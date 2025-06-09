@@ -56,6 +56,7 @@ defmodule Songy.MixProject do
       {:swoosh, "~> 1.16"},
       {:inertia, "~> 2.4.0"},
       {:req, "~> 0.5"},
+      {:spotify_ex, "~> 2.2.1"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.26"},

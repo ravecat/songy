@@ -1,14 +1,17 @@
 defmodule SongyWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :songy
 
-  # The session will be stored in the cookie and signed,
-  # this means its contents can be read but not tampered with.
-  # Set :encryption_salt if you would also like to encrypt it.
+  # The session will be stored in the cookie, signed and encrypted
+  # to protect sensitive data like Spotify tokens
   @session_options [
     store: :cookie,
     key: "_songy_key",
-    signing_salt: "4Ru/Zadi",
-    same_site: "Lax"
+    signing_salt: "60Zc+eMo",
+    encryption_salt: "spotify_encryption_salt_123",
+    same_site: "Lax",
+    http_only: true,
+    secure: Mix.env() == :prod,
+    max_age: 24 * 60 * 60
   ]
 
   socket "/live", Phoenix.LiveView.Socket,

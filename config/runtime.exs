@@ -1,4 +1,14 @@
 import Config
+import Dotenvy
+
+env_dir_prefix = System.get_env("RELEASE_ROOT") || Path.expand("./envs")
+
+source!([
+  Path.absname(".env", env_dir_prefix),
+  Path.absname(".#{config_env()}.env", env_dir_prefix),
+  Path.absname(".#{config_env()}.overrides.env", env_dir_prefix),
+  System.get_env()
+])
 
 # config/runtime.exs is executed for all environments, including
 # during releases. It is executed after compilation and before the
@@ -118,3 +128,14 @@ if config_env() == :prod do
   #
   # See https://hexdocs.pm/swoosh/Swoosh.html#module-installation for details.
 end
+
+config :spotify_ex,
+  client_id: env!("SPOTIFY_CLIENT_ID", :string?, ""),
+  secret_key: env!("SPOTIFY_SECRET_KEY", :string?, ""),
+  scopes: [
+    "user-read-playback-state",
+    "user-modify-playback-state",
+    "user-read-currently-playing",
+    "streaming"
+  ],
+  callback_url: "http://127.0.0.1:4000/auth/spotify/callback"

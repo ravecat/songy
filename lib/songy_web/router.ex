@@ -1,6 +1,8 @@
 defmodule SongyWeb.Router do
   use SongyWeb, :router
 
+  import SongyWeb.Auth
+
   pipeline :inertia do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -18,6 +20,7 @@ defmodule SongyWeb.Router do
     plug :put_root_layout, html: {SongyWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :fetch_current_media_provider
   end
 
   pipeline :api do
@@ -25,7 +28,7 @@ defmodule SongyWeb.Router do
   end
 
   scope "/", SongyWeb do
-    pipe_through :browser
+    pipe_through [:browser]
 
     get "/", PageController, :home
   end
@@ -56,5 +59,13 @@ defmodule SongyWeb.Router do
       live_dashboard "/dashboard", metrics: SongyWeb.Telemetry
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
+  end
+
+  scope "/auth/spotify", SongyWeb do
+    pipe_through :browser
+
+    get "/", SpotifyController, :authorize
+    get "/callback", SpotifyController, :callback
+    delete "/disconnect", SpotifyController, :disconnect
   end
 end
