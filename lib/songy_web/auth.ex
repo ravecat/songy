@@ -3,8 +3,6 @@ defmodule SongyWeb.Auth do
 
   import Plug.Conn
 
-  alias SongyWeb.SpotifyController
-
   def fetch_current_media_provider(conn, _opts) do
     if authenticated_with_spotify?(conn) do
       assign(conn, :provider, :spotify)
