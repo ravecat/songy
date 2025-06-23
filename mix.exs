@@ -10,7 +10,10 @@ defmodule Songy.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
-      listeners: [Phoenix.CodeReloader]
+      listeners: [Phoenix.CodeReloader],
+      preferred_cli_env: [
+        "test.watch": :test
+      ]
     ]
   end
 
@@ -63,8 +66,9 @@ defmodule Songy.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.5"},
+      {:bun, "~> 1.5", runtime: Mix.env() == :dev},
       {:typed_struct, "~> 0.3.0"},
-      {:bun, "~> 1.5", runtime: Mix.env() == :dev}
+      {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false}
     ]
   end
 
@@ -80,6 +84,7 @@ defmodule Songy.MixProject do
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
+      "test.watch": ["test.watch"],
       "assets.setup": ["bun.install --if-missing", "bun assets install"],
       "assets.build": ["bun vite build"],
       "assets.deploy": [

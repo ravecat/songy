@@ -6,16 +6,19 @@ Music application with Spotify integration built with Phoenix Framework.
 
 1. Clone the repository
 2. Install dependencies:
+
    ```bash
    mix deps.get
    ```
 
 3. Setup database:
+
    ```bash
    mix ecto.setup
    ```
 
 4. Configure Spotify API:
+
    - Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
    - Create a new app
    - Copy `.env.example` to `.env` and fill in your credentials:
@@ -42,8 +45,9 @@ Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 ## Environment Variables
 
 Create a `.env` file with the following variables:
+
 - `SPOTIFY_CLIENT_ID` - Your Spotify app client ID
-- `SPOTIFY_SECRET_KEY` - Your Spotify app client secret  
+- `SPOTIFY_SECRET_KEY` - Your Spotify app client secret
 - `SPOTIFY_USER_ID` - Your Spotify user ID (optional)
 
 ## Learn more
