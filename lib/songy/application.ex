@@ -14,6 +14,10 @@ defmodule Songy.Application do
       {Phoenix.PubSub, name: Songy.PubSub},
       # Start a worker by calling: Songy.Worker.start_link(arg)
       # {Songy.Worker, arg},
+      # Registry for game session process registration
+      {Registry, [name: Songy.Registry, keys: :unique]},
+      # Dynamic supervisor for game sessions
+      {DynamicSupervisor, [name: Songy.Supervisor.GameSession, strategy: :one_for_one]},
       # Start the SSR process pool for Inertia/Svelte
       # You must specify a `path` option to locate `ssr.js`
       {Inertia.SSR, path: Path.join([Application.app_dir(:songy), "priv"])},
