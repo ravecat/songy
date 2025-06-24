@@ -70,7 +70,8 @@ defmodule Songy.MixProject do
       {:typed_struct, "~> 0.3.0"},
       {:repatch, "~> 1.5", only: :test},
       {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false},
-      {:assert_eventually, "~> 1.0.0", only: :test}
+      {:assert_eventually, "~> 1.0.0", only: :test},
+      {:faker, "~> 0.19.0-alpha.1"}
     ]
   end
 
