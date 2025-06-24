@@ -33,6 +33,13 @@ defmodule SongyWeb.ConnCase do
 
   setup tags do
     Songy.DataCase.setup_sandbox(tags)
-    {:ok, conn: Phoenix.ConnTest.build_conn()}
+
+    conn =
+      Phoenix.ConnTest.build_conn()
+      |> Map.put(:secret_key_base, SongyWeb.Endpoint.config(:secret_key_base))
+      |> Plug.Conn.put_private(:phoenix_endpoint, SongyWeb.Endpoint)
+      |> Plug.Test.init_test_session(%{})
+
+    {:ok, conn: conn}
   end
 end
