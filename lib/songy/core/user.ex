@@ -9,6 +9,8 @@ defmodule Songy.Core.User do
 
   use TypedStruct
 
+  @derive {Jason.Encoder, only: [:uuid, :name, :avatar_url]}
+
   @uuid_size 16
   @base_avatar_url "https://api.dicebear.com/9.x"
 
@@ -19,25 +21,14 @@ defmodule Songy.Core.User do
   end
 
   @doc """
-  Creates a new game user. Use deterministic data generation based on UUID.
-
-  When UUID is provided, generates deterministic name based on UUID.
-  When UUID is nil, generates random UUID and random name.
+  Creates a new game user with random UUID.
 
   ## Examples
       iex> User.new()
       %User{uuid: "a1b2c3d4", name: "Pikachu"}
-
-      iex> User.new("abc123")
-      %User{uuid: "abc123", name: "Pikachu", avatar_url: "..."}
-
-      iex> User.new("abc123")
-      %User{uuid: "abc123", name: "Pikachu", avatar_url: "..."}  # Same name
   """
-  @spec new(String.t() | nil) :: t()
-  def new(uuid \\ nil)
-
-  def new(nil) do
+  @spec new() :: t()
+  def new() do
     uuid = generate_uuid()
 
     %__MODULE__{
@@ -47,7 +38,19 @@ defmodule Songy.Core.User do
     }
   end
 
-  def new(uuid) when is_binary(uuid) do
+  @doc """
+  Gets or creates a game user with specified UUID.
+  Uses deterministic data generation based on UUID.
+
+  ## Examples
+      iex> User.get_user("abc123")
+      %User{uuid: "abc123", name: "Pikachu", avatar_url: "..."}
+
+      iex> User.get_user("abc123")
+      %User{uuid: "abc123", name: "Pikachu", avatar_url: "..."}  # Same name
+  """
+  @spec get_user(String.t()) :: t()
+  def get_user(uuid) when is_binary(uuid) do
     %__MODULE__{
       uuid: uuid,
       name: generate_name(uuid),

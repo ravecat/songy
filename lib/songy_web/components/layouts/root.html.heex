@@ -31,6 +31,9 @@
         window.addEventListener("phx:set-theme", ({ detail: { theme } }) => setTheme(theme));
       })();
     </script>
+    <script>
+      window.channelToken = "<%= assigns[:channel_token] %>";
+    </script>
   </head>
   <body>
     {@inner_content}

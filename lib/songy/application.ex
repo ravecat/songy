@@ -18,6 +18,8 @@ defmodule Songy.Application do
       {Registry, [name: Songy.Registry, keys: :unique]},
       # Dynamic supervisor for game sessions
       {DynamicSupervisor, [name: Songy.Supervisor.GameSession, strategy: :one_for_one]},
+      # Start Presence for tracking user presence in channels
+      SongyWeb.Presence,
       # Start the SSR process pool for Inertia/Svelte
       # You must specify a `path` option to locate `ssr.js`
       {Inertia.SSR, path: Path.join([Application.app_dir(:songy), "priv"])},

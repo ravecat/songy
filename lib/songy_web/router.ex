@@ -11,6 +11,9 @@ defmodule SongyWeb.Router do
     plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug Inertia.Plug
+    plug :fetch_current_user
+    plug :put_channel_token
+    plug :fetch_current_media_provider
   end
 
   pipeline :browser do
@@ -33,13 +36,13 @@ defmodule SongyWeb.Router do
     pipe_through [:browser]
 
     get "/", PageController, :home
-    get "/:hash", PageController, :room
   end
 
   scope "/", SongyWeb do
-    pipe_through :inertia
+    pipe_through [:inertia]
 
     get "/inertia", PageController, :inertia
+    get "/:room_id", PageController, :room
   end
 
   # Other scopes may use custom stacks.

@@ -12,10 +12,9 @@ defmodule SongyWeb.PageController do
     |> render_inertia("welcome")
   end
 
-  def room(conn, %{"hash" => hash}) do
+  def room(conn, %{"room_id" => room_id}) do
     conn
-    |> assign(:hash, hash)
-    |> assign(:current_user, conn.assigns.current_user)
-    |> render(:room)
+    |> assign_prop(:room_id, room_id)
+    |> render_inertia("Room")
   end
 end
