@@ -41,7 +41,6 @@ defmodule SongyWeb.Router do
   scope "/", SongyWeb do
     pipe_through [:inertia]
 
-    get "/inertia", PageController, :inertia
     get "/:room_id", PageController, :room
   end
 
