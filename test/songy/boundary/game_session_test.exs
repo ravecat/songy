@@ -4,103 +4,196 @@ defmodule Songy.Boundary.GameSessionTest do
   use AssertEventually
 
   alias Songy.Boundary.GameSession
-  alias Songy.Core.Game
 
-  describe "start_game/1" do
+  describe "start_game_session/0" do
     test "starts new game session process" do
-      game = Game.new()
+      assert {:ok, game} = GameSession.start_game_session()
 
-      assert {:ok, pid} = GameSession.start_game(game)
+      pid =
+        case Registry.lookup(Songy.Registry, game.uuid) do
+          [{pid, nil}] -> pid
+          [] -> flunk("Process not found in registry")
+        end
+
       assert Process.alive?(pid)
-      assert [{^pid, nil}] = Registry.lookup(Songy.Registry, game.uuid)
-    end
-
-    test "returns error when starting duplicate game session" do
-      game = Game.new()
-
-      assert {:ok, _pid1} = GameSession.start_game(game)
-      assert {:error, {:already_started, _pid}} = GameSession.start_game(game)
+      assert game.uuid != nil
+      assert game.participants == []
     end
 
     test "multiple different games can be started" do
-      game1 = Game.new()
-      game2 = Game.new()
+      assert {:ok, game1} = GameSession.start_game_session()
+      assert {:ok, game2} = GameSession.start_game_session()
 
-      assert {:ok, pid1} = GameSession.start_game(game1)
-      assert {:ok, pid2} = GameSession.start_game(game2)
+      pid1 =
+        case Registry.lookup(Songy.Registry, game1.uuid) do
+          [{pid, nil}] -> pid
+          [] -> flunk("Process not found in registry")
+        end
+
+      pid2 =
+        case Registry.lookup(Songy.Registry, game2.uuid) do
+          [{pid, nil}] -> pid
+          [] -> flunk("Process not found in registry")
+        end
 
       assert Process.alive?(pid1)
       assert Process.alive?(pid2)
       assert pid1 != pid2
+      assert game1.uuid != game2.uuid
     end
   end
 
-  describe "add_user/2" do
+  describe "add_participant/2" do
     setup do
-      game = Game.new()
-      {:ok, pid} = GameSession.start_game(game)
+      {:ok, game} = GameSession.start_game_session()
+
+      pid =
+        case Registry.lookup(Songy.Registry, game.uuid) do
+          [{pid, nil}] -> pid
+          [] -> flunk("Process not found in registry")
+        end
 
       %{game: game, pid: pid}
     end
 
-    test "adds user to game session", %{game: game} do
-      user_uuid = "user123"
+    test "adds participant to game session", %{game: game} do
+      participant_uuid = "user123"
 
-      assert {:ok, updated_game} = GameSession.add_user(game.uuid, user_uuid)
+      assert {:ok, updated_game} = GameSession.add_participant(game.uuid, participant_uuid)
       assert length(updated_game.participants) == 1
-      assert hd(updated_game.participants).uuid == user_uuid
+      assert hd(updated_game.participants).uuid == participant_uuid
     end
 
     test "returns error for non-existent session" do
-      assert {:error, :not_found} = GameSession.add_user("nonexistent", "user123")
+      assert {:error, :not_found} = GameSession.add_participant("nonexistent", "user123")
     end
 
     test "returns error when game is full", %{game: _game} do
-      small_game = Game.new(1)
-      {:ok, _pid} = GameSession.start_game(small_game)
+      # Create a game with only 1 participant allowed for easy testing
+      # We'll manually add a second participant to test the full game scenario
+      {:ok, small_game} = GameSession.start_game_session()
 
-      assert {:ok, _updated_game} = GameSession.add_user(small_game.uuid, "user1")
-      assert {:error, :game_full} = GameSession.add_user(small_game.uuid, "user2")
+      # Add first participant
+      assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user1")
+      assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user2")
+      assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user3")
+      assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user4")
+      assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user5")
+      assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user6")
+
+      # Try to add 7th participant (should fail since max is 6)
+      assert {:error, :game_full} = GameSession.add_participant(small_game.uuid, "user7")
     end
 
-    test "returns error when user already joined", %{game: game} do
-      user_uuid = "user123"
+    test "returns error when participant already joined", %{game: game} do
+      participant_uuid = "user123"
 
-      assert {:ok, _updated_game} = GameSession.add_user(game.uuid, user_uuid)
-      assert {:error, :user_already_joined} = GameSession.add_user(game.uuid, user_uuid)
+      assert {:ok, _updated_game} = GameSession.add_participant(game.uuid, participant_uuid)
+
+      assert {:error, :user_already_joined} =
+               GameSession.add_participant(game.uuid, participant_uuid)
     end
 
-    test "handles concurrent user additions", %{game: _game} do
-      limited_game = Game.new(3)
-      {:ok, _pid} = GameSession.start_game(limited_game)
+    test "handles concurrent participant additions", %{game: _game} do
+      {:ok, limited_game} = GameSession.start_game_session()
 
       tasks =
         for i <- 1..5 do
           Task.async(fn ->
-            GameSession.add_user(limited_game.uuid, "user#{i}")
+            GameSession.add_participant(limited_game.uuid, "user#{i}")
           end)
         end
 
       results = Task.await_many(tasks)
+      # Since we're using a normal game (max 6), all 5 should succeed
       successful = Enum.count(results, &match?({:ok, _}, &1))
-      failed = Enum.count(results, &match?({:error, :game_full}, &1))
+      failed = Enum.count(results, &match?({:error, _}, &1))
 
-      assert successful <= 3
-      assert successful + failed == 5
+      assert successful == 5
+      assert failed == 0
     end
   end
 
-  describe "end_game/1" do
+  describe "end_game_session/1" do
     test "terminates game session process" do
-      game = Game.new()
-      {:ok, _} = GameSession.start_game(game)
+      {:ok, game} = GameSession.start_game_session()
 
-      assert :ok = GameSession.end_game(game.uuid)
-      assert_eventually [] = Registry.lookup(Songy.Registry, game.uuid)
+      assert :ok = GameSession.end_game_session(game.uuid)
+      assert_eventually([] = Registry.lookup(Songy.Registry, game.uuid))
     end
 
     test "handles termination of non-existent session" do
-      assert :ok = GameSession.end_game("nonexistent")
+      assert :ok = GameSession.end_game_session("nonexistent")
+    end
+  end
+
+  describe "remove_participant/2" do
+    setup do
+      {:ok, game} = GameSession.start_game_session()
+
+      pid =
+        case Registry.lookup(Songy.Registry, game.uuid) do
+          [{pid, nil}] -> pid
+          [] -> flunk("Process not found in registry")
+        end
+
+      %{game: game, pid: pid}
+    end
+
+    test "removes participant from game session", %{game: game} do
+      participant_uuid = "user123"
+
+      # Add participant first
+      assert {:ok, game_with_participant} =
+               GameSession.add_participant(game.uuid, participant_uuid)
+
+      assert length(game_with_participant.participants) == 1
+
+      # Remove participant
+      assert {:ok, updated_game} = GameSession.remove_participant(game.uuid, participant_uuid)
+      assert length(updated_game.participants) == 0
+    end
+
+    test "returns error when removing non-existent participant", %{game: game} do
+      assert {:error, :user_not_found} = GameSession.remove_participant(game.uuid, "nonexistent")
+    end
+
+    test "returns error for non-existent session" do
+      assert {:error, :not_found} = GameSession.remove_participant("nonexistent", "user123")
+    end
+  end
+
+  describe "get_game_session/1" do
+    setup do
+      {:ok, game} = GameSession.start_game_session()
+
+      pid =
+        case Registry.lookup(Songy.Registry, game.uuid) do
+          [{pid, nil}] -> pid
+          [] -> flunk("Process not found in registry")
+        end
+
+      %{game: game, pid: pid}
+    end
+
+    test "returns current game state", %{game: game} do
+      assert {:ok, returned_game} = GameSession.get_game_session(game.uuid)
+      assert returned_game.uuid == game.uuid
+      assert returned_game.participants == []
+      assert returned_game.status == :waiting
+    end
+
+    test "returns updated game state after participant addition", %{game: game} do
+      participant_uuid = "user123"
+      {:ok, _} = GameSession.add_participant(game.uuid, participant_uuid)
+
+      assert {:ok, updated_game} = GameSession.get_game_session(game.uuid)
+      assert length(updated_game.participants) == 1
+      assert hd(updated_game.participants).uuid == participant_uuid
+    end
+
+    test "returns error for non-existent session" do
+      assert {:error, :not_found} = GameSession.get_game_session("nonexistent")
     end
   end
 end

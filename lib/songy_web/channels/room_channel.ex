@@ -25,7 +25,8 @@ defmodule SongyWeb.RoomChannel do
     {:ok, _} =
       Presence.track(socket, user.uuid, %{
         name: user.name,
-        avatar_url: user.avatar_url
+        avatar_url: user.avatar_url,
+        online_at: inspect(System.system_time(:second))
       })
 
     push(socket, "presence_state", Presence.list(socket))

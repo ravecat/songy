@@ -36,6 +36,7 @@ defmodule SongyWeb.Router do
     pipe_through [:browser]
 
     get "/", PageController, :home
+    post "/start", PageController, :start
   end
 
   scope "/", SongyWeb do

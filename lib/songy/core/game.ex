@@ -44,6 +44,27 @@ defmodule Songy.Core.Game do
   end
 
   @doc """
+  Creates a new game with a specified UUID.
+
+  ## Parameters
+    * `uuid` - UUID to use for the game (typically room_id)
+    * `max_participants` - Maximum number of participants allowed
+
+  ## Examples
+      iex> Game.new_with_uuid("room123", 4)
+      %Game{uuid: "room123", participants: [], max_participants: 4}
+  """
+  @spec new_with_uuid(String.t(), pos_integer()) :: t()
+  def new_with_uuid(uuid, max_participants \\ 6)
+      when is_binary(uuid) and is_integer(max_participants) and max_participants > 0 do
+    %__MODULE__{
+      uuid: uuid,
+      max_participants: max_participants,
+      created_at: DateTime.utc_now()
+    }
+  end
+
+  @doc """
   Adds a user to the game if there's available space.
 
   ## Parameters

@@ -1,5 +1,6 @@
 defmodule SongyWeb.Auth do
   use SongyWeb, :verified_routes
+  require Logger
 
   import Plug.Conn
   alias Songy.Core.User
