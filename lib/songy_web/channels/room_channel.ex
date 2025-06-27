@@ -4,32 +4,30 @@ defmodule SongyWeb.RoomChannel do
   alias SongyWeb.Presence
 
   @impl true
-  def join("room:" <> room_hash, _payload, socket) do
+  def join("room:" <> _room_id, _payload, socket) do
     send(self(), :after_join)
 
-    user = socket.assigns.current_user
-
-    socket =
-      socket
-      |> assign(:room_hash, room_hash)
-      |> assign(:user, user)
-
-    {:ok, %{current_user: %{uuid: user.uuid, name: user.name, avatar_url: user.avatar_url}},
-     socket}
+    {:ok, socket}
   end
 
   @impl true
   def handle_info(:after_join, socket) do
-    user = socket.assigns.user
-
     {:ok, _} =
-      Presence.track(socket, user.uuid, %{
-        name: user.name,
-        avatar_url: user.avatar_url,
+      Presence.track(socket, socket.assigns.current_user_uuid, %{
         online_at: inspect(System.system_time(:second))
       })
 
-    push(socket, "presence_state", Presence.list(socket))
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:game_state, game}, socket) do
+    push(socket, "game_state", %{
+      participants: Enum.map(game.participants, & &1.uuid),
+      participant_count: length(game.participants),
+      status: game.status
+    })
+
     {:noreply, socket}
   end
 

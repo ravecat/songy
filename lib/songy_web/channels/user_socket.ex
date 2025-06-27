@@ -26,11 +26,9 @@ defmodule SongyWeb.UserSocket do
   # performing token verification on connect.
   @impl true
   def connect(%{"token" => token}, socket, _connect_info) do
-    case Phoenix.Token.verify(socket, "user auth", token, max_age: 86400) do
+    case Phoenix.Token.verify(socket, "user uuid", token, max_age: 86400) do
       {:ok, user_uuid} ->
-        current_user = Songy.Core.User.get_user(user_uuid)
-
-        {:ok, assign(socket, :current_user, current_user)}
+        {:ok, assign(socket, :current_user_uuid, user_uuid)}
 
       {:error, _reason} ->
         :error
@@ -52,5 +50,5 @@ defmodule SongyWeb.UserSocket do
   #
   # Returning `nil` makes this socket anonymous.
   @impl true
-  def id(socket), do: "user_socket:#{socket.assigns.current_user.uuid}"
+  def id(socket), do: "user_socket:#{socket.assigns.current_user_uuid}"
 end

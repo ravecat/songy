@@ -6,15 +6,13 @@ defmodule SongyWeb.RoomChannelTest do
 
     {:ok, reply, socket} =
       SongyWeb.UserSocket
-      |> socket("user_id", %{current_user: current_user})
+      |> socket("user_id", %{current_user_uuid: current_user.uuid})
       |> subscribe_and_join(SongyWeb.RoomChannel, "room:lobby")
 
     %{socket: socket, current_user: current_user, join_reply: reply}
   end
 
-  test "join returns current_user data", %{join_reply: reply, current_user: current_user} do
-    assert reply.current_user.uuid == current_user.uuid
-    assert reply.current_user.name == current_user.name
-    assert reply.current_user.avatar_url == current_user.avatar_url
+  test "join succeeds", %{join_reply: reply} do
+    assert reply == %{}
   end
 end

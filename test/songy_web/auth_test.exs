@@ -48,7 +48,7 @@ defmodule SongyWeb.AuthTest do
 
       # Verify token can be verified with same uuid
       {:ok, token_uuid} =
-        Phoenix.Token.verify(SongyWeb.Endpoint, "user auth", conn.assigns.channel_token)
+        Phoenix.Token.verify(SongyWeb.Endpoint, "user uuid", conn.assigns.channel_token)
 
       assert token_uuid == user.uuid
     end
@@ -66,7 +66,7 @@ defmodule SongyWeb.AuthTest do
 
       # Verify token integrity
       {:ok, token_uuid} =
-        Phoenix.Token.verify(SongyWeb.Endpoint, "user auth", conn.assigns.channel_token)
+        Phoenix.Token.verify(SongyWeb.Endpoint, "user uuid", conn.assigns.channel_token)
 
       assert token_uuid == user.uuid
     end
@@ -89,10 +89,10 @@ defmodule SongyWeb.AuthTest do
 
       # Verify both tokens work correctly
       {:ok, token_uuid1} =
-        Phoenix.Token.verify(SongyWeb.Endpoint, "user auth", conn1.assigns.channel_token)
+        Phoenix.Token.verify(SongyWeb.Endpoint, "user uuid", conn1.assigns.channel_token)
 
       {:ok, token_uuid2} =
-        Phoenix.Token.verify(SongyWeb.Endpoint, "user auth", conn2.assigns.channel_token)
+        Phoenix.Token.verify(SongyWeb.Endpoint, "user uuid", conn2.assigns.channel_token)
 
       assert token_uuid1 == user1.uuid
       assert token_uuid2 == user2.uuid
@@ -111,7 +111,7 @@ defmodule SongyWeb.AuthTest do
 
       # Verify token matches user
       {:ok, token_uuid} =
-        Phoenix.Token.verify(SongyWeb.Endpoint, "user auth", conn.assigns.channel_token)
+        Phoenix.Token.verify(SongyWeb.Endpoint, "user uuid", conn.assigns.channel_token)
 
       assert token_uuid == conn.assigns.current_user.uuid
     end
@@ -128,7 +128,7 @@ defmodule SongyWeb.AuthTest do
       assert conn.assigns.current_user == original_user
 
       {:ok, token_uuid} =
-        Phoenix.Token.verify(SongyWeb.Endpoint, "user auth", conn.assigns.channel_token)
+        Phoenix.Token.verify(SongyWeb.Endpoint, "user uuid", conn.assigns.channel_token)
 
       assert token_uuid == original_user.uuid
     end

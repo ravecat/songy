@@ -16,7 +16,7 @@ defmodule SongyWeb.Auth do
   end
 
   def put_channel_token(%{assigns: %{current_user: %{uuid: uuid}}} = conn, _) do
-    assign(conn, :channel_token, Phoenix.Token.sign(conn, "user auth", uuid))
+    assign(conn, :channel_token, Phoenix.Token.sign(conn, "user uuid", uuid))
   end
 
   def fetch_current_media_provider(conn, _opts) do
