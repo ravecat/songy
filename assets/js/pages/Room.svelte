@@ -5,15 +5,14 @@
   let { room_id } = $props();
 
   let state = $state(null);
-  let userCount = $state(0);
+  let userCount = $derived(state?.participants?.length ?? 0);
 
-  useChannel({
+  const channel = useChannel({
     socket,
     topic: `room:${room_id}`,
-    events: {
+    on: {
       game_state: (gameState) => {
         state = gameState;
-        userCount = gameState.participants.length;
       },
     },
   });
@@ -27,7 +26,7 @@
       {#if state}
         <!-- Circular Player Layout -->
         <div
-          class="relative mx-auto mb-12"
+          class="relative mx-auto"
           style="width: 60vw; height: 60vh; min-width: 400px; min-height: 400px;"
         >
           {#if state.participants && state.participants.length > 0}
@@ -82,21 +81,20 @@
             </div>
           {/each}
 
-          <!-- Center circle with game info -->
           <div
-            class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full"
-          ></div>
-        </div>
-
-        <!-- Game Controls -->
-        <div class="flex flex-col items-center space-y-4">
-          {#if state.status === "waiting"}
-            <button
-              class="bg-white text-purple-600 px-12 py-4 rounded-full font-semibold text-lg hover:bg-white/90 transition-colors shadow-lg"
-            >
-              Start Game
-            </button>
-          {/if}
+            class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+          >
+            {#if state.status === "waiting"}
+              <button
+                class="w-32 h-32 bg-white text-purple-600 rounded-full font-bold text-xl hover:bg-white/90 transition-all duration-300 hover:scale-110 shadow-2xl border-4 border-white/50 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                onclick={() => channel.push("start_game", {})}
+              >
+                Start
+              </button>
+            {:else if state.status === "in_progress"}
+              <p class="text-2xl font-bold text-white">Game in progress...</p>
+            {/if}
+          </div>
         </div>
       {:else}
         <div class="flex flex-col items-center">

@@ -139,6 +139,28 @@ defmodule Songy.Boundary.GameSession do
     end
   end
 
+  @doc """
+  Starts the game by changing its status to in_progress.
+
+  ## Parameters
+    * `game_uuid` - UUID of the game session
+
+  ## Examples
+      iex> GameSession.start_game("game123")
+      {:ok, %Game{status: :in_progress}}
+
+      iex> GameSession.start_game("nonexistent")
+      {:error, :not_found}
+  """
+  @spec start_game(String.t()) :: {:ok, Game.t()} | {:error, atom()}
+  def start_game(game_uuid) do
+    if session_exists?(game_uuid) do
+      GenServer.call(via(game_uuid), :start_game)
+    else
+      {:error, :not_found}
+    end
+  end
+
   def session_exists?(game_uuid) do
     match?([_], Registry.lookup(Songy.Registry, game_uuid))
   end
@@ -193,6 +215,18 @@ defmodule Songy.Boundary.GameSession do
   @impl GenServer
   def handle_call(:get_game, _from, game) do
     {:reply, {:ok, game}, game}
+  end
+
+  @impl GenServer
+  def handle_call(:start_game, _from, game) do
+    case game.status do
+      :waiting ->
+        updated_game = %{game | status: :in_progress}
+        {:reply, {:ok, updated_game}, updated_game}
+
+      _ ->
+        {:reply, {:error, :game_already_started}, game}
+    end
   end
 
   @impl GenServer
