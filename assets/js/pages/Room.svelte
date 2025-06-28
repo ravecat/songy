@@ -12,7 +12,6 @@
     topic: `room:${room_id}`,
     events: {
       game_state: (gameState) => {
-        console.log("Game state:", gameState);
         state = gameState;
         userCount = gameState.participants.length;
       },
@@ -25,77 +24,88 @@
 >
   <div class="flex-1 flex items-center justify-center">
     <div class="text-center text-white max-w-4xl mx-auto px-6">
-      <h1 class="text-4xl font-bold mb-4">{room_id}</h1>
-      
       {#if state}
-        <!-- Game Status -->
-        <div class="mb-6">
-          <div class="inline-flex items-center px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full">
-            <div class="w-3 h-3 bg-green-400 rounded-full mr-2"></div>
-            <span class="capitalize">{state.status}</span>
-          </div>
-        </div>
-
-        <!-- Player Count Progress -->
-        <div class="mb-8 bg-white/10 backdrop-blur-sm rounded-xl p-6">
-          <h3 class="text-xl font-semibold mb-4">Players</h3>
-          <div class="text-3xl font-bold mb-2">{userCount} / {state.max_participants}</div>
-          
-          <!-- Progress Bar -->
-          <div class="w-full bg-white/20 rounded-full h-2 mb-6">
-            <div 
-              class="bg-white h-2 rounded-full transition-all duration-300" 
-              style="width: {(userCount / state.max_participants) * 100}%"
-            ></div>
-          </div>
-
-          <!-- Participants List -->
+        <!-- Circular Player Layout -->
+        <div
+          class="relative mx-auto mb-12"
+          style="width: 60vw; height: 60vh; min-width: 400px; min-height: 400px;"
+        >
           {#if state.participants && state.participants.length > 0}
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {#each state.participants as participant}
-                <div class="text-center">
-                  <div class="w-16 h-16 mx-auto mb-2 rounded-full bg-white/20 flex items-center justify-center">
-                    {#if participant.avatar_url}
-                      <img 
-                        src={participant.avatar_url} 
-                        alt={participant.name || 'Player'} 
-                        class="w-full h-full rounded-full"
-                      />
-                    {:else}
-                      <div class="text-2xl">👤</div>
-                    {/if}
+            {#each state.participants as participant, index}
+              {@const angle = (index * 360) / state.max_participants}
+              {@const radius = 35}
+              {@const x =
+                Math.cos(((angle - 90) * Math.PI) / 180) * radius + 50}
+              {@const y =
+                Math.sin(((angle - 90) * Math.PI) / 180) * radius + 50}
+              <div
+                class="absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-500"
+                style="left: {x}%; top: {y}%;"
+              >
+                <div class="flex flex-col items-center">
+                  <div
+                    class="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center border-4 border-white/30 shadow-lg hover:scale-110 transition-transform"
+                  >
+                    <img
+                      src={participant.avatar_url}
+                      alt={participant.name}
+                      class="w-full h-full rounded-full object-cover"
+                    />
                   </div>
-                  <div class="text-sm truncate">
-                    {participant.name || `Player ${participant.uuid.slice(0, 6)}`}
+                  <!-- Player name -->
+                  <div
+                    class="mt-2 text-sm font-medium text-white text-center px-2 py-1 bg-black/50 rounded-md backdrop-blur-sm"
+                  >
+                    {participant.name}
                   </div>
                 </div>
-              {/each}
-            </div>
-          {:else}
-            <p class="text-white/70">Waiting for players to join...</p>
+              </div>
+            {/each}
           {/if}
+
+          <!-- Empty slots for remaining players -->
+          {#each Array(state.max_participants - userCount) as _, index}
+            {@const totalIndex = userCount + index}
+            {@const angle = (totalIndex * 360) / state.max_participants}
+            {@const radius = 35}
+            {@const x = Math.cos(((angle - 90) * Math.PI) / 180) * radius + 50}
+            {@const y = Math.sin(((angle - 90) * Math.PI) / 180) * radius + 50}
+            <div
+              class="absolute w-20 h-20 transform -translate-x-1/2 -translate-y-1/2"
+              style="left: {x}%; top: {y}%;"
+            >
+              <div
+                class="w-20 h-20 rounded-full border-4 border-dashed border-white/30 flex items-center justify-center"
+              >
+                <div class="text-4xl text-white/50 font-bold">?</div>
+              </div>
+            </div>
+          {/each}
+
+          <!-- Center circle with game info -->
+          <div
+            class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full"
+          ></div>
         </div>
 
         <!-- Game Controls -->
-        {#if state.status === 'waiting'}
-          <div class="space-y-4">
-            {#if userCount >= 2}
-              <button class="bg-white text-purple-600 px-8 py-3 rounded-full font-semibold hover:bg-white/90 transition-colors">
-                Start Game
-              </button>
-            {:else}
-              <p class="text-white/70">Need at least 2 players to start</p>
-            {/if}
-          </div>
-        {:else if state.status === 'in_progress'}
-          <p class="text-lg">Game in progress...</p>
-        {:else if state.status === 'finished'}
-          <button class="bg-white text-purple-600 px-8 py-3 rounded-full font-semibold hover:bg-white/90 transition-colors">
-            Start New Game
-          </button>
-        {/if}
+        <div class="flex flex-col items-center space-y-4">
+          {#if state.status === "waiting"}
+            <button
+              class="bg-white text-purple-600 px-12 py-4 rounded-full font-semibold text-lg hover:bg-white/90 transition-colors shadow-lg"
+            >
+              Start Game
+            </button>
+          {/if}
+        </div>
       {:else}
-        <p class="text-lg opacity-90">Connecting to game...</p>
+        <div class="flex flex-col items-center">
+          <p class="text-lg opacity-90 mb-8">Connecting to game...</p>
+          <!-- Loading spinner -->
+          <div
+            class="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin"
+          ></div>
+        </div>
       {/if}
     </div>
   </div>

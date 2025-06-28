@@ -69,20 +69,21 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "returns error when game is full", %{game: _game} do
-      # Create a game with only 1 participant allowed for easy testing
-      # We'll manually add a second participant to test the full game scenario
+      # Create a game with default max participants (8)
       {:ok, small_game} = GameSession.start_game_session()
 
-      # Add first participant
+      # Add participants up to max capacity
       assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user1")
       assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user2")
       assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user3")
       assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user4")
       assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user5")
       assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user6")
+      assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user7")
+      assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user8")
 
-      # Try to add 7th participant (should fail since max is 6)
-      assert {:error, :game_full} = GameSession.add_participant(small_game.uuid, "user7")
+      # Try to add 9th participant (should fail since max is 8)
+      assert {:error, :game_full} = GameSession.add_participant(small_game.uuid, "user9")
     end
 
     test "returns error when participant already joined", %{game: game} do
