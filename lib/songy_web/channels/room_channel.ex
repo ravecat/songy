@@ -22,11 +22,7 @@ defmodule SongyWeb.RoomChannel do
 
   @impl true
   def handle_info({:game_state, game}, socket) do
-    push(socket, "game_state", %{
-      participants: Enum.map(game.participants, & &1.uuid),
-      participant_count: length(game.participants),
-      status: game.status
-    })
+    push(socket, "game_state", game)
 
     {:noreply, socket}
   end

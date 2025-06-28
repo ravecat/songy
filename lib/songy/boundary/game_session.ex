@@ -25,7 +25,7 @@ defmodule Songy.Boundary.GameSession do
 
   use GenServer
 
-  alias Songy.Core.Game
+  alias Songy.Core.{Game, User}
 
   require Logger
 
@@ -168,7 +168,7 @@ defmodule Songy.Boundary.GameSession do
 
   @impl GenServer
   def handle_call({:add_participant, participant_uuid}, _from, game) do
-    user = %Songy.Core.User{uuid: participant_uuid}
+    user = User.get_user(participant_uuid)
 
     case Game.add_participant(game, user) do
       {:ok, updated_game} ->

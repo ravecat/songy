@@ -8,6 +8,8 @@ defmodule Songy.Core.Game do
 
   use TypedStruct
 
+  @derive {Jason.Encoder, only: [:uuid, :participants, :max_participants, :status]}
+
   alias Songy.Core.User
 
   @uuid_size 6
