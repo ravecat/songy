@@ -57,7 +57,8 @@ config :songy, SongyWeb.Endpoint,
     patterns: [
       ~r"priv/static/(?!uploads/).*(js|css|png|jpeg|jpg|gif|svg)$",
       ~r"priv/gettext/.*(po)$",
-      ~r"lib/songy_web/(?:controllers|live|components|channels|router)/?.*\.(ex|heex)$"
+      ~r"lib/songy_web/.*\.(ex|heex)$",
+      ~r"lib/songy/.*\.(ex|exs)$"
     ]
   ]
 
