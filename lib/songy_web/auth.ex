@@ -11,7 +11,11 @@ defmodule SongyWeb.Auth do
     if user do
       assign(conn, :current_user, user)
     else
-      assign(conn, :current_user, User.new())
+      new_user = User.new()
+
+      conn
+      |> put_session(:current_user, new_user)
+      |> assign(:current_user, new_user)
     end
   end
 
