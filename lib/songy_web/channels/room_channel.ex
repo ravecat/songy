@@ -30,10 +30,9 @@ defmodule SongyWeb.RoomChannel do
 
   @impl true
   def handle_in("start_game", _payload, socket) do
-    dbg("Starting game in room: #{socket.topic}")
     "room:" <> room_id = socket.topic
 
-    case GameSession.start_game(room_id) do
+    case GameSession.start_game_session(room_id) do
       {:ok, game} ->
         broadcast(socket, "game_state", game)
         {:noreply, socket}

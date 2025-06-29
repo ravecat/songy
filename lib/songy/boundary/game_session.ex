@@ -8,10 +8,11 @@ defmodule Songy.Boundary.GameSession do
 
   ## Public API
 
-    * `start_game_session/0` - Creates and starts a new game session process
+    * `create_game_session/0` - Creates and starts a new game session process
     * `add_participant/2` - Adds a participant to an existing game session
     * `remove_participant/2` - Removes a participant from an existing game session
     * `get_game_session/1` - Retrieves the current state of a game session
+    * `start_game_session/1` - Starts the game by changing its status to in_progress
     * `end_game_session/1` - Terminates a game session process
 
   ## Process Management
@@ -35,14 +36,14 @@ defmodule Songy.Boundary.GameSession do
   Generates a new game with a random UUID and starts the session process.
 
   ## Examples
-      iex> GameSession.start_game_session()
+      iex> GameSession.create_game_session()
       {:ok, %Game{uuid: "a1b2c3", participants: []}}
 
-      iex> GameSession.start_game_session()
+      iex> GameSession.create_game_session()
       {:error, :process_start_failed}
   """
-  @spec start_game_session() :: {:ok, Game.t()} | {:error, term()}
-  def start_game_session do
+  @spec create_game_session() :: {:ok, Game.t()} | {:error, term()}
+  def create_game_session do
     with game <- Game.new(),
          {:ok, _pid} <-
            DynamicSupervisor.start_child(
@@ -146,16 +147,16 @@ defmodule Songy.Boundary.GameSession do
     * `game_uuid` - UUID of the game session
 
   ## Examples
-      iex> GameSession.start_game("game123")
+      iex> GameSession.start_game_session("game123")
       {:ok, %Game{status: :in_progress}}
 
-      iex> GameSession.start_game("nonexistent")
+      iex> GameSession.start_game_session("nonexistent")
       {:error, :not_found}
   """
-  @spec start_game(String.t()) :: {:ok, Game.t()} | {:error, atom()}
-  def start_game(game_uuid) do
+  @spec start_game_session(String.t()) :: {:ok, Game.t()} | {:error, atom()}
+  def start_game_session(game_uuid) do
     if session_exists?(game_uuid) do
-      GenServer.call(via(game_uuid), :start_game)
+      GenServer.call(via(game_uuid), :start_game_session)
     else
       {:error, :not_found}
     end
@@ -218,7 +219,7 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @impl GenServer
-  def handle_call(:start_game, _from, game) do
+  def handle_call(:start_game_session, _from, game) do
     case game.status do
       :waiting ->
         updated_game = %{game | status: :in_progress}

@@ -5,9 +5,9 @@ defmodule Songy.Boundary.GameSessionTest do
 
   alias Songy.Boundary.GameSession
 
-  describe "start_game_session/0" do
+  describe "create_game_session/0" do
     test "starts new game session process" do
-      assert {:ok, game} = GameSession.start_game_session()
+      assert {:ok, game} = GameSession.create_game_session()
 
       pid =
         case Registry.lookup(Songy.Registry, game.uuid) do
@@ -21,8 +21,8 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "multiple different games can be started" do
-      assert {:ok, game1} = GameSession.start_game_session()
-      assert {:ok, game2} = GameSession.start_game_session()
+      assert {:ok, game1} = GameSession.create_game_session()
+      assert {:ok, game2} = GameSession.create_game_session()
 
       pid1 =
         case Registry.lookup(Songy.Registry, game1.uuid) do
@@ -45,7 +45,7 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "add_participant/2" do
     setup do
-      {:ok, game} = GameSession.start_game_session()
+      {:ok, game} = GameSession.create_game_session()
 
       pid =
         case Registry.lookup(Songy.Registry, game.uuid) do
@@ -70,7 +70,7 @@ defmodule Songy.Boundary.GameSessionTest do
 
     test "returns error when game is full", %{game: _game} do
       # Create a game with default max participants (8)
-      {:ok, small_game} = GameSession.start_game_session()
+      {:ok, small_game} = GameSession.create_game_session()
 
       # Add participants up to max capacity
       assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user1")
@@ -96,7 +96,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "handles concurrent participant additions", %{game: _game} do
-      {:ok, limited_game} = GameSession.start_game_session()
+      {:ok, limited_game} = GameSession.create_game_session()
 
       tasks =
         for i <- 1..5 do
@@ -117,7 +117,7 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "end_game_session/1" do
     test "terminates game session process" do
-      {:ok, game} = GameSession.start_game_session()
+      {:ok, game} = GameSession.create_game_session()
 
       assert :ok = GameSession.end_game_session(game.uuid)
       assert_eventually([] = Registry.lookup(Songy.Registry, game.uuid))
@@ -130,7 +130,7 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "remove_participant/2" do
     setup do
-      {:ok, game} = GameSession.start_game_session()
+      {:ok, game} = GameSession.create_game_session()
 
       pid =
         case Registry.lookup(Songy.Registry, game.uuid) do
@@ -166,7 +166,7 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "get_game_session/1" do
     setup do
-      {:ok, game} = GameSession.start_game_session()
+      {:ok, game} = GameSession.create_game_session()
 
       pid =
         case Registry.lookup(Songy.Registry, game.uuid) do
@@ -195,6 +195,46 @@ defmodule Songy.Boundary.GameSessionTest do
 
     test "returns error for non-existent session" do
       assert {:error, :not_found} = GameSession.get_game_session("nonexistent")
+    end
+  end
+
+  describe "start_game_session/1" do
+    setup do
+      {:ok, game} = GameSession.create_game_session()
+
+      pid =
+        case Registry.lookup(Songy.Registry, game.uuid) do
+          [{pid, nil}] -> pid
+          [] -> flunk("Process not found in registry")
+        end
+
+      %{game: game, pid: pid}
+    end
+
+    test "starts the game by changing status to in_progress", %{game: game} do
+      # Verify initial status is :waiting
+      assert {:ok, initial_game} = GameSession.get_game_session(game.uuid)
+      assert initial_game.status == :waiting
+
+      # Start the game
+      assert {:ok, updated_game} = GameSession.start_game_session(game.uuid)
+      assert updated_game.status == :in_progress
+
+      # Verify the game state was persisted
+      assert {:ok, persisted_game} = GameSession.get_game_session(game.uuid)
+      assert persisted_game.status == :in_progress
+    end
+
+    test "returns error when game is already started", %{game: game} do
+      # Start the game first
+      assert {:ok, _} = GameSession.start_game_session(game.uuid)
+
+      # Try to start again
+      assert {:error, :game_already_started} = GameSession.start_game_session(game.uuid)
+    end
+
+    test "returns error for non-existent session" do
+      assert {:error, :not_found} = GameSession.start_game_session("nonexistent")
     end
   end
 end
