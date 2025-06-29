@@ -29,9 +29,9 @@ defmodule SongyWeb.RoomChannelTest do
         |> subscribe_and_join(SongyWeb.RoomChannel, "room:#{game.uuid}")
 
       push(socket, "start_game", %{})
-      
+
       assert_broadcast "game_state", %{status: :in_progress}
-      
+
       {:ok, updated_game} = GameSession.get_game_session(game.uuid)
       assert updated_game.status == :in_progress
 
@@ -45,7 +45,7 @@ defmodule SongyWeb.RoomChannelTest do
         |> subscribe_and_join(SongyWeb.RoomChannel, "room:nonexistent")
 
       push(socket, "start_game", %{})
-      
+
       refute_push "start_game", _
       refute_broadcast "game_state", _
     end
