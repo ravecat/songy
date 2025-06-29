@@ -28,6 +28,7 @@ defmodule SongyWeb.ConnCase do
       import Plug.Conn
       import Phoenix.ConnTest
       import SongyWeb.ConnCase
+      import Inertia.Testing
     end
   end
 
