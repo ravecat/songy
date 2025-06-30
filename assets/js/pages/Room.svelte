@@ -1,8 +1,9 @@
 <script>
   import socket from "../user_socket.js";
   import { useChannel } from "../hooks/useChannel.svelte.js";
+  import { useSpotifyPlayer } from "../hooks/useSpotifyPlayer.svelte.js";
 
-  let { room_id } = $props();
+  let { room_id, spotify_token = null } = $props();
 
   let state = $state(null);
   let userCount = $derived(state?.participants?.length ?? 0);
@@ -16,12 +17,22 @@
       },
     },
   });
+
+  const player = useSpotifyPlayer(spotify_token);
 </script>
 
 <div
   class="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-purple-400 via-pink-500 to-red-500"
 >
   <div class="flex-1 flex items-center justify-center">
+    {#if player.player}
+      <div>
+        <button onclick={() => player.togglePlay()}> Toggle Play </button>
+        <button onclick={() => player.nextTrack()}> Next Track </button>
+      </div>
+    {:else}
+      <p>Loading Spotify Player...</p>
+    {/if}
     <div class="text-center text-white max-w-4xl mx-auto px-6">
       {#if state}
         <!-- Circular Player Layout -->
