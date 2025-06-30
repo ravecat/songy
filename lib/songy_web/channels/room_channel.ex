@@ -42,6 +42,16 @@ defmodule SongyWeb.RoomChannel do
     end
   end
 
+  def handle_in("get_spotify_token", _payload, socket) do
+    case socket.assigns[:credentials] do
+      %{access_token: token} when not is_nil(token) ->
+        {:reply, {:ok, %{token: token}}, socket}
+
+      _ ->
+        {:reply, {:error, %{reason: "invalid_credentials"}}, socket}
+    end
+  end
+
   @impl true
   def handle_in(event, _payload, socket) do
     {:reply, {:error, %{reason: "unknown_event", event: event}}, socket}

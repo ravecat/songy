@@ -31,6 +31,7 @@ export function useSpotifyPlayer(token, options = {}) {
 
   let player = $state(null);
 
+  
   $effect(() => {
     if (!token) {
       if (player) {
@@ -93,15 +94,6 @@ export function useSpotifyPlayer(token, options = {}) {
         player.disconnect();
         player = null;
       }
-
-      const script = document.querySelector(
-        'script[src="https://sdk.scdn.co/spotify-player.js"]'
-      );
-
-      if (script && document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
-      window.onSpotifyWebPlaybackSDKReady = null;
     };
   });
 

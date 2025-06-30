@@ -23,11 +23,8 @@ defmodule SongyWeb.PageController do
   def room(conn, %{"room_id" => room_id}) do
     case GameSession.get_game_session(room_id) do
       {:ok, _game} ->
-        spotify_token = get_spotify_access_token(conn)
-
         conn
         |> assign_prop(:room_id, room_id)
-        |> assign_prop(:spotify_token, spotify_token)
         |> render_inertia("Room")
 
       {:error, :not_found} ->
@@ -39,13 +36,6 @@ defmodule SongyWeb.PageController do
         conn
         |> put_flash(:error, "Failed to access game session: #{reason}")
         |> redirect(to: ~p"/")
-    end
-  end
-
-  defp get_spotify_access_token(conn) do
-    case get_session(conn, :spotify_credentials) do
-      %Spotify.Credentials{access_token: token} when not is_nil(token) -> token
-      _ -> nil
     end
   end
 end

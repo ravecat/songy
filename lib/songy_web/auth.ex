@@ -19,15 +19,27 @@ defmodule SongyWeb.Auth do
     end
   end
 
-  def put_channel_token(%{assigns: %{current_user: %{uuid: uuid}}} = conn, _) do
-    assign(conn, :channel_token, Phoenix.Token.sign(conn, "user uuid", uuid))
+  def put_channel_token(%{assigns: %{current_user: user}} = conn, _) do
+    token_data = %{
+      user_uuid: user.uuid,
+      credentials: get_spotify_credentials(conn),
+      provider: determine_provider(conn)
+    }
+
+    token = Phoenix.Token.sign(conn, "user_data", token_data)
+    assign(conn, :channel_token, token)
   end
 
   def fetch_current_media_provider(conn, _opts) do
+    provider = determine_provider(conn)
+    assign(conn, :provider, provider)
+  end
+
+  defp determine_provider(conn) do
     if authenticated_with_spotify?(conn) do
-      assign(conn, :provider, :spotify)
+      :spotify
     else
-      assign(conn, :provider, nil)
+      nil
     end
   end
 

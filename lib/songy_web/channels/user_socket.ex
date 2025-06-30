@@ -26,9 +26,15 @@ defmodule SongyWeb.UserSocket do
   # performing token verification on connect.
   @impl true
   def connect(%{"token" => token}, socket, _connect_info) do
-    case Phoenix.Token.verify(socket, "user uuid", token, max_age: 86400) do
-      {:ok, user_uuid} ->
-        {:ok, assign(socket, :current_user_uuid, user_uuid)}
+    case Phoenix.Token.verify(socket, "user_data", token, max_age: 86400) do
+      {:ok, %{user_uuid: user_uuid, credentials: credentials, provider: provider}} ->
+        socket = 
+          socket
+          |> assign(:current_user_uuid, user_uuid)
+          |> assign(:credentials, credentials)
+          |> assign(:provider, provider)
+        
+        {:ok, socket}
 
       {:error, _reason} ->
         :error

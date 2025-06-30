@@ -46,11 +46,13 @@ defmodule SongyWeb.AuthTest do
 
       assert is_binary(conn.assigns.channel_token)
 
-      # Verify token can be verified with same uuid
-      {:ok, token_uuid} =
-        Phoenix.Token.verify(SongyWeb.Endpoint, "user uuid", conn.assigns.channel_token)
+      # Verify token can be verified with new structure
+      {:ok, token_data} =
+        Phoenix.Token.verify(SongyWeb.Endpoint, "user_data", conn.assigns.channel_token)
 
-      assert token_uuid == user.uuid
+      assert token_data.user_uuid == user.uuid
+      assert Map.has_key?(token_data, :credentials)
+      assert Map.has_key?(token_data, :provider)
     end
 
     test "works with user from session", %{conn: conn} do
@@ -65,10 +67,10 @@ defmodule SongyWeb.AuthTest do
       assert is_binary(conn.assigns.channel_token)
 
       # Verify token integrity
-      {:ok, token_uuid} =
-        Phoenix.Token.verify(SongyWeb.Endpoint, "user uuid", conn.assigns.channel_token)
+      {:ok, token_data} =
+        Phoenix.Token.verify(SongyWeb.Endpoint, "user_data", conn.assigns.channel_token)
 
-      assert token_uuid == user.uuid
+      assert token_data.user_uuid == user.uuid
     end
 
     test "generates different tokens for different users", %{conn: conn} do
@@ -88,14 +90,14 @@ defmodule SongyWeb.AuthTest do
       assert conn1.assigns.channel_token != conn2.assigns.channel_token
 
       # Verify both tokens work correctly
-      {:ok, token_uuid1} =
-        Phoenix.Token.verify(SongyWeb.Endpoint, "user uuid", conn1.assigns.channel_token)
+      {:ok, token_data1} =
+        Phoenix.Token.verify(SongyWeb.Endpoint, "user_data", conn1.assigns.channel_token)
 
-      {:ok, token_uuid2} =
-        Phoenix.Token.verify(SongyWeb.Endpoint, "user uuid", conn2.assigns.channel_token)
+      {:ok, token_data2} =
+        Phoenix.Token.verify(SongyWeb.Endpoint, "user_data", conn2.assigns.channel_token)
 
-      assert token_uuid1 == user1.uuid
-      assert token_uuid2 == user2.uuid
+      assert token_data1.user_uuid == user1.uuid
+      assert token_data2.user_uuid == user2.uuid
     end
   end
 
@@ -110,10 +112,10 @@ defmodule SongyWeb.AuthTest do
       assert is_binary(conn.assigns.channel_token)
 
       # Verify token matches user
-      {:ok, token_uuid} =
-        Phoenix.Token.verify(SongyWeb.Endpoint, "user uuid", conn.assigns.channel_token)
+      {:ok, token_data} =
+        Phoenix.Token.verify(SongyWeb.Endpoint, "user_data", conn.assigns.channel_token)
 
-      assert token_uuid == conn.assigns.current_user.uuid
+      assert token_data.user_uuid == conn.assigns.current_user.uuid
     end
 
     test "preserves existing user through pipeline", %{conn: conn} do
@@ -127,10 +129,10 @@ defmodule SongyWeb.AuthTest do
 
       assert conn.assigns.current_user == original_user
 
-      {:ok, token_uuid} =
-        Phoenix.Token.verify(SongyWeb.Endpoint, "user uuid", conn.assigns.channel_token)
+      {:ok, token_data} =
+        Phoenix.Token.verify(SongyWeb.Endpoint, "user_data", conn.assigns.channel_token)
 
-      assert token_uuid == original_user.uuid
+      assert token_data.user_uuid == original_user.uuid
     end
   end
 end

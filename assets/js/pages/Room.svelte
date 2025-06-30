@@ -3,14 +3,22 @@
   import { useChannel } from "../hooks/useChannel.svelte.js";
   import { useSpotifyPlayer } from "../hooks/useSpotifyPlayer.svelte.js";
 
-  let { room_id, spotify_token = null } = $props();
+  let { room_id } = $props();
 
   let state = $state(null);
   let userCount = $derived(state?.participants?.length ?? 0);
+  let token = $state(null);
 
   const channel = useChannel({
     socket,
     topic: `room:${room_id}`,
+    join: {
+      ok: (resp) => {
+        channel.push("get_spotify_token", {}).receive("ok", (payload) => {
+          token = payload.token;
+        });
+      },
+    },
     on: {
       game_state: (gameState) => {
         state = gameState;
@@ -18,21 +26,17 @@
     },
   });
 
-  const player = useSpotifyPlayer(spotify_token);
+  $effect(() => {
+    if (token) {
+      useSpotifyPlayer(token);
+    }
+  });
 </script>
 
 <div
   class="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-purple-400 via-pink-500 to-red-500"
 >
   <div class="flex-1 flex items-center justify-center">
-    {#if player.player}
-      <div>
-        <button onclick={() => player.togglePlay()}> Toggle Play </button>
-        <button onclick={() => player.nextTrack()}> Next Track </button>
-      </div>
-    {:else}
-      <p>Loading Spotify Player...</p>
-    {/if}
     <div class="text-center text-white max-w-4xl mx-auto px-6">
       {#if state}
         <!-- Circular Player Layout -->
