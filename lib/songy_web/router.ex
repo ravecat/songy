@@ -1,6 +1,16 @@
 defmodule SongyWeb.Router do
   use SongyWeb, :router
 
+  pipeline :inertia do
+    plug :accepts, ["html"]
+    plug :fetch_session
+    plug :fetch_live_flash
+    plug :put_root_layout, html: {SongyWeb.Layouts, :inertia_root}
+    plug :protect_from_forgery
+    plug :put_secure_browser_headers
+    plug Inertia.Plug
+  end
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -18,6 +28,12 @@ defmodule SongyWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+  end
+
+  scope "/", SongyWeb do
+    pipe_through :inertia
+
+    get "/inertia", PageController, :inertia
   end
 
   # Other scopes may use custom stacks.

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content={get_csrf_token()} />
+    <.inertia_title>{assigns[:page_title] || "Songy"}</.inertia_title>
+    <.inertia_head content={assigns[:inertia_head]} />
+    <PhoenixVite.Components.assets
+      names={["js/app.js", "css/app.css"]}
+      manifest={{:songy, "priv/static/.vite/manifest.js"}}
+      dev_server={PhoenixVite.Components.has_vite_watcher?(SongyWeb.Endpoint)}
+      to_url={fn p -> static_url(@conn, p) end}
+    />
+    <script>
+      (() => {
+        const setTheme = (theme) => {
+          if (theme === "system") {
+            localStorage.removeItem("phx:theme");
+            document.documentElement.removeAttribute("data-theme");
+          } else {
+            localStorage.setItem("phx:theme", theme);
+            document.documentElement.setAttribute("data-theme", theme);
+          }
+        };
+        if (!document.documentElement.hasAttribute("data-theme")) {
+          setTheme(localStorage.getItem("phx:theme") || "system");
+        }
+        window.addEventListener("storage", (e) => e.key === "phx:theme" && setTheme(e.newValue || "system"));
+        window.addEventListener("phx:set-theme", ({ detail: { theme } }) => setTheme(theme));
+      })();
+    </script>
+  </head>
+  <body>
+    <ul class="menu menu-horizontal w-full relative z-10 flex items-center gap-4 px-4 sm:px-6 lg:px-8 justify-end">
+      <Layouts.theme_toggle />
+    </ul>
+    {@inner_content}
+  </body>
+</html>

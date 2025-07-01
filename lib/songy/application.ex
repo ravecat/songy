@@ -14,6 +14,9 @@ defmodule Songy.Application do
       {Phoenix.PubSub, name: Songy.PubSub},
       # Start a worker by calling: Songy.Worker.start_link(arg)
       # {Songy.Worker, arg},
+      # Start the SSR process pool for Inertia/Svelte
+      # You must specify a `path` option to locate `ssr.js`
+      {Inertia.SSR, path: Path.join([Application.app_dir(:songy), "priv"])},
       # Start to serve requests, typically the last entry
       SongyWeb.Endpoint
     ]
