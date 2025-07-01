@@ -7,7 +7,7 @@ export default defineConfig(({ command }) => {
     server: {
       port: 5173,
       strictPort: true,
-      cors: { origin: "http://localhost:4000" },
+      cors: { origin: "http://127.0.0.1:4000" },
     },
     resolve: {
       conditions: ["svelte", "browser", "import", "default"],
