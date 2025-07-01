@@ -7,9 +7,12 @@
     <.live_title default="Songy" suffix=" · Phoenix Framework">
       {assigns[:page_title]}
     </.live_title>
-    <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
-    <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
-    </script>
+    <PhoenixVite.Components.assets
+      names={["js/app.js", "css/app.css"]}
+      manifest={{:songy, "priv/static/.vite/manifest.js"}}
+      dev_server={PhoenixVite.Components.has_vite_watcher?(SongyWeb.Endpoint)}
+      to_url={fn p -> static_url(@conn, p) end}
+    />
     <script>
       (() => {
         const setTheme = (theme) => {
