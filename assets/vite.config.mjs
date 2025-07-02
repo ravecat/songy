@@ -31,5 +31,13 @@ export default defineConfig(({ command }) => {
         },
       }),
     ],
+    test: {
+      globals: true,
+      environment: "jsdom",
+      setupFiles: ["./tests/setup.js"],
+      include: ["tests/**/*.{test,spec}.{js,ts}"],
+      exclude: ["node_modules", "dist"],
+      passWithNoTests: true,
+    },
   };
 });

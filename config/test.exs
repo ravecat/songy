@@ -37,8 +37,9 @@ config :phoenix_live_view,
   enable_expensive_runtime_checks: true
 
 config :mix_test_watch,
-  tasks: ["test"],
+  tasks: ["assets.test", "test"],
   clear: true,
+  extra_extensions: [".svelte", ".ts", ".js"],
   exclude: [
     ~r/\.#/,
     ~r{priv/repo/migrations},
