@@ -28,7 +28,13 @@
 
   $effect(() => {
     if (token) {
-      useSpotifyPlayer(token);
+      useSpotifyPlayer(token, {
+        on: {
+          ready: ({ device_id }) => {
+            channel.push("register_device", { device_id });
+          },
+        },
+      });
     }
   });
 </script>

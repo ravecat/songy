@@ -31,13 +31,40 @@ export function useSpotifyPlayer(token, options = {}) {
 
   let player = $state(null);
 
-  
+  function initializePlayer() {
+    player = new window.Spotify.Player({
+      name: name,
+      getOAuthToken: (cb) => {
+        cb(token);
+      },
+      volume: volume,
+    });
+
+    player.addListener("ready", eventCallbacks.ready);
+    player.addListener("not_ready", eventCallbacks.not_ready);
+    player.addListener(
+      "player_state_changed",
+      eventCallbacks.player_state_changed
+    );
+    player.addListener("autoplay_failed", eventCallbacks.autoplay_failed);
+    player.addListener(
+      "initialization_error",
+      eventCallbacks.initialization_error
+    );
+    player.addListener(
+      "authentication_error",
+      eventCallbacks.authentication_error
+    );
+    player.addListener("account_error", eventCallbacks.account_error);
+    player.addListener("playback_error", eventCallbacks.playback_error);
+
+    player.connect();
+  }
+
   $effect(() => {
     if (!token) {
-      if (player) {
-        player.disconnect();
-        player = null;
-      }
+      player?.disconnect();
+
       return;
     }
 
@@ -59,41 +86,8 @@ export function useSpotifyPlayer(token, options = {}) {
       };
     }
 
-    function initializePlayer() {
-      player = new window.Spotify.Player({
-        name: name,
-        getOAuthToken: (cb) => {
-          cb(token);
-        },
-        volume: volume,
-      });
-
-      player.addListener("ready", eventCallbacks.ready);
-      player.addListener("not_ready", eventCallbacks.not_ready);
-      player.addListener(
-        "player_state_changed",
-        eventCallbacks.player_state_changed
-      );
-      player.addListener("autoplay_failed", eventCallbacks.autoplay_failed);
-      player.addListener(
-        "initialization_error",
-        eventCallbacks.initialization_error
-      );
-      player.addListener(
-        "authentication_error",
-        eventCallbacks.authentication_error
-      );
-      player.addListener("account_error", eventCallbacks.account_error);
-      player.addListener("playback_error", eventCallbacks.playback_error);
-
-      player.connect();
-    }
-
     return () => {
-      if (player) {
-        player.disconnect();
-        player = null;
-      }
+      player?.disconnect();
     };
   });
 

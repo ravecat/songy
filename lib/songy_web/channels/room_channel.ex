@@ -4,6 +4,8 @@ defmodule SongyWeb.RoomChannel do
   alias SongyWeb.Presence
   alias Songy.Boundary.GameSession
 
+  require Logger
+
   @impl true
   def join("room:" <> _room_id, _payload, socket) do
     send(self(), :after_join)
@@ -42,6 +44,14 @@ defmodule SongyWeb.RoomChannel do
     end
   end
 
+  @impl true
+  def handle_in("register_device", payload, socket) do
+    Logger.info("Registering device: #{inspect(payload)}")
+
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_in("get_spotify_token", _payload, socket) do
     case socket.assigns[:credentials] do
       %{access_token: token} when not is_nil(token) ->
