@@ -33,7 +33,9 @@ defmodule Songy.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:phoenix_vite, "~> 0.2"},
+      {:bcrypt_elixir, "~> 3.0"},
+      {:dotenvy, "~> 1.0.0"},
+      {:phoenix_vite, git: "https://github.com/ravecat/phoenix_vite.git"},
       {:igniter, "~> 0.6", only: [:dev, :test]},
       {:phoenix, "~> 1.8.0-rc.3", override: true},
       {:phoenix_ecto, "~> 4.5"},

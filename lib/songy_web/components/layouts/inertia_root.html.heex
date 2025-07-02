@@ -8,7 +8,7 @@
     <.inertia_head content={assigns[:inertia_head]} />
     <PhoenixVite.Components.assets
       names={["js/app.js", "css/app.css"]}
-      manifest={{:songy, "priv/static/.vite/manifest.js"}}
+      manifest={{:songy, "priv/static/.vite/manifest.json"}}
       dev_server={PhoenixVite.Components.has_vite_watcher?(SongyWeb.Endpoint)}
       to_url={fn p -> static_url(@conn, p) end}
     />
