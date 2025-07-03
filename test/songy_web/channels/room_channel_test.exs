@@ -50,4 +50,92 @@ defmodule SongyWeb.RoomChannelTest do
       refute_broadcast "game_state", _
     end
   end
+
+  describe "get_spotify_token event" do
+    test "returns spotify access token when provider is available", %{current_user: current_user} do
+      provider = %Songy.Core.Provider{
+        id: :spotify,
+        meta: %{access_token: "spotify_access_token_123"}
+      }
+
+      {:ok, _, socket} =
+        SongyWeb.UserSocket
+        |> socket("user_id", %{current_user_uuid: current_user.uuid, provider: provider})
+        |> subscribe_and_join(SongyWeb.RoomChannel, "room:lobby")
+
+      ref = push(socket, "get_spotify_token", %{})
+
+      assert_reply ref, :ok, %{token: "spotify_access_token_123"}
+    end
+
+    test "returns error when provider is nil", %{current_user: current_user} do
+      {:ok, _, socket} =
+        SongyWeb.UserSocket
+        |> socket("user_id", %{current_user_uuid: current_user.uuid, provider: nil})
+        |> subscribe_and_join(SongyWeb.RoomChannel, "room:lobby")
+
+      ref = push(socket, "get_spotify_token", %{})
+
+      assert_reply ref, :error, %{reason: "invalid_credentials"}
+    end
+
+    test "returns error when provider is not spotify", %{current_user: current_user} do
+      provider = %Songy.Core.Provider{
+        id: :youtube,
+        meta: %{access_token: "youtube_token_123"}
+      }
+
+      {:ok, _, socket} =
+        SongyWeb.UserSocket
+        |> socket("user_id", %{current_user_uuid: current_user.uuid, provider: provider})
+        |> subscribe_and_join(SongyWeb.RoomChannel, "room:lobby")
+
+      ref = push(socket, "get_spotify_token", %{})
+
+      assert_reply ref, :error, %{reason: "invalid_credentials"}
+    end
+
+    test "returns error when spotify provider has no access_token", %{current_user: current_user} do
+      provider = %Songy.Core.Provider{
+        id: :spotify,
+        meta: %{refresh_token: "refresh_token_123"}
+      }
+
+      {:ok, _, socket} =
+        SongyWeb.UserSocket
+        |> socket("user_id", %{current_user_uuid: current_user.uuid, provider: provider})
+        |> subscribe_and_join(SongyWeb.RoomChannel, "room:lobby")
+
+      ref = push(socket, "get_spotify_token", %{})
+
+      assert_reply ref, :error, %{reason: "invalid_credentials"}
+    end
+
+    test "returns error when spotify provider has nil access_token", %{current_user: current_user} do
+      provider = %Songy.Core.Provider{
+        id: :spotify,
+        meta: %{access_token: nil}
+      }
+
+      {:ok, _, socket} =
+        SongyWeb.UserSocket
+        |> socket("user_id", %{current_user_uuid: current_user.uuid, provider: provider})
+        |> subscribe_and_join(SongyWeb.RoomChannel, "room:lobby")
+
+      ref = push(socket, "get_spotify_token", %{})
+
+      assert_reply ref, :error, %{reason: "invalid_credentials"}
+    end
+
+    test "returns error when no provider is assigned", %{current_user: current_user} do
+      {:ok, _, socket} =
+        SongyWeb.UserSocket
+        |> socket("user_id", %{current_user_uuid: current_user.uuid})
+        |> subscribe_and_join(SongyWeb.RoomChannel, "room:lobby")
+
+      ref = push(socket, "get_spotify_token", %{})
+
+      assert_reply ref, :error, %{reason: "invalid_credentials"}
+    end
+  end
 end

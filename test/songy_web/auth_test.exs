@@ -35,24 +35,22 @@ defmodule SongyWeb.AuthTest do
     end
   end
 
-  describe "put_channel_token/2" do
-    test "creates channel token from user uuid", %{conn: conn} do
+  describe "put_user_token/2" do
+    test "creates user token from user uuid", %{conn: conn} do
       user = User.new()
 
       conn =
         conn
         |> assign(:current_user, user)
-        |> Auth.put_channel_token([])
+        |> Auth.put_user_token([])
 
-      assert is_binary(conn.assigns.channel_token)
+      assert is_binary(conn.assigns.user_token)
 
       # Verify token can be verified with new structure
-      {:ok, token_data} =
-        Phoenix.Token.verify(SongyWeb.Endpoint, "user_data", conn.assigns.channel_token)
+      {:ok, user_uuid} =
+        Phoenix.Token.verify(SongyWeb.Endpoint, "current_user", conn.assigns.user_token)
 
-      assert token_data.user_uuid == user.uuid
-      assert Map.has_key?(token_data, :credentials)
-      assert Map.has_key?(token_data, :provider)
+      assert user_uuid == user.uuid
     end
 
     test "works with user from session", %{conn: conn} do
@@ -62,15 +60,15 @@ defmodule SongyWeb.AuthTest do
         conn
         |> put_session(:current_user, user)
         |> Auth.fetch_current_user([])
-        |> Auth.put_channel_token([])
+        |> Auth.put_user_token([])
 
-      assert is_binary(conn.assigns.channel_token)
+      assert is_binary(conn.assigns.user_token)
 
       # Verify token integrity
-      {:ok, token_data} =
-        Phoenix.Token.verify(SongyWeb.Endpoint, "user_data", conn.assigns.channel_token)
+      {:ok, user_uuid} =
+        Phoenix.Token.verify(SongyWeb.Endpoint, "current_user", conn.assigns.user_token)
 
-      assert token_data.user_uuid == user.uuid
+      assert user_uuid == user.uuid
     end
 
     test "generates different tokens for different users", %{conn: conn} do
@@ -80,42 +78,83 @@ defmodule SongyWeb.AuthTest do
       conn1 =
         conn
         |> assign(:current_user, user1)
-        |> Auth.put_channel_token([])
+        |> Auth.put_user_token([])
 
       conn2 =
         conn
         |> assign(:current_user, user2)
-        |> Auth.put_channel_token([])
+        |> Auth.put_user_token([])
 
-      assert conn1.assigns.channel_token != conn2.assigns.channel_token
+      assert conn1.assigns.user_token != conn2.assigns.user_token
 
       # Verify both tokens work correctly
-      {:ok, token_data1} =
-        Phoenix.Token.verify(SongyWeb.Endpoint, "user_data", conn1.assigns.channel_token)
+      {:ok, user_uuid1} =
+        Phoenix.Token.verify(SongyWeb.Endpoint, "current_user", conn1.assigns.user_token)
 
-      {:ok, token_data2} =
-        Phoenix.Token.verify(SongyWeb.Endpoint, "user_data", conn2.assigns.channel_token)
+      {:ok, user_uuid2} =
+        Phoenix.Token.verify(SongyWeb.Endpoint, "current_user", conn2.assigns.user_token)
 
-      assert token_data1.user_uuid == user1.uuid
-      assert token_data2.user_uuid == user2.uuid
+      assert user_uuid1 == user1.uuid
+      assert user_uuid2 == user2.uuid
+    end
+
+    test "returns conn unchanged when no current_user", %{conn: conn} do
+      conn_result = Auth.put_user_token(conn, [])
+      assert conn_result == conn
+      refute Map.has_key?(conn_result.assigns, :user_token)
+    end
+  end
+
+  describe "put_provider_token/2" do
+    test "creates provider token when provider exists", %{conn: conn} do
+      provider = %{type: :spotify, data: %{token: "abc123"}}
+
+      conn =
+        conn
+        |> assign(:provider, provider)
+        |> Auth.put_provider_token([])
+
+      assert is_binary(conn.assigns.provider_token)
+
+      # Verify token can be verified
+      {:ok, verified_provider} =
+        Phoenix.Token.verify(SongyWeb.Endpoint, "current_provider", conn.assigns.provider_token)
+
+      assert verified_provider == provider
+    end
+
+    test "returns conn unchanged when no provider", %{conn: conn} do
+      conn_result = Auth.put_provider_token(conn, [])
+      assert conn_result == conn
+      refute Map.has_key?(conn_result.assigns, :provider_token)
+    end
+
+    test "returns conn unchanged when provider is nil", %{conn: conn} do
+      conn_result =
+        conn
+        |> assign(:provider, nil)
+        |> Auth.put_provider_token([])
+
+      assert conn_result.assigns.provider == nil
+      refute Map.has_key?(conn_result.assigns, :provider_token)
     end
   end
 
   describe "plug pipeline integration" do
-    test "fetch_current_user and put_channel_token work together", %{conn: conn} do
+    test "fetch_current_user and put_user_token work together", %{conn: conn} do
       conn =
         conn
         |> Auth.fetch_current_user([])
-        |> Auth.put_channel_token([])
+        |> Auth.put_user_token([])
 
       assert %User{} = conn.assigns.current_user
-      assert is_binary(conn.assigns.channel_token)
+      assert is_binary(conn.assigns.user_token)
 
       # Verify token matches user
-      {:ok, token_data} =
-        Phoenix.Token.verify(SongyWeb.Endpoint, "user_data", conn.assigns.channel_token)
+      {:ok, user_uuid} =
+        Phoenix.Token.verify(SongyWeb.Endpoint, "current_user", conn.assigns.user_token)
 
-      assert token_data.user_uuid == conn.assigns.current_user.uuid
+      assert user_uuid == conn.assigns.current_user.uuid
     end
 
     test "preserves existing user through pipeline", %{conn: conn} do
@@ -125,14 +164,39 @@ defmodule SongyWeb.AuthTest do
         conn
         |> put_session(:current_user, original_user)
         |> Auth.fetch_current_user([])
-        |> Auth.put_channel_token([])
+        |> Auth.put_user_token([])
 
       assert conn.assigns.current_user == original_user
 
-      {:ok, token_data} =
-        Phoenix.Token.verify(SongyWeb.Endpoint, "user_data", conn.assigns.channel_token)
+      {:ok, user_uuid} =
+        Phoenix.Token.verify(SongyWeb.Endpoint, "current_user", conn.assigns.user_token)
 
-      assert token_data.user_uuid == original_user.uuid
+      assert user_uuid == original_user.uuid
+    end
+
+    test "both tokens work together in pipeline", %{conn: conn} do
+      user = User.new()
+      provider = %{type: :spotify, data: %{token: "abc123"}}
+
+      conn =
+        conn
+        |> assign(:current_user, user)
+        |> assign(:provider, provider)
+        |> Auth.put_user_token([])
+        |> Auth.put_provider_token([])
+
+      assert is_binary(conn.assigns.user_token)
+      assert is_binary(conn.assigns.provider_token)
+
+      # Verify both tokens work correctly
+      {:ok, user_uuid} =
+        Phoenix.Token.verify(SongyWeb.Endpoint, "current_user", conn.assigns.user_token)
+
+      {:ok, verified_provider} =
+        Phoenix.Token.verify(SongyWeb.Endpoint, "current_provider", conn.assigns.provider_token)
+
+      assert user_uuid == user.uuid
+      assert verified_provider == provider
     end
   end
 end

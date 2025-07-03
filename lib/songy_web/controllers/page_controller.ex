@@ -20,7 +20,7 @@ defmodule SongyWeb.PageController do
     end
   end
 
-  def room(conn, %{"room_id" => room_id}) do
+  def join(conn, %{"room_id" => room_id}) do
     case GameSession.get_game_session(room_id) do
       {:ok, _game} ->
         conn

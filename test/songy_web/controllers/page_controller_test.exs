@@ -23,7 +23,7 @@ defmodule SongyWeb.PageControllerTest do
     end
   end
 
-  describe "room/2" do
+  describe "join/2" do
     test "returns error when accessing non-existent room", %{conn: conn} do
       room_id = "nonexistent_room"
 

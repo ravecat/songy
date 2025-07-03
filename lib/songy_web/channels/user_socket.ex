@@ -1,6 +1,8 @@
 defmodule SongyWeb.UserSocket do
   use Phoenix.Socket
 
+  require Logger
+
   # A Socket handler
   #
   # It's possible to control the websocket connection and
@@ -25,18 +27,19 @@ defmodule SongyWeb.UserSocket do
   # See `Phoenix.Token` documentation for examples in
   # performing token verification on connect.
   @impl true
-  def connect(%{"token" => token}, socket, _connect_info) do
-    case Phoenix.Token.verify(socket, "user_data", token, max_age: 86400) do
-      {:ok, %{user_uuid: user_uuid, credentials: credentials, provider: provider}} ->
-        socket = 
-          socket
-          |> assign(:current_user_uuid, user_uuid)
-          |> assign(:credentials, credentials)
-          |> assign(:provider, provider)
-        
-        {:ok, socket}
+  def connect(%{"user_token" => user_token} = params, socket, _connect_info) do
+    with {:ok, user_uuid} <- verify_user_token(socket, user_token),
+         provider <- verify_provider_token(socket, params) do
+      socket =
+        socket
+        |> assign(:current_user_uuid, user_uuid)
+        |> assign(:provider, provider)
 
-      {:error, _reason} ->
+      {:ok, socket}
+    else
+      {:error, reason} ->
+        Logger.error("Failed to connect user socket: #{inspect(reason)}")
+
         :error
     end
   end
@@ -57,4 +60,30 @@ defmodule SongyWeb.UserSocket do
   # Returning `nil` makes this socket anonymous.
   @impl true
   def id(socket), do: "user_socket:#{socket.assigns.current_user_uuid}"
+
+  defp verify_user_token(socket, user_token) do
+    case Phoenix.Token.verify(socket, "current_user", user_token, max_age: 86400) do
+      {:ok, user_uuid} ->
+        Logger.info("User socket connected for user ID: #{user_uuid}")
+
+        {:ok, user_uuid}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp verify_provider_token(socket, %{"provider_token" => provider_token}) do
+    case Phoenix.Token.verify(socket, "current_provider", provider_token, max_age: 86400) do
+      {:ok, provider} ->
+        Logger.info("User socket connected with provider: #{inspect(provider)}")
+
+        provider
+
+      _ ->
+        nil
+    end
+  end
+
+  defp verify_provider_token(_socket, _params), do: nil
 end

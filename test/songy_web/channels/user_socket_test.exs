@@ -1,0 +1,115 @@
+defmodule SongyWeb.UserSocketTest do
+  use SongyWeb.ChannelCase
+
+  alias SongyWeb.UserSocket
+  alias Songy.Core.{User, Provider}
+
+  describe "connect/3 with user_token" do
+    test "connects successfully with valid user token" do
+      user = User.new()
+      user_token = Phoenix.Token.sign(SongyWeb.Endpoint, "current_user", user.uuid)
+
+      assert {:ok, socket} = connect(UserSocket, %{"user_token" => user_token})
+      assert socket.assigns.current_user_uuid == user.uuid
+      assert socket.assigns.provider == nil
+    end
+
+    test "connects with valid user token and provider token" do
+      user = User.new()
+      provider = Provider.new(:spotify, %{access_token: "spotify_token_123"})
+
+      user_token = Phoenix.Token.sign(SongyWeb.Endpoint, "current_user", user.uuid)
+      provider_token = Phoenix.Token.sign(SongyWeb.Endpoint, "current_provider", provider)
+
+      params = %{
+        "user_token" => user_token,
+        "provider_token" => provider_token
+      }
+
+      assert {:ok, socket} = connect(UserSocket, params)
+      assert socket.assigns.current_user_uuid == user.uuid
+      assert socket.assigns.provider == provider
+    end
+
+    test "rejects connection with invalid user token" do
+      invalid_token = "invalid_token_123"
+
+      assert :error = connect(UserSocket, %{"user_token" => invalid_token})
+    end
+
+    test "rejects connection with expired user token" do
+      user = User.new()
+
+      expired_token =
+        Phoenix.Token.sign(SongyWeb.Endpoint, "current_user", user.uuid,
+          signed_at: System.system_time(:second) - 90000
+        )
+
+      assert :error = connect(UserSocket, %{"user_token" => expired_token})
+    end
+
+    test "connects with user token but ignores invalid provider token" do
+      user = User.new()
+      user_token = Phoenix.Token.sign(SongyWeb.Endpoint, "current_user", user.uuid)
+      invalid_provider_token = "invalid_provider_token"
+
+      params = %{
+        "user_token" => user_token,
+        "provider_token" => invalid_provider_token
+      }
+
+      assert {:ok, socket} = connect(UserSocket, params)
+      assert socket.assigns.current_user_uuid == user.uuid
+      assert socket.assigns.provider == nil
+    end
+
+    test "connects with user token but ignores expired provider token" do
+      user = User.new()
+      provider = Provider.new(:spotify, %{access_token: "spotify_token_123"})
+
+      user_token = Phoenix.Token.sign(SongyWeb.Endpoint, "current_user", user.uuid)
+
+      expired_provider_token =
+        Phoenix.Token.sign(SongyWeb.Endpoint, "current_provider", provider,
+          signed_at: System.system_time(:second) - 90000
+        )
+
+      params = %{
+        "user_token" => user_token,
+        "provider_token" => expired_provider_token
+      }
+
+      assert {:ok, socket} = connect(UserSocket, params)
+      assert socket.assigns.current_user_uuid == user.uuid
+      assert socket.assigns.provider == nil
+    end
+  end
+
+  describe "connect/3 without user_token" do
+    test "rejects connection when user_token is missing" do
+      assert :error = connect(UserSocket, %{})
+    end
+
+    test "rejects connection when user_token is nil" do
+      assert :error = connect(UserSocket, %{"user_token" => nil})
+    end
+
+    test "rejects connection with only provider token" do
+      provider = Provider.new(:spotify, %{access_token: "spotify_token_123"})
+      provider_token = Phoenix.Token.sign(SongyWeb.Endpoint, "current_provider", provider)
+
+      assert :error = connect(UserSocket, %{"provider_token" => provider_token})
+    end
+  end
+
+  describe "id/1" do
+    test "returns user socket id based on current_user_uuid" do
+      user = User.new()
+      user_token = Phoenix.Token.sign(SongyWeb.Endpoint, "current_user", user.uuid)
+
+      {:ok, socket} = connect(UserSocket, %{"user_token" => user_token})
+
+      assert UserSocket.id(socket) == "user_socket:#{user.uuid}"
+    end
+  end
+end

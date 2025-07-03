@@ -12,8 +12,9 @@ defmodule SongyWeb.Router do
     plug :put_secure_browser_headers
     plug Inertia.Plug
     plug :fetch_current_user
-    plug :put_channel_token
-    plug :fetch_current_media_provider
+    plug :fetch_current_provider
+    plug :put_user_token
+    plug :put_provider_token
   end
 
   pipeline :browser do
@@ -24,8 +25,9 @@ defmodule SongyWeb.Router do
     plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug :fetch_current_user
-    plug :put_channel_token
-    plug :fetch_current_media_provider
+    plug :fetch_current_provider
+    plug :put_user_token
+    plug :put_provider_token
   end
 
   pipeline :api do
@@ -42,7 +44,7 @@ defmodule SongyWeb.Router do
   scope "/", SongyWeb do
     pipe_through [:inertia]
 
-    get "/:room_id", PageController, :room
+    get "/:room_id", PageController, :join
   end
 
   # Other scopes may use custom stacks.

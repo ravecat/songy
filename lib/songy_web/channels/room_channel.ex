@@ -53,8 +53,8 @@ defmodule SongyWeb.RoomChannel do
 
   @impl true
   def handle_in("get_spotify_token", _payload, socket) do
-    case socket.assigns[:credentials] do
-      %{access_token: token} when not is_nil(token) ->
+    case socket.assigns[:provider] do
+      %{id: :spotify, meta: %{access_token: token}} when not is_nil(token) ->
         {:reply, {:ok, %{token: token}}, socket}
 
       _ ->

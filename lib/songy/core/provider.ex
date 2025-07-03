@@ -6,8 +6,8 @@ defmodule Songy.Core.Provider do
   use TypedStruct
 
   typedstruct do
-    field :id, atom(), enforce: true
-    field :meta, map(), default: %{}
+    field :id, atom()
+    field :meta, map()
   end
 
   def new(id, meta \\ %{}) do
