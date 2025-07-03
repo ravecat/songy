@@ -1,6 +1,9 @@
 defmodule SongyWeb.SpotifyController do
   use SongyWeb, :controller
+
   require Logger
+
+  import SongyWeb.Auth
 
   def authorize(conn, _params) do
     case Spotify.Authorization.url() do
@@ -17,23 +20,7 @@ defmodule SongyWeb.SpotifyController do
   end
 
   def callback(conn, %{"code" => code}) do
-    conn
-    |> Spotify.Credentials.new()
-    |> Spotify.Authentication.authenticate(%{"code" => code})
-    |> case do
-      {:ok, credentials} ->
-        conn
-        |> set_spotify_credentials(credentials)
-        |> put_flash(:info, "Successfully connected to Spotify!")
-        |> redirect(to: ~p"/")
-
-      {:error, reason} ->
-        Logger.error("Spotify authentication failed: #{inspect(reason)}")
-
-        conn
-        |> put_flash(:error, "Failed to authenticate with Spotify. Please try again.")
-        |> redirect(to: ~p"/")
-    end
+    authenticate_with_spotify(conn, %{"code" => code})
   end
 
   def callback(conn, %{"error" => error}) do
@@ -49,13 +36,5 @@ defmodule SongyWeb.SpotifyController do
     |> delete_spotify_credentials()
     |> put_flash(:info, "Disconnected from Spotify.")
     |> redirect(to: ~p"/")
-  end
-
-  defp set_spotify_credentials(conn, credentials) do
-    put_session(conn, :spotify_credentials, credentials)
-  end
-
-  defp delete_spotify_credentials(conn) do
-    delete_session(conn, :spotify_credentials)
   end
 end

@@ -15,6 +15,7 @@
     join: {
       ok: (resp) => {
         channel.push("get_spotify_token", {}).receive("ok", (payload) => {
+          console.log("Received Spotify token:", payload);
           token = payload.token;
         });
       },
@@ -28,6 +29,7 @@
 
   $effect(() => {
     if (token) {
+      console.log("Initializing Spotify player with token:", token);
       useSpotifyPlayer(token, {
         on: {
           ready: ({ device_id }) => {
