@@ -52,13 +52,6 @@ defmodule SongyWeb.RoomChannel do
   end
 
   @impl true
-  def handle_info({:game_state, game}, socket) do
-    broadcast(socket, "game_state", game)
-
-    {:noreply, socket}
-  end
-
-  @impl true
   def handle_in("start_game", _payload, socket) do
     "room:" <> room_id = socket.topic
 
