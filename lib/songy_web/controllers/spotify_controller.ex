@@ -33,7 +33,7 @@ defmodule SongyWeb.SpotifyController do
 
   def disconnect(conn, _params) do
     conn
-    |> delete_spotify_credentials()
+    |> delete()
     |> put_flash(:info, "Disconnected from Spotify.")
     |> redirect(to: ~p"/")
   end

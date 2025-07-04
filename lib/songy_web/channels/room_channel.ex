@@ -45,9 +45,7 @@ defmodule SongyWeb.RoomChannel do
   end
 
   @impl true
-  def handle_in("register_device", payload, socket) do
-    Logger.info("Registering device: #{inspect(payload)}")
-
+  def handle_in("register_device", _payload, socket) do
     {:noreply, socket}
   end
 

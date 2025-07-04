@@ -3,12 +3,11 @@ defmodule SongyWeb.Auth do
   require Logger
 
   import Plug.Conn
-  import Phoenix.Controller, only: [put_flash: 3, redirect: 2]
+  import Phoenix.Controller
 
   alias Songy.Core.User
   alias Songy.Core.Provider
 
-  @spotify_token_expires_in 3600
   @token_refresh_threshold 300
 
   def fetch_current_user(conn, _opts) do
@@ -26,7 +25,15 @@ defmodule SongyWeb.Auth do
   end
 
   def fetch_current_provider(conn, _opts) do
-    assign(conn, :provider, get_session(conn, :provider))
+    case get_session(conn, :provider) do
+      nil ->
+        assign(conn, :provider, nil)
+
+      provider ->
+        {conn, provider} = ensure_provider(conn, provider)
+
+        assign(conn, :provider, provider)
+    end
   end
 
   def put_user_token(%{assigns: %{current_user: user}} = conn, _) do
@@ -49,11 +56,8 @@ defmodule SongyWeb.Auth do
     |> Spotify.Authentication.authenticate(%{"code" => code})
     |> case do
       {:ok, credentials} ->
-        credentials_with_expiry = set_expires_at(credentials)
-        provider = Provider.new(:spotify, credentials_with_expiry)
-
         conn
-        |> put_session(:provider, provider)
+        |> put_session(:provider, Provider.new(:spotify, credentials))
         |> put_flash(:info, "Successfully connected to Spotify!")
         |> redirect(to: ~p"/")
 
@@ -66,52 +70,45 @@ defmodule SongyWeb.Auth do
     end
   end
 
-  def ensure_credentials(conn) do
-    case get_session(conn, :credentials) do
+  def delete(conn) do
+    delete_csrf_token()
+
+    conn
+    |> configure_session(renew: true)
+    |> clear_session()
+  end
+
+  defp ensure_provider(conn, %{id: :spotify, meta: meta} = provider) do
+    case Map.get(meta, :expires_at) do
       nil ->
-        {:error, :unauthorized}
+        {delete_session(conn, :provider), nil}
 
-      %{expires_at: nil} ->
-        delete_session(conn, :credentials)
-        {:error, :invalid_credentials}
+      expires_at ->
+        time_until_expiry = DateTime.diff(expires_at, DateTime.utc_now(), :second)
 
-      credentials ->
-        validate_and_refresh_credentials(conn, credentials)
+        if time_until_expiry <= @token_refresh_threshold do
+          refresh_spotify_credentials(conn, meta)
+        else
+          {conn, provider}
+        end
     end
   end
 
-  defp validate_and_refresh_credentials(conn, credentials) do
-    time_until_expiry =
-      DateTime.diff(Map.get(credentials, :expires_at), DateTime.utc_now(), :second)
-
-    if time_until_expiry <= @token_refresh_threshold do
-      refresh_credentials(conn, credentials)
-    else
-      {:ok, credentials}
-    end
+  defp ensure_provider(conn, _unsupported_provider) do
+    {delete_session(conn, :provider), nil}
   end
 
-  defp refresh_credentials(conn, credentials) do
+  defp refresh_spotify_credentials(conn, meta) do
+    credentials = struct(Spotify.Credentials, meta)
+
     case Spotify.Authentication.refresh(credentials) do
-      {:ok, refreshed_credentials} ->
-        updated_credentials = set_expires_at(refreshed_credentials)
-        put_session(conn, :credentials, updated_credentials)
-        {:ok, updated_credentials}
+      {:ok, credentials} ->
+        provider = Provider.new(:spotify, credentials)
 
-      {:error, reason} ->
-        Logger.warning("Failed to refresh Spotify token: #{inspect(reason)}")
-        delete_session(conn, :credentials)
-        {:error, reason}
+        {put_session(conn, :provider, provider), provider}
+
+      _error ->
+        {delete_session(conn, :provider), nil}
     end
-  end
-
-  defp set_expires_at(credentials) do
-    expires_at = DateTime.utc_now() |> DateTime.add(@spotify_token_expires_in, :second)
-
-    Map.put(credentials, :expires_at, expires_at)
-  end
-
-  def delete_spotify_credentials(conn) do
-    delete_session(conn, :credentials)
   end
 end
