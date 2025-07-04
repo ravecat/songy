@@ -8,13 +8,13 @@ defmodule SongyWeb.RoomChannel do
 
   @impl true
   def join("room:" <> _room_id, _payload, socket) do
-    send(self(), :after_join)
+    send(self(), :participant_joined)
 
     {:ok, socket}
   end
 
   @impl true
-  def handle_info(:after_join, socket) do
+  def handle_info(:participant_joined, socket) do
     {:ok, _} =
       Presence.track(socket, socket.assigns.current_user_uuid, %{
         online_at: inspect(System.system_time(:second))
