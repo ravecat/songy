@@ -30,7 +30,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       push(socket, "start_game", %{})
 
-      assert_broadcast "game_state", %{status: :in_progress}
+      assert_broadcast "update_state", %{status: :in_progress}
 
       {:ok, updated_game} = GameSession.get_game_session(game.uuid)
       assert updated_game.status == :in_progress
@@ -47,7 +47,7 @@ defmodule SongyWeb.RoomChannelTest do
       push(socket, "start_game", %{})
 
       refute_push "start_game", _
-      refute_broadcast "game_state", _
+      refute_broadcast "update_state", _
     end
   end
 
@@ -136,6 +136,77 @@ defmodule SongyWeb.RoomChannelTest do
       ref = push(socket, "get_spotify_token", %{})
 
       assert_reply ref, :error, %{reason: "invalid_credentials"}
+    end
+  end
+
+  describe "participant events" do
+    test "handles participant_joined event", %{current_user: current_user} do
+      {:ok, game} = GameSession.create_game_session("owner123")
+
+      {:ok, _, socket} =
+        SongyWeb.UserSocket
+        |> socket("user_id", %{current_user_uuid: current_user.uuid})
+        |> subscribe_and_join(SongyWeb.RoomChannel, "room:#{game.uuid}")
+
+      # Simulate a participant_joined event
+      send(socket.channel_pid, {:participant_joined, current_user.uuid})
+
+      user_uuid = current_user.uuid
+      assert_broadcast "update_state", %{participants: [%{uuid: ^user_uuid}]}
+
+      {:ok, updated_game} = GameSession.get_game_session(game.uuid)
+      assert length(updated_game.participants) == 1
+      assert Enum.any?(updated_game.participants, &(&1.uuid == current_user.uuid))
+
+      GameSession.end_game_session(game.uuid)
+    end
+
+    test "handles participant_left event", %{current_user: current_user} do
+      {:ok, game} = GameSession.create_game_session("owner123")
+      {:ok, _updated_game} = GameSession.add_participant(game.uuid, current_user.uuid)
+
+      # Verify participant was added
+      {:ok, game_before_leave} = GameSession.get_game_session(game.uuid)
+      assert length(game_before_leave.participants) == 1
+
+      {:ok, _, socket} =
+        SongyWeb.UserSocket
+        |> socket("user_id", %{current_user_uuid: current_user.uuid})
+        |> subscribe_and_join(SongyWeb.RoomChannel, "room:#{game.uuid}")
+
+      # Simulate a participant_left event
+      send(socket.channel_pid, {:participant_left, current_user.uuid})
+
+      assert_broadcast "update_state", game_state
+
+      # Verify broadcast contains expected state
+      assert length(game_state.participants) == 0
+
+      GameSession.end_game_session(game.uuid)
+    end
+
+    test "handles participant_joined event with nonexistent game", %{current_user: current_user} do
+      {:ok, _, socket} =
+        SongyWeb.UserSocket
+        |> socket("user_id", %{current_user_uuid: current_user.uuid})
+        |> subscribe_and_join(SongyWeb.RoomChannel, "room:nonexistent")
+
+      # Simulate a participant_joined event
+      send(socket.channel_pid, {:participant_joined, current_user.uuid})
+
+      refute_broadcast "update_state", _
+    end
+
+    test "handles participant_left event with nonexistent game", %{current_user: current_user} do
+      {:ok, _, socket} =
+        SongyWeb.UserSocket
+        |> socket("user_id", %{current_user_uuid: current_user.uuid})
+        |> subscribe_and_join(SongyWeb.RoomChannel, "room:nonexistent")
+
+      # Simulate a participant_left event
+      send(socket.channel_pid, {:participant_left, current_user.uuid})
+
+      refute_broadcast "update_state", _
     end
   end
 end

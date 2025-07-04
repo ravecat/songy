@@ -24,6 +24,34 @@ defmodule SongyWeb.RoomChannel do
   end
 
   @impl true
+  def handle_info({:participant_joined, user_uuid}, socket) do
+    "room:" <> room_id = socket.topic
+
+    case GameSession.add_participant(room_id, user_uuid) do
+      {:ok, game} ->
+        broadcast(socket, "update_state", game)
+        {:noreply, socket}
+
+      {:error, _reason} ->
+        {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_info({:participant_left, user_uuid}, socket) do
+    "room:" <> room_id = socket.topic
+
+    case GameSession.remove_participant(room_id, user_uuid) do
+      {:ok, game} ->
+        broadcast(socket, "update_state", game)
+        {:noreply, socket}
+
+      {:error, _reason} ->
+        {:noreply, socket}
+    end
+  end
+
+  @impl true
   def handle_info({:game_state, game}, socket) do
     broadcast(socket, "game_state", game)
 
@@ -36,7 +64,7 @@ defmodule SongyWeb.RoomChannel do
 
     case GameSession.start_game_session(room_id) do
       {:ok, game} ->
-        broadcast(socket, "game_state", game)
+        broadcast(socket, "update_state", game)
         {:noreply, socket}
 
       {:error, _} ->
