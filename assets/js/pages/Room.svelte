@@ -20,8 +20,8 @@
       },
     },
     on: {
-      update_state: (gameState) => {
-        state = gameState;
+      state_updated: (newState) => {
+        state = newState;
       },
     },
   });

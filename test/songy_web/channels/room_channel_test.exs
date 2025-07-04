@@ -30,7 +30,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       push(socket, "start_game", %{})
 
-      assert_broadcast "update_state", %{status: :in_progress}
+      assert_broadcast "state_updated", %{status: :in_progress}
 
       {:ok, updated_game} = GameSession.get_game_session(game.uuid)
       assert updated_game.status == :in_progress
@@ -47,7 +47,7 @@ defmodule SongyWeb.RoomChannelTest do
       push(socket, "start_game", %{})
 
       refute_push "start_game", _
-      refute_broadcast "update_state", _
+      refute_broadcast "state_updated", _
     end
   end
 
@@ -152,7 +152,7 @@ defmodule SongyWeb.RoomChannelTest do
       send(socket.channel_pid, {:participant_joined, current_user.uuid})
 
       user_uuid = current_user.uuid
-      assert_broadcast "update_state", %{participants: [%{uuid: ^user_uuid}]}
+      assert_broadcast "state_updated", %{participants: [%{uuid: ^user_uuid}]}
 
       {:ok, updated_game} = GameSession.get_game_session(game.uuid)
       assert length(updated_game.participants) == 1
@@ -177,7 +177,7 @@ defmodule SongyWeb.RoomChannelTest do
       # Simulate a participant_left event
       send(socket.channel_pid, {:participant_left, current_user.uuid})
 
-      assert_broadcast "update_state", game_state
+      assert_broadcast "state_updated", game_state
 
       # Verify broadcast contains expected state
       assert length(game_state.participants) == 0
@@ -194,7 +194,7 @@ defmodule SongyWeb.RoomChannelTest do
       # Simulate a participant_joined event
       send(socket.channel_pid, {:participant_joined, current_user.uuid})
 
-      refute_broadcast "update_state", _
+      refute_broadcast "state_updated", _
     end
 
     test "handles participant_left event with nonexistent game", %{current_user: current_user} do
@@ -206,7 +206,7 @@ defmodule SongyWeb.RoomChannelTest do
       # Simulate a participant_left event
       send(socket.channel_pid, {:participant_left, current_user.uuid})
 
-      refute_broadcast "update_state", _
+      refute_broadcast "state_updated", _
     end
   end
 end

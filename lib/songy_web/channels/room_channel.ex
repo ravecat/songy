@@ -29,7 +29,7 @@ defmodule SongyWeb.RoomChannel do
 
     case GameSession.add_participant(room_id, user_uuid) do
       {:ok, game} ->
-        broadcast(socket, "update_state", game)
+        broadcast(socket, "state_updated", game)
         {:noreply, socket}
 
       {:error, _reason} ->
@@ -43,7 +43,7 @@ defmodule SongyWeb.RoomChannel do
 
     case GameSession.remove_participant(room_id, user_uuid) do
       {:ok, game} ->
-        broadcast(socket, "update_state", game)
+        broadcast(socket, "state_updated", game)
         {:noreply, socket}
 
       {:error, _reason} ->
@@ -57,7 +57,7 @@ defmodule SongyWeb.RoomChannel do
 
     case GameSession.start_game_session(room_id) do
       {:ok, game} ->
-        broadcast(socket, "update_state", game)
+        broadcast(socket, "state_updated", game)
         {:noreply, socket}
 
       {:error, _} ->
