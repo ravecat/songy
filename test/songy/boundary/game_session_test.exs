@@ -5,9 +5,10 @@ defmodule Songy.Boundary.GameSessionTest do
 
   alias Songy.Boundary.GameSession
 
-  describe "create_game_session/0" do
-    test "starts new game session process" do
-      assert {:ok, game} = GameSession.create_game_session()
+  describe "create_game_session/1" do
+    test "starts new game session process with owner" do
+      owner_uuid = "owner123"
+      assert {:ok, game} = GameSession.create_game_session(owner_uuid)
 
       pid =
         case Registry.lookup(Songy.Registry, game.uuid) do
@@ -18,11 +19,12 @@ defmodule Songy.Boundary.GameSessionTest do
       assert Process.alive?(pid)
       assert game.uuid != nil
       assert game.participants == []
+      assert game.owner_uuid == owner_uuid
     end
 
-    test "multiple different games can be started" do
-      assert {:ok, game1} = GameSession.create_game_session()
-      assert {:ok, game2} = GameSession.create_game_session()
+    test "multiple different games can be started with different owners" do
+      assert {:ok, game1} = GameSession.create_game_session("owner1")
+      assert {:ok, game2} = GameSession.create_game_session("owner2")
 
       pid1 =
         case Registry.lookup(Songy.Registry, game1.uuid) do
@@ -40,12 +42,14 @@ defmodule Songy.Boundary.GameSessionTest do
       assert Process.alive?(pid2)
       assert pid1 != pid2
       assert game1.uuid != game2.uuid
+      assert game1.owner_uuid == "owner1"
+      assert game2.owner_uuid == "owner2"
     end
   end
 
   describe "add_participant/2" do
     setup do
-      {:ok, game} = GameSession.create_game_session()
+      {:ok, game} = GameSession.create_game_session("owner123")
 
       pid =
         case Registry.lookup(Songy.Registry, game.uuid) do
@@ -70,7 +74,7 @@ defmodule Songy.Boundary.GameSessionTest do
 
     test "returns error when game is full", %{game: _game} do
       # Create a game with default max participants (8)
-      {:ok, small_game} = GameSession.create_game_session()
+      {:ok, small_game} = GameSession.create_game_session("owner123")
 
       # Add participants up to max capacity
       assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user1")
@@ -96,7 +100,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "handles concurrent participant additions", %{game: _game} do
-      {:ok, limited_game} = GameSession.create_game_session()
+      {:ok, limited_game} = GameSession.create_game_session("owner123")
 
       tasks =
         for i <- 1..5 do
@@ -117,7 +121,7 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "end_game_session/1" do
     test "terminates game session process" do
-      {:ok, game} = GameSession.create_game_session()
+      {:ok, game} = GameSession.create_game_session("owner123")
 
       assert :ok = GameSession.end_game_session(game.uuid)
       assert_eventually([] = Registry.lookup(Songy.Registry, game.uuid))
@@ -130,7 +134,7 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "remove_participant/2" do
     setup do
-      {:ok, game} = GameSession.create_game_session()
+      {:ok, game} = GameSession.create_game_session("owner123")
 
       pid =
         case Registry.lookup(Songy.Registry, game.uuid) do
@@ -166,7 +170,7 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "get_game_session/1" do
     setup do
-      {:ok, game} = GameSession.create_game_session()
+      {:ok, game} = GameSession.create_game_session("owner123")
 
       pid =
         case Registry.lookup(Songy.Registry, game.uuid) do
@@ -200,7 +204,7 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "start_game_session/1" do
     setup do
-      {:ok, game} = GameSession.create_game_session()
+      {:ok, game} = GameSession.create_game_session("owner123")
 
       pid =
         case Registry.lookup(Songy.Registry, game.uuid) do

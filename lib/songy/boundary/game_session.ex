@@ -31,20 +31,23 @@ defmodule Songy.Boundary.GameSession do
   require Logger
 
   @doc """
-  Creates and starts a new game session process.
+  Creates and starts a new game session process with specified owner.
 
   Generates a new game with a random UUID and starts the session process.
 
-  ## Examples
-      iex> GameSession.create_game_session()
-      {:ok, %Game{uuid: "a1b2c3", participants: []}}
+  ## Parameters
+    * `owner_uuid` - UUID of the user who will own the game room
 
-      iex> GameSession.create_game_session()
+  ## Examples
+      iex> GameSession.create_game_session("user123")
+      {:ok, %Game{uuid: "a1b2c3", participants: [], owner_uuid: "user123"}}
+
+      iex> GameSession.create_game_session("invalid")
       {:error, :process_start_failed}
   """
-  @spec create_game_session() :: {:ok, Game.t()} | {:error, term()}
-  def create_game_session do
-    with game <- Game.new(),
+  @spec create_game_session(String.t()) :: {:ok, Game.t()} | {:error, term()}
+  def create_game_session(owner_uuid) when is_binary(owner_uuid) do
+    with game <- Game.new(owner_uuid),
          {:ok, _pid} <-
            DynamicSupervisor.start_child(
              Songy.Supervisor.GameSession,

@@ -9,7 +9,9 @@ defmodule SongyWeb.PageController do
   end
 
   def start(conn, _params) do
-    case GameSession.create_game_session() do
+    owner_uuid = conn.assigns.current_user.uuid
+
+    case GameSession.create_game_session(owner_uuid) do
       {:ok, game} ->
         redirect(conn, to: ~p"/#{game.uuid}")
 

@@ -20,7 +20,7 @@ defmodule SongyWeb.RoomChannelTest do
 
   describe "start_game event" do
     test "changes game status and broadcasts update", %{current_user: current_user} do
-      {:ok, game} = GameSession.create_game_session()
+      {:ok, game} = GameSession.create_game_session("owner123")
       {:ok, _updated_game} = GameSession.add_participant(game.uuid, current_user.uuid)
 
       {:ok, _, socket} =

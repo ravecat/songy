@@ -17,18 +17,18 @@ defmodule Songy do
   # Game management functions
 
   @doc """
-  Creates a new game with optional maximum participants.
+  Creates a new game with owner and optional maximum participants.
 
   ## Examples
-      iex> Songy.create_game()
-      %Game{uuid: "a1b2c3d4", participants: [], max_participants: 6}
+      iex> Songy.create_game("user123")
+      %Game{uuid: "a1b2c3d4", participants: [], max_participants: 6, owner_uuid: "user123"}
 
-      iex> Songy.create_game(4)
-      %Game{uuid: "a1b2c3d4", participants: [], max_participants: 4}
+      iex> Songy.create_game("user123", 4)
+      %Game{uuid: "a1b2c3d4", participants: [], max_participants: 4, owner_uuid: "user123"}
   """
-  @spec create_game(pos_integer()) :: Game.t()
-  def create_game(max_participants \\ 6) do
-    Game.new(max_participants)
+  @spec create_game(String.t(), pos_integer()) :: Game.t()
+  def create_game(owner_uuid, max_participants \\ 6) when is_binary(owner_uuid) do
+    Game.new(owner_uuid, max_participants)
   end
 
   @doc """

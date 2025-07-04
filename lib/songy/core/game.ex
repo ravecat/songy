@@ -8,7 +8,7 @@ defmodule Songy.Core.Game do
 
   use TypedStruct
 
-  @derive {Jason.Encoder, only: [:uuid, :participants, :max_participants, :status]}
+  @derive {Jason.Encoder, only: [:uuid, :participants, :max_participants, :status, :owner_uuid]}
 
   alias Songy.Core.User
 
@@ -21,27 +21,31 @@ defmodule Songy.Core.Game do
     field :max_participants, pos_integer(), enforce: true
     field :created_at, DateTime.t(), enforce: true
     field :status, status(), default: :waiting
+    field :owner_uuid, String.t(), enforce: true
   end
 
   @doc """
-  Creates a new game with given maximum participants.
+  Creates a new game with given maximum participants and owner.
 
   ## Parameters
+    * `owner_uuid` - UUID of the user who owns the game room
     * `max_participants` - Maximum number of players allowed (default: 8)
 
   ## Examples
-      iex> Game.new()
-      %Game{uuid: "a1b2c3d4", participants: [], max_participants: 8}
+      iex> Game.new("user123")
+      %Game{uuid: "a1b2c3d4", participants: [], max_participants: 8, owner_uuid: "user123"}
 
-      iex> Game.new(4)
-      %Game{uuid: "a1b2c3d4", participants: [], max_participants: 4}
+      iex> Game.new("user123", 4)
+      %Game{uuid: "a1b2c3d4", participants: [], max_participants: 4, owner_uuid: "user123"}
   """
-  @spec new(pos_integer()) :: t()
-  def new(max_participants \\ 8) when is_integer(max_participants) and max_participants > 0 do
+  @spec new(String.t(), pos_integer()) :: t()
+  def new(owner_uuid, max_participants \\ 8)
+      when is_binary(owner_uuid) and is_integer(max_participants) and max_participants > 0 do
     %__MODULE__{
       uuid: generate_uuid(),
       max_participants: max_participants,
-      created_at: DateTime.utc_now()
+      created_at: DateTime.utc_now(),
+      owner_uuid: owner_uuid
     }
   end
 
@@ -121,6 +125,26 @@ defmodule Songy.Core.Game do
   def update_status(%__MODULE__{} = game, status)
       when status in [:waiting, :in_progress, :finished] do
     %{game | status: status}
+  end
+
+  @doc """
+  Checks if the given user UUID is the owner of the game.
+
+  ## Parameters
+    * `game` - The game to check
+    * `user_uuid` - UUID of the user to check
+
+  ## Examples
+      iex> game = Game.new("owner123")
+      iex> Game.owner?(game, "owner123")
+      true
+
+      iex> Game.owner?(game, "other456")
+      false
+  """
+  @spec owner?(t(), String.t()) :: boolean()
+  def owner?(%__MODULE__{owner_uuid: owner_uuid}, user_uuid) when is_binary(user_uuid) do
+    owner_uuid == user_uuid
   end
 
   defp user_already_joined?(%__MODULE__{participants: participants}, %User{uuid: uuid}) do

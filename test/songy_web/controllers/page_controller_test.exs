@@ -34,7 +34,7 @@ defmodule SongyWeb.PageControllerTest do
     end
 
     test "accesses existing game session", %{conn: conn} do
-      {:ok, game} = GameSession.create_game_session()
+      {:ok, game} = GameSession.create_game_session("owner123")
 
       conn = get(conn, ~p"/#{game.uuid}")
 
