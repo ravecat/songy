@@ -7,14 +7,30 @@ defmodule SongyWeb.RoomChannel do
   require Logger
 
   @impl true
-  def join("room:" <> _room_id, _payload, socket) do
-    send(self(), :participant_joined)
+  def join("room:" <> _, _payload, socket) do
+    send(self(), :init_state)
+    send(self(), :track_presence)
 
     {:ok, socket}
   end
 
   @impl true
-  def handle_info(:participant_joined, socket) do
+  def handle_info(:init_state, socket) do
+    "room:" <> room_id = socket.topic
+
+    case GameSession.get_game_session(room_id) do
+      {:ok, game} ->
+        push(socket, "state_updated", game)
+
+      {:error, _} ->
+        Logger.error("Game session not found for room #{room_id}")
+    end
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(:track_presence, socket) do
     {:ok, _} =
       Presence.track(socket, socket.assigns.current_user_uuid, %{
         online_at: inspect(System.system_time(:second))
@@ -26,13 +42,15 @@ defmodule SongyWeb.RoomChannel do
   @impl true
   def handle_info({:participant_joined, user_uuid}, socket) do
     "room:" <> room_id = socket.topic
+    Logger.info("Participant #{user_uuid} joined room #{room_id}")
 
     case GameSession.add_participant(room_id, user_uuid) do
       {:ok, game} ->
         broadcast(socket, "state_updated", game)
         {:noreply, socket}
 
-      {:error, _reason} ->
+      {:error, reason} ->
+        Logger.error("Failed to add participant #{user_uuid}: #{inspect(reason)}")
         {:noreply, socket}
     end
   end
@@ -40,13 +58,15 @@ defmodule SongyWeb.RoomChannel do
   @impl true
   def handle_info({:participant_left, user_uuid}, socket) do
     "room:" <> room_id = socket.topic
+    Logger.info("Participant #{user_uuid} left room #{room_id}")
 
     case GameSession.remove_participant(room_id, user_uuid) do
       {:ok, game} ->
         broadcast(socket, "state_updated", game)
         {:noreply, socket}
 
-      {:error, _reason} ->
+      {:error, reason} ->
+        Logger.error("Failed to remove participant #{user_uuid}: #{inspect(reason)}")
         {:noreply, socket}
     end
   end

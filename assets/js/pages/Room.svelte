@@ -18,12 +18,10 @@
     },
   });
 
-  
   useSpotifyPlayer({
     name: "Songy Player",
     getOAuthToken: (cb) => {
       channel.push("get_spotify_token", {}).receive("ok", (payload) => {
-        console.log("Received token:", payload.token);
         cb(payload.token);
       });
     },

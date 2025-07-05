@@ -71,8 +71,7 @@ defmodule Songy.Core.Game do
         {:error, :user_already_joined}
 
       true ->
-        updated_game = %{game | participants: [user | game.participants]}
-        {:ok, updated_game}
+        {:ok, %{game | participants: [user | game.participants]}}
     end
   end
 
@@ -97,8 +96,7 @@ defmodule Songy.Core.Game do
         {:error, :user_not_found}
 
       _ ->
-        updated_game = %{game | participants: updated_participants}
-        {:ok, updated_game}
+        {:ok, %{game | participants: updated_participants}}
     end
   end
 
