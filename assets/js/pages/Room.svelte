@@ -7,18 +7,10 @@
 
   let state = $state(null);
   let userCount = $derived(state?.participants?.length ?? 0);
-  let token = $state(null);
 
   const channel = useChannel({
     socket,
     topic: `room:${room_id}`,
-    join: {
-      ok: (resp) => {
-        channel.push("get_spotify_token", {}).receive("ok", (payload) => {
-          token = payload.token;
-        });
-      },
-    },
     on: {
       state_updated: (newState) => {
         state = newState;
@@ -26,16 +18,20 @@
     },
   });
 
-  $effect(() => {
-    if (token) {
-      useSpotifyPlayer(token, {
-        on: {
-          ready: ({ device_id }) => {
-            channel.push("register_device", { device_id });
-          },
-        },
+  
+  useSpotifyPlayer({
+    name: "Songy Player",
+    getOAuthToken: (cb) => {
+      channel.push("get_spotify_token", {}).receive("ok", (payload) => {
+        console.log("Received token:", payload.token);
+        cb(payload.token);
       });
-    }
+    },
+    on: {
+      ready: ({ device_id }) => {
+        channel.push("register_device", { device_id });
+      },
+    },
   });
 </script>
 

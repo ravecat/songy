@@ -1,14 +1,24 @@
+import { get } from "svelte/store";
+
 /**
  * Hook for Spotify Web Playback SDK player management
- * @param {string} token - Spotify access token
  * @param {Object} options - Configuration options
- * @param {string} options.name - Device name (default: 'Web Playback SDK Player')
- * @param {number} options.volume - Initial volume 0-1 (default: 0.5)
- * @param {Object} [options.on] - Event handlers object
- * @returns {Object} Spotify Player instance
+ * @param {string} [options.name] - Device name (default: 'Web Playback SDK Player')
+ * @param {Function} options.getOAuthToken - Function that provides fresh access token. Should call callback with token: (cb) => cb(token)
+ * @param {number} [options.volume] - Initial volume 0-1 (default: 0.5)
+ * @param {Object} [options.on] - Event handlers object for player events
+ * @returns {Object} Spotify Player instance and control methods
  */
-export function useSpotifyPlayer(token, options = {}) {
-  const { name = "Web Playback SDK Player", volume = 0.5, on = {} } = options;
+export function useSpotifyPlayer(options = {}) {
+  const {
+    name = "Web Playback SDK Player",
+    getOAuthToken = (cb) => {
+      console.warn("getOAuthToken not provided, player will not work");
+      cb(null);
+    },
+    volume = 0.5,
+    on = {},
+  } = options;
 
   const eventCallbacks = {
     ready: (data) => console.log("Ready with Device ID", data.device_id),
@@ -31,60 +41,44 @@ export function useSpotifyPlayer(token, options = {}) {
 
   let player = $state(null);
 
-  function initializePlayer() {
-    player = new window.Spotify.Player({
-      name: name,
-      getOAuthToken: (cb) => {
-        cb(token);
-      },
-      volume: volume,
-    });
-
-    player.addListener("ready", eventCallbacks.ready);
-    player.addListener("not_ready", eventCallbacks.not_ready);
-    player.addListener(
-      "player_state_changed",
-      eventCallbacks.player_state_changed
-    );
-    player.addListener("autoplay_failed", eventCallbacks.autoplay_failed);
-    player.addListener(
-      "initialization_error",
-      eventCallbacks.initialization_error
-    );
-    player.addListener(
-      "authentication_error",
-      eventCallbacks.authentication_error
-    );
-    player.addListener("account_error", eventCallbacks.account_error);
-    player.addListener("playback_error", eventCallbacks.playback_error);
-
-    player.connect();
-  }
-
   $effect(() => {
-    if (!token) {
-      player?.disconnect();
+    const script = document.createElement("script");
+    script.src = "https://sdk.scdn.co/spotify-player.js";
+    script.async = true;
 
-      return;
-    }
+    script.onerror = () => {
+      console.error("Failed to load Spotify SDK script");
+    };
 
-    if (window.Spotify?.Player) {
-      initializePlayer();
-    } else {
-      const script = document.createElement("script");
-      script.src = "https://sdk.scdn.co/spotify-player.js";
-      script.async = true;
+    document.body.appendChild(script);
 
-      script.onerror = () => {
-        console.error("Failed to load Spotify SDK script");
-      };
+    window.onSpotifyWebPlaybackSDKReady = () => {
+      player = new window.Spotify.Player({
+        name: name,
+        getOAuthToken: getOAuthToken,
+        volume: volume,
+      });
 
-      document.body.appendChild(script);
+      player.addListener("ready", eventCallbacks.ready);
+      player.addListener("not_ready", eventCallbacks.not_ready);
+      player.addListener(
+        "player_state_changed",
+        eventCallbacks.player_state_changed
+      );
+      player.addListener("autoplay_failed", eventCallbacks.autoplay_failed);
+      player.addListener(
+        "initialization_error",
+        eventCallbacks.initialization_error
+      );
+      player.addListener(
+        "authentication_error",
+        eventCallbacks.authentication_error
+      );
+      player.addListener("account_error", eventCallbacks.account_error);
+      player.addListener("playback_error", eventCallbacks.playback_error);
 
-      window.onSpotifyWebPlaybackSDKReady = () => {
-        initializePlayer();
-      };
-    }
+      player.connect();
+    };
 
     return () => {
       player?.disconnect();
