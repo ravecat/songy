@@ -23,7 +23,7 @@ defmodule SongyWeb.RoomChannel do
         push(socket, "state_updated", game)
 
       {:error, _} ->
-        Logger.error("Game session not found for room #{room_id}")
+        Logger.warning("Game session not found for room #{room_id}")
     end
 
     {:noreply, socket}
@@ -50,7 +50,7 @@ defmodule SongyWeb.RoomChannel do
         {:noreply, socket}
 
       {:error, reason} ->
-        Logger.error("Failed to add participant #{user_uuid}: #{inspect(reason)}")
+        Logger.warning("Failed to add participant #{user_uuid}: #{inspect(reason)}")
         {:noreply, socket}
     end
   end
@@ -66,7 +66,7 @@ defmodule SongyWeb.RoomChannel do
         {:noreply, socket}
 
       {:error, reason} ->
-        Logger.error("Failed to remove participant #{user_uuid}: #{inspect(reason)}")
+        Logger.warning("Failed to remove participant #{user_uuid}: #{inspect(reason)}")
         {:noreply, socket}
     end
   end
