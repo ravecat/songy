@@ -1,6 +1,6 @@
 import "vite/modulepreload-polyfill";
 // Enable Phoenix channels
-import "./user_socket.js"
+import "./socket.js"
 
 // You can include dependencies in two ways.
 //

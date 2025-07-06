@@ -1,7 +1,7 @@
 <script>
-  import socket from "../user_socket.js";
-  import { useChannel } from "../hooks/useChannel.svelte.js";
-  import { useSpotifyPlayer } from "../hooks/useSpotifyPlayer.svelte.js";
+  import socket from "@/socket";
+  import { useChannel } from "@hooks/useChannel.svelte";
+  import { useSpotifyPlayer } from "@hooks/useSpotifyPlayer.svelte";
 
   let { room_id } = $props();
 
@@ -19,7 +19,7 @@
   });
 
   useSpotifyPlayer({
-    name: "Songy Player",
+    name: `Songy Player ${room_id}`,
     getOAuthToken: (cb) => {
       channel.push("get_spotify_token", {}).receive("ok", (payload) => {
         cb(payload.token);
@@ -107,7 +107,14 @@
                 Start
               </button>
             {:else if state.status === "in_progress"}
-              <p class="text-2xl font-bold text-white">Game in progress...</p>
+              <button
+                class="w-32 h-32 bg-white text-purple-600 rounded-full font-bold text-xl hover:bg-white/90 transition-all duration-300 hover:scale-110 shadow-2xl border-4 border-white/50 flex items-center justify-center"
+                aria-label="Play track"
+              >
+                <svg class="w-10 h-10" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </button>
             {/if}
           </div>
         </div>
@@ -117,6 +124,8 @@
           <!-- Loading spinner -->
           <div
             class="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin"
+            role="status"
+            aria-label="Loading"
           ></div>
         </div>
       {/if}

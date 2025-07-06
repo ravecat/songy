@@ -1,5 +1,3 @@
-import { get } from "svelte/store";
-
 /**
  * Hook for Spotify Web Playback SDK player management
  * @param {Object} options - Configuration options

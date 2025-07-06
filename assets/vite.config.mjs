@@ -47,7 +47,7 @@ export default defineConfig(({ command }) => {
       exclude: ["node_modules", "dist"],
       passWithNoTests: true,
       deps: {
-        moduleDirectories: ['node_modules', '.']
+        moduleDirectories: ['node_modules', '.'],
       }
     },
   };
