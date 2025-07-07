@@ -1,3 +1,5 @@
+/// <reference types="vitest" />
+
 import { defineConfig } from "vite";
 import tailwindcss from "@tailwindcss/vite";
 import { svelte, vitePreprocess } from "@sveltejs/vite-plugin-svelte";
