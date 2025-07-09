@@ -46,6 +46,9 @@ export default defineConfig(({ command }) => {
       include: ["tests/**/*.{test,spec}.{js,ts}"],
       exclude: ["node_modules", "dist"],
       passWithNoTests: true,
+      deps: {
+        moduleDirectories: ['node_modules', '.']
+      }
     },
   };
 });
