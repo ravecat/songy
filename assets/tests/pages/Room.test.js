@@ -17,13 +17,13 @@ describe("Room", () => {
   });
 
   test("joins to channel with room id", () => {
-    render(Room, { room_id: "test-room" });
+    render(Room, { roomId: "test-room" });
 
     expect(socket.channel).toHaveBeenCalledWith("room:test-room", {});
   });
 
   test("listens state_updated event", () => {
-    render(Room, { room_id: "test-room" });
+    render(Room, { roomId: "test-room" });
 
     expect(socket.channel.mock.results[0].value.on).toHaveBeenCalledWith(
       "state_updated",
@@ -32,14 +32,14 @@ describe("Room", () => {
   });
 
   test("displays loader when state is null", () => {
-    render(Room, { room_id: "test-room" });
+    render(Room, { roomId: "test-room" });
 
     expect(screen.getByText("Connecting to game...")).toBeInTheDocument();
     expect(screen.getByText("Connecting to game...")).toBeVisible();
   });
 
   test("displays start button on waiting state", async () => {
-    render(Room, { room_id: "test-room" });
+    render(Room, { roomId: "test-room" });
 
     const channel = socket.channel.mock.results[0].value;
 

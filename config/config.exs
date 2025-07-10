@@ -54,7 +54,7 @@ config :inertia,
   # Enable automatic conversion of prop keys from snake case (e.g. `inserted_at`),
   # which is conventional in Elixir, to camel case (e.g. `insertedAt`), which is
   # conventional in JavaScript. Defaults to `false`.
-  camelize_props: false,
+  camelize_props: true,
 
   # Instruct the client side whether to encrypt the page object in the window history
   # state. This can also be set/overridden on a per-request basis, using the `encrypt_history`

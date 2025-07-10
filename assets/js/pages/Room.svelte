@@ -3,14 +3,14 @@
   import { useChannel } from "@hooks/useChannel.svelte";
   import { useSpotifyPlayer } from "@hooks/useSpotifyPlayer.svelte";
 
-  let { room_id } = $props();
+  let { roomId } = $props();
 
   let state = $state(null);
   let userCount = $derived(state?.participants?.length ?? 0);
 
   const channel = useChannel({
     socket,
-    topic: `room:${room_id}`,
+    topic: `room:${roomId}`,
     on: {
       state_updated: (newState) => {
         state = newState;
@@ -19,7 +19,7 @@
   });
 
   useSpotifyPlayer({
-    name: `Songy Player ${room_id}`,
+    name: `Songy Player ${roomId}`,
     getOAuthToken: (cb) => {
       channel.push("get_spotify_token", {}).receive("ok", (payload) => {
         cb(payload.token);
