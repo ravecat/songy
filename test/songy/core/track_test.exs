@@ -1,13 +1,12 @@
 defmodule Songy.Core.TrackTest do
   use ExUnit.Case, async: true
 
-  alias Songy
   alias Songy.Core.Track
 
-  describe "create_track/1" do
+  describe "new/1" do
     test "creates track with required attributes" do
       track =
-        Songy.create_track(
+        Track.new(
           id: "spotify:track:4uLU6hMCjMI75M1A2tKUQC",
           title: "Bohemian Rhapsody",
           artist: "Queen",
@@ -24,7 +23,7 @@ defmodule Songy.Core.TrackTest do
 
     test "creates track with optional preview_url" do
       track =
-        Songy.create_track(
+        Track.new(
           id: "spotify:track:3n3Ppam7vgaVa1iaRUc9Lp",
           title: "Another One Bites the Dust",
           artist: "Queen",

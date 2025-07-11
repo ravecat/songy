@@ -1,109 +1,158 @@
 defmodule Songy.Core.GameTest do
   use ExUnit.Case, async: true
 
-  alias Songy
-  alias Songy.Core.Game
+  alias Songy.Core.{Game, User}
 
-  describe "create_game/2" do
+  describe "new/1" do
     test "creates game with default max participants" do
       owner_uuid = "owner123"
-      game = Songy.create_game(owner_uuid)
+      game = Game.new(owner_uuid)
 
       assert %Game{} = game
-      assert game.max_participants == 6
+      assert game.max_participants == 8
       assert game.participants == []
       assert game.status == :waiting
       assert game.owner_uuid == owner_uuid
       assert String.length(game.uuid) == 8
+      assert %DateTime{} = game.created_at
     end
+  end
 
+  describe "new/2" do
     test "creates game with custom max participants" do
       owner_uuid = "owner456"
-      game = Songy.create_game(owner_uuid, 4)
+      game = Game.new(owner_uuid, 4)
 
       assert game.max_participants == 4
       assert game.owner_uuid == owner_uuid
+      assert game.participants == []
+      assert game.status == :waiting
     end
   end
 
-  describe "join_game/2 and leave_game/2" do
-    test "user can join and leave game" do
-      game = Songy.create_game("owner123")
-      user = Songy.create_user()
+  describe "add_participant/2" do
+    test "adds user to game successfully" do
+      game = Game.new("owner123")
+      user = User.new()
 
-      # Join game
-      assert {:ok, updated_game} = Songy.join_game(game, user)
+      assert {:ok, updated_game} = Game.add_participant(game, user)
       assert length(updated_game.participants) == 1
       assert hd(updated_game.participants).uuid == user.uuid
-
-      # Leave game
-      assert {:ok, final_game} = Songy.leave_game(updated_game, user.uuid)
-      assert length(final_game.participants) == 0
     end
 
-    test "cannot join full game" do
-      game = Songy.create_game("owner123", 1)
-      user1 = Songy.create_user()
-      user2 = Songy.create_user()
+    test "returns error when game is full" do
+      game = Game.new("owner123", 1)
+      user1 = User.new()
+      user2 = User.new()
 
-      {:ok, game_with_user} = Songy.join_game(game, user1)
-      assert {:error, :game_full} = Songy.join_game(game_with_user, user2)
+      {:ok, game_with_user} = Game.add_participant(game, user1)
+      assert {:error, :game_full} = Game.add_participant(game_with_user, user2)
     end
 
-    test "cannot join same user twice" do
-      game = Songy.create_game("owner123")
-      user = Songy.create_user()
+    test "returns error when user already joined" do
+      game = Game.new("owner123")
+      user = User.new()
 
-      {:ok, game_with_user} = Songy.join_game(game, user)
-      assert {:error, :user_already_joined} = Songy.join_game(game_with_user, user)
+      {:ok, game_with_user} = Game.add_participant(game, user)
+      assert {:error, :user_already_joined} = Game.add_participant(game_with_user, user)
     end
   end
 
-  describe "can_join_game?/2" do
-    test "returns true when user can join" do
-      game = Songy.create_game("owner123")
-      user = Songy.create_user()
+  describe "remove_participant/2" do
+    test "removes user from game successfully" do
+      game = Game.new("owner123")
+      user = User.new()
 
-      assert Songy.can_join_game?(game, user) == true
+      {:ok, game_with_user} = Game.add_participant(game, user)
+      assert {:ok, updated_game} = Game.remove_participant(game_with_user, user.uuid)
+      assert length(updated_game.participants) == 0
     end
 
-    test "returns false when game is full" do
-      game = Songy.create_game("owner123", 1)
-      user1 = Songy.create_user()
-      user2 = Songy.create_user()
+    test "returns error when user not found" do
+      game = Game.new("owner123")
 
-      {:ok, full_game} = Songy.join_game(game, user1)
+      assert {:error, :user_not_found} = Game.remove_participant(game, "non_existent_uuid")
+    end
+  end
 
-      assert Songy.can_join_game?(full_game, user2) == false
+  describe "participant_count/1" do
+    test "returns 0 for empty game" do
+      game = Game.new("owner123")
+
+      assert Game.participant_count(game) == 0
     end
 
-    test "returns false when user already joined" do
-      game = Songy.create_game("owner123")
-      user = Songy.create_user()
+    test "returns correct count with participants" do
+      game = Game.new("owner123")
+      user1 = User.new()
+      user2 = User.new()
 
-      {:ok, game_with_user} = Songy.join_game(game, user)
+      {:ok, game_with_one} = Game.add_participant(game, user1)
+      assert Game.participant_count(game_with_one) == 1
 
-      assert Songy.can_join_game?(game_with_user, user) == false
+      {:ok, game_with_two} = Game.add_participant(game_with_one, user2)
+      assert Game.participant_count(game_with_two) == 2
+    end
+  end
+
+  describe "full?/1" do
+    test "returns false for empty game" do
+      game = Game.new("owner123", 2)
+
+      assert Game.full?(game) == false
     end
 
-    test "returns false when game is not waiting" do
-      game = Songy.create_game("owner123") |> Songy.start_game()
-      user = Songy.create_user()
+    test "returns false for partially filled game" do
+      game = Game.new("owner123", 2)
+      user = User.new()
 
-      assert Songy.can_join_game?(game, user) == false
+      {:ok, game_with_user} = Game.add_participant(game, user)
+      assert Game.full?(game_with_user) == false
+    end
+
+    test "returns true for full game" do
+      game = Game.new("owner123", 1)
+      user = User.new()
+
+      {:ok, full_game} = Game.add_participant(game, user)
+      assert Game.full?(full_game) == true
+    end
+  end
+
+  describe "update_status/2" do
+    test "updates status to in_progress" do
+      game = Game.new("owner123")
+
+      updated_game = Game.update_status(game, :in_progress)
+      assert updated_game.status == :in_progress
+    end
+
+    test "updates status to finished" do
+      game = Game.new("owner123")
+
+      updated_game = Game.update_status(game, :finished)
+      assert updated_game.status == :finished
+    end
+
+    test "updates status back to waiting" do
+      game = Game.new("owner123")
+      |> Game.update_status(:in_progress)
+
+      updated_game = Game.update_status(game, :waiting)
+      assert updated_game.status == :waiting
     end
   end
 
   describe "owner?/2" do
     test "returns true when user is owner" do
       owner_uuid = "owner123"
-      game = Songy.create_game(owner_uuid)
+      game = Game.new(owner_uuid)
 
       assert Game.owner?(game, owner_uuid) == true
     end
 
     test "returns false when user is not owner" do
-      game = Songy.create_game("owner123")
+      game = Game.new("owner123")
 
       assert Game.owner?(game, "other456") == false
     end
