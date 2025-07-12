@@ -1,95 +1,126 @@
 defmodule Songy.Core.GameTest do
   use ExUnit.Case, async: true
 
-  alias Songy.Core.{Game, User}
+  alias Songy.Core.{Game, User, Provider}
 
-  describe "new/1" do
-    test "creates game with default max participants" do
+  describe "new/2" do
+    test "creates game with required provider" do
       owner_uuid = "owner123"
-      game = Game.new(owner_uuid)
+      provider = Provider.new(:spotify)
+      game = Game.new(owner_uuid, provider: provider)
 
       assert %Game{} = game
       assert game.max_participants == 8
       assert game.participants == []
       assert game.status == :waiting
       assert game.owner_uuid == owner_uuid
+      assert %Provider{id: :spotify} = game.provider
       assert String.length(game.uuid) == 8
       assert %DateTime{} = game.created_at
     end
-  end
 
-  describe "new/2" do
-    test "creates game with custom max participants" do
+    test "creates game with custom max participants and provider" do
       owner_uuid = "owner456"
-      game = Game.new(owner_uuid, max_participants: 4)
+      provider = Provider.new(:spotify)
+      game = Game.new(owner_uuid, provider: provider, max_participants: 4)
 
       assert game.max_participants == 4
       assert game.owner_uuid == owner_uuid
       assert game.participants == []
       assert game.status == :waiting
+      assert %Provider{id: :spotify} = game.provider
     end
 
     test "creates game with multiple options" do
       owner_uuid = "owner789"
-      game = Game.new(owner_uuid, max_participants: 12)
+      provider = Provider.new(:spotify)
+      game = Game.new(owner_uuid, provider: provider, max_participants: 12)
 
       assert game.max_participants == 12
       assert game.owner_uuid == owner_uuid
       assert game.participants == []
       assert game.status == :waiting
+      assert %Provider{id: :spotify} = game.provider
     end
 
     test "creates game with empty options list" do
       owner_uuid = "owner000"
-      game = Game.new(owner_uuid, [])
+      provider = Provider.new(:spotify)
+      game = Game.new(owner_uuid, provider: provider)
 
       assert game.max_participants == 8
       assert game.owner_uuid == owner_uuid
       assert game.participants == []
       assert game.status == :waiting
+      assert %Provider{id: :spotify} = game.provider
+    end
+
+    test "raises error without provider" do
+      assert_raise NimbleOptions.ValidationError, fn ->
+        Game.new("owner123")
+      end
+    end
+
+    test "raises error with invalid provider" do
+      assert_raise NimbleOptions.ValidationError, fn ->
+        Game.new("owner123", provider: "invalid")
+      end
+    end
+
+    test "raises error with nil provider" do
+      assert_raise NimbleOptions.ValidationError, fn ->
+        Game.new("owner123", provider: nil)
+      end
     end
 
     test "raises error with invalid max_participants" do
+      provider = Provider.new(:spotify)
+
       assert_raise NimbleOptions.ValidationError, fn ->
-        Game.new("owner123", max_participants: 0)
+        Game.new("owner123", provider: provider, max_participants: 0)
       end
 
       assert_raise NimbleOptions.ValidationError, fn ->
-        Game.new("owner123", max_participants: -1)
+        Game.new("owner123", provider: provider, max_participants: -1)
       end
 
       assert_raise NimbleOptions.ValidationError, fn ->
-        Game.new("owner123", max_participants: "invalid")
+        Game.new("owner123", provider: provider, max_participants: "invalid")
       end
     end
 
     test "raises error with unknown options" do
+      provider = Provider.new(:spotify)
+
       assert_raise NimbleOptions.ValidationError, fn ->
-        Game.new("owner123", created_at: DateTime.utc_now())
+        Game.new("owner123", provider: provider, created_at: DateTime.utc_now())
       end
 
       assert_raise NimbleOptions.ValidationError, fn ->
-        Game.new("owner123", uuid: "custom_uuid")
+        Game.new("owner123", provider: provider, uuid: "custom_uuid")
       end
 
       assert_raise NimbleOptions.ValidationError, fn ->
-        Game.new("owner123", unknown_field: "test")
+        Game.new("owner123", provider: provider, unknown_field: "test")
       end
     end
   end
 
   describe "add_participant/2" do
     test "adds user to game successfully" do
-      game = Game.new("owner123")
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
       user = User.new()
 
       assert {:ok, updated_game} = Game.add_participant(game, user)
       assert length(updated_game.participants) == 1
       assert hd(updated_game.participants).uuid == user.uuid
+      assert %Provider{id: :spotify} = updated_game.provider
     end
 
     test "returns error when game is full" do
-      game = Game.new("owner123", max_participants: 1)
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider, max_participants: 1)
       user1 = User.new()
       user2 = User.new()
 
@@ -98,7 +129,8 @@ defmodule Songy.Core.GameTest do
     end
 
     test "returns error when user already joined" do
-      game = Game.new("owner123")
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
       user = User.new()
 
       {:ok, game_with_user} = Game.add_participant(game, user)
@@ -108,16 +140,19 @@ defmodule Songy.Core.GameTest do
 
   describe "remove_participant/2" do
     test "removes user from game successfully" do
-      game = Game.new("owner123")
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
       user = User.new()
 
       {:ok, game_with_user} = Game.add_participant(game, user)
       assert {:ok, updated_game} = Game.remove_participant(game_with_user, user.uuid)
       assert length(updated_game.participants) == 0
+      assert %Provider{id: :spotify} = updated_game.provider
     end
 
     test "returns error when user not found" do
-      game = Game.new("owner123")
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
 
       assert {:error, :user_not_found} = Game.remove_participant(game, "non_existent_uuid")
     end
@@ -125,13 +160,15 @@ defmodule Songy.Core.GameTest do
 
   describe "participant_count/1" do
     test "returns 0 for empty game" do
-      game = Game.new("owner123")
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
 
       assert Game.participant_count(game) == 0
     end
 
     test "returns correct count with participants" do
-      game = Game.new("owner123")
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
       user1 = User.new()
       user2 = User.new()
 
@@ -145,13 +182,15 @@ defmodule Songy.Core.GameTest do
 
   describe "full?/1" do
     test "returns false for empty game" do
-      game = Game.new("owner123", max_participants: 2)
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider, max_participants: 2)
 
       assert Game.full?(game) == false
     end
 
     test "returns false for partially filled game" do
-      game = Game.new("owner123", max_participants: 2)
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider, max_participants: 2)
       user = User.new()
 
       {:ok, game_with_user} = Game.add_participant(game, user)
@@ -159,7 +198,8 @@ defmodule Songy.Core.GameTest do
     end
 
     test "returns true for full game" do
-      game = Game.new("owner123", max_participants: 1)
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider, max_participants: 1)
       user = User.new()
 
       {:ok, full_game} = Game.add_participant(game, user)
@@ -169,21 +209,24 @@ defmodule Songy.Core.GameTest do
 
   describe "update_status/2" do
     test "updates status to in_progress" do
-      game = Game.new("owner123")
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
 
       updated_game = Game.update_status(game, :in_progress)
       assert updated_game.status == :in_progress
     end
 
     test "updates status to finished" do
-      game = Game.new("owner123")
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
 
       updated_game = Game.update_status(game, :finished)
       assert updated_game.status == :finished
     end
 
     test "updates status back to waiting" do
-      game = Game.new("owner123")
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
       |> Game.update_status(:in_progress)
 
       updated_game = Game.update_status(game, :waiting)
@@ -194,13 +237,15 @@ defmodule Songy.Core.GameTest do
   describe "owner?/2" do
     test "returns true when user is owner" do
       owner_uuid = "owner123"
-      game = Game.new(owner_uuid)
+      provider = Provider.new(:spotify)
+      game = Game.new(owner_uuid, provider: provider)
 
       assert Game.owner?(game, owner_uuid) == true
     end
 
     test "returns false when user is not owner" do
-      game = Game.new("owner123")
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
 
       assert Game.owner?(game, "other456") == false
     end

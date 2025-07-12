@@ -8,9 +8,10 @@ defmodule Songy.Core.Game do
 
   use TypedStruct
 
-  @derive {Jason.Encoder, only: [:uuid, :participants, :max_participants, :status, :owner_uuid]}
+  @derive {Jason.Encoder,
+           only: [:uuid, :participants, :max_participants, :status, :owner_uuid, :provider]}
 
-  alias Songy.Core.User
+  alias Songy.Core.{User, Provider}
 
   @uuid_size 6
   @type status :: :waiting | :in_progress | :finished
@@ -24,34 +25,41 @@ defmodule Songy.Core.Game do
     field :created_at, DateTime.t(), enforce: true
     field :status, status(), default: :waiting
     field :owner_uuid, String.t(), enforce: true
+    field :provider, Provider.t(), enforce: true
   end
 
+  # Options for game creation based on NimbleOptions format
   @options [
     max_participants: [
       type: :pos_integer,
       doc: "Maximum number of players allowed in the game"
+    ],
+    provider: [
+      type: {:struct, Provider},
+      required: true,
+      doc: "Provider instance for the game"
     ]
   ]
 
   @doc """
   Creates a new game with the given owner and options.
 
-  ## Parameters
-    * `owner_uuid` - UUID of the user who owns the game room (required)
-    * `opts` - Keyword list of game options (optional)
-
   ## Options
+    * `:provider` - Provider instance (required, e.g., Provider.new(:spotify))
     * `:max_participants` - Maximum number of players allowed (default: 8)
 
   ## Examples
-      iex> Game.new("user123")
-      %Game{uuid: "a1b2c3d4", participants: [], max_participants: 8, status: :waiting, owner_uuid: "user123"}
+      iex> provider = Provider.new(:spotify)
+      iex> Game.new("user123", provider: provider)
+      %Game{uuid: "a1b2c3d4", participants: [], max_participants: 8, status: :waiting, owner_uuid: "user123", provider: %Provider{id: :spotify}}
 
-      iex> Game.new("user123", max_participants: 4)
-      %Game{uuid: "a1b2c3d4", participants: [], max_participants: 4, status: :waiting, owner_uuid: "user123"}
+      iex> provider = Provider.new(:spotify)
+      iex> Game.new("user123", provider: provider, max_participants: 4)
+      %Game{uuid: "a1b2c3d4", participants: [], max_participants: 4, status: :waiting, owner_uuid: "user123", provider: %Provider{id: :spotify}}
 
-      iex> Game.new("user123", max_participants: 12)
-      %Game{uuid: "a1b2c3d4", participants: [], max_participants: 12, status: :waiting, owner_uuid: "user123"}
+      iex> provider = Provider.new(:spotify)
+      iex> Game.new("user123", provider: provider, max_participants: 12)
+      %Game{uuid: "a1b2c3d4", participants: [], max_participants: 12, status: :waiting, owner_uuid: "user123", provider: %Provider{id: :spotify}}
   """
   @spec new(String.t(), keyword()) :: t()
   def new(owner_uuid, opts \\ []) when is_binary(owner_uuid) and is_list(opts) do

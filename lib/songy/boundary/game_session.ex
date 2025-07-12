@@ -8,7 +8,7 @@ defmodule Songy.Boundary.GameSession do
 
   ## Public API
 
-    * `create_game_session/0` - Creates and starts a new game session process
+    * `create_game_session/2` - Creates and starts a new game session process with owner and provider
     * `add_participant/2` - Adds a participant to an existing game session
     * `remove_participant/2` - Removes a participant from an existing game session
     * `get_game_session/1` - Retrieves the current state of a game session
@@ -26,28 +26,29 @@ defmodule Songy.Boundary.GameSession do
 
   use GenServer
 
-  alias Songy.Core.{Game, User}
+  alias Songy.Core.{Game, User, Provider}
 
   require Logger
 
   @doc """
-  Creates and starts a new game session process with specified owner.
+  Creates and starts a new game session process with specified owner and provider.
 
   Generates a new game with a random UUID and starts the session process.
 
   ## Parameters
     * `owner_uuid` - UUID of the user who will own the game room
+    * `provider` - Provider instance for the game
 
   ## Examples
-      iex> GameSession.create_game_session("user123")
-      {:ok, %Game{uuid: "a1b2c3", participants: [], owner_uuid: "user123"}}
+      iex> GameSession.create_game_session("user123", %Provider{id: :spotify})
+      {:ok, %Game{uuid: "a1b2c3", participants: [], owner_uuid: "user123", provider: %Provider{id: :spotify}}}
 
-      iex> GameSession.create_game_session("invalid")
+      iex> GameSession.create_game_session("invalid", %Provider{id: :spotify})
       {:error, :process_start_failed}
   """
-  @spec create_game_session(String.t()) :: {:ok, Game.t()} | {:error, term()}
-  def create_game_session(owner_uuid) when is_binary(owner_uuid) do
-    with game <- Game.new(owner_uuid),
+  @spec create_game_session(String.t(), Provider.t()) :: {:ok, Game.t()} | {:error, term()}
+  def create_game_session(owner_uuid, %Provider{} = provider) when is_binary(owner_uuid) do
+    with game <- Game.new(owner_uuid, provider: provider),
          {:ok, _pid} <-
            DynamicSupervisor.start_child(
              Songy.Supervisor.GameSession,

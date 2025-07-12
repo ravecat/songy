@@ -20,7 +20,7 @@ defmodule SongyWeb.SpotifyController do
   end
 
   def callback(conn, %{"code" => code}) do
-    authenticate_with_spotify(conn, %{"code" => code})
+    authenticate(conn, :spotify, %{"code" => code})
   end
 
   def callback(conn, %{"error" => error}) do

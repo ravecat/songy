@@ -220,22 +220,6 @@ defmodule SongyWeb.AuthTest do
       assert conn.assigns.provider == nil
     end
 
-    test "removes invalid provider from session", %{conn: conn} do
-      # Create provider without expires_at to simulate invalid state
-      invalid_provider = %Songy.Core.Provider{
-        id: :spotify,
-        meta: %{access_token: "token"}
-      }
-
-      conn =
-        conn
-        |> put_session(:provider, invalid_provider)
-        |> Auth.fetch_current_provider([])
-
-      assert conn.assigns.provider == nil
-      assert get_session(conn, :provider) == nil
-    end
-
     test "handles unsupported provider types", %{conn: conn} do
       unsupported_provider = Songy.Core.Provider.new(:youtube, %{token: "token"})
 
@@ -247,8 +231,10 @@ defmodule SongyWeb.AuthTest do
       assert conn.assigns.provider == nil
       assert get_session(conn, :provider) == nil
     end
+  end
 
-    test "preserves provider when tokens are not close to expiry", %{conn: conn} do
+  describe "spotify integration" do
+    test "assigns provider when tokens are not close to expiry", %{conn: conn} do
       # 30 minutes from now
       future_time = DateTime.utc_now() |> DateTime.add(1800, :second)
 
@@ -269,29 +255,6 @@ defmodule SongyWeb.AuthTest do
       assert get_session(conn, :provider) == provider
     end
 
-    test "removes provider when token expiry is close and no refresh_token", %{conn: conn} do
-      # 200 seconds from now
-      expires_soon = DateTime.utc_now() |> DateTime.add(200, :second)
-
-      # Create provider without refresh_token to simulate failure scenario
-      invalid_provider = %Songy.Core.Provider{
-        id: :spotify,
-        meta: %{
-          access_token: "token_without_refresh",
-          expires_at: expires_soon
-        }
-      }
-
-      conn =
-        conn
-        |> put_session(:provider, invalid_provider)
-        |> Auth.fetch_current_provider([])
-
-      # Should remove provider since refresh will fail without refresh_token
-      assert conn.assigns.provider == nil
-      assert get_session(conn, :provider) == nil
-    end
-
     test "attempts to refresh tokens when close to expiry", %{conn: conn} do
       # Token expires in 200 seconds (within refresh threshold)
       expires_soon = DateTime.utc_now() |> DateTime.add(200, :second)
@@ -306,12 +269,12 @@ defmodule SongyWeb.AuthTest do
         }
       }
 
-      # Mock Spotify.Authentication.refresh to return proper Spotify.Credentials struct
       Repatch.patch(Spotify.Authentication, :refresh, fn _creds ->
-        {:ok, %Spotify.Credentials{
-          access_token: "new_token",
-          refresh_token: "new_refresh_token"
-        }}
+        {:ok,
+         %Spotify.Credentials{
+           access_token: "new_token",
+           refresh_token: "new_refresh_token"
+         }}
       end)
 
       conn =
@@ -319,28 +282,23 @@ defmodule SongyWeb.AuthTest do
         |> put_session(:provider, provider)
         |> Auth.fetch_current_provider([])
 
-      # Should have refreshed provider
       assert %Songy.Core.Provider{} = conn.assigns.provider
       assert conn.assigns.provider.meta.access_token == "new_token"
       assert conn.assigns.provider.meta.refresh_token == "new_refresh_token"
     end
 
-    test "removes provider when refresh fails", %{conn: conn} do
-      expires_soon = DateTime.utc_now() |> DateTime.add(200, :second)
-
-      # Create provider directly to avoid expires_at being overwritten
+    test "handles case when exist only refresh_token", %{conn: conn} do
       provider = %Songy.Core.Provider{
         id: :spotify,
-        meta: %{
-          access_token: "old_token",
-          refresh_token: "invalid_refresh_token",
-          expires_at: expires_soon
-        }
+        meta: %{refresh_token: "refresh_token"}
       }
 
-      # Mock failed refresh
       Repatch.patch(Spotify.Authentication, :refresh, fn _creds ->
-        {:error, :invalid_refresh_token}
+        {:ok,
+         %Spotify.Credentials{
+           access_token: "new_token",
+           refresh_token: "new_refresh_token"
+         }}
       end)
 
       conn =
@@ -348,9 +306,168 @@ defmodule SongyWeb.AuthTest do
         |> put_session(:provider, provider)
         |> Auth.fetch_current_provider([])
 
-      # Should remove provider on refresh failure
+      assert %Songy.Core.Provider{} = conn.assigns.provider
+      assert conn.assigns.provider.meta.access_token == "new_token"
+      assert conn.assigns.provider.meta.refresh_token == "new_refresh_token"
+    end
+
+    test "handles case when missing refresh_token", %{conn: conn} do
+      invalid_provider = %Songy.Core.Provider{
+        id: :spotify,
+        meta: %{access_token: "token"}
+      }
+
+      conn =
+        conn
+        |> put_session(:provider, invalid_provider)
+        |> Auth.fetch_current_provider([])
+
       assert conn.assigns.provider == nil
       assert get_session(conn, :provider) == nil
+    end
+
+    test "handles case when provider has empty meta", %{conn: conn} do
+      invalid_provider = %Songy.Core.Provider{
+        id: :spotify,
+        meta: %{}
+      }
+
+      conn =
+        conn
+        |> put_session(:provider, invalid_provider)
+        |> Auth.fetch_current_provider([])
+
+      assert conn.assigns.provider == nil
+      assert get_session(conn, :provider) == nil
+    end
+
+    test "clears session when provider has nil values", %{conn: conn} do
+      conn = Auth.fetch_current_provider(conn, [])
+
+      assert conn.assigns.provider == nil
+      assert get_session(conn, :provider) == nil
+    end
+
+    test "preserves existing expires_at when token is valid", %{conn: conn} do
+      original_expires_at = DateTime.utc_now() |> DateTime.add(1800, :second)
+
+      provider_with_expires = %Songy.Core.Provider{
+        id: :spotify,
+        meta: %{
+          access_token: "valid_token",
+          refresh_token: "refresh_token",
+          expires_at: original_expires_at
+        }
+      }
+
+      conn =
+        conn
+        |> put_session(:provider, provider_with_expires)
+        |> Auth.fetch_current_provider([])
+
+      assert conn.assigns.provider.meta.expires_at == original_expires_at
+      assert get_session(conn, :provider) == provider_with_expires
+    end
+
+    test "refreshes token when expires_at missing but calls refresh API", %{conn: conn} do
+      provider_without_expires = %Songy.Core.Provider{
+        id: :spotify,
+        meta: %{
+          access_token: "old_token",
+          refresh_token: "refresh_token"
+        }
+      }
+
+      Repatch.patch(Spotify.Authentication, :refresh, fn _creds ->
+        {:ok,
+         %Spotify.Credentials{
+           access_token: "new_token",
+           refresh_token: "new_refresh_token"
+         }}
+      end)
+
+      conn =
+        conn
+        |> put_session(:provider, provider_without_expires)
+        |> Auth.fetch_current_provider([])
+
+      assert %Songy.Core.Provider{} = conn.assigns.provider
+      assert Map.has_key?(conn.assigns.provider.meta, :expires_at)
+      assert conn.assigns.provider.meta.access_token == "new_token"
+      assert conn.assigns.provider.meta.refresh_token == "new_refresh_token"
+    end
+
+    test "removes provider when token expiry is close and no refresh_token", %{conn: conn} do
+      expires_soon = DateTime.utc_now() |> DateTime.add(200, :second)
+
+      invalid_provider = %Songy.Core.Provider{
+        id: :spotify,
+        meta: %{
+          access_token: "token_without_refresh",
+          expires_at: expires_soon
+        }
+      }
+
+      conn =
+        conn
+        |> put_session(:provider, invalid_provider)
+        |> Auth.fetch_current_provider([])
+
+      assert conn.assigns.provider == nil
+      assert get_session(conn, :provider) == nil
+    end
+
+    test "handles token refresh failure gracefully", %{conn: conn} do
+      expires_soon = DateTime.utc_now() |> DateTime.add(200, :second)
+
+      provider = %Songy.Core.Provider{
+        id: :spotify,
+        meta: %{
+          access_token: "expiring_token",
+          refresh_token: "refresh_token",
+          expires_at: expires_soon
+        }
+      }
+
+      Repatch.patch(Spotify.Authentication, :refresh, fn _creds ->
+        :unauthorized
+      end)
+
+      conn =
+        conn
+        |> put_session(:provider, provider)
+        |> Auth.fetch_current_provider([])
+
+      assert conn.assigns.provider == nil
+      assert get_session(conn, :provider) == nil
+    end
+
+    test "handles exact threshold boundary for token expiry", %{conn: conn} do
+      expires_at_threshold = DateTime.utc_now() |> DateTime.add(300, :second)
+
+      provider = %Songy.Core.Provider{
+        id: :spotify,
+        meta: %{
+          access_token: "boundary_token",
+          refresh_token: "refresh_token",
+          expires_at: expires_at_threshold
+        }
+      }
+
+      Repatch.patch(Spotify.Authentication, :refresh, fn _creds ->
+        {:ok,
+         %Spotify.Credentials{
+           access_token: "boundary_refreshed_token",
+           refresh_token: "boundary_refresh_token"
+         }}
+      end)
+
+      conn =
+        conn
+        |> put_session(:provider, provider)
+        |> Auth.fetch_current_provider([])
+
+      assert conn.assigns.provider.meta.access_token == "boundary_refreshed_token"
     end
   end
 end

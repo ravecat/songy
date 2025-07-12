@@ -2,6 +2,7 @@ defmodule SongyWeb.RoomChannelTest do
   use SongyWeb.ChannelCase
 
   alias Songy.Boundary.GameSession
+  alias Songy.Core.Provider
 
   setup do
     current_user = Songy.Core.User.get_user("test-uuid")
@@ -20,7 +21,8 @@ defmodule SongyWeb.RoomChannelTest do
 
   describe "start_game event" do
     test "changes game status and broadcasts update", %{current_user: current_user} do
-      {:ok, game} = GameSession.create_game_session("owner123")
+      provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", provider)
       {:ok, _updated_game} = GameSession.add_participant(game.uuid, current_user.uuid)
 
       {:ok, _, socket} =
@@ -141,7 +143,8 @@ defmodule SongyWeb.RoomChannelTest do
 
   describe "participant events" do
     test "handles participant_joined event", %{current_user: current_user} do
-      {:ok, game} = GameSession.create_game_session("owner123")
+      provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", provider)
 
       {:ok, _, socket} =
         SongyWeb.UserSocket
@@ -162,7 +165,8 @@ defmodule SongyWeb.RoomChannelTest do
     end
 
     test "handles participant_left event", %{current_user: current_user} do
-      {:ok, game} = GameSession.create_game_session("owner123")
+      provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", provider)
       {:ok, _updated_game} = GameSession.add_participant(game.uuid, current_user.uuid)
 
       # Verify participant was added

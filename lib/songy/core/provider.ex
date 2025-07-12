@@ -16,6 +16,8 @@ defmodule Songy.Core.Provider do
     @callback update(provider :: Provider.t(), patch :: map()) :: Provider.t()
   end
 
+  @derive {Jason.Encoder, only: [:id, :meta]}
+
   typedstruct do
     field :id, atom()
     field :meta, map()

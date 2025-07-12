@@ -3,6 +3,7 @@ defmodule SongyWeb.PageController do
   require Logger
 
   alias Songy.Boundary.GameSession
+  alias Songy.Core.Provider
 
   def home(conn, _params) do
     render(conn, :home)
@@ -10,15 +11,30 @@ defmodule SongyWeb.PageController do
 
   def start(conn, _params) do
     owner_uuid = conn.assigns.current_user.uuid
+    provider = conn.assigns.provider
 
-    case GameSession.create_game_session(owner_uuid) do
-      {:ok, game} ->
-        redirect(conn, to: ~p"/#{game.uuid}")
+    with {:ok, provider} <- if(provider, do: {:ok, provider}, else: {:error, :require_provider}),
+         %{id: provider_id} <- provider,
+         safe_provider <- Provider.new(provider_id),
+         {:ok, game} <- GameSession.create_game_session(owner_uuid, safe_provider) do
+      redirect(conn, to: ~p"/#{game.uuid}")
+    else
+      {:error, :require_provider} ->
+        conn
+        |> put_flash(:error, "Provider authentication required")
+        |> redirect(to: ~p"/")
+        |> halt()
 
       {:error, reason} ->
         conn
         |> put_flash(:error, "Failed to create game session: #{reason}")
         |> redirect(to: ~p"/")
+
+      _ ->
+        conn
+        |> put_flash(:error, "Provider authentication required")
+        |> redirect(to: ~p"/")
+        |> halt()
     end
   end
 

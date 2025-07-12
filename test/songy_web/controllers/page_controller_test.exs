@@ -2,6 +2,7 @@ defmodule SongyWeb.PageControllerTest do
   use SongyWeb.ConnCase
 
   alias Songy.Boundary.GameSession
+  alias Songy.Core.Provider
 
   test "GET /", %{conn: conn} do
     conn = get(conn, ~p"/")
@@ -9,8 +10,16 @@ defmodule SongyWeb.PageControllerTest do
   end
 
   describe "start/2" do
-    test "creates game session and redirects to room", %{conn: conn} do
-      conn = post(conn, ~p"/start")
+    test "creates game session authenticated by Spotify provider", %{conn: conn} do
+      provider = %Provider{
+        id: :spotify,
+        meta: %{
+          access_token: "test_token",
+          expires_at: DateTime.utc_now() |> DateTime.add(3600, :second)
+        }
+      }
+
+      conn = conn |> put_session(:provider, provider) |> post(~p"/start")
 
       assert redirected_to(conn, 302) =~ ~r"^/[A-Za-z0-9_-]+$"
 
@@ -20,6 +29,13 @@ defmodule SongyWeb.PageControllerTest do
       assert GameSession.session_exists?(uuid)
 
       GameSession.end_game_session(uuid)
+    end
+
+    test "returns error when provider is not authenticated", %{conn: conn} do
+      conn = post(conn, ~p"/start")
+
+      assert redirected_to(conn, 302) == "/"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Provider authentication required"
     end
   end
 
@@ -34,13 +50,13 @@ defmodule SongyWeb.PageControllerTest do
     end
 
     test "accesses existing game session", %{conn: conn} do
-      {:ok, game} = GameSession.create_game_session("owner123")
+      provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", provider)
 
       conn = get(conn, ~p"/#{game.uuid}")
 
       assert html_response(conn, 200)
 
-      # Cleanup
       GameSession.end_game_session(game.uuid)
     end
   end

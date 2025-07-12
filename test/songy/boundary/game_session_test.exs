@@ -4,11 +4,13 @@ defmodule Songy.Boundary.GameSessionTest do
   use AssertEventually
 
   alias Songy.Boundary.GameSession
+  alias Songy.Core.Provider
 
-  describe "create_game_session/1" do
-    test "starts new game session process with owner" do
+  describe "create_game_session/2" do
+    test "starts new game session process with owner and provider" do
       owner_uuid = "owner123"
-      assert {:ok, game} = GameSession.create_game_session(owner_uuid)
+      provider = Provider.new(:spotify)
+      assert {:ok, game} = GameSession.create_game_session(owner_uuid, provider)
 
       pid =
         case Registry.lookup(Songy.Registry, game.uuid) do
@@ -20,11 +22,15 @@ defmodule Songy.Boundary.GameSessionTest do
       assert game.uuid != nil
       assert game.participants == []
       assert game.owner_uuid == owner_uuid
+      assert %Provider{id: :spotify} = game.provider
     end
 
-    test "multiple different games can be started with different owners" do
-      assert {:ok, game1} = GameSession.create_game_session("owner1")
-      assert {:ok, game2} = GameSession.create_game_session("owner2")
+    test "multiple different games can be started with different owners and providers" do
+      provider1 = Provider.new(:spotify)
+      provider2 = Provider.new(:spotify)
+
+      assert {:ok, game1} = GameSession.create_game_session("owner1", provider1)
+      assert {:ok, game2} = GameSession.create_game_session("owner2", provider2)
 
       pid1 =
         case Registry.lookup(Songy.Registry, game1.uuid) do
@@ -44,12 +50,15 @@ defmodule Songy.Boundary.GameSessionTest do
       assert game1.uuid != game2.uuid
       assert game1.owner_uuid == "owner1"
       assert game2.owner_uuid == "owner2"
+      assert %Provider{id: :spotify} = game1.provider
+      assert %Provider{id: :spotify} = game2.provider
     end
   end
 
   describe "add_participant/2" do
     setup do
-      {:ok, game} = GameSession.create_game_session("owner123")
+      provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", provider)
 
       pid =
         case Registry.lookup(Songy.Registry, game.uuid) do
@@ -74,7 +83,8 @@ defmodule Songy.Boundary.GameSessionTest do
 
     test "returns error when game is full", %{game: _game} do
       # Create a game with default max participants (8)
-      {:ok, small_game} = GameSession.create_game_session("owner123")
+      provider = Provider.new(:spotify)
+      {:ok, small_game} = GameSession.create_game_session("owner123", provider)
 
       # Add participants up to max capacity
       assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user1")
@@ -100,7 +110,8 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "handles concurrent participant additions", %{game: _game} do
-      {:ok, limited_game} = GameSession.create_game_session("owner123")
+      provider = Provider.new(:spotify)
+      {:ok, limited_game} = GameSession.create_game_session("owner123", provider)
 
       tasks =
         for i <- 1..5 do
@@ -121,7 +132,8 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "end_game_session/1" do
     test "terminates game session process" do
-      {:ok, game} = GameSession.create_game_session("owner123")
+      provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", provider)
 
       assert :ok = GameSession.end_game_session(game.uuid)
       assert_eventually([] = Registry.lookup(Songy.Registry, game.uuid))
@@ -134,7 +146,8 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "remove_participant/2" do
     setup do
-      {:ok, game} = GameSession.create_game_session("owner123")
+      provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", provider)
 
       pid =
         case Registry.lookup(Songy.Registry, game.uuid) do
@@ -170,7 +183,8 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "get_game_session/1" do
     setup do
-      {:ok, game} = GameSession.create_game_session("owner123")
+      provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", provider)
 
       pid =
         case Registry.lookup(Songy.Registry, game.uuid) do
@@ -204,7 +218,8 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "start_game_session/1" do
     setup do
-      {:ok, game} = GameSession.create_game_session("owner123")
+      provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", provider)
 
       pid =
         case Registry.lookup(Songy.Registry, game.uuid) do
