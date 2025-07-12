@@ -68,6 +68,7 @@ defmodule Songy.MixProject do
       {:bandit, "~> 1.5"},
       {:bun, "~> 1.5", runtime: Mix.env() == :dev},
       {:typed_struct, "~> 0.3.0"},
+      {:nimble_options, "~> 1.1"},
       {:repatch, "~> 1.5", only: :test},
       {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false},
       {:assert_eventually, "~> 1.0.0", only: :test},
