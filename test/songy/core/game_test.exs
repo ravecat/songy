@@ -21,12 +21,60 @@ defmodule Songy.Core.GameTest do
   describe "new/2" do
     test "creates game with custom max participants" do
       owner_uuid = "owner456"
-      game = Game.new(owner_uuid, 4)
+      game = Game.new(owner_uuid, max_participants: 4)
 
       assert game.max_participants == 4
       assert game.owner_uuid == owner_uuid
       assert game.participants == []
       assert game.status == :waiting
+    end
+
+    test "creates game with multiple options" do
+      owner_uuid = "owner789"
+      game = Game.new(owner_uuid, max_participants: 12)
+
+      assert game.max_participants == 12
+      assert game.owner_uuid == owner_uuid
+      assert game.participants == []
+      assert game.status == :waiting
+    end
+
+    test "creates game with empty options list" do
+      owner_uuid = "owner000"
+      game = Game.new(owner_uuid, [])
+
+      assert game.max_participants == 8
+      assert game.owner_uuid == owner_uuid
+      assert game.participants == []
+      assert game.status == :waiting
+    end
+
+    test "raises error with invalid max_participants" do
+      assert_raise NimbleOptions.ValidationError, fn ->
+        Game.new("owner123", max_participants: 0)
+      end
+
+      assert_raise NimbleOptions.ValidationError, fn ->
+        Game.new("owner123", max_participants: -1)
+      end
+
+      assert_raise NimbleOptions.ValidationError, fn ->
+        Game.new("owner123", max_participants: "invalid")
+      end
+    end
+
+    test "raises error with unknown options" do
+      assert_raise NimbleOptions.ValidationError, fn ->
+        Game.new("owner123", created_at: DateTime.utc_now())
+      end
+
+      assert_raise NimbleOptions.ValidationError, fn ->
+        Game.new("owner123", uuid: "custom_uuid")
+      end
+
+      assert_raise NimbleOptions.ValidationError, fn ->
+        Game.new("owner123", unknown_field: "test")
+      end
     end
   end
 
@@ -41,7 +89,7 @@ defmodule Songy.Core.GameTest do
     end
 
     test "returns error when game is full" do
-      game = Game.new("owner123", 1)
+      game = Game.new("owner123", max_participants: 1)
       user1 = User.new()
       user2 = User.new()
 
@@ -97,13 +145,13 @@ defmodule Songy.Core.GameTest do
 
   describe "full?/1" do
     test "returns false for empty game" do
-      game = Game.new("owner123", 2)
+      game = Game.new("owner123", max_participants: 2)
 
       assert Game.full?(game) == false
     end
 
     test "returns false for partially filled game" do
-      game = Game.new("owner123", 2)
+      game = Game.new("owner123", max_participants: 2)
       user = User.new()
 
       {:ok, game_with_user} = Game.add_participant(game, user)
@@ -111,7 +159,7 @@ defmodule Songy.Core.GameTest do
     end
 
     test "returns true for full game" do
-      game = Game.new("owner123", 1)
+      game = Game.new("owner123", max_participants: 1)
       user = User.new()
 
       {:ok, full_game} = Game.add_participant(game, user)

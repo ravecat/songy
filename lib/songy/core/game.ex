@@ -14,6 +14,8 @@ defmodule Songy.Core.Game do
 
   @uuid_size 6
   @type status :: :waiting | :in_progress | :finished
+  @type option :: {:max_participants, pos_integer()}
+  @type options :: [option()]
 
   typedstruct do
     field :uuid, String.t(), enforce: true
@@ -24,29 +26,50 @@ defmodule Songy.Core.Game do
     field :owner_uuid, String.t(), enforce: true
   end
 
+  @options [
+    max_participants: [
+      type: :pos_integer,
+      doc: "Maximum number of players allowed in the game"
+    ]
+  ]
+
   @doc """
-  Creates a new game with given maximum participants and owner.
+  Creates a new game with the given owner and options.
 
   ## Parameters
-    * `owner_uuid` - UUID of the user who owns the game room
-    * `max_participants` - Maximum number of players allowed (default: 8)
+    * `owner_uuid` - UUID of the user who owns the game room (required)
+    * `opts` - Keyword list of game options (optional)
+
+  ## Options
+    * `:max_participants` - Maximum number of players allowed (default: 8)
 
   ## Examples
       iex> Game.new("user123")
-      %Game{uuid: "a1b2c3d4", participants: [], max_participants: 8, owner_uuid: "user123"}
+      %Game{uuid: "a1b2c3d4", participants: [], max_participants: 8, status: :waiting, owner_uuid: "user123"}
 
-      iex> Game.new("user123", 4)
-      %Game{uuid: "a1b2c3d4", participants: [], max_participants: 4, owner_uuid: "user123"}
+      iex> Game.new("user123", max_participants: 4)
+      %Game{uuid: "a1b2c3d4", participants: [], max_participants: 4, status: :waiting, owner_uuid: "user123"}
+
+      iex> Game.new("user123", max_participants: 12)
+      %Game{uuid: "a1b2c3d4", participants: [], max_participants: 12, status: :waiting, owner_uuid: "user123"}
   """
-  @spec new(String.t(), pos_integer()) :: t()
-  def new(owner_uuid, max_participants \\ 8)
-      when is_binary(owner_uuid) and is_integer(max_participants) and max_participants > 0 do
-    %__MODULE__{
-      uuid: generate_uuid(),
-      max_participants: max_participants,
-      created_at: DateTime.utc_now(),
-      owner_uuid: owner_uuid
-    }
+  @spec new(String.t(), keyword()) :: t()
+  def new(owner_uuid, opts \\ []) when is_binary(owner_uuid) and is_list(opts) do
+    opts = NimbleOptions.validate!(opts, @options)
+
+    struct!(
+      __MODULE__,
+      Keyword.merge(
+        [
+          max_participants: 8,
+          uuid: generate_uuid(),
+          owner_uuid: owner_uuid,
+          created_at: DateTime.utc_now(),
+          status: :waiting
+        ],
+        opts
+      )
+    )
   end
 
   @doc """
