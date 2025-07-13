@@ -64,4 +64,52 @@ describe("Room", () => {
     expect(screen.getByText("Start")).toBeInTheDocument();
     expect(screen.getByText("Start")).toBeVisible();
   });
+
+  test("should initialize Spotify Player when component mounts", () => {
+    render(Room, { roomId: "test-room" });
+
+    window.onSpotifyWebPlaybackSDKReady();
+
+    expect(window.Spotify.Player).toHaveBeenCalledWith({
+      name: "Songy Player test-room",
+      getOAuthToken: expect.any(Function),
+      volume: 0.5,
+    });
+  });
+
+  test("should call channel.push('get_spotify_token') when getOAuthToken is invoked", () => {
+    render(Room, { roomId: "test-room" });
+
+    const channel = socket.channel.mock.results[0].value;
+
+    window.onSpotifyWebPlaybackSDKReady();
+
+    const player = window.Spotify.Player.mock.results[0].value;
+    const getOAuthTokenCallback = player.options.getOAuthToken;
+    const tokenCallback = vi.fn();
+
+    getOAuthTokenCallback(tokenCallback);
+
+    expect(channel.push).toHaveBeenCalledWith("get_spotify_token", {});
+  });
+
+  test("should call channel.push('register_device') when player ready event is fired", () => {
+    render(Room, { roomId: "test-room" });
+
+    const channel = socket.channel.mock.results[0].value;
+
+    window.onSpotifyWebPlaybackSDKReady();
+
+    const player = window.Spotify.Player.mock.results[0].value;
+
+    const [_, readyCb] = player.addListener.mock.calls.find(
+      ([event]) => event === "ready"
+    );
+
+    readyCb({ device_id: "test-device-id" });
+
+    expect(channel.push).toHaveBeenCalledWith("register_device", {
+      device_id: "test-device-id",
+    });
+  });
 });
