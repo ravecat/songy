@@ -38,6 +38,11 @@ defmodule SongyWeb.Router do
     pipe_through [:browser]
 
     get "/", PageController, :home
+  end
+
+  scope "/", SongyWeb do
+    pipe_through [:browser, :require_provider]
+
     post "/start", PageController, :start
   end
 

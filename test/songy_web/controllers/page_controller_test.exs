@@ -35,7 +35,9 @@ defmodule SongyWeb.PageControllerTest do
       conn = post(conn, ~p"/start")
 
       assert redirected_to(conn, 302) == "/"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Provider authentication required"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "You must be authenticated by one of the supported providers."
     end
   end
 

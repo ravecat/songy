@@ -47,6 +47,20 @@ defmodule SongyWeb.Auth do
 
   def put_provider_token(conn, _), do: conn
 
+  @doc """
+  Plug for routes that require provider authentication.
+  """
+  def require_provider(conn, _opts) do
+    if Map.get(conn.assigns, :provider) do
+      conn
+    else
+      conn
+      |> put_flash(:error, "You must be authenticated by one of the supported providers.")
+      |> redirect(to: ~p"/")
+      |> halt()
+    end
+  end
+
   def authenticate(conn, :spotify, %{"code" => code}) do
     conn
     |> Spotify.Credentials.new()
