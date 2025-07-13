@@ -1,7 +1,10 @@
 import { render, screen } from "@testing-library/svelte";
 import { afterEach, expect, test, vi } from "vitest";
 import Room from "@pages/Room.svelte";
+import Spotify from "@mocks/spotify.js";
 import socket from "@/socket";
+
+vi.stubGlobal("Spotify", Spotify);
 
 vi.mock("@/socket", async () => {
   const { Socket } = await vi.importMock("phoenix");

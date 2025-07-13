@@ -1,33 +1,13 @@
 import { expect, test, vi, beforeEach, afterEach } from "vitest";
 import { flushSync } from "svelte";
 import { useSpotifyPlayer } from "@hooks/useSpotifyPlayer.svelte";
+import Spotify from "@mocks/spotify.js";
+
+vi.stubGlobal("Spotify", Spotify);
 
 describe("useSpotifyPlayer", () => {
-  beforeEach(() => {
-    vi.stubGlobal("Spotify", {
-      Player: vi.fn().mockImplementation(() => ({
-        addListener: vi.fn().mockReturnThis(),
-        connect: vi.fn().mockReturnThis(),
-        disconnect: vi.fn().mockReturnThis(),
-        togglePlay: vi.fn().mockReturnThis(),
-        pause: vi.fn().mockReturnThis(),
-        resume: vi.fn().mockReturnThis(),
-        nextTrack: vi.fn().mockReturnThis(),
-        previousTrack: vi.fn().mockReturnThis(),
-        seek: vi.fn().mockReturnThis(),
-        getCurrentState: vi.fn().mockReturnThis(),
-        getVolume: vi.fn().mockReturnThis(),
-        setVolume: vi.fn().mockReturnThis(),
-        setName: vi.fn().mockReturnThis(),
-        activateElement: vi.fn().mockReturnThis(),
-        removeListener: vi.fn().mockReturnThis(),
-      })),
-    });
-  });
-
   afterEach(() => {
     vi.clearAllMocks();
-    vi.unstubAllGlobals();
   });
 
   test("should initialize Spotify Player SDK", () => {
