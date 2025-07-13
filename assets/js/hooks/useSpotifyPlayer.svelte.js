@@ -38,6 +38,7 @@ export function useSpotifyPlayer(options = {}) {
   };
 
   let player = $state(null);
+  let instancePlayer = null;
 
   $effect(() => {
     const script = document.createElement("script");
@@ -51,35 +52,43 @@ export function useSpotifyPlayer(options = {}) {
     document.body.appendChild(script);
 
     window.onSpotifyWebPlaybackSDKReady = () => {
-      player = new window.Spotify.Player({
+      instancePlayer = new window.Spotify.Player({
         name: name,
         getOAuthToken: getOAuthToken,
         volume: volume,
       });
 
-      player.addListener("ready", eventCallbacks.ready);
-      player.addListener("not_ready", eventCallbacks.not_ready);
-      player.addListener(
+      player = instancePlayer;
+
+      instancePlayer.addListener("ready", eventCallbacks.ready);
+      instancePlayer.addListener("not_ready", eventCallbacks.not_ready);
+      instancePlayer.addListener(
         "player_state_changed",
         eventCallbacks.player_state_changed
       );
-      player.addListener("autoplay_failed", eventCallbacks.autoplay_failed);
-      player.addListener(
+      instancePlayer.addListener(
+        "autoplay_failed",
+        eventCallbacks.autoplay_failed
+      );
+      instancePlayer.addListener(
         "initialization_error",
         eventCallbacks.initialization_error
       );
-      player.addListener(
+      instancePlayer.addListener(
         "authentication_error",
         eventCallbacks.authentication_error
       );
-      player.addListener("account_error", eventCallbacks.account_error);
-      player.addListener("playback_error", eventCallbacks.playback_error);
+      instancePlayer.addListener("account_error", eventCallbacks.account_error);
+      instancePlayer.addListener(
+        "playback_error",
+        eventCallbacks.playback_error
+      );
 
-      player.connect();
+      instancePlayer.connect();
     };
 
     return () => {
-      player?.disconnect();
+      instancePlayer?.disconnect();
     };
   });
 

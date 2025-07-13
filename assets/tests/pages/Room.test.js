@@ -1,4 +1,4 @@
-import { render, screen, act } from "@testing-library/svelte";
+import { render, screen } from "@testing-library/svelte";
 import { afterEach, expect, test, vi } from "vitest";
 import Room from "@pages/Room.svelte";
 import socket from "@/socket";
@@ -25,7 +25,9 @@ describe("Room", () => {
   test("listens state_updated event", () => {
     render(Room, { roomId: "test-room" });
 
-    expect(socket.channel.mock.results[0].value.on).toHaveBeenCalledWith(
+    const channel = socket.channel.mock.results[0].value;
+
+    expect(channel.on).toHaveBeenCalledWith(
       "state_updated",
       expect.any(Function)
     );
