@@ -18,6 +18,7 @@ export default defineConfig(({ command }) => {
         "@": path.resolve(__dirname, "js"),
         "@hooks": path.resolve(__dirname, "js/hooks"),
         "@pages": path.resolve(__dirname, "js/pages"),
+        "@mocks": path.resolve(__dirname, "__mocks__"),
       },
     },
     build: {
