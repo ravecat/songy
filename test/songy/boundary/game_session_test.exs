@@ -256,4 +256,45 @@ defmodule Songy.Boundary.GameSessionTest do
       assert {:error, :not_found} = GameSession.start_game_session("nonexistent")
     end
   end
+
+  describe "owner?/2" do
+    setup do
+      provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      %{game: game}
+    end
+
+    test "returns true when user is owner", %{game: game} do
+      assert GameSession.owner?(game.uuid, "owner123") == true
+    end
+
+    test "returns false when user is not owner", %{game: game} do
+      assert GameSession.owner?(game.uuid, "other456") == false
+    end
+
+    test "returns false for non-existent session" do
+      assert GameSession.owner?("nonexistent", "user123") == false
+    end
+  end
+
+  describe "update_provider/2" do
+    setup do
+      provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      %{game: game}
+    end
+
+    test "updates provider successfully", %{game: game} do
+      provider_data = %{id: :spotify, meta: %{device_id: "test-device-123"}}
+
+      assert {:ok, updated_game} = GameSession.update_provider(game.uuid, provider_data)
+      assert updated_game.provider.meta.device_id == "test-device-123"
+    end
+
+    test "returns error for non-existent session" do
+      provider_data = %{id: :spotify, meta: %{device_id: "test-device-123"}}
+
+      assert {:error, :not_found} = GameSession.update_provider("nonexistent", provider_data)
+    end
+  end
 end

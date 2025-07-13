@@ -93,7 +93,7 @@ describe("Room", () => {
     expect(channel.push).toHaveBeenCalledWith("get_spotify_token", {});
   });
 
-  test("should call channel.push('register_device') when player ready event is fired", () => {
+  test("should call channel.push('update_provider') when player ready event is fired", () => {
     render(Room, { roomId: "test-room" });
 
     const channel = socket.channel.mock.results[0].value;
@@ -108,8 +108,9 @@ describe("Room", () => {
 
     readyCb({ device_id: "test-device-id" });
 
-    expect(channel.push).toHaveBeenCalledWith("register_device", {
-      device_id: "test-device-id",
+    expect(channel.push).toHaveBeenCalledWith("update_provider", {
+      id: "spotify",
+      meta: { device_id: "test-device-id" },
     });
   });
 });

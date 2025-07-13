@@ -86,8 +86,18 @@ defmodule SongyWeb.RoomChannel do
   end
 
   @impl true
-  def handle_in("register_device", _payload, socket) do
-    {:noreply, socket}
+  def handle_in("update_provider", payload, socket) do
+    "room:" <> room_id = socket.topic
+    current_user_uuid = socket.assigns.current_user_uuid
+
+    with true <- GameSession.owner?(room_id, current_user_uuid),
+         {:ok, provider_data} <- transform_provider_payload(payload),
+         {:ok, _game} <- GameSession.update_provider(room_id, provider_data) do
+      {:reply, :ok, socket}
+    else
+      _ ->
+        {:noreply, socket}
+    end
   end
 
   @impl true
@@ -104,5 +114,15 @@ defmodule SongyWeb.RoomChannel do
   @impl true
   def handle_in(event, _payload, socket) do
     {:reply, {:error, %{reason: "unknown_event", event: event}}, socket}
+  end
+
+  defp transform_provider_payload(%{"id" => provider_id, "meta" => meta}) do
+    meta = for {key, value} <- meta, into: %{}, do: {String.to_atom(key), value}
+
+    {:ok, %{id: String.to_atom(provider_id), meta: meta}}
+  end
+
+  defp transform_provider_payload(_payload) do
+    {:error, :invalid_provider_meta}
   end
 end

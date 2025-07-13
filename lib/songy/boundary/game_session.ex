@@ -14,6 +14,8 @@ defmodule Songy.Boundary.GameSession do
     * `get_game_session/1` - Retrieves the current state of a game session
     * `start_game_session/1` - Starts the game by changing its status to in_progress
     * `end_game_session/1` - Terminates a game session process
+    * `owner?/2` - Checks if a user is the owner of a game session
+    * `update_provider/2` - Updates the provider for a game session (owner only)
 
   ## Process Management
 
@@ -166,6 +168,51 @@ defmodule Songy.Boundary.GameSession do
     end
   end
 
+  @doc """
+  Checks if the given user is the owner of the game session.
+
+  ## Parameters
+    * `game_uuid` - UUID of the game session
+    * `user_uuid` - UUID of the user to check
+
+  ## Examples
+      iex> GameSession.owner?("game123", "owner456")
+      true
+
+      iex> GameSession.owner?("game123", "participant789")
+      false
+  """
+  @spec owner?(String.t(), String.t()) :: boolean()
+  def owner?(game_uuid, user_uuid) do
+    case get_game_session(game_uuid) do
+      {:ok, game} -> Game.owner?(game, user_uuid)
+      {:error, _} -> false
+    end
+  end
+
+  @doc """
+  Updates the provider for the game session.
+
+  ## Parameters
+    * `game_uuid` - UUID of the game session
+    * `provider_data` - Map containing provider id and meta (%{id: atom(), meta: map()})
+
+  ## Examples
+      iex> GameSession.update_provider("game123", %{id: :spotify, meta: %{device_id: "abc123"}})
+      {:ok, %Game{provider: %Provider{id: :spotify, meta: %{device_id: "abc123"}}}}
+
+      iex> GameSession.update_provider("nonexistent", %{id: :spotify, meta: %{}})
+      {:error, :not_found}
+  """
+  @spec update_provider(String.t(), map()) :: {:ok, Game.t()} | {:error, atom()}
+  def update_provider(game_uuid, provider_data) do
+    if session_exists?(game_uuid) do
+      GenServer.call(via(game_uuid), {:update_provider, provider_data})
+    else
+      {:error, :not_found}
+    end
+  end
+
   def session_exists?(game_uuid) do
     match?([_], Registry.lookup(Songy.Registry, game_uuid))
   end
@@ -232,6 +279,23 @@ defmodule Songy.Boundary.GameSession do
       _ ->
         {:reply, {:error, :game_already_started}, game}
     end
+  end
+
+  @impl GenServer
+  def handle_call({:update_provider, %{id: provider_id, meta: meta}}, _from, game) do
+    # If provider id changes, create new provider with merged meta
+    # Otherwise update existing provider
+    updated_provider =
+      if game.provider.id == provider_id do
+        Provider.update(game.provider, meta)
+      else
+        # Merge existing meta with new meta when changing provider type
+        merged_meta = Map.merge(game.provider.meta, meta)
+        Provider.new(provider_id, merged_meta)
+      end
+
+    updated_game = %{game | provider: updated_provider}
+    {:reply, {:ok, updated_game}, updated_game}
   end
 
   @impl GenServer
