@@ -62,19 +62,15 @@ defmodule SongyWeb.Auth do
   end
 
   def authenticate(conn, :spotify, %{"code" => code}) do
-    conn
-    |> Spotify.Credentials.new()
-    |> Spotify.Authentication.authenticate(%{"code" => code})
-    |> case do
-      {:ok, credentials} ->
-        conn
-        |> put_provider_in_session(Provider.new(:spotify, credentials))
-        |> put_flash(:info, "Successfully connected to Spotify!")
-        |> redirect(to: ~p"/")
-
-      {:error, reason} ->
-        Logger.error("Spotify authentication failed: #{inspect(reason)}")
-
+    with credentials <- Spotify.Credentials.new(conn),
+         {:ok, credentials} <- Spotify.Authentication.authenticate(credentials, %{"code" => code}),
+         %Provider{} = provider <- Provider.new(:spotify, Map.from_struct(credentials)) do
+      conn
+      |> put_provider_in_session(provider)
+      |> put_flash(:info, "Successfully connected to Spotify!")
+      |> redirect(to: ~p"/")
+    else
+      {:error, _} ->
         conn
         |> put_flash(:error, "Failed to authenticate with Spotify. Please try again.")
         |> redirect(to: ~p"/")
@@ -107,26 +103,26 @@ defmodule SongyWeb.Auth do
     {delete_session(conn, :provider), nil}
   end
 
-  defp ensure_spotify_provider(conn, provider) do
-    expires_at = Map.get(provider.meta, :expires_at, DateTime.utc_now())
-    time_until_expiry = DateTime.diff(expires_at, DateTime.utc_now(), :second)
+  defp ensure_spotify_provider(conn, %Provider{meta: meta} = provider) do
+    expires_at = Map.get(meta, :expires_at, DateTime.utc_now())
+    threshold_time = DateTime.add(DateTime.utc_now(), @token_refresh_threshold, :second)
 
-    if time_until_expiry > @token_refresh_threshold do
-      {conn, provider}
+    with :lt <- DateTime.compare(expires_at, threshold_time),
+         credentials <- struct(Spotify.Credentials, meta),
+         {:ok, refreshed_credentials} <- try_refresh_spotify_credentials(credentials) do
+      credentials_map = Map.from_struct(refreshed_credentials)
+      provider_with_credentials = Provider.new(:spotify, credentials_map)
+      {put_provider_in_session(conn, provider_with_credentials), provider_with_credentials}
     else
-      credentials = struct(Spotify.Credentials, provider.meta)
+      :gt ->
+        {conn, provider}
 
-      case try_refresh_spotify_credentials(credentials) do
-        {:ok, credentials} ->
-          updated_provider = Provider.new(:spotify, credentials)
+      :eq ->
+        {conn, provider}
 
-          {put_provider_in_session(conn, updated_provider), updated_provider}
-
-        _error ->
-          Logger.warning("Failed to refresh Spotify credentials")
-
-          {delete_session(conn, :provider), nil}
-      end
+      _error ->
+        Logger.warning("Failed to refresh Spotify credentials")
+        {delete_session(conn, :provider), nil}
     end
   end
 

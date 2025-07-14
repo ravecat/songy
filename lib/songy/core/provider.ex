@@ -1,127 +1,66 @@
 defmodule Songy.Core.Provider do
   @moduledoc """
-  Provides a common interface for media providers.
+  Simple provider structure with id and metadata fields using basic Elixir types.
   """
 
-  use TypedStruct
-
-  defmodule Behaviour do
-    @moduledoc """
-    Behaviour for provider-specific metadata enhancement.
-    """
-
-    alias Songy.Core.Provider
-
-    @callback new(meta :: map()) :: Provider.t()
-    @callback update(provider :: Provider.t(), patch :: map()) :: Provider.t()
-  end
+  use Ecto.Schema
+  import PolymorphicEmbed
+  import Ecto.Changeset
 
   @derive {Jason.Encoder, only: [:id, :meta]}
+  @type t :: %__MODULE__{
+          id: atom(),
+          meta: map()
+        }
 
-  typedstruct do
-    field :id, atom()
-    field :meta, map()
+  @primary_key false
+  embedded_schema do
+    field :id, Ecto.Enum, values: [:spotify]
+
+    polymorphic_embeds_one :meta,
+      types: [
+        spotify: Songy.Core.Provider.Spotify
+      ],
+      on_replace: :update,
+      use_parent_field_for_type: :id
   end
 
   @doc """
-  Creates a new provider with optional metadata enhancement.
+  Creates a new provider instance with given id and metadata.
 
   ## Examples
 
-      iex> Provider.new(:spotify, %{custom_field: "value"})
-      %Provider{id: :spotify, meta: %{custom_field: "value", expires_at: ~U[...]}}
-
+      iex> Provider.new(:spotify, %{access_token: "token"})
+      %Provider{id: :spotify, meta: %Spotify{access_token: "token"}}
   """
-  @spec new(atom(), map()) :: %__MODULE__{}
-  def new(id, meta \\ %{})
-  def new(:spotify, meta), do: __MODULE__.Spotify.new(meta)
-  def new(id, meta), do: %__MODULE__{id: id, meta: meta}
 
-  @doc """
-  Updates provider metadata using provider-specific implementations.
+  @spec new(atom(), map()) :: %__MODULE__{} | {:error, Ecto.Changeset.t()}
+  def new(id, meta \\ %{}) do
+    %__MODULE__{}
+    |> cast(%{id: id, meta: meta}, [:id])
+    |> case do
+      %{valid?: true} = changeset ->
+        changeset
+        |> cast_polymorphic_embed(:meta)
+        |> apply_changes()
 
-  Falls back to basic map merge if no specific provider implementation exists.
-
-  ## Examples
-
-      iex> provider = Provider.new(:spotify, %{token: "old"})
-      iex> Provider.update(provider, %{token: "new"})
-      %Provider{id: :spotify, meta: %{token: "new", expires_at: ~U[...]}}
-
-      iex> provider = Provider.new(:unknown, %{data: "old"})
-      iex> Provider.update(provider, %{data: "new"})
-      %Provider{id: :unknown, meta: %{data: "new"}}
-
-  """
-  def update(%__MODULE__{id: :spotify} = provider, patch),
-    do: __MODULE__.Spotify.update(provider, patch)
-
-  def update(%__MODULE__{meta: meta} = provider, patch),
-    do: %{provider | meta: Map.merge(meta, patch)}
-
-  defmodule Spotify do
-    @moduledoc """
-    Spotify provider implementation.
-    """
-    alias Songy.Core.Provider
-
-    @behaviour Songy.Core.Provider.Behaviour
-
-    @spotify_token_expires_in 3600
-
-    @impl true
-    def new(%{access_token: _token} = credentials) do
-      credential_data = normalize_credentials(credentials)
-
-      meta =
-        credential_data
-        |> extend_with_expires_at()
-
-      %Provider{id: :spotify, meta: meta}
+      %{valid?: false} = changeset ->
+        {:error, changeset}
     end
+  end
 
-    @impl true
-    def new(meta) do
-      %Provider{id: :spotify, meta: meta}
-    end
+  @spec update(%__MODULE__{}, map()) :: %__MODULE__{} | {:error, Ecto.Changeset.t()}
+  def update(%__MODULE__{} = provider, attrs) do
+    provider
+    |> cast(%{id: provider.id, meta: attrs}, [:id])
+    |> case do
+      %{valid?: true} = changeset ->
+        changeset
+        |> cast_polymorphic_embed(:meta)
+        |> apply_changes()
 
-    @doc """
-    Updates Spotify provider metadata.
-    """
-    @impl true
-    def update(
-          %Provider{id: _id, meta: meta} = provider,
-          %{access_token: _token} = credentials
-        ) do
-      credential_data = normalize_credentials(credentials)
-
-      meta =
-        meta
-        |> Map.merge(credential_data)
-        |> extend_with_expires_at()
-
-      %{provider | meta: meta}
-    end
-
-    @impl true
-    def update(%Provider{id: _id, meta: meta} = provider, patch) do
-      meta = Map.merge(meta, patch)
-
-      %{provider | meta: meta}
-    end
-
-    defp normalize_credentials(credentials) when is_struct(credentials) do
-      Map.from_struct(credentials)
-    end
-
-    defp normalize_credentials(credentials) when is_map(credentials) do
-      credentials
-    end
-
-    defp extend_with_expires_at(meta) do
-      expires_at = DateTime.utc_now() |> DateTime.add(@spotify_token_expires_in, :second)
-
-      Map.put(meta, :expires_at, expires_at)
+      %{valid?: false} = changeset ->
+        {:error, changeset}
     end
   end
 end

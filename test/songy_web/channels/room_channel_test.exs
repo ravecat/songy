@@ -222,7 +222,7 @@ defmodule SongyWeb.RoomChannelTest do
       # Check provider state before update attempt
       {:ok, game_before} = GameSession.get_game_session(game.uuid)
       assert game_before.provider.id == :spotify
-      assert game_before.provider.meta == %{}
+      assert game_before.provider.meta == nil
 
       {:ok, _, socket} =
         SongyWeb.UserSocket
@@ -241,7 +241,7 @@ defmodule SongyWeb.RoomChannelTest do
       # Verify provider state remained unchanged
       {:ok, game_after} = GameSession.get_game_session(game.uuid)
       assert game_after.provider.id == :spotify
-      assert game_after.provider.meta == %{}
+      assert game_after.provider.meta == nil
 
       GameSession.end_game_session(game.uuid)
     end
@@ -253,7 +253,7 @@ defmodule SongyWeb.RoomChannelTest do
       # Check provider state before update
       {:ok, game_before} = GameSession.get_game_session(game.uuid)
       assert game_before.provider.id == :spotify
-      assert game_before.provider.meta == %{}
+      assert game_before.provider.meta == nil
 
       {:ok, _, socket} =
         SongyWeb.UserSocket
@@ -284,7 +284,7 @@ defmodule SongyWeb.RoomChannelTest do
       # Check provider state before update
       {:ok, game_before} = GameSession.get_game_session(game.uuid)
       assert game_before.provider.id == :spotify
-      assert game_before.provider.meta == %{}
+      assert game_before.provider.meta == nil
 
       {:ok, _, socket} =
         SongyWeb.UserSocket
@@ -297,12 +297,7 @@ defmodule SongyWeb.RoomChannelTest do
           "meta" => %{"device_id" => "test-device-id"}
         })
 
-      assert_reply ref, :ok, %{}
-
-      # Verify provider was changed to nonexistent_provider with merged meta
-      {:ok, game_after} = GameSession.get_game_session(game.uuid)
-      assert game_after.provider.id == :nonexistent_provider
-      assert game_after.provider.meta.device_id == "test-device-id"
+      refute_reply ref, :ok
 
       GameSession.end_game_session(game.uuid)
     end
@@ -314,7 +309,7 @@ defmodule SongyWeb.RoomChannelTest do
       # Check provider state before update attempt
       {:ok, game_before} = GameSession.get_game_session(game.uuid)
       assert game_before.provider.id == :spotify
-      assert game_before.provider.meta == %{}
+      assert game_before.provider.meta == nil
 
       {:ok, _, socket} =
         SongyWeb.UserSocket
@@ -328,7 +323,7 @@ defmodule SongyWeb.RoomChannelTest do
       # Verify provider state remained unchanged
       {:ok, game_after} = GameSession.get_game_session(game.uuid)
       assert game_after.provider.id == :spotify
-      assert game_after.provider.meta == %{}
+      assert game_after.provider.meta == nil
 
       GameSession.end_game_session(game.uuid)
     end

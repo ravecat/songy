@@ -11,9 +11,8 @@ defmodule SongyWeb.PageController do
 
   def start(conn, _params) do
     owner_uuid = conn.assigns.current_user.uuid
-    # Current provider fetched from session and contains authentication details
-    # so should create initial provider instance without sensitive data
     %{id: provider_id} = conn.assigns.provider
+
     provider = Provider.new(provider_id)
 
     case GameSession.create_game_session(owner_uuid, provider) do

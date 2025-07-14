@@ -283,19 +283,17 @@ defmodule Songy.Boundary.GameSession do
 
   @impl GenServer
   def handle_call({:update_provider, %{id: provider_id, meta: meta}}, _from, game) do
-    # If provider id changes, create new provider with merged meta
-    # Otherwise update existing provider
-    updated_provider =
-      if game.provider.id == provider_id do
-        Provider.update(game.provider, meta)
-      else
-        # Merge existing meta with new meta when changing provider type
-        merged_meta = Map.merge(game.provider.meta, meta)
-        Provider.new(provider_id, merged_meta)
-      end
-
-    updated_game = %{game | provider: updated_provider}
-    {:reply, {:ok, updated_game}, updated_game}
+    # If provider id changes, create new provider otherwise update existing provider
+    with %Provider{} = provider <-
+           if(game.provider.id == provider_id,
+             do: Provider.update(game.provider, meta),
+             else: Provider.new(provider_id, meta)
+           ) do
+      updated_game = %{game | provider: provider}
+      {:reply, {:ok, updated_game}, updated_game}
+    else
+      {:error, %Ecto.Changeset{}} -> {:reply, {:error, :invalid_provider}, game}
+    end
   end
 
   @impl GenServer
