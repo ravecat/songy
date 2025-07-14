@@ -72,7 +72,9 @@ defmodule Songy.MixProject do
       {:repatch, "~> 1.5", only: :test},
       {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false},
       {:assert_eventually, "~> 1.0.0", only: :test},
-      {:faker, "~> 0.19.0-alpha.1"}
+      {:faker, "~> 0.19.0-alpha.1"},
+      {:polymorphic_embed,
+       git: "https://github.com/mathieuprog/polymorphic_embed.git", tag: "v5.0.3"}
     ]
   end
 
