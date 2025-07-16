@@ -27,10 +27,7 @@
     },
     on: {
       ready: ({ device_id }) => {
-        channel.push("update_provider", { 
-          id: "spotify", 
-          meta: { device_id } 
-        });
+        channel.push("update_provider", { device_id });
       },
     },
   });

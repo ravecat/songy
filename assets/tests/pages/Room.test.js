@@ -109,8 +109,7 @@ describe("Room", () => {
     readyCb({ device_id: "test-device-id" });
 
     expect(channel.push).toHaveBeenCalledWith("update_provider", {
-      id: "spotify",
-      meta: { device_id: "test-device-id" },
+      device_id: "test-device-id",
     });
   });
 });

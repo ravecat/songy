@@ -140,7 +140,7 @@ defmodule Songy.Boundary.GameSession do
   @spec get_game_session(String.t()) :: {:ok, Game.t()} | {:error, atom()}
   def get_game_session(game_uuid) do
     if session_exists?(game_uuid) do
-      GenServer.call(via(game_uuid), :get_game)
+      GenServer.call(via(game_uuid), :get_game_session)
     else
       {:error, :not_found}
     end
@@ -205,16 +205,29 @@ defmodule Songy.Boundary.GameSession do
       {:error, :not_found}
   """
   @spec update_provider(String.t(), map()) :: {:ok, Game.t()} | {:error, atom()}
-  def update_provider(game_uuid, provider_data) do
-    if session_exists?(game_uuid) do
-      GenServer.call(via(game_uuid), {:update_provider, provider_data})
+  def update_provider(game_uuid, attrs) do
+    with {:ok, game} <- lookup_game_session(game_uuid),
+         %Provider{} = provider <- Provider.update(game.provider, attrs) do
+      GenServer.call(via(game_uuid), {:update_provider, provider})
     else
-      {:error, :not_found}
+      error -> error
     end
   end
 
   def session_exists?(game_uuid) do
     match?([_], Registry.lookup(Songy.Registry, game_uuid))
+  end
+
+  @spec lookup_game_session(String.t()) :: {:ok, Game.t()} | {:error, :not_found}
+  def lookup_game_session(game_uuid) do
+    case Registry.lookup(Songy.Registry, game_uuid) do
+      [{pid, _value}] -> GenServer.call(pid, :get_game_session, 1000)
+      [] -> {:error, :not_found}
+    end
+  rescue
+    _ -> {:error, :not_found}
+  catch
+    _, _ -> {:error, :not_found}
   end
 
   def child_spec(game) do
@@ -265,7 +278,7 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @impl GenServer
-  def handle_call(:get_game, _from, game) do
+  def handle_call(:get_game_session, _from, game) do
     {:reply, {:ok, game}, game}
   end
 
@@ -282,18 +295,10 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @impl GenServer
-  def handle_call({:update_provider, %{id: provider_id, meta: meta}}, _from, game) do
-    # If provider id changes, create new provider otherwise update existing provider
-    with %Provider{} = provider <-
-           if(game.provider.id == provider_id,
-             do: Provider.update(game.provider, meta),
-             else: Provider.new(provider_id, meta)
-           ) do
-      updated_game = %{game | provider: provider}
-      {:reply, {:ok, updated_game}, updated_game}
-    else
-      {:error, %Ecto.Changeset{}} -> {:reply, {:error, :invalid_provider}, game}
-    end
+  def handle_call({:update_provider, provider}, _from, game) do
+    updated_game = Game.update_provider(game, provider)
+
+    {:reply, {:ok, updated_game}, updated_game}
   end
 
   @impl GenServer

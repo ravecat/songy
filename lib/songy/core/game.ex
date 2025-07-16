@@ -8,8 +8,7 @@ defmodule Songy.Core.Game do
 
   use TypedStruct
 
-  @derive {Jason.Encoder,
-           only: [:uuid, :participants, :max_participants, :status, :owner_uuid, :provider]}
+  @derive {Jason.Encoder, only: [:uuid, :participants, :max_participants, :status, :owner_uuid, :provider]}
 
   alias Songy.Core.{User, Provider}
 
@@ -174,6 +173,16 @@ defmodule Songy.Core.Game do
   @spec owner?(t(), String.t()) :: boolean()
   def owner?(%__MODULE__{owner_uuid: owner_uuid}, user_uuid) when is_binary(user_uuid) do
     owner_uuid == user_uuid
+  end
+
+  @spec get_provider(t()) :: Provider.t()
+  def get_provider(%__MODULE__{provider: provider}) do
+    provider
+  end
+
+  @spec update_provider(t(), Provider.t()) :: t()
+  def update_provider(%__MODULE__{} = game, %Provider{} = provider) do
+    %{game | provider: provider}
   end
 
   defp user_already_joined?(%__MODULE__{participants: participants}, %User{uuid: uuid}) do

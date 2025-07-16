@@ -15,7 +15,7 @@ defmodule SongyWeb.RoomChannelTest do
     %{socket: socket, current_user: current_user, join_reply: reply}
   end
 
-  describe "room channel" do
+  describe "room common events" do
     test "handles join succeeds", %{join_reply: reply} do
       assert reply == %{}
     end
@@ -80,68 +80,7 @@ defmodule SongyWeb.RoomChannelTest do
     end
   end
 
-  describe "room channel with spotify provider" do
-    test "returns access token when provider is available", %{current_user: current_user} do
-      provider = %Songy.Core.Provider{
-        id: :spotify,
-        meta: %{access_token: "spotify_access_token_123"}
-      }
-
-      {:ok, _, socket} =
-        SongyWeb.UserSocket
-        |> socket("user_id", %{current_user_uuid: current_user.uuid, provider: provider})
-        |> subscribe_and_join(SongyWeb.RoomChannel, "room:lobby")
-
-      ref = push(socket, "get_spotify_token", %{})
-
-      assert_reply ref, :ok, %{token: "spotify_access_token_123"}
-    end
-
-    test "returns error when provider has no access_token", %{current_user: current_user} do
-      provider = %Songy.Core.Provider{
-        id: :spotify,
-        meta: %{refresh_token: "refresh_token_123"}
-      }
-
-      {:ok, _, socket} =
-        SongyWeb.UserSocket
-        |> socket("user_id", %{current_user_uuid: current_user.uuid, provider: provider})
-        |> subscribe_and_join(SongyWeb.RoomChannel, "room:lobby")
-
-      ref = push(socket, "get_spotify_token", %{})
-
-      assert_reply ref, :error, %{reason: "invalid_credentials"}
-    end
-
-    test "returns error with missing access_token", %{current_user: current_user} do
-      provider = %Songy.Core.Provider{
-        id: :spotify,
-        meta: %{access_token: nil}
-      }
-
-      {:ok, _, socket} =
-        SongyWeb.UserSocket
-        |> socket("user_id", %{current_user_uuid: current_user.uuid, provider: provider})
-        |> subscribe_and_join(SongyWeb.RoomChannel, "room:lobby")
-
-      ref = push(socket, "get_spotify_token", %{})
-
-      assert_reply ref, :error, %{reason: "invalid_credentials"}
-    end
-
-    test "returns error with missing provider", %{current_user: current_user} do
-      {:ok, _, socket} =
-        SongyWeb.UserSocket
-        |> socket("user_id", %{current_user_uuid: current_user.uuid})
-        |> subscribe_and_join(SongyWeb.RoomChannel, "room:lobby")
-
-      ref = push(socket, "get_spotify_token", %{})
-
-      assert_reply ref, :error, %{reason: "invalid_credentials"}
-    end
-  end
-
-  describe "room presence" do
+  describe "room presence events" do
     test "handles participant_joined event", %{current_user: current_user} do
       provider = Provider.new(:spotify)
       {:ok, game} = GameSession.create_game_session("owner123", provider)
@@ -214,7 +153,7 @@ defmodule SongyWeb.RoomChannelTest do
     end
   end
 
-  describe "update_provider event" do
+  describe "provider common events" do
     test "refuses access to provider for non-owner user", %{current_user: current_user} do
       provider = Provider.new(:spotify)
       {:ok, game} = GameSession.create_game_session("other_owner", provider)
@@ -230,10 +169,7 @@ defmodule SongyWeb.RoomChannelTest do
         |> subscribe_and_join(SongyWeb.RoomChannel, "room:#{game.uuid}")
 
       ref =
-        push(socket, "update_provider", %{
-          "id" => "spotify",
-          "meta" => %{"device_id" => "test-device-id"}
-        })
+        push(socket, "update_provider", %{"device_id" => "test-device-id"})
 
       refute_reply ref, :ok
       refute_broadcast "provider_updated", _
@@ -261,10 +197,7 @@ defmodule SongyWeb.RoomChannelTest do
         |> subscribe_and_join(SongyWeb.RoomChannel, "room:#{game.uuid}")
 
       ref =
-        push(socket, "update_provider", %{
-          "id" => "spotify",
-          "meta" => %{"device_id" => "test-device-id"}
-        })
+        push(socket, "update_provider", %{"device_id" => "test-device-id"})
 
       assert_reply ref, :ok, %{}
       refute_broadcast "provider_updated", _
@@ -277,39 +210,12 @@ defmodule SongyWeb.RoomChannelTest do
       GameSession.end_game_session(game.uuid)
     end
 
-    test "handles unknown provider id gracefully", %{current_user: current_user} do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session(current_user.uuid, provider)
-
-      # Check provider state before update
-      {:ok, game_before} = GameSession.get_game_session(game.uuid)
-      assert game_before.provider.id == :spotify
-      assert game_before.provider.meta == nil
-
-      {:ok, _, socket} =
-        SongyWeb.UserSocket
-        |> socket("user_id", %{current_user_uuid: current_user.uuid})
-        |> subscribe_and_join(SongyWeb.RoomChannel, "room:#{game.uuid}")
-
-      ref =
-        push(socket, "update_provider", %{
-          "id" => "nonexistent_provider",
-          "meta" => %{"device_id" => "test-device-id"}
-        })
-
-      refute_reply ref, :ok
-
-      GameSession.end_game_session(game.uuid)
-    end
-
     test "skip provider update when payload is invalid", %{current_user: current_user} do
-      provider = Provider.new(:spotify)
+      provider = Provider.new(:spotify, %{device_id: "test-device-id"})
       {:ok, game} = GameSession.create_game_session(current_user.uuid, provider)
 
-      # Check provider state before update attempt
       {:ok, game_before} = GameSession.get_game_session(game.uuid)
-      assert game_before.provider.id == :spotify
-      assert game_before.provider.meta == nil
+      assert game_before.provider == provider
 
       {:ok, _, socket} =
         SongyWeb.UserSocket
@@ -318,14 +224,73 @@ defmodule SongyWeb.RoomChannelTest do
 
       ref = push(socket, "update_provider", %{"invalid" => "payload"})
 
-      refute_reply ref, :ok
+      assert_reply ref, :ok
 
-      # Verify provider state remained unchanged
       {:ok, game_after} = GameSession.get_game_session(game.uuid)
-      assert game_after.provider.id == :spotify
-      assert game_after.provider.meta == nil
+      assert game_after.provider == provider
 
       GameSession.end_game_session(game.uuid)
+    end
+  end
+
+  describe "room spotify events" do
+    test "returns access token when provider is available", %{current_user: current_user} do
+      provider = %Songy.Core.Provider{
+        id: :spotify,
+        meta: %{access_token: "spotify_access_token_123"}
+      }
+
+      {:ok, _, socket} =
+        SongyWeb.UserSocket
+        |> socket("user_id", %{current_user_uuid: current_user.uuid, provider: provider})
+        |> subscribe_and_join(SongyWeb.RoomChannel, "room:lobby")
+
+      ref = push(socket, "get_spotify_token", %{})
+
+      assert_reply ref, :ok, %{token: "spotify_access_token_123"}
+    end
+
+    test "returns error when provider has no access_token", %{current_user: current_user} do
+      provider = %Songy.Core.Provider{
+        id: :spotify,
+        meta: %{refresh_token: "refresh_token_123"}
+      }
+
+      {:ok, _, socket} =
+        SongyWeb.UserSocket
+        |> socket("user_id", %{current_user_uuid: current_user.uuid, provider: provider})
+        |> subscribe_and_join(SongyWeb.RoomChannel, "room:lobby")
+
+      ref = push(socket, "get_spotify_token", %{})
+
+      assert_reply ref, :error, %{reason: "invalid_credentials"}
+    end
+
+    test "returns error with missing access_token", %{current_user: current_user} do
+      provider = %Songy.Core.Provider{
+        id: :spotify,
+        meta: %{access_token: nil}
+      }
+
+      {:ok, _, socket} =
+        SongyWeb.UserSocket
+        |> socket("user_id", %{current_user_uuid: current_user.uuid, provider: provider})
+        |> subscribe_and_join(SongyWeb.RoomChannel, "room:lobby")
+
+      ref = push(socket, "get_spotify_token", %{})
+
+      assert_reply ref, :error, %{reason: "invalid_credentials"}
+    end
+
+    test "returns error with missing provider", %{current_user: current_user} do
+      {:ok, _, socket} =
+        SongyWeb.UserSocket
+        |> socket("user_id", %{current_user_uuid: current_user.uuid})
+        |> subscribe_and_join(SongyWeb.RoomChannel, "room:lobby")
+
+      ref = push(socket, "get_spotify_token", %{})
+
+      assert_reply ref, :error, %{reason: "invalid_credentials"}
     end
   end
 end
