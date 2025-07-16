@@ -23,7 +23,7 @@ defmodule Songy.MixProject do
   def application do
     [
       mod: {Songy.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :wx, :observer]
     ]
   end
 
