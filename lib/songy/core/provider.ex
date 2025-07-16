@@ -7,10 +7,14 @@ defmodule Songy.Core.Provider do
   import PolymorphicEmbed
   import Ecto.Changeset
 
+  alias Songy.Core.Provider.Spotify
+
   @derive {Jason.Encoder, only: [:id, :meta]}
+
+  @type provider_meta :: Spotify.t() | nil
   @type t :: %__MODULE__{
           id: atom(),
-          meta: map()
+          meta: provider_meta()
         }
 
   @primary_key false
@@ -19,7 +23,7 @@ defmodule Songy.Core.Provider do
 
     polymorphic_embeds_one :meta,
       types: [
-        spotify: Songy.Core.Provider.Spotify
+        spotify: Spotify
       ],
       on_replace: :update,
       use_parent_field_for_type: :id
