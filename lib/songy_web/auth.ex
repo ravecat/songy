@@ -95,7 +95,12 @@ defmodule SongyWeb.Auth do
     put_session(conn, :provider, provider)
   end
 
-  defp ensure_provider(conn, %{id: :spotify} = provider) do
+  defp ensure_provider(conn, %Provider{meta: nil}) do
+    Logger.warning("Provider credentials data are missing or invalid")
+    {delete_session(conn, :provider), nil}
+  end
+
+  defp ensure_provider(conn, %Provider{id: :spotify} = provider) do
     ensure_spotify_provider(conn, provider)
   end
 
@@ -104,7 +109,7 @@ defmodule SongyWeb.Auth do
   end
 
   defp ensure_spotify_provider(conn, %Provider{meta: meta} = provider) do
-    expires_at = Map.get(meta, :expires_at, DateTime.utc_now())
+    expires_at = meta.expires_at || DateTime.utc_now()
     threshold_time = DateTime.add(DateTime.utc_now(), @token_refresh_threshold, :second)
 
     with :lt <- DateTime.compare(expires_at, threshold_time),
