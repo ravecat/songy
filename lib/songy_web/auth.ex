@@ -108,7 +108,7 @@ defmodule SongyWeb.Auth do
     threshold_time = DateTime.add(DateTime.utc_now(), @token_refresh_threshold, :second)
 
     with :lt <- DateTime.compare(expires_at, threshold_time),
-         credentials <- struct(Spotify.Credentials, meta),
+         credentials <- struct(Spotify.Credentials, Map.from_struct(meta)),
          {:ok, refreshed_credentials} <- try_refresh_spotify_credentials(credentials) do
       credentials_map = Map.from_struct(refreshed_credentials)
       provider_with_credentials = Provider.new(:spotify, credentials_map)
