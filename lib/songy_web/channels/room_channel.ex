@@ -97,9 +97,11 @@ defmodule SongyWeb.RoomChannel do
 
     with true <- GameSession.owner?(room_id, current_user_uuid),
          {:ok, _game} <- GameSession.update_provider(room_id, payload),
-         {:ok, _result} <- Spotify.transfer_playback(provider, payload) |> dbg do
+         {:ok, :transferred} <- Spotify.transfer_playback(provider, payload) do
       {:reply, :ok, socket}
     else
+      {:error, _reason} ->
+        {:noreply, socket}
       _ ->
         {:noreply, socket}
     end

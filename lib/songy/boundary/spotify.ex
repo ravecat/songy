@@ -10,29 +10,32 @@ defmodule Songy.Boundary.Spotify do
   require Logger
 
   @spec transfer_playback(provider :: Provider.t(), payload :: map()) ::
-          {:ok, :transferred} | {:ok, :transfer_failed} | {:ok, :no_credentials} | {:ok, :no_device_id}
+          {:ok, :transferred} | {:error, :no_credentials | :invalid_provider | :no_device_id | :transfer_failed}
   def transfer_playback(provider, %{"device_id" => device_id}) do
-    case provider do
-      %{id: :spotify, meta: %{access_token: token}} when not is_nil(token) ->
-        credentials = struct(Spotify.Credentials, %{access_token: token})
+    with {:ok, provider} <- validate_spotify_provider(provider),
+         {:ok, credentials} <- extract_credentials(provider),
+         :ok <- Spotify.Player.transfer_playback(credentials, [device_id]) do
+      Logger.info("Successfully transferred playback to device #{device_id}")
+      {:ok, :transferred}
+    else
+      {:error, reason} when reason in [:no_credentials, :invalid_provider] ->
+        {:error, reason}
 
-        case Spotify.Player.transfer_playback(credentials, [device_id]) do
-          :ok ->
-            Logger.info("Successfully transferred playback to device #{device_id}")
-            {:ok, :transferred}
-
-          {:error, reason} ->
-            Logger.warning("Failed to transfer playback to device #{device_id}: #{inspect(reason)}")
-            {:ok, :transfer_failed}
-        end
-
-      _ ->
-        Logger.warning("No valid Spotify credentials for playback transfer")
-        {:ok, :no_credentials}
+      {:error, reason} ->
+        Logger.warning("Failed to transfer playback to device #{device_id}: #{inspect(reason)}")
+        {:error, :transfer_failed}
     end
   end
 
-  def transfer_playback(_socket, _payload) do
-    {:ok, :no_device_id}
+  def transfer_playback(_, _), do: {:error, :no_device_id}
+
+  defp validate_spotify_provider(%{id: :spotify} = provider), do: {:ok, provider}
+  defp validate_spotify_provider(_), do: {:error, :invalid_provider}
+
+  defp extract_credentials(%{meta: %{access_token: token}}) when not is_nil(token) do
+    credentials = struct(Spotify.Credentials, %{access_token: token})
+    {:ok, credentials}
   end
+
+  defp extract_credentials(_), do: {:error, :no_credentials}
 end
