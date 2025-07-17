@@ -2,22 +2,31 @@ defmodule SongyWeb.RoomChannelTest do
   use SongyWeb.ChannelCase
 
   alias Songy.Boundary.GameSession
-  alias Songy.Core.Provider
+  alias Songy.Core.{Provider, User}
+
+  defp join_room_channel(current_user, room_uuid, assigns \\ %{}) do
+    default_assigns = %{current_user_uuid: current_user.uuid}
+
+    SongyWeb.UserSocket
+    |> socket("user_id", Map.merge(default_assigns, assigns))
+    |> subscribe_and_join(SongyWeb.RoomChannel, "room:#{room_uuid}")
+  end
 
   setup do
-    current_user = Songy.Core.User.get_user("test-uuid")
+    current_user = User.get_user("test-uuid")
 
-    {:ok, reply, socket} =
-      SongyWeb.UserSocket
-      |> socket("user_id", %{current_user_uuid: current_user.uuid})
-      |> subscribe_and_join(SongyWeb.RoomChannel, "room:lobby")
-
-    %{socket: socket, current_user: current_user, join_reply: reply}
+    %{current_user: current_user}
   end
 
   describe "room common events" do
-    test "handles join succeeds", %{join_reply: reply} do
+    test "handles join succeeds", %{current_user: current_user} do
+      provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", provider)
+
+      {:ok, reply, _socket} = join_room_channel(current_user, game.uuid)
       assert reply == %{}
+
+      GameSession.end_game_session(game.uuid)
     end
 
     test "changes game status and broadcasts update", %{current_user: current_user} do
@@ -25,10 +34,7 @@ defmodule SongyWeb.RoomChannelTest do
       {:ok, game} = GameSession.create_game_session("owner123", provider)
       {:ok, _updated_game} = GameSession.add_participant(game.uuid, current_user.uuid)
 
-      {:ok, _, socket} =
-        SongyWeb.UserSocket
-        |> socket("user_id", %{current_user_uuid: current_user.uuid})
-        |> subscribe_and_join(SongyWeb.RoomChannel, "room:#{game.uuid}")
+      {:ok, _, socket} = join_room_channel(current_user, game.uuid)
 
       push(socket, "start_game", %{})
 
@@ -41,10 +47,7 @@ defmodule SongyWeb.RoomChannelTest do
     end
 
     test "fails when game session does not exist", %{current_user: current_user} do
-      {:ok, _, socket} =
-        SongyWeb.UserSocket
-        |> socket("user_id", %{current_user_uuid: current_user.uuid})
-        |> subscribe_and_join(SongyWeb.RoomChannel, "room:nonexistent")
+      {:ok, _, socket} = join_room_channel(current_user, "nonexistent")
 
       push(socket, "start_game", %{})
 
@@ -53,14 +56,16 @@ defmodule SongyWeb.RoomChannelTest do
     end
 
     test "returns error when provider is nil", %{current_user: current_user} do
-      {:ok, _, socket} =
-        SongyWeb.UserSocket
-        |> socket("user_id", %{current_user_uuid: current_user.uuid, provider: nil})
-        |> subscribe_and_join(SongyWeb.RoomChannel, "room:lobby")
+      provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", provider)
+
+      {:ok, _, socket} = join_room_channel(current_user, game.uuid, %{provider: nil})
 
       ref = push(socket, "get_spotify_token", %{})
 
       assert_reply ref, :error, %{reason: "invalid_credentials"}
+
+      GameSession.end_game_session(game.uuid)
     end
 
     test "returns error when provider is unknown", %{current_user: current_user} do
@@ -69,14 +74,16 @@ defmodule SongyWeb.RoomChannelTest do
         meta: %{access_token: "youtube_token_123"}
       }
 
-      {:ok, _, socket} =
-        SongyWeb.UserSocket
-        |> socket("user_id", %{current_user_uuid: current_user.uuid, provider: provider})
-        |> subscribe_and_join(SongyWeb.RoomChannel, "room:lobby")
+      base_provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", base_provider)
+
+      {:ok, _, socket} = join_room_channel(current_user, game.uuid, %{provider: provider})
 
       ref = push(socket, "get_spotify_token", %{})
 
       assert_reply ref, :error, %{reason: "invalid_credentials"}
+
+      GameSession.end_game_session(game.uuid)
     end
   end
 
@@ -85,10 +92,7 @@ defmodule SongyWeb.RoomChannelTest do
       provider = Provider.new(:spotify)
       {:ok, game} = GameSession.create_game_session("owner123", provider)
 
-      {:ok, _, socket} =
-        SongyWeb.UserSocket
-        |> socket("user_id", %{current_user_uuid: current_user.uuid})
-        |> subscribe_and_join(SongyWeb.RoomChannel, "room:#{game.uuid}")
+      {:ok, _, socket} = join_room_channel(current_user, game.uuid)
 
       # Simulate a participant_joined event
       send(socket.channel_pid, {:participant_joined, current_user.uuid})
@@ -112,10 +116,7 @@ defmodule SongyWeb.RoomChannelTest do
       {:ok, game_before_leave} = GameSession.get_game_session(game.uuid)
       assert length(game_before_leave.participants) == 1
 
-      {:ok, _, socket} =
-        SongyWeb.UserSocket
-        |> socket("user_id", %{current_user_uuid: current_user.uuid})
-        |> subscribe_and_join(SongyWeb.RoomChannel, "room:#{game.uuid}")
+      {:ok, _, socket} = join_room_channel(current_user, game.uuid)
 
       # Simulate a participant_left event
       send(socket.channel_pid, {:participant_left, current_user.uuid})
@@ -129,10 +130,7 @@ defmodule SongyWeb.RoomChannelTest do
     end
 
     test "handles participant_joined event with nonexistent game", %{current_user: current_user} do
-      {:ok, _, socket} =
-        SongyWeb.UserSocket
-        |> socket("user_id", %{current_user_uuid: current_user.uuid})
-        |> subscribe_and_join(SongyWeb.RoomChannel, "room:nonexistent")
+      {:ok, _, socket} = join_room_channel(current_user, "nonexistent")
 
       # Simulate a participant_joined event
       send(socket.channel_pid, {:participant_joined, current_user.uuid})
@@ -141,10 +139,7 @@ defmodule SongyWeb.RoomChannelTest do
     end
 
     test "handles participant_left event with nonexistent game", %{current_user: current_user} do
-      {:ok, _, socket} =
-        SongyWeb.UserSocket
-        |> socket("user_id", %{current_user_uuid: current_user.uuid})
-        |> subscribe_and_join(SongyWeb.RoomChannel, "room:nonexistent")
+      {:ok, _, socket} = join_room_channel(current_user, "nonexistent")
 
       # Simulate a participant_left event
       send(socket.channel_pid, {:participant_left, current_user.uuid})
@@ -163,10 +158,7 @@ defmodule SongyWeb.RoomChannelTest do
       assert game_before.provider.id == :spotify
       assert game_before.provider.meta == nil
 
-      {:ok, _, socket} =
-        SongyWeb.UserSocket
-        |> socket("user_id", %{current_user_uuid: current_user.uuid})
-        |> subscribe_and_join(SongyWeb.RoomChannel, "room:#{game.uuid}")
+      {:ok, _, socket} = join_room_channel(current_user, game.uuid)
 
       ref =
         push(socket, "update_provider", %{"device_id" => "test-device-id"})
@@ -191,10 +183,7 @@ defmodule SongyWeb.RoomChannelTest do
       assert game_before.provider.id == :spotify
       assert game_before.provider.meta == nil
 
-      {:ok, _, socket} =
-        SongyWeb.UserSocket
-        |> socket("user_id", %{current_user_uuid: current_user.uuid})
-        |> subscribe_and_join(SongyWeb.RoomChannel, "room:#{game.uuid}")
+      {:ok, _, socket} = join_room_channel(current_user, game.uuid)
 
       ref =
         push(socket, "update_provider", %{"device_id" => "test-device-id"})
@@ -217,10 +206,7 @@ defmodule SongyWeb.RoomChannelTest do
       {:ok, game_before} = GameSession.get_game_session(game.uuid)
       assert game_before.provider == provider
 
-      {:ok, _, socket} =
-        SongyWeb.UserSocket
-        |> socket("user_id", %{current_user_uuid: current_user.uuid})
-        |> subscribe_and_join(SongyWeb.RoomChannel, "room:#{game.uuid}")
+      {:ok, _, socket} = join_room_channel(current_user, game.uuid)
 
       ref = push(socket, "update_provider", %{"invalid" => "payload"})
 
@@ -240,14 +226,16 @@ defmodule SongyWeb.RoomChannelTest do
         meta: %{access_token: "spotify_access_token_123"}
       }
 
-      {:ok, _, socket} =
-        SongyWeb.UserSocket
-        |> socket("user_id", %{current_user_uuid: current_user.uuid, provider: provider})
-        |> subscribe_and_join(SongyWeb.RoomChannel, "room:lobby")
+      base_provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", base_provider)
+
+      {:ok, _, socket} = join_room_channel(current_user, game.uuid, %{provider: provider})
 
       ref = push(socket, "get_spotify_token", %{})
 
       assert_reply ref, :ok, %{token: "spotify_access_token_123"}
+
+      GameSession.end_game_session(game.uuid)
     end
 
     test "returns error when provider has no access_token", %{current_user: current_user} do
@@ -256,14 +244,16 @@ defmodule SongyWeb.RoomChannelTest do
         meta: %{refresh_token: "refresh_token_123"}
       }
 
-      {:ok, _, socket} =
-        SongyWeb.UserSocket
-        |> socket("user_id", %{current_user_uuid: current_user.uuid, provider: provider})
-        |> subscribe_and_join(SongyWeb.RoomChannel, "room:lobby")
+      base_provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", base_provider)
+
+      {:ok, _, socket} = join_room_channel(current_user, game.uuid, %{provider: provider})
 
       ref = push(socket, "get_spotify_token", %{})
 
       assert_reply ref, :error, %{reason: "invalid_credentials"}
+
+      GameSession.end_game_session(game.uuid)
     end
 
     test "returns error with missing access_token", %{current_user: current_user} do
@@ -272,25 +262,29 @@ defmodule SongyWeb.RoomChannelTest do
         meta: %{access_token: nil}
       }
 
-      {:ok, _, socket} =
-        SongyWeb.UserSocket
-        |> socket("user_id", %{current_user_uuid: current_user.uuid, provider: provider})
-        |> subscribe_and_join(SongyWeb.RoomChannel, "room:lobby")
+      base_provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", base_provider)
+
+      {:ok, _, socket} = join_room_channel(current_user, game.uuid, %{provider: provider})
 
       ref = push(socket, "get_spotify_token", %{})
 
       assert_reply ref, :error, %{reason: "invalid_credentials"}
+
+      GameSession.end_game_session(game.uuid)
     end
 
     test "returns error with missing provider", %{current_user: current_user} do
-      {:ok, _, socket} =
-        SongyWeb.UserSocket
-        |> socket("user_id", %{current_user_uuid: current_user.uuid})
-        |> subscribe_and_join(SongyWeb.RoomChannel, "room:lobby")
+      base_provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", base_provider)
+
+      {:ok, _, socket} = join_room_channel(current_user, game.uuid)
 
       ref = push(socket, "get_spotify_token", %{})
 
       assert_reply ref, :error, %{reason: "invalid_credentials"}
+
+      GameSession.end_game_session(game.uuid)
     end
   end
 end
