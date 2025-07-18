@@ -6,6 +6,8 @@ import { svelte, vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 import path from "path";
 
 export default defineConfig(({ command }) => {
+  const isDev = command !== "build";
+  
   return {
     server: {
       port: 5173,
@@ -23,6 +25,7 @@ export default defineConfig(({ command }) => {
     },
     build: {
       manifest: true,
+      sourcemap: isDev,
       rollupOptions: {
         input: ["js/app.js", "css/app.css"],
       },

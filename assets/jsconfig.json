@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["js/*"],
+      "@hooks/*": ["js/hooks/*"],
+      "@pages/*": ["js/pages/*"],
+      "@mocks/*": ["__mocks__/*"]
+    }
+  },
+  "include": ["js/**/*", "__mocks__/**/*"]
+}
