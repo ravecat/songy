@@ -50,16 +50,10 @@ defmodule Songy.MixProject do
       {:floki, ">= 0.30.0", only: :test},
       {:phoenix_live_dashboard, "~> 0.8.3"},
       {:heroicons,
-       github: "tailwindlabs/heroicons",
-       tag: "v2.1.1",
-       sparse: "optimized",
-       app: false,
-       compile: false,
-       depth: 1},
+       github: "tailwindlabs/heroicons", tag: "v2.1.1", sparse: "optimized", app: false, compile: false, depth: 1},
       {:swoosh, "~> 1.16"},
       {:inertia, "~> 2.4.0"},
       {:req, "~> 0.5"},
-      {:spotify_ex, "~> 2.2.1"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.26"},
@@ -73,8 +67,9 @@ defmodule Songy.MixProject do
       {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false},
       {:assert_eventually, "~> 1.0.0", only: :test},
       {:faker, "~> 0.19.0-alpha.1"},
-      {:polymorphic_embed,
-       git: "https://github.com/mathieuprog/polymorphic_embed.git", tag: "v5.0.3"}
+      {:polymorphic_embed, git: "https://github.com/mathieuprog/polymorphic_embed.git", tag: "v5.0.3"},
+      # Temprorary dependency until `spotify_ex` is resolved by https://github.com/jsncmgs1/spotify_ex/pull/59
+      {:spotify_ex, git: "https://github.com/ravecat/spotify_ex.git"}
     ]
   end
 

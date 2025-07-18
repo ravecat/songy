@@ -1,7 +1,7 @@
 defmodule Songy.Core.GameTest do
   use ExUnit.Case, async: true
 
-  alias Songy.Core.{Game, User, Provider}
+  alias Songy.Core.{Game, User, Provider, Player}
 
   describe "new/2" do
     test "creates game with required provider" do
@@ -15,6 +15,7 @@ defmodule Songy.Core.GameTest do
       assert game.status == :waiting
       assert game.owner_uuid == owner_uuid
       assert %Provider{id: :spotify} = game.provider
+      assert %Player{is_playback: false} = game.player
       assert String.length(game.uuid) == 8
       assert %DateTime{} = game.created_at
     end
@@ -248,6 +249,78 @@ defmodule Songy.Core.GameTest do
       game = Game.new("owner123", provider: provider)
 
       assert Game.owner?(game, "other456") == false
+    end
+  end
+
+  describe "player field" do
+    test "has player with default state" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+
+      assert %Player{is_playback: false} = game.player
+    end
+  end
+
+  describe "start_playback/1" do
+    test "starts playback for the game" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+
+      updated_game = Game.start_playback(game)
+
+      assert updated_game.player.is_playback == true
+    end
+
+    test "works when playback is already started" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      game = Game.start_playback(game)
+
+      updated_game = Game.start_playback(game)
+
+      assert updated_game.player.is_playback == true
+    end
+  end
+
+  describe "stop_playback/1" do
+    test "stops playback for the game" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      game = Game.start_playback(game)
+
+      updated_game = Game.stop_playback(game)
+
+      assert updated_game.player.is_playback == false
+    end
+
+    test "works when playback is already stopped" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+
+      updated_game = Game.stop_playback(game)
+
+      assert updated_game.player.is_playback == false
+    end
+  end
+
+  describe "toggle_playback/1" do
+    test "toggles playback state from false to true" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+
+      updated_game = Game.toggle_playback(game)
+
+      assert updated_game.player.is_playback == true
+    end
+
+    test "toggles playback state from true to false" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      game_with_playback = Game.toggle_playback(game)
+
+      updated_game = Game.toggle_playback(game_with_playback)
+
+      assert updated_game.player.is_playback == false
     end
   end
 end

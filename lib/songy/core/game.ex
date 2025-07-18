@@ -8,9 +8,9 @@ defmodule Songy.Core.Game do
 
   use TypedStruct
 
-  @derive {Jason.Encoder, only: [:uuid, :participants, :max_participants, :status, :owner_uuid, :provider]}
+  @derive {Jason.Encoder, only: [:uuid, :participants, :max_participants, :status, :owner_uuid, :provider, :player]}
 
-  alias Songy.Core.{User, Provider}
+  alias Songy.Core.{User, Provider, Player}
 
   @uuid_size 6
   @type status :: :waiting | :in_progress | :finished
@@ -19,12 +19,13 @@ defmodule Songy.Core.Game do
 
   typedstruct do
     field :uuid, String.t(), enforce: true
-    field :participants, list(User.t()), default: []
+    field :participants, list(User.t()), enforce: true
     field :max_participants, pos_integer(), enforce: true
     field :created_at, DateTime.t(), enforce: true
-    field :status, status(), default: :waiting
+    field :status, status(), enforce: true
     field :owner_uuid, String.t(), enforce: true
     field :provider, Provider.t(), enforce: true
+    field :player, Player.t(), enforce: true
   end
 
   # Options for game creation based on NimbleOptions format
@@ -72,7 +73,9 @@ defmodule Songy.Core.Game do
           uuid: generate_uuid(),
           owner_uuid: owner_uuid,
           created_at: DateTime.utc_now(),
-          status: :waiting
+          status: :waiting,
+          participants: [],
+          player: Player.new()
         ],
         opts
       )
@@ -178,6 +181,52 @@ defmodule Songy.Core.Game do
   @spec update_provider(t(), Provider.t()) :: t()
   def update_provider(%__MODULE__{} = game, %Provider{} = provider) do
     %{game | provider: provider}
+  end
+
+  @doc """
+  Starts playback for the game.
+
+  ## Examples
+      iex> provider = Provider.new(:spotify)
+      iex> game = Game.new("owner123", provider: provider)
+      iex> updated_game = Game.start_playback(game)
+      iex> updated_game.player.is_playback
+      true
+  """
+  @spec start_playback(t()) :: t()
+  def start_playback(%__MODULE__{} = game) do
+    %{game | player: Player.set_playback(game.player, true)}
+  end
+
+  @doc """
+  Stops playback for the game.
+
+  ## Examples
+      iex> provider = Provider.new(:spotify)
+      iex> game = Game.new("owner123", provider: provider)
+      iex> game = Game.start_playback(game)
+      iex> updated_game = Game.stop_playback(game)
+      iex> updated_game.player.is_playback
+      false
+  """
+  @spec stop_playback(t()) :: t()
+  def stop_playback(%__MODULE__{} = game) do
+    %{game | player: Player.set_playback(game.player, false)}
+  end
+
+  @doc """
+  Toggles the playback state for the game.
+
+  ## Examples
+      iex> provider = Provider.new(:spotify)
+      iex> game = Game.new("owner123", provider: provider)
+      iex> updated_game = Game.toggle_playback(game)
+      iex> updated_game.player.is_playback
+      true
+  """
+  @spec toggle_playback(t()) :: t()
+  def toggle_playback(%__MODULE__{} = game) do
+    %{game | player: Player.toggle_playback(game.player)}
   end
 
   defp user_already_joined?(%__MODULE__{participants: participants}, %User{uuid: uuid}) do

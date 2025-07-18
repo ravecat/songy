@@ -87,6 +87,48 @@ defmodule SongyWeb.RoomChannel do
 
   @impl true
   def handle_in(
+        "start_playback",
+        _payload,
+        %{assigns: %{provider: %{id: :spotify} = provider}} = socket
+      ) do
+    "room:" <> room_id = socket.topic
+    current_user_uuid = socket.assigns.current_user_uuid
+
+    with true <- GameSession.owner?(room_id, current_user_uuid),
+         {:ok, :transferred} <- Spotify.start_playback(provider) do
+      {:reply, :ok, socket}
+    else
+      {:error, _reason} ->
+        {:noreply, socket}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_in(
+        "pause_playback",
+        _payload,
+        %{assigns: %{provider: %{id: :spotify} = provider}} = socket
+      ) do
+    "room:" <> room_id = socket.topic
+    current_user_uuid = socket.assigns.current_user_uuid
+
+    with true <- GameSession.owner?(room_id, current_user_uuid),
+         {:ok, :transferred} <- Spotify.pause_playback(provider) do
+      {:reply, :ok, socket}
+    else
+      {:error, _reason} ->
+        {:noreply, socket}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_in(
         "update_provider",
         %{"device_id" => _device_id} = payload,
         %{assigns: %{provider: %{id: :spotify} = provider}} = socket
@@ -101,6 +143,7 @@ defmodule SongyWeb.RoomChannel do
     else
       {:error, _reason} ->
         {:noreply, socket}
+
       _ ->
         {:noreply, socket}
     end

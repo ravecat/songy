@@ -62,4 +62,72 @@ defmodule Songy.Boundary.SpotifyTest do
       assert {:error, :transfer_failed} = Boundary.Spotify.transfer_playback(provider, %{"device_id" => "test_device"})
     end
   end
+
+  describe "start_playback/2" do
+    test "returns success when Spotify.Player.play succeeds" do
+      provider = Provider.new(:spotify, %{access_token: "valid_token"})
+
+      Repatch.patch(Spotify.Player, :play, fn _credentials, _params ->
+        :ok
+      end)
+
+      assert {:ok, :playback_started} = Boundary.Spotify.start_playback(provider)
+    end
+
+    test "returns error when Spotify.Player.play fails" do
+      provider = Provider.new(:spotify, %{access_token: "valid_token"})
+
+      Repatch.patch(Spotify.Player, :play, fn _credentials, _params ->
+        {:error, :api_error}
+      end)
+
+      assert {:error, :playback_start_failed} = Boundary.Spotify.start_playback(provider)
+    end
+
+    test "returns error when provider has no access_token" do
+      provider = Provider.new(:spotify, %{device_id: "test_device"})
+
+      assert {:error, :no_credentials} = Boundary.Spotify.start_playback(provider)
+    end
+
+    test "returns error when provider is not Spotify" do
+      provider = Provider.new(:youtube, %{access_token: "token"})
+
+      assert {:error, :invalid_provider} = Boundary.Spotify.start_playback(provider)
+    end
+  end
+
+  describe "pause_playback/2" do
+    test "returns success when Spotify.Player.pause succeeds" do
+      provider = Provider.new(:spotify, %{access_token: "valid_token"})
+
+      Repatch.patch(Spotify.Player, :pause, fn _credentials, _params ->
+        :ok
+      end)
+
+      assert {:ok, :playback_paused} = Boundary.Spotify.pause_playback(provider)
+    end
+
+    test "returns error when Spotify.Player.pause fails" do
+      provider = Provider.new(:spotify, %{access_token: "valid_token"})
+
+      Repatch.patch(Spotify.Player, :pause, fn _credentials, _params ->
+        {:error, :api_error}
+      end)
+
+      assert {:error, :playback_pause_failed} = Boundary.Spotify.pause_playback(provider)
+    end
+
+    test "returns error when provider has no access_token" do
+      provider = Provider.new(:spotify, %{device_id: "test_device"})
+
+      assert {:error, :no_credentials} = Boundary.Spotify.pause_playback(provider)
+    end
+
+    test "returns error when provider is not Spotify" do
+      provider = Provider.new(:youtube, %{access_token: "token"})
+
+      assert {:error, :invalid_provider} = Boundary.Spotify.pause_playback(provider)
+    end
+  end
 end
