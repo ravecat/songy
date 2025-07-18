@@ -174,7 +174,7 @@ defmodule SongyWeb.RoomChannelTest do
       GameSession.end_game_session(game.uuid)
     end
 
-    test "allows owner to update whitelisted provider", %{current_user: current_user} do
+    test "allows owner access to whitelisted provider", %{current_user: current_user} do
       provider = Provider.new(:spotify)
       {:ok, game} = GameSession.create_game_session(current_user.uuid, provider)
 
@@ -286,5 +286,29 @@ defmodule SongyWeb.RoomChannelTest do
 
       GameSession.end_game_session(game.uuid)
     end
+
+    test "transfer playback to device", %{current_user: current_user} do
+      provider = Provider.new(:spotify, %{device_id: "test-device-id", access_token: "fake-token"})
+      {:ok, game} = GameSession.create_game_session(current_user.uuid, provider)
+
+      {:ok, _, socket} = join_room_channel(current_user, game.uuid, %{provider: provider})
+
+      Repatch.patch(Songy.Boundary.Spotify, :transfer_playback, [mode: :shared], fn _provider, payload ->
+        assert payload == %{"device_id" => "test-device-id"}
+
+        {:ok, :transferred}
+      end)
+
+      Repatch.allow(self(), socket.channel_pid)
+
+      ref = push(socket, "update_provider", %{"device_id" => "test-device-id"})
+
+      assert_reply ref, :ok
+      assert Repatch.called?(Songy.Boundary.Spotify, :transfer_playback, 2, by: socket.channel_pid)
+
+      GameSession.end_game_session(game.uuid)
+    end
+
+
   end
 end
