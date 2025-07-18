@@ -175,11 +175,6 @@ defmodule Songy.Core.Game do
     owner_uuid == user_uuid
   end
 
-  @spec get_provider(t()) :: Provider.t()
-  def get_provider(%__MODULE__{provider: provider}) do
-    provider
-  end
-
   @spec update_provider(t(), Provider.t()) :: t()
   def update_provider(%__MODULE__{} = game, %Provider{} = provider) do
     %{game | provider: provider}
