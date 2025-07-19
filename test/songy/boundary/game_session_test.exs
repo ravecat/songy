@@ -297,4 +297,145 @@ defmodule Songy.Boundary.GameSessionTest do
       assert {:error, :not_found} = GameSession.update_provider("nonexistent", provider_data)
     end
   end
+
+  describe "start_playback/1" do
+    test "starts playback when game is in progress" do
+      # Create and start game session
+      provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      {:ok, _} = GameSession.start_game_session(game.uuid)
+      
+      # Verify initial playback state
+      {:ok, initial_game} = GameSession.get_game_session(game.uuid)
+      assert initial_game.player.is_playback == false
+      
+      # Start playback
+      assert {:ok, updated_game} = GameSession.start_playback(game.uuid)
+      assert updated_game.player.is_playback == true
+      
+      # Verify state persisted
+      {:ok, persisted_game} = GameSession.get_game_session(game.uuid)
+      assert persisted_game.player.is_playback == true
+      
+      # Cleanup
+      GameSession.end_game_session(game.uuid)
+    end
+
+    test "returns error when game is in waiting status" do
+      provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      
+      # Don't start the game, leave it in :waiting status
+      assert {:error, :game_not_in_progress} = GameSession.start_playback(game.uuid)
+      
+      # Cleanup
+      GameSession.end_game_session(game.uuid)
+    end
+
+    test "returns error for non-existent session" do
+      assert {:error, :not_found} = GameSession.start_playback("nonexistent-uuid")
+    end
+
+    test "idempotent when playback already started" do
+      provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      {:ok, _} = GameSession.start_game_session(game.uuid)
+      
+      # Start playback twice
+      assert {:ok, first_result} = GameSession.start_playback(game.uuid)
+      assert {:ok, second_result} = GameSession.start_playback(game.uuid)
+      
+      # Both should show playback as true
+      assert first_result.player.is_playback == true
+      assert second_result.player.is_playback == true
+      
+      # Cleanup
+      GameSession.end_game_session(game.uuid)
+    end
+  end
+
+  describe "stop_playback/1" do
+    test "stops playback when game is in progress" do
+      provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      {:ok, _} = GameSession.start_game_session(game.uuid)
+      {:ok, _} = GameSession.start_playback(game.uuid)
+      
+      # Verify playback is started
+      {:ok, playing_game} = GameSession.get_game_session(game.uuid)
+      assert playing_game.player.is_playback == true
+      
+      # Stop playback
+      assert {:ok, updated_game} = GameSession.stop_playback(game.uuid)
+      assert updated_game.player.is_playback == false
+      
+      # Verify state persisted
+      {:ok, persisted_game} = GameSession.get_game_session(game.uuid)
+      assert persisted_game.player.is_playback == false
+      
+      # Cleanup
+      GameSession.end_game_session(game.uuid)
+    end
+
+    test "returns error when game is in waiting status" do
+      provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      
+      # Don't start the game, leave it in :waiting status
+      assert {:error, :game_not_in_progress} = GameSession.stop_playback(game.uuid)
+      
+      # Cleanup
+      GameSession.end_game_session(game.uuid)
+    end
+
+    test "returns error for non-existent session" do
+      assert {:error, :not_found} = GameSession.stop_playback("nonexistent-uuid")
+    end
+
+    test "idempotent when playback already stopped" do
+      provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      {:ok, _} = GameSession.start_game_session(game.uuid)
+      
+      # Verify playback is initially stopped
+      {:ok, initial_game} = GameSession.get_game_session(game.uuid)
+      assert initial_game.player.is_playback == false
+      
+      # Stop playback (should be idempotent)
+      assert {:ok, first_result} = GameSession.stop_playback(game.uuid)
+      assert {:ok, second_result} = GameSession.stop_playback(game.uuid)
+      
+      # Both should show playback as false
+      assert first_result.player.is_playback == false
+      assert second_result.player.is_playback == false
+      
+      # Cleanup
+      GameSession.end_game_session(game.uuid)
+    end
+
+    test "start then stop playback sequence" do
+      provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      {:ok, _} = GameSession.start_game_session(game.uuid)
+      
+      # Initial state: not playing
+      {:ok, initial_game} = GameSession.get_game_session(game.uuid)
+      assert initial_game.player.is_playback == false
+      
+      # Start playback
+      {:ok, playing_game} = GameSession.start_playback(game.uuid)
+      assert playing_game.player.is_playback == true
+      
+      # Stop playback
+      {:ok, stopped_game} = GameSession.stop_playback(game.uuid)
+      assert stopped_game.player.is_playback == false
+      
+      # Verify final state persisted
+      {:ok, final_game} = GameSession.get_game_session(game.uuid)
+      assert final_game.player.is_playback == false
+      
+      # Cleanup
+      GameSession.end_game_session(game.uuid)
+    end
+  end
 end

@@ -169,6 +169,77 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @doc """
+  Starts playback for the game session.
+
+  Updates the internal player state to indicate that playback is active.
+  This function only works when the game is in `:in_progress` status.
+
+  ## Parameters
+    * `game_uuid` - UUID of the game session
+
+  ## Returns
+    * `{:ok, game}` - Success with updated game state
+    * `{:error, :not_found}` - Game session does not exist
+    * `{:error, :game_not_in_progress}` - Game is not in the correct status
+
+  ## Examples
+      iex> {:ok, game} = GameSession.create_game_session("owner123", provider)
+      iex> {:ok, _} = GameSession.start_game_session(game.uuid)
+      iex> {:ok, updated_game} = GameSession.start_playback(game.uuid)
+      iex> updated_game.player.is_playback
+      true
+
+      iex> GameSession.start_playback("nonexistent")
+      {:error, :not_found}
+  """
+  @spec start_playback(String.t()) :: {:ok, Game.t()} | {:error, atom()}
+  def start_playback(game_uuid) do
+    case lookup_game_session(game_uuid) do
+      {:ok, _} ->
+        GenServer.call(via(game_uuid), :start_playback)
+
+      {:error, _} ->
+        {:error, :not_found}
+    end
+  end
+
+  @doc """
+  Stops playback for the game session.
+
+  Updates the internal player state to indicate that playback is stopped.
+  This function only works when the game is in `:in_progress` status.
+
+  ## Parameters
+    * `game_uuid` - UUID of the game session
+
+  ## Returns
+    * `{:ok, game}` - Success with updated game state
+    * `{:error, :not_found}` - Game session does not exist
+    * `{:error, :game_not_in_progress}` - Game is not in the correct status
+
+  ## Examples
+      iex> {:ok, game} = GameSession.create_game_session("owner123", provider)
+      iex> {:ok, _} = GameSession.start_game_session(game.uuid)
+      iex> {:ok, _} = GameSession.start_playback(game.uuid)
+      iex> {:ok, updated_game} = GameSession.stop_playback(game.uuid)
+      iex> updated_game.player.is_playback
+      false
+
+      iex> GameSession.stop_playback("nonexistent")
+      {:error, :not_found}
+  """
+  @spec stop_playback(String.t()) :: {:ok, Game.t()} | {:error, atom()}
+  def stop_playback(game_uuid) do
+    case lookup_game_session(game_uuid) do
+      {:ok, _} ->
+        GenServer.call(via(game_uuid), :stop_playback)
+
+      {:error, _} ->
+        {:error, :not_found}
+    end
+  end
+
+  @doc """
   Checks if the given user is the owner of the game session.
 
   ## Parameters
@@ -283,7 +354,7 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @impl GenServer
-  def handle_call(:start_game_session, _from, game) do
+def handle_call(:start_game_session, _from, game) do
     case game.status do
       :waiting ->
         updated_game = %{game | status: :in_progress}
@@ -291,6 +362,32 @@ defmodule Songy.Boundary.GameSession do
 
       _ ->
         {:reply, {:error, :game_already_started}, game}
+    end
+  end
+
+  @impl GenServer
+  def handle_call(:start_playback, _from, game) do
+    case game.status do
+      :in_progress ->
+        updated_game = Game.start_playback(game)
+
+        {:reply, {:ok, updated_game}, updated_game}
+
+      _ ->
+        {:reply, {:error, :game_not_in_progress}, game}
+    end
+  end
+
+  @impl GenServer
+  def handle_call(:stop_playback, _from, game) do
+    case game.status do
+      :in_progress ->
+        updated_game = Game.stop_playback(game)
+
+        {:reply, {:ok, updated_game}, updated_game}
+
+      _ ->
+        {:reply, {:error, :game_not_in_progress}, game}
     end
   end
 

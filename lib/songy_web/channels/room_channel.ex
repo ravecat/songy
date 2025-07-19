@@ -95,13 +95,17 @@ defmodule SongyWeb.RoomChannel do
     current_user_uuid = socket.assigns.current_user_uuid
 
     with true <- GameSession.owner?(room_id, current_user_uuid),
-         {:ok, :transferred} <- Spotify.start_playback(provider) do
+         {:ok, :playback_started} <- Spotify.start_playback(provider),
+         {:ok, game} <- GameSession.start_playback(room_id) do
+      broadcast(socket, "state_updated", game)
       {:reply, :ok, socket}
     else
-      {:error, _reason} ->
+      {:error, reason} ->
+        Logger.warning("Start playback failed: #{inspect(reason)}")
         {:noreply, socket}
 
-      _ ->
+      other ->
+        Logger.warning("Start playback failed with: #{inspect(other)}")
         {:noreply, socket}
     end
   end
@@ -116,13 +120,17 @@ defmodule SongyWeb.RoomChannel do
     current_user_uuid = socket.assigns.current_user_uuid
 
     with true <- GameSession.owner?(room_id, current_user_uuid),
-         {:ok, :transferred} <- Spotify.pause_playback(provider) do
+         {:ok, :playback_paused} <- Spotify.pause_playback(provider),
+         {:ok, game} <- GameSession.stop_playback(room_id) do
+      broadcast(socket, "state_updated", game)
       {:reply, :ok, socket}
     else
-      {:error, _reason} ->
+      {:error, reason} ->
+        Logger.warning("Pause playback failed: #{inspect(reason)}")
         {:noreply, socket}
 
-      _ ->
+      other ->
+        Logger.warning("Pause playback failed with: #{inspect(other)}")
         {:noreply, socket}
     end
   end

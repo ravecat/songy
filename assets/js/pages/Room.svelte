@@ -112,9 +112,8 @@
                 class="w-32 h-32 bg-white text-purple-600 rounded-full font-bold text-xl hover:bg-white/90 transition-all duration-300 hover:scale-110 shadow-2xl border-4 border-white/50 flex items-center justify-center"
                 aria-label={isPlayback ? "Pause track" : "Play track"}
                 onclick={() => {
-                  isPlayback = !isPlayback;
                   channel.push(
-                    isPlayback ? "start_playback" : "pause_playback",
+                    isPlayback ? "pause_playback" : "start_playback",
                     {}
                   );
                 }}
