@@ -38,7 +38,7 @@ defmodule Songy.MixProject do
     [
       {:bcrypt_elixir, "~> 3.0"},
       {:dotenvy, "~> 1.0.0"},
-      {:phoenix_vite, git: "https://github.com/ravecat/phoenix_vite.git"},
+      {:phoenix_vite, "~> 0.2.0"},
       {:igniter, "~> 0.6", only: [:dev, :test]},
       {:phoenix, "~> 1.8.0-rc.3", override: true},
       {:phoenix_ecto, "~> 4.5"},
@@ -68,7 +68,7 @@ defmodule Songy.MixProject do
       {:assert_eventually, "~> 1.0.0", only: :test},
       {:faker, "~> 0.19.0-alpha.1"},
       {:polymorphic_embed, git: "https://github.com/mathieuprog/polymorphic_embed.git", tag: "v5.0.3"},
-      # Temprorary dependency until `spotify_ex` is resolved by https://github.com/jsncmgs1/spotify_ex/pull/59
+      # Temporary dependency until `spotify_ex` is resolved by https://github.com/jsncmgs1/spotify_ex/pull/59
       {:spotify_ex, git: "https://github.com/ravecat/spotify_ex.git"}
     ]
   end
