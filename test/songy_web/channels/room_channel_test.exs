@@ -40,7 +40,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       assert_broadcast "state_updated", %{status: :in_progress}
 
-      {:ok, updated_game} = GameSession.get_game_session(game.uuid)
+      {:ok, updated_game} = GameSession.lookup_game_session(game.uuid)
       assert updated_game.status == :in_progress
 
       GameSession.end_game_session(game.uuid)
@@ -100,7 +100,7 @@ defmodule SongyWeb.RoomChannelTest do
       user_uuid = current_user.uuid
       assert_broadcast "state_updated", %{participants: [%{uuid: ^user_uuid}]}
 
-      {:ok, updated_game} = GameSession.get_game_session(game.uuid)
+      {:ok, updated_game} = GameSession.lookup_game_session(game.uuid)
       assert length(updated_game.participants) == 1
       assert Enum.any?(updated_game.participants, &(&1.uuid == current_user.uuid))
 
@@ -113,7 +113,7 @@ defmodule SongyWeb.RoomChannelTest do
       {:ok, _updated_game} = GameSession.add_participant(game.uuid, current_user.uuid)
 
       # Verify participant was added
-      {:ok, game_before_leave} = GameSession.get_game_session(game.uuid)
+      {:ok, game_before_leave} = GameSession.lookup_game_session(game.uuid)
       assert length(game_before_leave.participants) == 1
 
       {:ok, _, socket} = join_room_channel(current_user, game.uuid)
@@ -154,7 +154,7 @@ defmodule SongyWeb.RoomChannelTest do
       {:ok, game} = GameSession.create_game_session("other_owner", provider)
 
       # Check provider state before update attempt
-      {:ok, game_before} = GameSession.get_game_session(game.uuid)
+      {:ok, game_before} = GameSession.lookup_game_session(game.uuid)
       assert game_before.provider.id == :spotify
       assert game_before.provider.meta == nil
 
@@ -167,7 +167,7 @@ defmodule SongyWeb.RoomChannelTest do
       refute_broadcast "provider_updated", _
 
       # Verify provider state remained unchanged
-      {:ok, game_after} = GameSession.get_game_session(game.uuid)
+      {:ok, game_after} = GameSession.lookup_game_session(game.uuid)
       assert game_after.provider.id == :spotify
       assert game_after.provider.meta == nil
 
@@ -179,7 +179,7 @@ defmodule SongyWeb.RoomChannelTest do
       {:ok, game} = GameSession.create_game_session(current_user.uuid, provider)
 
       # Check provider state before update
-      {:ok, game_before} = GameSession.get_game_session(game.uuid)
+      {:ok, game_before} = GameSession.lookup_game_session(game.uuid)
       assert game_before.provider.id == :spotify
       assert game_before.provider.meta == nil
 
@@ -192,7 +192,7 @@ defmodule SongyWeb.RoomChannelTest do
       refute_broadcast "provider_updated", _
 
       # Verify provider state was updated
-      {:ok, game_after} = GameSession.get_game_session(game.uuid)
+      {:ok, game_after} = GameSession.lookup_game_session(game.uuid)
       assert game_after.provider.id == :spotify
       assert game_after.provider.meta.device_id == "test-device-id"
 
@@ -203,7 +203,7 @@ defmodule SongyWeb.RoomChannelTest do
       provider = Provider.new(:spotify, %{device_id: "test-device-id"})
       {:ok, game} = GameSession.create_game_session(current_user.uuid, provider)
 
-      {:ok, game_before} = GameSession.get_game_session(game.uuid)
+      {:ok, game_before} = GameSession.lookup_game_session(game.uuid)
       assert game_before.provider == provider
 
       {:ok, _, socket} = join_room_channel(current_user, game.uuid)
@@ -212,7 +212,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       assert_reply ref, :ok
 
-      {:ok, game_after} = GameSession.get_game_session(game.uuid)
+      {:ok, game_after} = GameSession.lookup_game_session(game.uuid)
       assert game_after.provider == provider
 
       GameSession.end_game_session(game.uuid)

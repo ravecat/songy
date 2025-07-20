@@ -11,7 +11,7 @@ defmodule Songy.Boundary.GameSession do
     * `create_game_session/2` - Creates and starts a new game session process with owner and provider
     * `add_participant/2` - Adds a participant to an existing game session
     * `remove_participant/2` - Removes a participant from an existing game session
-    * `get_game_session/1` - Retrieves the current state of a game session
+    * `lookup_game_session/1` - Retrieves the current state of a game session
     * `start_game_session/1` - Starts the game by changing its status to in_progress
     * `end_game_session/1` - Terminates a game session process
     * `owner?/2` - Checks if a user is the owner of a game session
@@ -79,10 +79,12 @@ defmodule Songy.Boundary.GameSession do
   """
   @spec add_participant(String.t(), String.t()) :: {:ok, Game.t()} | {:error, atom()}
   def add_participant(game_uuid, participant_uuid) do
-    if session_exists?(game_uuid) do
-      GenServer.call(via(game_uuid), {:add_participant, participant_uuid})
-    else
-      {:error, :not_found}
+    case lookup_game_session(game_uuid) do
+      {:ok, _} ->
+        GenServer.call(via(game_uuid), {:add_participant, participant_uuid})
+
+      {:error, _} ->
+        {:error, :not_found}
     end
   end
 
@@ -94,10 +96,12 @@ defmodule Songy.Boundary.GameSession do
   """
   @spec end_game_session(String.t()) :: :ok
   def end_game_session(game_uuid) do
-    if session_exists?(game_uuid) do
-      GenServer.stop(via(game_uuid))
-    else
-      :ok
+    case lookup_game_session(game_uuid) do
+      {:ok, _} ->
+        GenServer.stop(via(game_uuid))
+
+      {:error, _} ->
+        :ok
     end
   end
 
@@ -117,32 +121,12 @@ defmodule Songy.Boundary.GameSession do
   """
   @spec remove_participant(String.t(), String.t()) :: {:ok, Game.t()} | {:error, atom()}
   def remove_participant(game_uuid, participant_uuid) do
-    if session_exists?(game_uuid) do
-      GenServer.call(via(game_uuid), {:remove_participant, participant_uuid})
-    else
-      {:error, :not_found}
-    end
-  end
+    case lookup_game_session(game_uuid) do
+      {:ok, _} ->
+        GenServer.call(via(game_uuid), {:remove_participant, participant_uuid})
 
-  @doc """
-  Gets the current state of the game session.
-
-  ## Parameters
-    * `game_uuid` - UUID of the game session
-
-  ## Examples
-      iex> GameSession.get_game_session("game123")
-      {:ok, %Game{uuid: "game123", participants: []}}
-
-      iex> GameSession.get_game_session("nonexistent")
-      {:error, :not_found}
-  """
-  @spec get_game_session(String.t()) :: {:ok, Game.t()} | {:error, atom()}
-  def get_game_session(game_uuid) do
-    if session_exists?(game_uuid) do
-      GenServer.call(via(game_uuid), :get_game_session)
-    else
-      {:error, :not_found}
+      {:error, _} ->
+        {:error, :not_found}
     end
   end
 
@@ -161,10 +145,12 @@ defmodule Songy.Boundary.GameSession do
   """
   @spec start_game_session(String.t()) :: {:ok, Game.t()} | {:error, atom()}
   def start_game_session(game_uuid) do
-    if session_exists?(game_uuid) do
-      GenServer.call(via(game_uuid), :start_game_session)
-    else
-      {:error, :not_found}
+    case lookup_game_session(game_uuid) do
+      {:ok, _} ->
+        GenServer.call(via(game_uuid), :start_game_session)
+
+      {:error, _} ->
+        {:error, :not_found}
     end
   end
 
@@ -255,7 +241,7 @@ defmodule Songy.Boundary.GameSession do
   """
   @spec owner?(String.t(), String.t()) :: boolean()
   def owner?(game_uuid, user_uuid) do
-    case get_game_session(game_uuid) do
+    case lookup_game_session(game_uuid) do
       {:ok, game} -> Game.owner?(game, user_uuid)
       {:error, _} -> false
     end
@@ -285,14 +271,10 @@ defmodule Songy.Boundary.GameSession do
     end
   end
 
-  def session_exists?(game_uuid) do
-    match?([_], Registry.lookup(Songy.Registry, game_uuid))
-  end
-
   @spec lookup_game_session(String.t()) :: {:ok, Game.t()} | {:error, :not_found}
   def lookup_game_session(game_uuid) do
     case Registry.lookup(Songy.Registry, game_uuid) do
-      [{pid, _value}] -> GenServer.call(pid, :get_game_session, 1000)
+      [{pid, _value}] -> GenServer.call(pid, :lookup_game_session, 1000)
       [] -> {:error, :not_found}
     end
   rescue
@@ -349,12 +331,12 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @impl GenServer
-  def handle_call(:get_game_session, _from, game) do
+  def handle_call(:lookup_game_session, _from, game) do
     {:reply, {:ok, game}, game}
   end
 
   @impl GenServer
-def handle_call(:start_game_session, _from, game) do
+  def handle_call(:start_game_session, _from, game) do
     case game.status do
       :waiting ->
         updated_game = %{game | status: :in_progress}

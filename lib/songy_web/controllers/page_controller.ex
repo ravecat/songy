@@ -27,7 +27,7 @@ defmodule SongyWeb.PageController do
   end
 
   def join(conn, %{"room_id" => room_id}) do
-    case GameSession.get_game_session(room_id) do
+    case GameSession.lookup_game_session(room_id) do
       {:ok, _game} ->
         conn
         |> assign_prop(:room_id, room_id)

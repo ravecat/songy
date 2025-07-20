@@ -18,7 +18,7 @@ defmodule SongyWeb.RoomChannel do
   def handle_info(:init_state, socket) do
     "room:" <> room_id = socket.topic
 
-    case GameSession.get_game_session(room_id) do
+    case GameSession.lookup_game_session(room_id) do
       {:ok, game} ->
         push(socket, "state_updated", game)
 

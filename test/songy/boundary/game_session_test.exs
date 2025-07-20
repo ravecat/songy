@@ -181,7 +181,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
   end
 
-  describe "get_game_session/1" do
+  describe "lookup_game_session/1" do
     setup do
       provider = Provider.new(:spotify)
       {:ok, game} = GameSession.create_game_session("owner123", provider)
@@ -196,7 +196,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "returns current game state", %{game: game} do
-      assert {:ok, returned_game} = GameSession.get_game_session(game.uuid)
+      assert {:ok, returned_game} = GameSession.lookup_game_session(game.uuid)
       assert returned_game.uuid == game.uuid
       assert returned_game.participants == []
       assert returned_game.status == :waiting
@@ -206,13 +206,13 @@ defmodule Songy.Boundary.GameSessionTest do
       participant_uuid = "user123"
       {:ok, _} = GameSession.add_participant(game.uuid, participant_uuid)
 
-      assert {:ok, updated_game} = GameSession.get_game_session(game.uuid)
+      assert {:ok, updated_game} = GameSession.lookup_game_session(game.uuid)
       assert length(updated_game.participants) == 1
       assert hd(updated_game.participants).uuid == participant_uuid
     end
 
     test "returns error for non-existent session" do
-      assert {:error, :not_found} = GameSession.get_game_session("nonexistent")
+      assert {:error, :not_found} = GameSession.lookup_game_session("nonexistent")
     end
   end
 
@@ -232,7 +232,7 @@ defmodule Songy.Boundary.GameSessionTest do
 
     test "starts the game by changing status to in_progress", %{game: game} do
       # Verify initial status is :waiting
-      assert {:ok, initial_game} = GameSession.get_game_session(game.uuid)
+      assert {:ok, initial_game} = GameSession.lookup_game_session(game.uuid)
       assert initial_game.status == :waiting
 
       # Start the game
@@ -240,7 +240,7 @@ defmodule Songy.Boundary.GameSessionTest do
       assert updated_game.status == :in_progress
 
       # Verify the game state was persisted
-      assert {:ok, persisted_game} = GameSession.get_game_session(game.uuid)
+      assert {:ok, persisted_game} = GameSession.lookup_game_session(game.uuid)
       assert persisted_game.status == :in_progress
     end
 
@@ -304,19 +304,19 @@ defmodule Songy.Boundary.GameSessionTest do
       provider = Provider.new(:spotify)
       {:ok, game} = GameSession.create_game_session("owner123", provider)
       {:ok, _} = GameSession.start_game_session(game.uuid)
-      
+
       # Verify initial playback state
-      {:ok, initial_game} = GameSession.get_game_session(game.uuid)
+      {:ok, initial_game} = GameSession.lookup_game_session(game.uuid)
       assert initial_game.player.is_playback == false
-      
+
       # Start playback
       assert {:ok, updated_game} = GameSession.start_playback(game.uuid)
       assert updated_game.player.is_playback == true
-      
+
       # Verify state persisted
-      {:ok, persisted_game} = GameSession.get_game_session(game.uuid)
+      {:ok, persisted_game} = GameSession.lookup_game_session(game.uuid)
       assert persisted_game.player.is_playback == true
-      
+
       # Cleanup
       GameSession.end_game_session(game.uuid)
     end
@@ -324,10 +324,10 @@ defmodule Songy.Boundary.GameSessionTest do
     test "returns error when game is in waiting status" do
       provider = Provider.new(:spotify)
       {:ok, game} = GameSession.create_game_session("owner123", provider)
-      
+
       # Don't start the game, leave it in :waiting status
       assert {:error, :game_not_in_progress} = GameSession.start_playback(game.uuid)
-      
+
       # Cleanup
       GameSession.end_game_session(game.uuid)
     end
@@ -340,15 +340,15 @@ defmodule Songy.Boundary.GameSessionTest do
       provider = Provider.new(:spotify)
       {:ok, game} = GameSession.create_game_session("owner123", provider)
       {:ok, _} = GameSession.start_game_session(game.uuid)
-      
+
       # Start playback twice
       assert {:ok, first_result} = GameSession.start_playback(game.uuid)
       assert {:ok, second_result} = GameSession.start_playback(game.uuid)
-      
+
       # Both should show playback as true
       assert first_result.player.is_playback == true
       assert second_result.player.is_playback == true
-      
+
       # Cleanup
       GameSession.end_game_session(game.uuid)
     end
@@ -360,19 +360,19 @@ defmodule Songy.Boundary.GameSessionTest do
       {:ok, game} = GameSession.create_game_session("owner123", provider)
       {:ok, _} = GameSession.start_game_session(game.uuid)
       {:ok, _} = GameSession.start_playback(game.uuid)
-      
+
       # Verify playback is started
-      {:ok, playing_game} = GameSession.get_game_session(game.uuid)
+      {:ok, playing_game} = GameSession.lookup_game_session(game.uuid)
       assert playing_game.player.is_playback == true
-      
+
       # Stop playback
       assert {:ok, updated_game} = GameSession.stop_playback(game.uuid)
       assert updated_game.player.is_playback == false
-      
+
       # Verify state persisted
-      {:ok, persisted_game} = GameSession.get_game_session(game.uuid)
+      {:ok, persisted_game} = GameSession.lookup_game_session(game.uuid)
       assert persisted_game.player.is_playback == false
-      
+
       # Cleanup
       GameSession.end_game_session(game.uuid)
     end
@@ -380,10 +380,10 @@ defmodule Songy.Boundary.GameSessionTest do
     test "returns error when game is in waiting status" do
       provider = Provider.new(:spotify)
       {:ok, game} = GameSession.create_game_session("owner123", provider)
-      
+
       # Don't start the game, leave it in :waiting status
       assert {:error, :game_not_in_progress} = GameSession.stop_playback(game.uuid)
-      
+
       # Cleanup
       GameSession.end_game_session(game.uuid)
     end
@@ -396,19 +396,19 @@ defmodule Songy.Boundary.GameSessionTest do
       provider = Provider.new(:spotify)
       {:ok, game} = GameSession.create_game_session("owner123", provider)
       {:ok, _} = GameSession.start_game_session(game.uuid)
-      
+
       # Verify playback is initially stopped
-      {:ok, initial_game} = GameSession.get_game_session(game.uuid)
+      {:ok, initial_game} = GameSession.lookup_game_session(game.uuid)
       assert initial_game.player.is_playback == false
-      
+
       # Stop playback (should be idempotent)
       assert {:ok, first_result} = GameSession.stop_playback(game.uuid)
       assert {:ok, second_result} = GameSession.stop_playback(game.uuid)
-      
+
       # Both should show playback as false
       assert first_result.player.is_playback == false
       assert second_result.player.is_playback == false
-      
+
       # Cleanup
       GameSession.end_game_session(game.uuid)
     end
@@ -417,23 +417,23 @@ defmodule Songy.Boundary.GameSessionTest do
       provider = Provider.new(:spotify)
       {:ok, game} = GameSession.create_game_session("owner123", provider)
       {:ok, _} = GameSession.start_game_session(game.uuid)
-      
+
       # Initial state: not playing
-      {:ok, initial_game} = GameSession.get_game_session(game.uuid)
+      {:ok, initial_game} = GameSession.lookup_game_session(game.uuid)
       assert initial_game.player.is_playback == false
-      
+
       # Start playback
       {:ok, playing_game} = GameSession.start_playback(game.uuid)
       assert playing_game.player.is_playback == true
-      
+
       # Stop playback
       {:ok, stopped_game} = GameSession.stop_playback(game.uuid)
       assert stopped_game.player.is_playback == false
-      
+
       # Verify final state persisted
-      {:ok, final_game} = GameSession.get_game_session(game.uuid)
+      {:ok, final_game} = GameSession.lookup_game_session(game.uuid)
       assert final_game.player.is_playback == false
-      
+
       # Cleanup
       GameSession.end_game_session(game.uuid)
     end
