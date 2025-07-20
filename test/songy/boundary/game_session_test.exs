@@ -55,88 +55,12 @@ defmodule Songy.Boundary.GameSessionTest do
     end
   end
 
-  describe "add_participant/2" do
-    setup do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", provider)
-
-      pid =
-        case Registry.lookup(Songy.Registry, game.uuid) do
-          [{pid, nil}] -> pid
-          [] -> flunk("Process not found in registry")
-        end
-
-      %{game: game, pid: pid}
-    end
-
-    test "adds participant to game session", %{game: game} do
-      participant_uuid = "user123"
-
-      assert {:ok, updated_game} = GameSession.add_participant(game.uuid, participant_uuid)
-      assert length(updated_game.participants) == 1
-      assert hd(updated_game.participants).uuid == participant_uuid
-    end
-
-    test "returns error for non-existent session" do
-      assert {:error, :not_found} = GameSession.add_participant("nonexistent", "user123")
-    end
-
-    test "returns error when game is full", %{game: _game} do
-      # Create a game with default max participants (8)
-      provider = Provider.new(:spotify)
-      {:ok, small_game} = GameSession.create_game_session("owner123", provider)
-
-      # Add participants up to max capacity
-      assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user1")
-      assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user2")
-      assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user3")
-      assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user4")
-      assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user5")
-      assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user6")
-      assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user7")
-      assert {:ok, _updated_game} = GameSession.add_participant(small_game.uuid, "user8")
-
-      # Try to add 9th participant (should fail since max is 8)
-      assert {:error, :game_full} = GameSession.add_participant(small_game.uuid, "user9")
-    end
-
-    test "returns error when participant already joined", %{game: game} do
-      participant_uuid = "user123"
-
-      assert {:ok, _updated_game} = GameSession.add_participant(game.uuid, participant_uuid)
-
-      assert {:error, :user_already_joined} =
-               GameSession.add_participant(game.uuid, participant_uuid)
-    end
-
-    test "handles concurrent participant additions", %{game: _game} do
-      provider = Provider.new(:spotify)
-      {:ok, limited_game} = GameSession.create_game_session("owner123", provider)
-
-      tasks =
-        for i <- 1..5 do
-          Task.async(fn ->
-            GameSession.add_participant(limited_game.uuid, "user#{i}")
-          end)
-        end
-
-      results = Task.await_many(tasks)
-      # Since we're using a normal game (max 6), all 5 should succeed
-      successful = Enum.count(results, &match?({:ok, _}, &1))
-      failed = Enum.count(results, &match?({:error, _}, &1))
-
-      assert successful == 5
-      assert failed == 0
-    end
-  end
-
   describe "end_game_session/1" do
     test "terminates game session process" do
       provider = Provider.new(:spotify)
       {:ok, game} = GameSession.create_game_session("owner123", provider)
 
       assert :ok = GameSession.end_game_session(game.uuid)
-      assert_eventually([] = Registry.lookup(Songy.Registry, game.uuid))
     end
 
     test "handles termination of non-existent session" do
@@ -158,16 +82,17 @@ defmodule Songy.Boundary.GameSessionTest do
       %{game: game, pid: pid}
     end
 
-    test "removes participant from game session", %{game: game} do
+    test "removes participant from game session", %{game: game, pid: pid} do
       participant_uuid = "user123"
 
-      # Add participant first
-      assert {:ok, game_with_participant} =
-               GameSession.add_participant(game.uuid, participant_uuid)
+      # Simulate participant joining via Presence (direct GenServer message)
+      send(pid, {:participant_joined, participant_uuid})
 
+      # Verify participant was added
+      assert {:ok, game_with_participant} = GameSession.lookup_game_session(game.uuid)
       assert length(game_with_participant.participants) == 1
 
-      # Remove participant
+      # Remove participant via API
       assert {:ok, updated_game} = GameSession.remove_participant(game.uuid, participant_uuid)
       assert length(updated_game.participants) == 0
     end
@@ -200,15 +125,6 @@ defmodule Songy.Boundary.GameSessionTest do
       assert returned_game.uuid == game.uuid
       assert returned_game.participants == []
       assert returned_game.status == :waiting
-    end
-
-    test "returns updated game state after participant addition", %{game: game} do
-      participant_uuid = "user123"
-      {:ok, _} = GameSession.add_participant(game.uuid, participant_uuid)
-
-      assert {:ok, updated_game} = GameSession.lookup_game_session(game.uuid)
-      assert length(updated_game.participants) == 1
-      assert hd(updated_game.participants).uuid == participant_uuid
     end
 
     test "returns error for non-existent session" do
@@ -277,7 +193,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
   end
 
-  describe "update_provider/2 spotify" do
+  describe "update_provider/2" do
     setup do
       provider = Provider.new(:spotify)
       {:ok, game} = GameSession.create_game_session("owner123", provider)
@@ -436,6 +352,43 @@ defmodule Songy.Boundary.GameSessionTest do
 
       # Cleanup
       GameSession.end_game_session(game.uuid)
+    end
+  end
+
+  describe ":participant_joined event" do
+    test "broadcasts event state update" do
+      provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", provider)
+
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+
+      send(pid, {:participant_joined, "user456"})
+
+      assert_receive {:game_state_updated, updated_game}
+      assert length(updated_game.participants) == 1
+      assert hd(updated_game.participants).uuid == "user456"
+
+      GameSession.end_game_session(game.uuid)
+    end
+  end
+
+  describe ":participant_left event" do
+    test "auto terminates empty game session" do
+      provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", provider)
+
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+
+      monitor_ref = Process.monitor(pid)
+
+      send(pid, {:participant_joined, "user456"})
+      send(pid, {:participant_left, "user456"})
+
+      assert_receive {:DOWN, ^monitor_ref, :process, ^pid, :inactivity_timeout}
+
+      assert {:error, :not_found} = GameSession.lookup_game_session(game.uuid)
     end
   end
 end

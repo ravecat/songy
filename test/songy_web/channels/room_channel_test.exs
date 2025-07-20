@@ -32,7 +32,6 @@ defmodule SongyWeb.RoomChannelTest do
     test "changes game status and broadcasts update", %{current_user: current_user} do
       provider = Provider.new(:spotify)
       {:ok, game} = GameSession.create_game_session("owner123", provider)
-      {:ok, _updated_game} = GameSession.add_participant(game.uuid, current_user.uuid)
 
       {:ok, _, socket} = join_room_channel(current_user, game.uuid)
 
@@ -84,67 +83,6 @@ defmodule SongyWeb.RoomChannelTest do
       assert_reply ref, :error, %{reason: "invalid_credentials"}
 
       GameSession.end_game_session(game.uuid)
-    end
-  end
-
-  describe "room presence events" do
-    test "handles participant_joined event", %{current_user: current_user} do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", provider)
-
-      {:ok, _, socket} = join_room_channel(current_user, game.uuid)
-
-      # Simulate a participant_joined event
-      send(socket.channel_pid, {:participant_joined, current_user.uuid})
-
-      user_uuid = current_user.uuid
-      assert_broadcast "state_updated", %{participants: [%{uuid: ^user_uuid}]}
-
-      {:ok, updated_game} = GameSession.lookup_game_session(game.uuid)
-      assert length(updated_game.participants) == 1
-      assert Enum.any?(updated_game.participants, &(&1.uuid == current_user.uuid))
-
-      GameSession.end_game_session(game.uuid)
-    end
-
-    test "handles participant_left event", %{current_user: current_user} do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", provider)
-      {:ok, _updated_game} = GameSession.add_participant(game.uuid, current_user.uuid)
-
-      # Verify participant was added
-      {:ok, game_before_leave} = GameSession.lookup_game_session(game.uuid)
-      assert length(game_before_leave.participants) == 1
-
-      {:ok, _, socket} = join_room_channel(current_user, game.uuid)
-
-      # Simulate a participant_left event
-      send(socket.channel_pid, {:participant_left, current_user.uuid})
-
-      assert_broadcast "state_updated", game_state
-
-      # Verify broadcast contains expected state
-      assert length(game_state.participants) == 0
-
-      GameSession.end_game_session(game.uuid)
-    end
-
-    test "handles participant_joined event with nonexistent game", %{current_user: current_user} do
-      {:ok, _, socket} = join_room_channel(current_user, "nonexistent")
-
-      # Simulate a participant_joined event
-      send(socket.channel_pid, {:participant_joined, current_user.uuid})
-
-      refute_broadcast "state_updated", _
-    end
-
-    test "handles participant_left event with nonexistent game", %{current_user: current_user} do
-      {:ok, _, socket} = join_room_channel(current_user, "nonexistent")
-
-      # Simulate a participant_left event
-      send(socket.channel_pid, {:participant_left, current_user.uuid})
-
-      refute_broadcast "state_updated", _
     end
   end
 
@@ -308,7 +246,5 @@ defmodule SongyWeb.RoomChannelTest do
 
       GameSession.end_game_session(game.uuid)
     end
-
-
   end
 end

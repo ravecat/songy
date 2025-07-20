@@ -229,6 +229,33 @@ defmodule Songy.Core.Game do
     %{game | player: Player.toggle_playback(game.player)}
   end
 
+  @doc """
+  Checks if the game has no participants.
+
+  ## Parameters
+    * `game` - The game to check
+
+  ## Returns
+    * `true` - If game has no participants
+    * `false` - If game has at least one participant
+
+  ## Examples
+      iex> provider = Provider.new(:spotify)
+      iex> game = Game.new("owner123", provider: provider)
+      iex> Game.empty?(game)
+      true
+
+      iex> game = Game.new("owner123", provider: provider)
+      iex> user = User.get_user("user456")
+      iex> {:ok, updated_game} = Game.add_participant(game, user)
+      iex> Game.empty?(updated_game)
+      false
+  """
+  @spec empty?(t()) :: boolean()
+  def empty?(%__MODULE__{participants: participants}) do
+    Enum.empty?(participants)
+  end
+
   defp user_already_joined?(%__MODULE__{participants: participants}, %User{uuid: uuid}) do
     Enum.any?(participants, &(&1.uuid == uuid))
   end

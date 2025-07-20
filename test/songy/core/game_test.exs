@@ -323,4 +323,32 @@ defmodule Songy.Core.GameTest do
       assert updated_game.player.is_playback == false
     end
   end
+
+  describe "empty?/1" do
+    test "returns true for game with no participants" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+
+      assert Game.empty?(game) == true
+    end
+
+    test "returns false for game with participants" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      user = User.get_user("user456")
+      {:ok, updated_game} = Game.add_participant(game, user)
+
+      assert Game.empty?(updated_game) == false
+    end
+
+    test "returns true after removing all participants" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      user = User.get_user("user456")
+      {:ok, game_with_user} = Game.add_participant(game, user)
+      {:ok, game_without_user} = Game.remove_participant(game_with_user, "user456")
+
+      assert Game.empty?(game_without_user) == true
+    end
+  end
 end

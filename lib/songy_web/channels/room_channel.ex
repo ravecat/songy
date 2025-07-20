@@ -6,8 +6,10 @@ defmodule SongyWeb.RoomChannel do
 
   require Logger
 
+  @room_prefix "room:"
+
   @impl true
-  def join("room:" <> _, _payload, socket) do
+  def join(@room_prefix <> _, _payload, socket) do
     send(self(), :init_state)
     send(self(), :track_presence)
 
@@ -16,7 +18,7 @@ defmodule SongyWeb.RoomChannel do
 
   @impl true
   def handle_info(:init_state, socket) do
-    "room:" <> room_id = socket.topic
+    @room_prefix <> room_id = socket.topic
 
     case GameSession.lookup_game_session(room_id) do
       {:ok, game} ->
@@ -39,41 +41,15 @@ defmodule SongyWeb.RoomChannel do
     {:noreply, socket}
   end
 
-  @impl true
-  def handle_info({:participant_joined, user_uuid}, socket) do
-    "room:" <> room_id = socket.topic
-    Logger.info("Participant #{user_uuid} joined room #{room_id}")
+  def handle_info({:game_state_updated, game}, socket) do
+    broadcast(socket, "state_updated", game)
 
-    case GameSession.add_participant(room_id, user_uuid) do
-      {:ok, game} ->
-        broadcast(socket, "state_updated", game)
-        {:noreply, socket}
-
-      {:error, reason} ->
-        Logger.warning("Failed to add participant #{user_uuid}: #{inspect(reason)}")
-        {:noreply, socket}
-    end
-  end
-
-  @impl true
-  def handle_info({:participant_left, user_uuid}, socket) do
-    "room:" <> room_id = socket.topic
-    Logger.info("Participant #{user_uuid} left room #{room_id}")
-
-    case GameSession.remove_participant(room_id, user_uuid) do
-      {:ok, game} ->
-        broadcast(socket, "state_updated", game)
-        {:noreply, socket}
-
-      {:error, reason} ->
-        Logger.warning("Failed to remove participant #{user_uuid}: #{inspect(reason)}")
-        {:noreply, socket}
-    end
+    {:noreply, socket}
   end
 
   @impl true
   def handle_in("start_game", _payload, socket) do
-    "room:" <> room_id = socket.topic
+    @room_prefix <> room_id = socket.topic
 
     case GameSession.start_game_session(room_id) do
       {:ok, game} ->
@@ -91,7 +67,7 @@ defmodule SongyWeb.RoomChannel do
         _payload,
         %{assigns: %{provider: %{id: :spotify} = provider}} = socket
       ) do
-    "room:" <> room_id = socket.topic
+    @room_prefix <> room_id = socket.topic
     current_user_uuid = socket.assigns.current_user_uuid
 
     with true <- GameSession.owner?(room_id, current_user_uuid),
@@ -116,7 +92,7 @@ defmodule SongyWeb.RoomChannel do
         _payload,
         %{assigns: %{provider: %{id: :spotify} = provider}} = socket
       ) do
-    "room:" <> room_id = socket.topic
+    @room_prefix <> room_id = socket.topic
     current_user_uuid = socket.assigns.current_user_uuid
 
     with true <- GameSession.owner?(room_id, current_user_uuid),
@@ -141,7 +117,7 @@ defmodule SongyWeb.RoomChannel do
         %{"device_id" => _device_id} = payload,
         %{assigns: %{provider: %{id: :spotify} = provider}} = socket
       ) do
-    "room:" <> room_id = socket.topic
+    @room_prefix <> room_id = socket.topic
     current_user_uuid = socket.assigns.current_user_uuid
 
     with true <- GameSession.owner?(room_id, current_user_uuid),
@@ -159,7 +135,7 @@ defmodule SongyWeb.RoomChannel do
 
   @impl true
   def handle_in("update_provider", payload, socket) do
-    "room:" <> room_id = socket.topic
+    @room_prefix <> room_id = socket.topic
     current_user_uuid = socket.assigns.current_user_uuid
 
     with true <- GameSession.owner?(room_id, current_user_uuid),

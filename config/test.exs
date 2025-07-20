@@ -36,6 +36,9 @@ config :phoenix, :plug_init_mode, :runtime
 config :phoenix_live_view,
   enable_expensive_runtime_checks: true
 
+# Set auto termination timeout to 0 for immediate testing
+config :songy, :game_session_termination_timeout, 0
+
 config :mix_test_watch,
   tasks: ["assets.test", "test"],
   clear: true,

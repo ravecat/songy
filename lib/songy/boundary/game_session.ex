@@ -9,7 +9,6 @@ defmodule Songy.Boundary.GameSession do
   ## Public API
 
     * `create_game_session/2` - Creates and starts a new game session process with owner and provider
-    * `add_participant/2` - Adds a participant to an existing game session
     * `remove_participant/2` - Removes a participant from an existing game session
     * `lookup_game_session/1` - Retrieves the current state of a game session
     * `start_game_session/1` - Starts the game by changing its status to in_progress
@@ -64,41 +63,16 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @doc """
-  Adds a participant to the game session.
-
-  ## Parameters
-    * `game_uuid` - UUID of the game session
-    * `participant_uuid` - UUID of the participant to add
-
-  ## Examples
-      iex> GameSession.add_participant("game123", "user456")
-      {:ok, %Game{participants: [%User{uuid: "user456"}]}}
-
-      iex> GameSession.add_participant("game123", "existing_user")
-      {:error, :user_already_joined}
-  """
-  @spec add_participant(String.t(), String.t()) :: {:ok, Game.t()} | {:error, atom()}
-  def add_participant(game_uuid, participant_uuid) do
-    case lookup_game_session(game_uuid) do
-      {:ok, _} ->
-        GenServer.call(via(game_uuid), {:add_participant, participant_uuid})
-
-      {:error, _} ->
-        {:error, :not_found}
-    end
-  end
-
-  @doc """
   Terminates a game session.
 
   ## Parameters
     * `game_uuid` - UUID of the game session to terminate
   """
   @spec end_game_session(String.t()) :: :ok
-  def end_game_session(game_uuid) do
+  def end_game_session(game_uuid, reason \\ :normal, timeout \\ :infinity) do
     case lookup_game_session(game_uuid) do
       {:ok, _} ->
-        GenServer.stop(via(game_uuid))
+        GenServer.stop(via(game_uuid), reason, timeout)
 
       {:error, _} ->
         :ok
@@ -303,30 +277,63 @@ defmodule Songy.Boundary.GameSession do
   def init(%Game{} = game) do
     Logger.info("Starting game session for game #{game.uuid}")
 
+    SongyWeb.Presence.subscribe(game.uuid)
+
     {:ok, game}
   end
 
   @impl GenServer
-  def handle_call({:add_participant, participant_uuid}, _from, game) do
-    user = User.get_user(participant_uuid)
+  def handle_info({:participant_joined, user_uuid}, game) do
+    user = User.get_user(user_uuid)
 
     case Game.add_participant(game, user) do
       {:ok, updated_game} ->
-        {:reply, {:ok, updated_game}, updated_game}
+        Phoenix.PubSub.local_broadcast(
+          Songy.PubSub,
+          "room:#{updated_game.uuid}",
+          {:game_state_updated, updated_game}
+        )
 
-      {:error, reason} ->
-        {:reply, {:error, reason}, game}
+        if Game.empty?(game) do
+          cancel_termination_timer(game.uuid)
+        end
+
+        {:noreply, updated_game}
+
+      {:error, _reason} ->
+        {:noreply, game}
     end
   end
 
   @impl GenServer
-  def handle_call({:remove_participant, participant_uuid}, _from, game) do
-    case Game.remove_participant(game, participant_uuid) do
+  def handle_info({:participant_left, user_uuid}, game) do
+    case Game.remove_participant(game, user_uuid) do
       {:ok, updated_game} ->
-        {:reply, {:ok, updated_game}, updated_game}
+        Phoenix.PubSub.local_broadcast(
+          Songy.PubSub,
+          "room:#{updated_game.uuid}",
+          {:game_state_updated, updated_game}
+        )
 
-      {:error, reason} ->
-        {:reply, {:error, reason}, game}
+        if Game.empty?(updated_game) do
+          schedule_termination(game.uuid)
+        end
+
+        {:noreply, updated_game}
+
+      {:error, _reason} ->
+        {:noreply, game}
+    end
+  end
+
+  @impl GenServer
+  def handle_info({:auto_terminate, game_uuid}, game) do
+    Registry.unregister(Songy.Registry, {:termination_timer, game_uuid})
+
+    if Game.empty?(game) do
+      {:stop, :inactivity_timeout, game}
+    else
+      {:noreply, game}
     end
   end
 
@@ -381,12 +388,51 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @impl GenServer
+  def handle_call({:remove_participant, participant_uuid}, _from, game) do
+    case Game.remove_participant(game, participant_uuid) do
+      {:ok, updated_game} ->
+        Phoenix.PubSub.local_broadcast(
+          Songy.PubSub,
+          "room:#{updated_game.uuid}",
+          {:game_state_updated, updated_game}
+        )
+
+        {:reply, {:ok, updated_game}, updated_game}
+
+      {:error, reason} ->
+        {:reply, {:error, reason}, game}
+    end
+  end
+
+  @impl GenServer
   def terminate(reason, game) do
     Logger.info("Game session #{game.uuid} terminated: #{inspect(reason)}")
+    Registry.unregister(Songy.Registry, {:termination_timer, game.uuid})
+
     :ok
   end
 
   defp via(game_uuid) do
     {:via, Registry, {Songy.Registry, game_uuid}}
+  end
+
+  defp schedule_termination(game_uuid) do
+    timeout = Application.get_env(:songy, :game_session_termination_timeout, :timer.minutes(3))
+
+    timer_ref = Process.send_after(self(), {:auto_terminate, game_uuid}, timeout)
+    Registry.register(Songy.Registry, {:termination_timer, game_uuid}, timer_ref)
+    timer_ref
+  end
+
+  defp cancel_termination_timer(game_uuid) do
+    case Registry.lookup(Songy.Registry, {:termination_timer, game_uuid}) do
+      [{_pid, timer_ref}] ->
+        Process.cancel_timer(timer_ref)
+        Registry.unregister(Songy.Registry, {:termination_timer, game_uuid})
+        :ok
+
+      [] ->
+        :ok
+    end
   end
 end
