@@ -372,6 +372,23 @@ defmodule Songy.Boundary.GameSessionTest do
 
       GameSession.end_game_session(game.uuid)
     end
+
+    test "updates game state with new participant" do
+      provider = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+
+      assert {:ok, game} = GameSession.start_game_session(game.uuid)
+
+      assert length(game.participants) == 0
+
+      send(pid, {:participant_joined, "owner123"})
+
+      assert {:ok, updated_game} = GameSession.lookup_game_session(game.uuid)
+
+      assert length(updated_game.participants) == 1
+      assert hd(updated_game.participants).uuid == "owner123"
+    end
   end
 
   describe ":participant_left event" do
@@ -383,8 +400,8 @@ defmodule Songy.Boundary.GameSessionTest do
 
       monitor_ref = Process.monitor(pid)
 
-      send(pid, {:participant_joined, "user456"})
-      send(pid, {:participant_left, "user456"})
+      send(pid, {:participant_joined, "owner123"})
+      send(pid, {:participant_left, "owner123"})
 
       assert_receive {:DOWN, ^monitor_ref, :process, ^pid, :inactivity_timeout}
 
