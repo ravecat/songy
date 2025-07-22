@@ -7,7 +7,7 @@ import path from "path";
 
 export default defineConfig(({ command }) => {
   const isDev = command !== "build";
-  
+
   return {
     server: {
       port: 5173,
@@ -20,7 +20,9 @@ export default defineConfig(({ command }) => {
         "@": path.resolve(__dirname, "js"),
         "@hooks": path.resolve(__dirname, "js/hooks"),
         "@pages": path.resolve(__dirname, "js/pages"),
+        "@shared": path.resolve(__dirname, "js/shared"),
         "@mocks": path.resolve(__dirname, "__mocks__"),
+        "@components": path.resolve(__dirname, "js/components"),
       },
     },
     build: {
@@ -51,8 +53,8 @@ export default defineConfig(({ command }) => {
       exclude: ["node_modules", "dist"],
       passWithNoTests: true,
       deps: {
-        moduleDirectories: ['node_modules', '.'],
-      }
+        moduleDirectories: ["node_modules", "."],
+      },
     },
   };
 });

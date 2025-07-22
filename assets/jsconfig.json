@@ -5,6 +5,8 @@
       "@/*": ["js/*"],
       "@hooks/*": ["js/hooks/*"],
       "@pages/*": ["js/pages/*"],
+      "@components/*": ["js/components/*"],
+      "@shared/*": ["js/shared/*"],
       "@mocks/*": ["__mocks__/*"]
     }
   },

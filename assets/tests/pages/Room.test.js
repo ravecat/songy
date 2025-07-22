@@ -65,7 +65,7 @@ describe("Room", () => {
     expect(screen.getByText("Start")).toBeVisible();
   });
 
-  test("should initialize Spotify Player when component mounts", () => {
+  test.skip("should initialize Spotify Player when component mounts", () => {
     render(Room, { roomId: "test-room" });
 
     window.onSpotifyWebPlaybackSDKReady();

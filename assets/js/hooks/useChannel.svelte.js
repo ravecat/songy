@@ -22,9 +22,9 @@ export function useChannel(options) {
   } = options;
 
   const joinCallbacks = {
-    ok: (resp) => console.log(`Joined ${topic} successfully`, resp),
-    error: (resp) => console.log(`Unable to join ${topic}`, resp),
-    timeout: () => console.log(`Networking issue with ${topic}`),
+    ok: (resp) => console.info(`Joined ${topic} successfully`, resp),
+    error: (resp) => console.info(`Unable to join ${topic}`, resp),
+    timeout: () => console.info(`Networking issue with ${topic}`),
     ...join,
   };
 
@@ -44,14 +44,14 @@ export function useChannel(options) {
     channel.onError(
       onError ||
         (() => {
-          console.log(`Channel error on ${topic}, attempting to rejoin...`);
+          console.error(`Channel error on ${topic}, attempting to rejoin...`);
         })
     );
 
     channel.onClose(
       onClose ||
         (() => {
-          console.log(`Channel ${topic} closed`);
+          console.info(`Channel ${topic} closed`);
         })
     );
 
