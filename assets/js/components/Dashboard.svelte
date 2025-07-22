@@ -20,6 +20,8 @@
           {#if state.participants && state.participants.length > 0}
             {#each state.participants as participant}
               <div
+                in:slide={{ duration: 400, axis: "y" }}
+                out:slide={{ duration: 400, axis: "y" }}
                 class="flex items-center p-2 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30 shadow-lg transition-all duration-300 hover:bg-white/30"
               >
                 <div
@@ -42,7 +44,10 @@
 
           <!-- Empty slots for remaining players -->
           {#if isWaiting}
-            <div in:slide={{ duration: 400, axis: 'y' }} out:slide={{ duration: 400, axis: 'y' }}>
+            <div
+              in:slide={{ duration: 400, axis: "y" }}
+              out:slide={{ duration: 400, axis: "y" }}
+            >
               {#each Array(state.max_participants - userCount) as _, index}
                 <div
                   class="flex items-center p-2 bg-white/10 backdrop-blur-sm rounded-lg border-2 border-dashed border-white/30 mb-2"
