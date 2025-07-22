@@ -39,8 +39,8 @@ describe("Room", () => {
   test("displays loader when state is null", () => {
     render(Room, { roomId: "test-room" });
 
-    expect(screen.getByText("Connecting to game...")).toBeInTheDocument();
-    expect(screen.getByText("Connecting to game...")).toBeVisible();
+    expect(screen.getByLabelText("Loading")).toBeInTheDocument();
+    expect(screen.getByLabelText("Loading")).toBeVisible();
   });
 
   test("displays start button on waiting state", async () => {

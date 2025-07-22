@@ -5,8 +5,9 @@
   import WaitingSlot from "@components/WaitingSlot.svelte";
   import GameButton from "@components/GameButton.svelte";
   import PlayerButton from "@components/PlayerButton.svelte";
+  import Spinner from "@components/Spinner.svelte";
 
-  const { state, channel } = $derived(getChannelContext());
+  const { state } = $derived(getChannelContext());
 
   let userCount = $derived(state?.participants?.length ?? 0);
   let isWaiting = $derived(state?.status === "waiting");
@@ -18,7 +19,7 @@
   <div class="flex-1 flex items-center justify-center">
     <div class="text-center text-white mx-auto px-6 min-w-[24rem]">
       {#if state}
-        <!-- Players List Layout - KEEPING AS IS FOR NOW -->
+        <!-- Players List Layout -->
         <div class="space-y-2 mb-2">
           {#if state.participants && state.participants.length > 0}
             {#each state.participants as participant}
@@ -46,15 +47,7 @@
           <PlayerButton />
         {/if}
       {:else}
-        <!-- Loading spinner - KEEPING AS IS FOR NOW -->
-        <div class="flex flex-col items-center">
-          <p class="text-lg opacity-90 mb-8">Connecting to game...</p>
-          <div
-            class="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin"
-            role="status"
-            aria-label="Loading"
-          ></div>
-        </div>
+        <Spinner />
       {/if}
     </div>
   </div>
