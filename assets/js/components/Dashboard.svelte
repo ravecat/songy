@@ -1,24 +1,7 @@
 <script>
   import { getChannelContext } from "@shared/context/channel.js";
-  import { useSpotifyPlayer } from "@hooks/useSpotifyPlayer.svelte";
 
-  const context = getChannelContext();
-
-  let state = $derived(context.state);
-  let channel = $derived(context.channel);
-
-  useSpotifyPlayer({
-    getOAuthToken: (cb) => {
-      channel.push("get_spotify_token", {}).receive("ok", (payload) => {
-        cb(payload.token);
-      });
-    },
-    on: {
-      ready: ({ device_id }) => {
-        channel.push("update_provider", { device_id });
-      },
-    },
-  });
+  const { state, channel } = $derived(getChannelContext());
 
   let userCount = $derived(state?.participants?.length ?? 0);
   let isPlayback = $derived(state?.player?.is_playback ?? false);
