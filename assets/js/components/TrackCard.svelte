@@ -1,5 +1,5 @@
 <script>
-  import { slide } from "svelte/transition";
+  import { scale } from "svelte/transition";
 
   const mock = {
     artist: "Taylor Swift",
@@ -12,9 +12,9 @@
 </script>
 
 <div
-  class="w-32 h-32 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg shadow-lg mt-4 mx-auto flex items-center justify-center"
-  in:slide={{ duration: 400, axis: "y" }}
-  out:slide={{ duration: 400, axis: "y" }}
+  class="w-32 h-32 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg shadow-lg mx-auto flex items-center justify-center"
+  in:scale={{ duration: 400 }}
+  out:scale={{ duration: 400, start: 0 }}
 >
   <div class="text-center w-full px-2">
     <div class="text-gray-800 font-semibold mb-2 text-sm">
