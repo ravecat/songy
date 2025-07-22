@@ -6,6 +6,7 @@
   import GameButton from "@components/GameButton.svelte";
   import PlayerButton from "@components/PlayerButton.svelte";
   import Spinner from "@components/Spinner.svelte";
+  import TrackCard from "@components/TrackCard.svelte";
 
   const { state } = $derived(getChannelContext());
 
@@ -45,6 +46,7 @@
           <GameButton />
         {:else if state.status === "in_progress"}
           <PlayerButton />
+          <TrackCard />
         {/if}
       {:else}
         <Spinner />
