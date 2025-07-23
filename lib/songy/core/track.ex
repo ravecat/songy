@@ -8,6 +8,8 @@ defmodule Songy.Core.Track do
 
   use TypedStruct
 
+  @derive {Jason.Encoder, only: [:id, :title, :artist, :year, :preview_url]}
+
   typedstruct do
     field :id, String.t(), enforce: true
     field :title, String.t(), enforce: true
