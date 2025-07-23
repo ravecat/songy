@@ -130,4 +130,74 @@ defmodule Songy.Boundary.SpotifyTest do
       assert {:error, :invalid_provider} = Boundary.Spotify.pause_playback(provider)
     end
   end
+
+  describe "search/2" do
+    test "calls Spotify.Search.query with provided params" do
+      provider = Provider.new(:spotify, %{access_token: "valid_token"})
+      params = [q: "test query", type: "track", limit: 10]
+
+      Repatch.patch(Spotify.Search, :query, fn _credentials, args ->
+        assert args == params
+        {:ok, %{items: []}}
+      end)
+
+      Boundary.Spotify.search(provider, params)
+    end
+
+    test "returns error when provider has no access_token" do
+      provider = Provider.new(:spotify, %{device_id: "test_device"})
+
+      params = [q: "test query", type: "track"]
+      assert {:error, :no_credentials} = Boundary.Spotify.search(provider, params)
+    end
+
+    test "returns error when provider is not Spotify" do
+      provider = Provider.new(:youtube, %{access_token: "token"})
+
+      params = [q: "test query", type: "track"]
+      assert {:error, :invalid_provider} = Boundary.Spotify.search(provider, params)
+    end
+
+    test "calls Spotify.Search.query with empty params by default" do
+      provider = Provider.new(:spotify, %{access_token: "valid_token"})
+
+      Repatch.patch(Spotify.Search, :query, fn _credentials, args ->
+        assert args == []
+        {:ok, %{items: []}}
+      end)
+
+      Boundary.Spotify.search(provider)
+    end
+  end
+
+  describe "search_random_track/1" do
+    test "calls Spotify.Search.query with random track params" do
+      provider = Provider.new(:spotify, %{access_token: "valid_token"})
+
+      Repatch.patch(Spotify.Search, :query, fn _credentials, params ->
+        assert params[:q] =~ ~r/^\*[a-zA-Z]\* year:\d{4}-\d{4}$/
+        assert params[:type] == "track"
+        assert params[:limit] == 1
+        assert is_integer(params[:offset])
+        assert params[:offset] >= 0
+        assert params[:offset] <= 999
+
+        {:ok, %{items: [%{id: "test"}]}}
+      end)
+
+      Boundary.Spotify.search_random_track(provider)
+    end
+
+    test "returns error when provider has no access_token" do
+      provider = Provider.new(:spotify, %{device_id: "test_device"})
+
+      assert {:error, :no_credentials} = Boundary.Spotify.search_random_track(provider)
+    end
+
+    test "returns error when provider is not Spotify" do
+      provider = Provider.new(:youtube, %{access_token: "token"})
+
+      assert {:error, :invalid_provider} = Boundary.Spotify.search_random_track(provider)
+    end
+  end
 end
