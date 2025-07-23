@@ -1,7 +1,7 @@
 defmodule Songy.Core.GameTest do
   use ExUnit.Case, async: true
 
-  alias Songy.Core.{Game, User, Provider, Player}
+  alias Songy.Core.{Game, User, Provider, Player, Turn, Track}
 
   describe "new/2" do
     test "creates game with required provider" do
@@ -227,8 +227,10 @@ defmodule Songy.Core.GameTest do
 
     test "updates status back to waiting" do
       provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-      |> Game.update_status(:in_progress)
+
+      game =
+        Game.new("owner123", provider: provider)
+        |> Game.update_status(:in_progress)
 
       updated_game = Game.update_status(game, :waiting)
       assert updated_game.status == :waiting
@@ -349,6 +351,60 @@ defmodule Songy.Core.GameTest do
       {:ok, game_without_user} = Game.remove_participant(game_with_user, "user456")
 
       assert Game.empty?(game_without_user) == true
+    end
+  end
+
+  describe "update_turn/2" do
+    test "sets turn on game" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      turn = Turn.new(player_id: "player-1")
+
+      updated_game = Game.update_turn(game, turn)
+
+      assert updated_game.turn == turn
+      # other fields preserved
+      assert updated_game.uuid == game.uuid
+    end
+
+    test "replaces existing turn" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+
+      old_turn = Turn.new(player_id: "player-old")
+      new_turn = Turn.new(player_id: "player-new")
+
+      game_with_old = Game.update_turn(game, old_turn)
+      game_with_new = Game.update_turn(game_with_old, new_turn)
+
+      assert game_with_new.turn == new_turn
+      refute game_with_new.turn == old_turn
+    end
+
+    test "works with complete turn data" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+
+      track =
+        Track.new(
+          id: "spotify:track:test",
+          title: "Test Song",
+          artist: "Test Artist",
+          year: 2023
+        )
+
+      turn =
+        Turn.new(
+          player_id: "player-1",
+          challengers: ["challenger-1", "challenger-2"],
+          track: track
+        )
+
+      updated_game = Game.update_turn(game, turn)
+
+      assert updated_game.turn.player_id == "player-1"
+      assert updated_game.turn.challengers == ["challenger-1", "challenger-2"]
+      assert updated_game.turn.track == track
     end
   end
 end

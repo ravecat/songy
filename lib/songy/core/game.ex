@@ -8,9 +8,10 @@ defmodule Songy.Core.Game do
 
   use TypedStruct
 
-  @derive {Jason.Encoder, only: [:uuid, :participants, :max_participants, :status, :owner_uuid, :provider, :player]}
+  @derive {Jason.Encoder,
+           only: [:uuid, :participants, :max_participants, :status, :owner_uuid, :provider, :player, :turn]}
 
-  alias Songy.Core.{User, Provider, Player}
+  alias Songy.Core.{User, Provider, Player, Turn}
 
   @uuid_size 6
   @type status :: :waiting | :in_progress | :finished
@@ -26,6 +27,7 @@ defmodule Songy.Core.Game do
     field :owner_uuid, String.t(), enforce: true
     field :provider, Provider.t(), enforce: true
     field :player, Player.t(), enforce: true
+    field :turn, Turn.t()
   end
 
   # Options for game creation based on NimbleOptions format
@@ -255,6 +257,28 @@ defmodule Songy.Core.Game do
   def empty?(%__MODULE__{participants: participants}) do
     Enum.empty?(participants)
   end
+
+  @doc """
+  Updates the turn for the game.
+
+  ## Parameters
+    * `game` - The game to update
+    * `turn` - The turn to set
+
+  ## Examples
+      iex> provider = Provider.new(:spotify)
+      iex> game = Game.new("owner123", provider: provider)
+      iex> turn = Turn.new(player_id: "player-1")
+      iex> updated_game = Game.update_turn(game, turn)
+      iex> updated_game.turn.player_id
+      "player-1"
+  """
+  @spec update_turn(t(), Turn.t()) :: t()
+  def update_turn(%__MODULE__{} = game, %Turn{} = turn) do
+    %{game | turn: turn}
+  end
+
+
 
   defp user_already_joined?(%__MODULE__{participants: participants}, %User{uuid: uuid}) do
     Enum.any?(participants, &(&1.uuid == uuid))
