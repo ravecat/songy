@@ -1,6 +1,6 @@
 <script>
   import { getChannelContext } from "@shared/context/channel.js";
-  import Participant from "@components/Participant.svelte";
+  import Participants from "@/components/Participants.svelte";
   import WaitingSlot from "@components/WaitingSlot.svelte";
   import GameButton from "@components/GameButton.svelte";
   import PlayerButton from "@components/PlayerButton.svelte";
@@ -18,11 +18,7 @@
 >
   <div class="mx-auto min-w-[24rem] space-y-2">
     {#if state}
-      {#if state.participants && state.participants.length > 0}
-        {#each state.participants as participant}
-          <Participant {participant} />
-        {/each}
-      {/if}
+      <Participants />
 
       {#if isWaiting}
         <WaitingSlot />
