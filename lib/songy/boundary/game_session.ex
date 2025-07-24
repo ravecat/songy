@@ -31,25 +31,26 @@ defmodule Songy.Boundary.GameSession do
 
   require Logger
 
-  @doc """
+    @doc """
   Creates and starts a new game session process with specified owner and provider.
 
   Generates a new game with a random UUID and starts the session process.
 
   ## Parameters
     * `owner_uuid` - UUID of the user who will own the game room
-    * `provider` - Provider instance for the game
+    * `provider_id` - Provider identifier atom (e.g., :spotify)
 
   ## Examples
-      iex> GameSession.create_game_session("user123", %Provider{id: :spotify})
+      iex> GameSession.create_game_session("user123", :spotify)
       {:ok, %Game{uuid: "a1b2c3", participants: [], owner_uuid: "user123", provider: %Provider{id: :spotify}}}
 
-      iex> GameSession.create_game_session("invalid", %Provider{id: :spotify})
+      iex> GameSession.create_game_session("invalid", :spotify)
       {:error, :process_start_failed}
   """
-  @spec create_game_session(String.t(), Provider.t()) :: {:ok, Game.t()} | {:error, term()}
-  def create_game_session(owner_uuid, %Provider{} = provider) when is_binary(owner_uuid) do
-    with game <- Game.new(owner_uuid, provider: provider),
+  @spec create_game_session(String.t(), atom()) :: {:ok, Game.t()} | {:error, term()}
+  def create_game_session(owner_uuid, provider_id) when is_binary(owner_uuid) and is_atom(provider_id) do
+    with provider <- Provider.new(provider_id),
+         game <- Game.new(owner_uuid, provider: provider),
          {:ok, _pid} <-
            DynamicSupervisor.start_child(
              Songy.Supervisor.GameSession,
@@ -143,7 +144,7 @@ defmodule Songy.Boundary.GameSession do
     * `{:error, :game_not_in_progress}` - Game is not in the correct status
 
   ## Examples
-      iex> {:ok, game} = GameSession.create_game_session("owner123", provider)
+      iex> {:ok, game} = GameSession.create_game_session("owner123", :spotify)
       iex> {:ok, _} = GameSession.start_game_session(game.uuid)
       iex> {:ok, updated_game} = GameSession.start_playback(game.uuid)
       iex> updated_game.player.is_playback
@@ -178,7 +179,7 @@ defmodule Songy.Boundary.GameSession do
     * `{:error, :game_not_in_progress}` - Game is not in the correct status
 
   ## Examples
-      iex> {:ok, game} = GameSession.create_game_session("owner123", provider)
+      iex> {:ok, game} = GameSession.create_game_session("owner123", :spotify)
       iex> {:ok, _} = GameSession.start_game_session(game.uuid)
       iex> {:ok, _} = GameSession.start_playback(game.uuid)
       iex> {:ok, updated_game} = GameSession.stop_playback(game.uuid)

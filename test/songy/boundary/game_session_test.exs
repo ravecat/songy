@@ -9,8 +9,8 @@ defmodule Songy.Boundary.GameSessionTest do
   describe "create_game_session/2" do
     test "starts new game session process with owner and provider" do
       owner_uuid = "owner123"
-      provider = Provider.new(:spotify)
-      assert {:ok, game} = GameSession.create_game_session(owner_uuid, provider)
+      provider_id = :spotify
+      assert {:ok, game} = GameSession.create_game_session(owner_uuid, provider_id)
 
       pid =
         case Registry.lookup(Songy.Registry, game.uuid) do
@@ -26,11 +26,8 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "multiple different games can be started with different owners and providers" do
-      provider1 = Provider.new(:spotify)
-      provider2 = Provider.new(:spotify)
-
-      assert {:ok, game1} = GameSession.create_game_session("owner1", provider1)
-      assert {:ok, game2} = GameSession.create_game_session("owner2", provider2)
+      assert {:ok, game1} = GameSession.create_game_session("owner1", :spotify)
+      assert {:ok, game2} = GameSession.create_game_session("owner2", :spotify)
 
       pid1 =
         case Registry.lookup(Songy.Registry, game1.uuid) do
@@ -57,8 +54,8 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "end_game_session/1" do
     test "terminates game session process" do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      provider_id = :spotify
+      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
 
       assert :ok = GameSession.end_game_session(game.uuid)
     end
@@ -70,8 +67,8 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "remove_participant/2" do
     setup do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      provider_id = :spotify
+      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
 
       pid =
         case Registry.lookup(Songy.Registry, game.uuid) do
@@ -108,8 +105,8 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "lookup_game_session/1" do
     setup do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      provider_id = :spotify
+      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
 
       pid =
         case Registry.lookup(Songy.Registry, game.uuid) do
@@ -134,8 +131,8 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "start_game_session/1" do
     setup do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      provider_id = :spotify
+      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
 
       pid =
         case Registry.lookup(Songy.Registry, game.uuid) do
@@ -175,8 +172,8 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "owner?/2" do
     setup do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      provider_id = :spotify
+      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
       %{game: game}
     end
 
@@ -195,8 +192,8 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "update_provider/2" do
     setup do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      provider_id = :spotify
+      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
       %{game: game}
     end
 
@@ -217,8 +214,8 @@ defmodule Songy.Boundary.GameSessionTest do
   describe "start_playback/1" do
     test "starts playback when game is in progress" do
       # Create and start game session
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      provider_id = :spotify
+      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
       {:ok, _} = GameSession.start_game_session(game.uuid)
 
       # Verify initial playback state
@@ -238,8 +235,8 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "returns error when game is in waiting status" do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      provider_id = :spotify
+      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
 
       # Don't start the game, leave it in :waiting status
       assert {:error, :game_not_in_progress} = GameSession.start_playback(game.uuid)
@@ -253,8 +250,8 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "idempotent when playback already started" do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      provider_id = :spotify
+      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
       {:ok, _} = GameSession.start_game_session(game.uuid)
 
       # Start playback twice
@@ -272,8 +269,8 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "stop_playback/1" do
     test "stops playback when game is in progress" do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      provider_id = :spotify
+      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
       {:ok, _} = GameSession.start_game_session(game.uuid)
       {:ok, _} = GameSession.start_playback(game.uuid)
 
@@ -294,8 +291,8 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "returns error when game is in waiting status" do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      provider_id = :spotify
+      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
 
       # Don't start the game, leave it in :waiting status
       assert {:error, :game_not_in_progress} = GameSession.stop_playback(game.uuid)
@@ -309,8 +306,8 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "idempotent when playback already stopped" do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      provider_id = :spotify
+      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
       {:ok, _} = GameSession.start_game_session(game.uuid)
 
       # Verify playback is initially stopped
@@ -330,8 +327,8 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "start then stop playback sequence" do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      provider_id = :spotify
+      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
       {:ok, _} = GameSession.start_game_session(game.uuid)
 
       # Initial state: not playing
@@ -357,8 +354,8 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe ":participant_joined event" do
     test "broadcasts event state update" do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      provider_id = :spotify
+      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
 
       assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
 
@@ -374,8 +371,8 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "updates game state with new participant" do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      provider_id = :spotify
+      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
       assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
 
       assert {:ok, game} = GameSession.start_game_session(game.uuid)
@@ -393,8 +390,8 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe ":participant_left event" do
     test "auto terminates empty game session" do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      provider_id = :spotify
+      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
 
       assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
 

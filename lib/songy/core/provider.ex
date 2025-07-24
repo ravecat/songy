@@ -42,6 +42,7 @@ defmodule Songy.Core.Provider do
   def new(id, meta \\ %{}) do
     %__MODULE__{}
     |> cast(%{id: id, meta: meta}, [:id])
+    |> validate_required([:id])
     |> case do
       %{valid?: true} = changeset ->
         changeset
@@ -57,6 +58,7 @@ defmodule Songy.Core.Provider do
   def update(%__MODULE__{} = provider, attrs) do
     provider
     |> cast(%{id: provider.id, meta: attrs}, [:id])
+    |> validate_required([:id])
     |> case do
       %{valid?: true} = changeset ->
         changeset

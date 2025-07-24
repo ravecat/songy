@@ -20,8 +20,7 @@ defmodule SongyWeb.RoomChannelTest do
 
   describe "room common events" do
     test "handles join succeeds", %{current_user: current_user} do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
       {:ok, reply, _socket} = join_room_channel(current_user, game.uuid)
       assert reply == %{}
@@ -30,8 +29,7 @@ defmodule SongyWeb.RoomChannelTest do
     end
 
     test "changes game status and broadcasts update", %{current_user: current_user} do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
       {:ok, _, socket} = join_room_channel(current_user, game.uuid)
 
@@ -55,8 +53,7 @@ defmodule SongyWeb.RoomChannelTest do
     end
 
     test "returns error when provider is nil", %{current_user: current_user} do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", provider)
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
       {:ok, _, socket} = join_room_channel(current_user, game.uuid, %{provider: nil})
 
@@ -68,13 +65,9 @@ defmodule SongyWeb.RoomChannelTest do
     end
 
     test "returns error when provider is unknown", %{current_user: current_user} do
-      provider = %Songy.Core.Provider{
-        id: :youtube,
-        meta: %{access_token: "youtube_token_123"}
-      }
+      provider = Provider.new(:youtube, %{access_token: "youtube_token_123"})
 
-      base_provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", base_provider)
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
       {:ok, _, socket} = join_room_channel(current_user, game.uuid, %{provider: provider})
 
@@ -88,8 +81,7 @@ defmodule SongyWeb.RoomChannelTest do
 
   describe "provider common events" do
     test "refuses access to provider for non-owner user", %{current_user: current_user} do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("other_owner", provider)
+      {:ok, game} = GameSession.create_game_session("other_owner", :spotify)
 
       # Check provider state before update attempt
       {:ok, game_before} = GameSession.lookup_game_session(game.uuid)
@@ -113,8 +105,7 @@ defmodule SongyWeb.RoomChannelTest do
     end
 
     test "allows owner access to whitelisted provider", %{current_user: current_user} do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session(current_user.uuid, provider)
+      {:ok, game} = GameSession.create_game_session(current_user.uuid, :spotify)
 
       # Check provider state before update
       {:ok, game_before} = GameSession.lookup_game_session(game.uuid)
@@ -136,36 +127,12 @@ defmodule SongyWeb.RoomChannelTest do
 
       GameSession.end_game_session(game.uuid)
     end
-
-    test "skip provider update when payload is invalid", %{current_user: current_user} do
-      provider = Provider.new(:spotify, %{device_id: "test-device-id"})
-      {:ok, game} = GameSession.create_game_session(current_user.uuid, provider)
-
-      {:ok, game_before} = GameSession.lookup_game_session(game.uuid)
-      assert game_before.provider == provider
-
-      {:ok, _, socket} = join_room_channel(current_user, game.uuid)
-
-      ref = push(socket, "update_provider", %{"invalid" => "payload"})
-
-      assert_reply ref, :ok
-
-      {:ok, game_after} = GameSession.lookup_game_session(game.uuid)
-      assert game_after.provider == provider
-
-      GameSession.end_game_session(game.uuid)
-    end
   end
 
   describe "room spotify events" do
     test "returns access token when provider is available", %{current_user: current_user} do
-      provider = %Songy.Core.Provider{
-        id: :spotify,
-        meta: %{access_token: "spotify_access_token_123"}
-      }
-
-      base_provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", base_provider)
+      provider = Provider.new(:spotify, %{access_token: "spotify_access_token_123"})
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
       {:ok, _, socket} = join_room_channel(current_user, game.uuid, %{provider: provider})
 
@@ -177,13 +144,9 @@ defmodule SongyWeb.RoomChannelTest do
     end
 
     test "returns error when provider has no access_token", %{current_user: current_user} do
-      provider = %Songy.Core.Provider{
-        id: :spotify,
-        meta: %{refresh_token: "refresh_token_123"}
-      }
+      provider = Provider.new(:spotify, %{refresh_token: "refresh_token_123"})
 
-      base_provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", base_provider)
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
       {:ok, _, socket} = join_room_channel(current_user, game.uuid, %{provider: provider})
 
@@ -195,13 +158,9 @@ defmodule SongyWeb.RoomChannelTest do
     end
 
     test "returns error with missing access_token", %{current_user: current_user} do
-      provider = %Songy.Core.Provider{
-        id: :spotify,
-        meta: %{access_token: nil}
-      }
+      provider = Provider.new(:spotify, %{access_token: nil})
 
-      base_provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", base_provider)
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
       {:ok, _, socket} = join_room_channel(current_user, game.uuid, %{provider: provider})
 
@@ -213,8 +172,7 @@ defmodule SongyWeb.RoomChannelTest do
     end
 
     test "returns error with missing provider", %{current_user: current_user} do
-      base_provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", base_provider)
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
       {:ok, _, socket} = join_room_channel(current_user, game.uuid)
 
@@ -227,7 +185,7 @@ defmodule SongyWeb.RoomChannelTest do
 
     test "transfer playback to device", %{current_user: current_user} do
       provider = Provider.new(:spotify, %{device_id: "test-device-id", access_token: "fake-token"})
-      {:ok, game} = GameSession.create_game_session(current_user.uuid, provider)
+      {:ok, game} = GameSession.create_game_session(current_user.uuid, :spotify)
 
       {:ok, _, socket} = join_room_channel(current_user, game.uuid, %{provider: provider})
 

@@ -3,7 +3,6 @@ defmodule SongyWeb.PageController do
   require Logger
 
   alias Songy.Boundary.GameSession
-  alias Songy.Core.Provider
 
   def home(conn, _params) do
     render(conn, :home)
@@ -11,11 +10,9 @@ defmodule SongyWeb.PageController do
 
   def start(conn, _params) do
     owner_uuid = conn.assigns.current_user.uuid
-    %{id: provider_id} = conn.assigns.provider
+    provider_id = conn.assigns.provider.id
 
-    provider = Provider.new(provider_id)
-
-    case GameSession.create_game_session(owner_uuid, provider) do
+    case GameSession.create_game_session(owner_uuid, provider_id) do
       {:ok, game} ->
         redirect(conn, to: ~p"/#{game.uuid}")
 

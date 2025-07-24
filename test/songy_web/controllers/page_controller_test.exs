@@ -51,9 +51,9 @@ defmodule SongyWeb.PageControllerTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Game session not found"
     end
 
-    test "accesses existing game session", %{conn: conn} do
-      provider = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", provider)
+    test "allows access to existing game session", %{conn: conn} do
+      %{id: provider_id} = Provider.new(:spotify)
+      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
 
       conn = get(conn, ~p"/#{game.uuid}")
 
