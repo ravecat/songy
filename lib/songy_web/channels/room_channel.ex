@@ -65,13 +65,13 @@ defmodule SongyWeb.RoomChannel do
   def handle_in(
         "start_playback",
         _payload,
-        %{assigns: %{provider: %{id: :spotify} = provider}} = socket
+        %{assigns: %{provider: %{id: :spotify, meta: credentials}}} = socket
       ) do
     @room_prefix <> room_id = socket.topic
     current_user_uuid = socket.assigns.current_user_uuid
 
     with true <- GameSession.owner?(room_id, current_user_uuid),
-         {:ok, :playback_started} <- Spotify.start_playback(provider),
+         {:ok, :playback_started} <- Spotify.start_playback(credentials),
          {:ok, game} <- GameSession.start_playback(room_id) do
       broadcast(socket, "state_updated", game)
       {:reply, :ok, socket}
@@ -90,13 +90,13 @@ defmodule SongyWeb.RoomChannel do
   def handle_in(
         "pause_playback",
         _payload,
-        %{assigns: %{provider: %{id: :spotify} = provider}} = socket
+        %{assigns: %{provider: %{id: :spotify, meta: credentials}}} = socket
       ) do
     @room_prefix <> room_id = socket.topic
     current_user_uuid = socket.assigns.current_user_uuid
 
     with true <- GameSession.owner?(room_id, current_user_uuid),
-         {:ok, :playback_paused} <- Spotify.pause_playback(provider),
+         {:ok, :playback_paused} <- Spotify.pause_playback(credentials),
          {:ok, game} <- GameSession.stop_playback(room_id) do
       broadcast(socket, "state_updated", game)
       {:reply, :ok, socket}
@@ -115,14 +115,14 @@ defmodule SongyWeb.RoomChannel do
   def handle_in(
         "update_provider",
         %{"device_id" => _device_id} = payload,
-        %{assigns: %{provider: %{id: :spotify} = provider}} = socket
+        %{assigns: %{provider: %{id: :spotify, meta: credentials}}} = socket
       ) do
     @room_prefix <> room_id = socket.topic
     current_user_uuid = socket.assigns.current_user_uuid
 
     with true <- GameSession.owner?(room_id, current_user_uuid),
          {:ok, _game} <- GameSession.update_provider(room_id, payload),
-         {:ok, :transferred} <- Spotify.transfer_playback(provider, payload) do
+         {:ok, :playback_transferred} <- Spotify.transfer_playback(credentials, payload) do
       {:reply, :ok, socket}
     else
       {:error, _reason} ->

@@ -234,7 +234,7 @@ defmodule SongyWeb.RoomChannelTest do
       Repatch.patch(Songy.Boundary.Spotify, :transfer_playback, [mode: :shared], fn _provider, payload ->
         assert payload == %{"device_id" => "test-device-id"}
 
-        {:ok, :transferred}
+        {:ok, :playback_transferred}
       end)
 
       Repatch.allow(self(), socket.channel_pid)
