@@ -207,12 +207,12 @@ defmodule Songy.Core.Game do
       iex> provider = Provider.new(:spotify)
       iex> game = Game.new("owner123", provider: provider)
       iex> game = Game.start_playback(game)
-      iex> updated_game = Game.stop_playback(game)
+      iex> updated_game = Game.pause_playback(game)
       iex> updated_game.player.is_playback
       false
   """
-  @spec stop_playback(t()) :: t()
-  def stop_playback(%__MODULE__{} = game) do
+  @spec pause_playback(t()) :: t()
+  def pause_playback(%__MODULE__{} = game) do
     %{game | player: Player.set_playback(game.player, false)}
   end
 
@@ -277,8 +277,6 @@ defmodule Songy.Core.Game do
   def update_turn(%__MODULE__{} = game, %Turn{} = turn) do
     %{game | turn: turn}
   end
-
-
 
   defp user_already_joined?(%__MODULE__{participants: participants}, %User{uuid: uuid}) do
     Enum.any?(participants, &(&1.uuid == uuid))

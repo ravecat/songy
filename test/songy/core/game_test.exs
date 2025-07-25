@@ -284,13 +284,13 @@ defmodule Songy.Core.GameTest do
     end
   end
 
-  describe "stop_playback/1" do
+  describe "pause_playback/1" do
     test "stops playback for the game" do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
       game = Game.start_playback(game)
 
-      updated_game = Game.stop_playback(game)
+      updated_game = Game.pause_playback(game)
 
       assert updated_game.player.is_playback == false
     end
@@ -299,7 +299,7 @@ defmodule Songy.Core.GameTest do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
 
-      updated_game = Game.stop_playback(game)
+      updated_game = Game.pause_playback(game)
 
       assert updated_game.player.is_playback == false
     end

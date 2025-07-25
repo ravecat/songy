@@ -89,14 +89,13 @@ defmodule SongyWeb.RoomChannel do
   def handle_in(
         "pause_playback",
         _payload,
-        %{assigns: %{provider: %{id: :spotify, meta: credentials}}} = socket
+        %{assigns: %{provider: %{id: provider, meta: credentials}}} = socket
       ) do
     @room_prefix <> room_id = socket.topic
     current_user_uuid = socket.assigns.current_user_uuid
 
     with true <- GameSession.owner?(room_id, current_user_uuid),
-         {:ok, :playback_paused} <- Spotify.pause_playback(credentials),
-         {:ok, game} <- GameSession.stop_playback(room_id) do
+         {:ok, game} <- GameSession.pause_playback(room_id, provider, credentials) do
       broadcast(socket, "state_updated", game)
       {:reply, :ok, socket}
     else

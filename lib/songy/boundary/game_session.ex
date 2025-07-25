@@ -12,6 +12,8 @@ defmodule Songy.Boundary.GameSession do
     * `remove_participant/2` - Removes a participant from an existing game session
     * `lookup_game_session/1` - Retrieves the current state of a game session
     * `start_game_session/1` - Starts the game by changing its status to in_progress
+    * `start_playback/3` - Starts playback with provider and credentials
+    * `pause_playback/3` - Pauses playback and updates internal state
     * `end_game_session/1` - Terminates a game session process
     * `owner?/2` - Checks if a user is the owner of a game session
     * `update_provider/2` - Updates the provider for a game session (owner only)
@@ -138,6 +140,8 @@ defmodule Songy.Boundary.GameSession do
 
   ## Parameters
     * `game_uuid` - UUID of the game session
+    * `provider` - Provider identifier atom (e.g., :spotify)
+    * `credentials` - Provider credentials for API calls
 
   ## Returns
     * `{:ok, game}` - Success with updated game state
@@ -147,11 +151,12 @@ defmodule Songy.Boundary.GameSession do
   ## Examples
       iex> {:ok, game} = GameSession.create_game_session("owner123", :spotify)
       iex> {:ok, _} = GameSession.start_game_session(game.uuid)
-      iex> {:ok, updated_game} = GameSession.start_playback(game.uuid)
+      iex> credentials = %{access_token: "token123"}
+      iex> {:ok, updated_game} = GameSession.start_playback(game.uuid, :spotify, credentials)
       iex> updated_game.player.is_playback
       true
 
-      iex> GameSession.start_playback("nonexistent")
+      iex> GameSession.start_playback("nonexistent", :spotify, credentials)
       {:error, :not_found}
   """
   @spec start_playback(String.t(), atom(), map()) :: {:ok, Game.t()} | {:error, atom()}
@@ -166,13 +171,15 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @doc """
-  Stops playback for the game session.
+  Pauses playback for the game session.
 
-  Updates the internal player state to indicate that playback is stopped.
+  Updates the internal player state to indicate that playback is paused.
   This function only works when the game is in `:in_progress` status.
 
   ## Parameters
     * `game_uuid` - UUID of the game session
+    * `provider` - Provider identifier atom (e.g., :spotify)
+    * `credentials` - Provider credentials for API calls
 
   ## Returns
     * `{:ok, game}` - Success with updated game state
@@ -182,19 +189,20 @@ defmodule Songy.Boundary.GameSession do
   ## Examples
       iex> {:ok, game} = GameSession.create_game_session("owner123", :spotify)
       iex> {:ok, _} = GameSession.start_game_session(game.uuid)
-      iex> {:ok, _} = GameSession.start_playback(game.uuid)
-      iex> {:ok, updated_game} = GameSession.stop_playback(game.uuid)
+      iex> credentials = %{access_token: "token123"}
+      iex> {:ok, _} = GameSession.start_playback(game.uuid, :spotify, credentials)
+      iex> {:ok, updated_game} = GameSession.pause_playback(game.uuid, :spotify, credentials)
       iex> updated_game.player.is_playback
       false
 
-      iex> GameSession.stop_playback("nonexistent")
+      iex> GameSession.pause_playback("nonexistent", :spotify, credentials)
       {:error, :not_found}
   """
-  @spec stop_playback(String.t()) :: {:ok, Game.t()} | {:error, atom()}
-  def stop_playback(game_uuid) do
+  @spec pause_playback(String.t(), atom(), map()) :: {:ok, Game.t()} | {:error, atom()}
+  def pause_playback(game_uuid, provider, credentials) do
     case lookup_game_session(game_uuid) do
       {:ok, _} ->
-        GenServer.call(via(game_uuid), :stop_playback)
+        GenServer.call(via(game_uuid), {:pause_playback, provider, credentials})
 
       {:error, _} ->
         {:error, :not_found}
@@ -369,13 +377,12 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @impl GenServer
-  def handle_call(:stop_playback, _from, game) do
-    case game.status do
-      :in_progress ->
-        updated_game = Game.stop_playback(game)
-
-        {:reply, {:ok, updated_game}, updated_game}
-
+  def handle_call({:pause_playback, :spotify, credentials}, _from, game) do
+    with :in_progress <- game.status,
+         {:ok, :playback_paused} <- Spotify.pause_playback(credentials),
+         %Game{} = updated_game <- Game.pause_playback(game) do
+      {:reply, {:ok, updated_game}, updated_game}
+    else
       _ ->
         {:reply, {:error, :game_not_in_progress}, game}
     end
