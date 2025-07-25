@@ -387,7 +387,6 @@ defmodule Songy.Core.GameTest do
 
       track =
         Track.new(
-          id: "spotify:track:test",
           title: "Test Song",
           artist: "Test Artist",
           year: 2023

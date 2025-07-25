@@ -7,50 +7,65 @@ defmodule Songy.Core.TrackTest do
     test "creates track with required attributes" do
       track =
         Track.new(
-          id: "spotify:track:4uLU6hMCjMI75M1A2tKUQC",
           title: "Bohemian Rhapsody",
           artist: "Queen",
           year: 1975
         )
 
       assert %Track{} = track
-      assert track.id == "spotify:track:4uLU6hMCjMI75M1A2tKUQC"
       assert track.title == "Bohemian Rhapsody"
       assert track.artist == "Queen"
       assert track.year == 1975
-      assert track.preview_url == nil
+      assert track.cover_url == nil
     end
 
-    test "creates track with optional preview_url" do
+    test "creates track with optional cover_url" do
       track =
         Track.new(
-          id: "spotify:track:3n3Ppam7vgaVa1iaRUc9Lp",
           title: "Another One Bites the Dust",
           artist: "Queen",
           year: 1980,
-          preview_url: "https://p.scdn.co/mp3-preview/123456"
+          cover_url: "https://i.scdn.co/image/example123456"
         )
 
-      assert track.preview_url == "https://p.scdn.co/mp3-preview/123456"
+      assert track.cover_url == "https://i.scdn.co/image/example123456"
     end
-  end
 
-  describe "Track.new/1" do
-    test "creates track with keyword arguments" do
-      track =
-        Track.new(
-          id: "track123",
-          title: "Test Track",
-          artist: "Test Artist",
-          year: 1980
-        )
+    test "creates track with nil title" do
+      track = Track.new(title: nil, artist: "Queen", year: 1975)
 
       assert %Track{} = track
-      assert track.id == "track123"
-      assert track.title == "Test Track"
-      assert track.artist == "Test Artist"
-      assert track.year == 1980
-      assert track.preview_url == nil
+      assert track.title == nil
+      assert track.artist == "Queen"
+      assert track.year == 1975
+    end
+
+    test "creates track with nil artist" do
+      track = Track.new(title: "Bohemian Rhapsody", artist: nil, year: 1975)
+
+      assert %Track{} = track
+      assert track.title == "Bohemian Rhapsody"
+      assert track.artist == nil
+      assert track.year == 1975
+    end
+
+    test "creates track with nil year" do
+      track = Track.new(title: "Bohemian Rhapsody", artist: "Queen", year: nil)
+
+      assert %Track{} = track
+      assert track.title == "Bohemian Rhapsody"
+      assert track.artist == "Queen"
+      assert track.year == nil
+    end
+
+    test "creates track with all nil values" do
+      track = Track.new(title: nil, artist: nil, year: nil)
+
+      assert %Track{} = track
+      assert track.title == nil
+      assert track.artist == nil
+      assert track.year == nil
+      assert track.cover_url == nil
     end
   end
 end

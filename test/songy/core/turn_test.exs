@@ -29,7 +29,6 @@ defmodule Songy.Core.TurnTest do
       player_id = "player-uuid-123"
       challengers = ["player-uuid-456"]
       track = Track.new(
-        id: "spotify:track:4uLU6hMCjMI75M1A2tKUQC",
         title: "Bohemian Rhapsody",
         artist: "Queen",
         year: 1975
@@ -65,7 +64,6 @@ defmodule Songy.Core.TurnTest do
     test "encodes turn with track to JSON correctly" do
       player_id = "player-uuid-123"
       track = Track.new(
-        id: "spotify:track:test",
         title: "Test Song",
         artist: "Test Artist",
         year: 2023
@@ -108,7 +106,6 @@ defmodule Songy.Core.TurnTest do
 
     test "preserves other turn fields when adding challenger" do
       track = Track.new(
-        id: "spotify:track:test",
         title: "Test Song",
         artist: "Test Artist",
         year: 2023
@@ -156,7 +153,6 @@ defmodule Songy.Core.TurnTest do
     test "sets track on turn without existing track" do
       turn = Turn.new(player_id: "player-1")
       track = Track.new(
-        id: "spotify:track:test",
         title: "Test Song",
         artist: "Test Artist",
         year: 2023
@@ -170,13 +166,11 @@ defmodule Songy.Core.TurnTest do
 
     test "replaces existing track with new track" do
       old_track = Track.new(
-        id: "spotify:track:old",
         title: "Old Song",
         artist: "Old Artist",
         year: 2020
       )
       new_track = Track.new(
-        id: "spotify:track:new",
         title: "New Song",
         artist: "New Artist",
         year: 2023
@@ -190,7 +184,6 @@ defmodule Songy.Core.TurnTest do
 
     test "preserves other turn fields when setting track" do
       track = Track.new(
-        id: "spotify:track:test",
         title: "Test Song",
         artist: "Test Artist",
         year: 2023

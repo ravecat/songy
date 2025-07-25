@@ -71,7 +71,7 @@ defmodule Songy.Core.Turn do
 
   ## Examples
       iex> turn = Turn.new(player_id: "player-1")
-      iex> track = Track.new(id: "track-1", title: "Song", artist: "Artist", year: 2020)
+      iex> track = Track.new(title: "Song", artist: "Artist", year: 2020)
       iex> Turn.set_track(turn, track)
       %Turn{player_id: "player-1", challengers: [], track: %Track{...}}
 
