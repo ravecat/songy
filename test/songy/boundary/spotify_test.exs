@@ -225,7 +225,7 @@ defmodule Songy.Boundary.SpotifyTest do
       credentials = %{access_token: "valid_token"}
 
       Repatch.patch(Spotify.Search, :query, fn _credentials, params ->
-        assert params[:q] =~ ~r/^\*[a-zA-Z]\* year:\d{4}-\d{4}$/
+        assert params[:q] =~ ~r/^\*[a-zA-Z]\*%20year:\d{4}-\d{4}$/
         assert params[:type] == "track"
         assert params[:limit] == 1
         assert is_integer(params[:offset])

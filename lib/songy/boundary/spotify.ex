@@ -177,7 +177,7 @@ defmodule Songy.Boundary.Spotify do
     start_year = :rand.uniform(current_year - 1900 + 1) + 1900 - 1
     end_year = :rand.uniform(current_year - start_year + 1) + start_year - 1
 
-    "*#{random_letter}* year:#{start_year}-#{end_year}"
+    "*#{random_letter}*%20year:#{start_year}-#{end_year}"
   end
 
   defp generate_random_latin_letter do
