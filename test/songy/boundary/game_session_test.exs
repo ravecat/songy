@@ -3,7 +3,7 @@ defmodule Songy.Boundary.GameSessionTest do
   use Repatch.ExUnit
   use AssertEventually
 
-  alias Songy.Boundary.GameSession
+  alias Songy.Boundary.{GameSession, Spotify}
   alias Songy.Core.Provider
 
   describe "create_game_session/2" do
@@ -12,12 +12,7 @@ defmodule Songy.Boundary.GameSessionTest do
       provider_id = :spotify
       assert {:ok, game} = GameSession.create_game_session(owner_uuid, provider_id)
 
-      pid =
-        case Registry.lookup(Songy.Registry, game.uuid) do
-          [{pid, nil}] -> pid
-          [] -> flunk("Process not found in registry")
-        end
-
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
       assert Process.alive?(pid)
       assert game.uuid != nil
       assert game.participants == []
@@ -29,17 +24,8 @@ defmodule Songy.Boundary.GameSessionTest do
       assert {:ok, game1} = GameSession.create_game_session("owner1", :spotify)
       assert {:ok, game2} = GameSession.create_game_session("owner2", :spotify)
 
-      pid1 =
-        case Registry.lookup(Songy.Registry, game1.uuid) do
-          [{pid, nil}] -> pid
-          [] -> flunk("Process not found in registry")
-        end
-
-      pid2 =
-        case Registry.lookup(Songy.Registry, game2.uuid) do
-          [{pid, nil}] -> pid
-          [] -> flunk("Process not found in registry")
-        end
+      assert [{pid1, _}] = Registry.lookup(Songy.Registry, game1.uuid)
+      assert [{pid2, _}] = Registry.lookup(Songy.Registry, game2.uuid)
 
       assert Process.alive?(pid1)
       assert Process.alive?(pid2)
@@ -70,11 +56,7 @@ defmodule Songy.Boundary.GameSessionTest do
       provider_id = :spotify
       {:ok, game} = GameSession.create_game_session("owner123", provider_id)
 
-      pid =
-        case Registry.lookup(Songy.Registry, game.uuid) do
-          [{pid, nil}] -> pid
-          [] -> flunk("Process not found in registry")
-        end
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
 
       %{game: game, pid: pid}
     end
@@ -108,11 +90,7 @@ defmodule Songy.Boundary.GameSessionTest do
       provider_id = :spotify
       {:ok, game} = GameSession.create_game_session("owner123", provider_id)
 
-      pid =
-        case Registry.lookup(Songy.Registry, game.uuid) do
-          [{pid, nil}] -> pid
-          [] -> flunk("Process not found in registry")
-        end
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
 
       %{game: game, pid: pid}
     end
@@ -134,11 +112,7 @@ defmodule Songy.Boundary.GameSessionTest do
       provider_id = :spotify
       {:ok, game} = GameSession.create_game_session("owner123", provider_id)
 
-      pid =
-        case Registry.lookup(Songy.Registry, game.uuid) do
-          [{pid, nil}] -> pid
-          [] -> flunk("Process not found in registry")
-        end
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
 
       %{game: game, pid: pid}
     end
@@ -211,19 +185,28 @@ defmodule Songy.Boundary.GameSessionTest do
     end
   end
 
-  describe "start_playback/1" do
-    test "starts playback when game is in progress" do
+  describe "start_playback/3" do
+    test "starts playback when game in progress" do
       # Create and start game session
       provider_id = :spotify
+      credentials = %{access_token: "test-token"}
       {:ok, game} = GameSession.create_game_session("owner123", provider_id)
       {:ok, _} = GameSession.start_game_session(game.uuid)
+
+      Repatch.patch(Spotify, :start_playback, [mode: :shared], fn _credentials, _params ->
+        {:ok, :playback_started}
+      end)
+
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+
+      Repatch.allow(self(), pid)
 
       # Verify initial playback state
       {:ok, initial_game} = GameSession.lookup_game_session(game.uuid)
       assert initial_game.player.is_playback == false
 
       # Start playback
-      assert {:ok, updated_game} = GameSession.start_playback(game.uuid)
+      assert {:ok, updated_game} = GameSession.start_playback(game.uuid, :spotify, credentials)
       assert updated_game.player.is_playback == true
 
       # Verify state persisted
@@ -236,27 +219,37 @@ defmodule Songy.Boundary.GameSessionTest do
 
     test "returns error when game is in waiting status" do
       provider_id = :spotify
+      credentials = %{access_token: "test-token"}
       {:ok, game} = GameSession.create_game_session("owner123", provider_id)
 
       # Don't start the game, leave it in :waiting status
-      assert {:error, :game_not_in_progress} = GameSession.start_playback(game.uuid)
+      assert {:error, :game_not_in_progress} = GameSession.start_playback(game.uuid, :spotify, credentials)
 
       # Cleanup
       GameSession.end_game_session(game.uuid)
     end
 
     test "returns error for non-existent session" do
-      assert {:error, :not_found} = GameSession.start_playback("nonexistent-uuid")
+      credentials = %{access_token: "test-token"}
+      assert {:error, :not_found} = GameSession.start_playback("nonexistent-uuid", :spotify, credentials)
     end
 
     test "idempotent when playback already started" do
+      Repatch.patch(Spotify, :start_playback, [mode: :shared], fn _credentials, _params ->
+        {:ok, :playback_started}
+      end)
+
       provider_id = :spotify
+      credentials = %{access_token: "test-token"}
       {:ok, game} = GameSession.create_game_session("owner123", provider_id)
       {:ok, _} = GameSession.start_game_session(game.uuid)
 
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      Repatch.allow(self(), pid)
+
       # Start playback twice
-      assert {:ok, first_result} = GameSession.start_playback(game.uuid)
-      assert {:ok, second_result} = GameSession.start_playback(game.uuid)
+      assert {:ok, first_result} = GameSession.start_playback(game.uuid, :spotify, credentials)
+      assert {:ok, second_result} = GameSession.start_playback(game.uuid, :spotify, credentials)
 
       # Both should show playback as true
       assert first_result.player.is_playback == true
@@ -269,10 +262,19 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "stop_playback/1" do
     test "stops playback when game is in progress" do
+      Repatch.patch(Spotify, :start_playback, [mode: :shared], fn _credentials, _params ->
+        {:ok, :playback_started}
+      end)
+
       provider_id = :spotify
+      credentials = %{access_token: "test-token"}
       {:ok, game} = GameSession.create_game_session("owner123", provider_id)
       {:ok, _} = GameSession.start_game_session(game.uuid)
-      {:ok, _} = GameSession.start_playback(game.uuid)
+
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      Repatch.allow(self(), pid)
+
+      {:ok, _} = GameSession.start_playback(game.uuid, :spotify, credentials)
 
       # Verify playback is started
       {:ok, playing_game} = GameSession.lookup_game_session(game.uuid)
@@ -327,16 +329,24 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "start then stop playback sequence" do
+      Repatch.patch(Spotify, :start_playback, [mode: :shared], fn _credentials, _params ->
+        {:ok, :playback_started}
+      end)
+
       provider_id = :spotify
+      credentials = %{access_token: "test-token"}
       {:ok, game} = GameSession.create_game_session("owner123", provider_id)
       {:ok, _} = GameSession.start_game_session(game.uuid)
+
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      Repatch.allow(self(), pid)
 
       # Initial state: not playing
       {:ok, initial_game} = GameSession.lookup_game_session(game.uuid)
       assert initial_game.player.is_playback == false
 
       # Start playback
-      {:ok, playing_game} = GameSession.start_playback(game.uuid)
+      {:ok, playing_game} = GameSession.start_playback(game.uuid, :spotify, credentials)
       assert playing_game.player.is_playback == true
 
       # Stop playback

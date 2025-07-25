@@ -28,10 +28,11 @@ defmodule Songy.Boundary.GameSession do
   use GenServer
 
   alias Songy.Core.{Game, User, Provider}
+  alias Songy.Boundary.Spotify
 
   require Logger
 
-    @doc """
+  @doc """
   Creates and starts a new game session process with specified owner and provider.
 
   Generates a new game with a random UUID and starts the session process.
@@ -153,11 +154,11 @@ defmodule Songy.Boundary.GameSession do
       iex> GameSession.start_playback("nonexistent")
       {:error, :not_found}
   """
-  @spec start_playback(String.t()) :: {:ok, Game.t()} | {:error, atom()}
-  def start_playback(game_uuid) do
+  @spec start_playback(String.t(), atom(), map()) :: {:ok, Game.t()} | {:error, atom()}
+  def start_playback(game_uuid, provider, credentials) do
     case lookup_game_session(game_uuid) do
       {:ok, _} ->
-        GenServer.call(via(game_uuid), :start_playback)
+        GenServer.call(via(game_uuid), {:start_playback, provider, credentials})
 
       {:error, _} ->
         {:error, :not_found}
@@ -356,13 +357,12 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @impl GenServer
-  def handle_call(:start_playback, _from, game) do
-    case game.status do
-      :in_progress ->
-        updated_game = Game.start_playback(game)
-
-        {:reply, {:ok, updated_game}, updated_game}
-
+  def handle_call({:start_playback, :spotify, credentials}, _from, game) do
+    with :in_progress <- game.status,
+         {:ok, :playback_started} <- Spotify.start_playback(credentials),
+         %Game{} = updated_game <- Game.start_playback(game) do
+      {:reply, {:ok, updated_game}, updated_game}
+    else
       _ ->
         {:reply, {:error, :game_not_in_progress}, game}
     end
