@@ -19,7 +19,7 @@ defmodule SongyWeb.PageControllerTest do
         }
       }
 
-      conn = conn |> put_session(:provider, provider) |> post(~p"/start")
+      conn = conn |> put_session(:provider, provider) |> post(~p"/create")
 
       assert redirected_to(conn, 302) =~ ~r"^/[A-Za-z0-9_-]+$"
 
@@ -32,7 +32,7 @@ defmodule SongyWeb.PageControllerTest do
     end
 
     test "returns error when provider is not authenticated", %{conn: conn} do
-      conn = post(conn, ~p"/start")
+      conn = post(conn, ~p"/create")
 
       assert redirected_to(conn, 302) == "/"
 

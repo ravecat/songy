@@ -8,7 +8,7 @@ defmodule SongyWeb.PageController do
     render(conn, :home)
   end
 
-  def start(conn, _params) do
+  def create(conn, _params) do
     owner_uuid = conn.assigns.current_user.uuid
     provider_id = conn.assigns.provider.id
 
