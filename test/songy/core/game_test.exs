@@ -619,5 +619,96 @@ defmodule Songy.Core.GameTest do
       expected = [track2, track4, track1, track3, track5]
       assert Game.get_user_timeline(game, "user456") == expected
     end
+
+    test "valid_timeline? returns true for empty timeline" do
+      assert Game.valid_timeline?([]) == true
+    end
+
+    test "valid_timeline? returns true for single track timeline" do
+      track = Track.new(title: "Single Song", artist: "Artist", year: 2023)
+      assert Game.valid_timeline?([track]) == true
+    end
+
+    test "valid_timeline? returns true for chronologically ordered tracks" do
+      tracks = [
+        Track.new(title: "Old Song", artist: "Artist 1", year: 1990),
+        Track.new(title: "Middle Song", artist: "Artist 2", year: 2000),
+        Track.new(title: "New Song", artist: "Artist 3", year: 2020)
+      ]
+      
+      assert Game.valid_timeline?(tracks) == true
+    end
+
+    test "valid_timeline? returns true for tracks with equal years" do
+      tracks = [
+        Track.new(title: "Song A", artist: "Artist 1", year: 2000),
+        Track.new(title: "Song B", artist: "Artist 2", year: 2000),
+        Track.new(title: "Song C", artist: "Artist 3", year: 2000)
+      ]
+      
+      assert Game.valid_timeline?(tracks) == true
+    end
+
+    test "valid_timeline? returns true for non-decreasing years" do
+      tracks = [
+        Track.new(title: "Song 1", artist: "Artist", year: 1990),
+        Track.new(title: "Song 2", artist: "Artist", year: 1990),
+        Track.new(title: "Song 3", artist: "Artist", year: 2000),
+        Track.new(title: "Song 4", artist: "Artist", year: 2000),
+        Track.new(title: "Song 5", artist: "Artist", year: 2020)
+      ]
+      
+      assert Game.valid_timeline?(tracks) == true
+    end
+
+    test "valid_timeline? returns false for out-of-order tracks" do
+      tracks = [
+        Track.new(title: "New Song", artist: "Artist 1", year: 2020),
+        Track.new(title: "Old Song", artist: "Artist 2", year: 1990)
+      ]
+      
+      assert Game.valid_timeline?(tracks) == false
+    end
+
+    test "valid_timeline? returns false when first violation found" do
+      tracks = [
+        Track.new(title: "Song 1", artist: "Artist", year: 1990),
+        Track.new(title: "Song 2", artist: "Artist", year: 2000),
+        Track.new(title: "Song 3", artist: "Artist", year: 1995),  # violation here
+        Track.new(title: "Song 4", artist: "Artist", year: 2020)
+      ]
+      
+      assert Game.valid_timeline?(tracks) == false
+    end
+
+    test "valid_timeline? handles mixed valid and invalid sequences" do
+      # Valid start, then invalid
+      tracks1 = [
+        Track.new(title: "Song 1", artist: "Artist", year: 1990),
+        Track.new(title: "Song 2", artist: "Artist", year: 2000),
+        Track.new(title: "Song 3", artist: "Artist", year: 1980)  # invalid
+      ]
+      assert Game.valid_timeline?(tracks1) == false
+
+      # Invalid start
+      tracks2 = [
+        Track.new(title: "Song 1", artist: "Artist", year: 2000),
+        Track.new(title: "Song 2", artist: "Artist", year: 1990)  # invalid immediately
+      ]
+      assert Game.valid_timeline?(tracks2) == false
+    end
+
+    test "valid_timeline? works with large timeline" do
+      # Create 100 tracks in chronological order
+      tracks = for year <- 1920..2020 do
+        Track.new(title: "Song #{year}", artist: "Artist", year: year)
+      end
+      
+      assert Game.valid_timeline?(tracks) == true
+
+      # Same tracks but with one out of order
+      invalid_tracks = List.replace_at(tracks, 50, Track.new(title: "Wrong", artist: "Artist", year: 1900))
+      assert Game.valid_timeline?(invalid_tracks) == false
+    end
   end
 end

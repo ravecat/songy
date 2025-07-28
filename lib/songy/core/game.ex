@@ -378,6 +378,46 @@ defmodule Songy.Core.Game do
     %{game | timelines: Map.put(game.timelines, user_uuid, updated_timeline)}
   end
 
+  @doc """
+  Checks if tracks in timeline are in chronological order (year-based).
+
+  Returns true if each track's year is greater than or equal to the previous track's year.
+  Empty timelines and single-track timelines are considered valid.
+
+  ## Parameters
+    * `timeline` - List of Track structs to validate
+
+  ## Returns
+    * `true` - If timeline is in chronological order
+    * `false` - If timeline has tracks out of chronological order
+
+  ## Examples
+      iex> valid_tracks = [
+      ...>   Track.new(title: "Old Song", artist: "Artist", year: 1990),
+      ...>   Track.new(title: "New Song", artist: "Artist", year: 2000),
+      ...>   Track.new(title: "Latest Song", artist: "Artist", year: 2020)
+      ...> ]
+      iex> Game.valid_timeline?(valid_tracks)
+      true
+
+      iex> invalid_tracks = [
+      ...>   Track.new(title: "New Song", artist: "Artist", year: 2000),
+      ...>   Track.new(title: "Old Song", artist: "Artist", year: 1990)
+      ...> ]
+      iex> Game.valid_timeline?(invalid_tracks)
+      false
+
+      iex> Game.valid_timeline?([])
+      true
+  """
+  @spec valid_timeline?(list(Track.t())) :: boolean()
+  def valid_timeline?([]), do: true
+  def valid_timeline?([_single]), do: true
+  def valid_timeline?([%Track{year: year1}, %Track{year: year2} = second | rest]) when year1 <= year2 do
+    valid_timeline?([second | rest])
+  end
+  def valid_timeline?([%Track{}, %Track{} | _rest]), do: false
+
   defp user_already_joined?(%__MODULE__{participants: participants}, %User{uuid: uuid}) do
     Enum.any?(participants, &(&1.uuid == uuid))
   end
