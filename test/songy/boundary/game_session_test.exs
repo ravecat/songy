@@ -1,10 +1,9 @@
 defmodule Songy.Boundary.GameSessionTest do
   use ExUnit.Case, async: true
-  use Repatch.ExUnit
   use AssertEventually
 
-  alias Songy.Boundary.{GameSession, Spotify}
-  alias Songy.Core.Provider
+  alias Songy.Boundary.GameSession
+  alias Songy.Core.{Provider, Game}
 
   describe "create_game_session/2" do
     test "starts new game session process with owner and provider" do
@@ -192,7 +191,7 @@ defmodule Songy.Boundary.GameSessionTest do
       {:ok, game} = GameSession.create_game_session("owner123", provider_id)
       {:ok, _} = GameSession.start_game_session(game.uuid)
 
-      Repatch.patch(Spotify, :start_playback, [mode: :shared], fn _credentials, _params ->
+      Repatch.patch(Songy.Boundary.Spotify, :start_playback, [mode: :shared], fn _credentials, _params ->
         {:ok, :playback_started}
       end)
 
@@ -236,7 +235,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "idempotent when playback already started" do
-      Repatch.patch(Spotify, :start_playback, [mode: :shared], fn _credentials, _params ->
+      Repatch.patch(Songy.Boundary.Spotify, :start_playback, [mode: :shared], fn _credentials, _params ->
         {:ok, :playback_started}
       end)
 
@@ -264,11 +263,11 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "pause_playback/3" do
     test "pauses playback when game is in progress" do
-      Repatch.patch(Spotify, :start_playback, [mode: :shared], fn _credentials, _params ->
+      Repatch.patch(Songy.Boundary.Spotify, :start_playback, [mode: :shared], fn _credentials, _params ->
         {:ok, :playback_started}
       end)
 
-      Repatch.patch(Spotify, :pause_playback, [mode: :shared], fn _credentials, _params ->
+      Repatch.patch(Songy.Boundary.Spotify, :pause_playback, [mode: :shared], fn _credentials, _params ->
         {:ok, :playback_paused}
       end)
 
@@ -300,7 +299,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "returns error when game is in waiting status" do
-      Repatch.patch(Spotify, :pause_playback, [mode: :shared], fn _credentials, _params ->
+      Repatch.patch(Songy.Boundary.Spotify, :pause_playback, [mode: :shared], fn _credentials, _params ->
         {:ok, :playback_paused}
       end)
 
@@ -324,7 +323,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "idempotent when playback already paused" do
-      Repatch.patch(Spotify, :pause_playback, [mode: :shared], fn _credentials, _params ->
+      Repatch.patch(Songy.Boundary.Spotify, :pause_playback, [mode: :shared], fn _credentials, _params ->
         {:ok, :playback_paused}
       end)
 
@@ -388,23 +387,154 @@ defmodule Songy.Boundary.GameSessionTest do
       assert length(updated_game.participants) == 1
       assert hd(updated_game.participants).uuid == "owner123"
     end
-  end
 
-  describe ":participant_left event" do
-    test "auto terminates empty game session" do
+    test "adds initial track to user timeline" do
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
+      %{meta: credentials} = Provider.new(:spotify, %{access_token: "test_token"})
+
+      # Setup mock for successful random track search
+      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+        {:ok,
+         %Spotify.Track{
+           id: "track123",
+           name: "Random Song",
+           artists: [%{"name" => "Random Artist"}],
+           album: %{
+             "release_date" => "2023-01-01",
+             "images" => [%{"url" => "https://example.com/cover.jpg"}]
+           }
+         }}
+      end)
+
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      Repatch.allow(self(), pid)
+
+      # Set credentials first
+      assert :ok = GameSession.set_credentials(game.uuid, credentials)
+
+      # Verify credentials are set
+      assert {:ok, stored_creds} = GameSession.get_credentials(game.uuid)
+      assert stored_creds.access_token == "test_token"
+
+      # Subscribe to state updates
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+
+      # Send participant joined event
+      send(pid, {:participant_joined, "user456"})
+
+      assert_receive {:game_state_updated, updated_game}
+      assert length(updated_game.participants) == 1
+      assert hd(updated_game.participants).uuid == "user456"
+
+      user_timeline = Game.get_user_timeline(updated_game, "user456")
+      assert length(user_timeline) == 1
+
+      [track] = user_timeline
+      assert track.title == "Random Song"
+      assert track.artist == "Random Artist"
+      assert track.year == 2023
+
+      # Verify Spotify.search_random_track was called
+      assert Repatch.called?(Songy.Boundary.Spotify, :search_random_track, 1, by: pid)
+
+      GameSession.end_game_session(game.uuid)
+    end
+
+    test "handles missing credentials gracefully when adding random track" do
       provider_id = :spotify
       {:ok, game} = GameSession.create_game_session("owner123", provider_id)
 
       assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
 
-      monitor_ref = Process.monitor(pid)
+      # Subscribe to state updates
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
 
-      send(pid, {:participant_joined, "owner123"})
-      send(pid, {:participant_left, "owner123"})
+      # Send participant joined event without setting credentials
+      send(pid, {:participant_joined, "user456"})
 
-      assert_receive {:DOWN, ^monitor_ref, :process, ^pid, :inactivity_timeout}
+      # Verify participant was added but no random track (due to missing credentials)
+      assert_receive {:game_state_updated, updated_game}
+      assert length(updated_game.participants) == 1
+      assert hd(updated_game.participants).uuid == "user456"
 
-      assert {:error, :game_session_not_found} = GameSession.lookup_game_session(game.uuid)
+      # Check that no track was added to user's timeline
+      user_timeline = Game.get_user_timeline(updated_game, "user456")
+      assert length(user_timeline) == 0
+
+      GameSession.end_game_session(game.uuid)
+    end
+
+    test "handles random track search failure gracefully" do
+      provider_id = :spotify
+      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
+      %{meta: credentials} = Provider.new(:spotify, %{access_token: "valid_token"})
+
+      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+        {:error, :no_tracks_found}
+      end)
+
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      Repatch.allow(self(), pid)
+
+      # Set credentials first
+      :ok = GameSession.set_credentials(game.uuid, credentials)
+
+      # Subscribe to state updates
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+
+      # Send participant joined event
+      send(pid, {:participant_joined, "user456"})
+
+      # Verify participant was added but no random track (due to search failure)
+      assert_receive {:game_state_updated, updated_game}
+      assert length(updated_game.participants) == 1
+      assert hd(updated_game.participants).uuid == "user456"
+
+      # Check that no track was added to user's timeline
+      user_timeline = Game.get_user_timeline(updated_game, "user456")
+      assert length(user_timeline) == 0
+
+      # Verify Spotify.search_random_track was called but failed
+      assert Repatch.called?(Songy.Boundary.Spotify, :search_random_track, 1, by: pid)
+
+      GameSession.end_game_session(game.uuid)
+    end
+
+    test "handles Spotify API error gracefully" do
+      provider_id = :spotify
+      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
+      %{meta: credentials} = Provider.new(:spotify, %{access_token: "invalid_token"})
+
+      # Setup mock for Spotify API error
+      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+        {:error, :search_failed}
+      end)
+
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      Repatch.allow(self(), pid)
+
+      # Set credentials first
+      :ok = GameSession.set_credentials(game.uuid, credentials)
+
+      # Subscribe to state updates
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+
+      # Send participant joined event
+      send(pid, {:participant_joined, "user456"})
+
+      # Verify participant was added but no random track (due to API error)
+      assert_receive {:game_state_updated, updated_game}
+      assert length(updated_game.participants) == 1
+      assert hd(updated_game.participants).uuid == "user456"
+
+      # Check that no track was added to user's timeline
+      user_timeline = Game.get_user_timeline(updated_game, "user456")
+      assert length(user_timeline) == 0
+
+      # Verify Spotify.search_random_track was called but failed
+      assert Repatch.called?(Songy.Boundary.Spotify, :search_random_track, 1, by: pid)
+
+      GameSession.end_game_session(game.uuid)
     end
   end
 

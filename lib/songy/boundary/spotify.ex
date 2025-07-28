@@ -100,8 +100,14 @@ defmodule Songy.Boundary.Spotify do
   def search(credentials, params \\ []) do
     with {:ok, credentials} <- ensure_credentials(credentials),
          {:ok, result} <- Spotify.Search.query(credentials, params) do
-      Logger.info("Successfully performed search with query: #{params[:q]}")
-      {:ok, result}
+      case result do
+        %{"error" => reason} ->
+          {:error, reason}
+
+        _valid_result ->
+          Logger.info("Successfully performed search with query: #{params[:q]}")
+          {:ok, result}
+      end
     else
       {:error, :invalid_credentials} ->
         {:error, :invalid_credentials}

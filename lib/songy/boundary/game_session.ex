@@ -31,7 +31,7 @@ defmodule Songy.Boundary.GameSession do
 
   use GenServer
 
-  alias Songy.Core.{Game, User, Provider}
+  alias Songy.Core.{Game, User, Provider, Trackable}
   alias Songy.Core.Provider.Credentials
   alias Songy.Boundary.Spotify
 
@@ -377,22 +377,17 @@ defmodule Songy.Boundary.GameSession do
   def handle_info({:participant_joined, user_uuid}, game) do
     user = User.get_user(user_uuid)
 
+    if Game.empty?(game) do
+      cancel_termination_timer(game.uuid)
+    end
+
     case Game.add_participant(game, user) do
       {:ok, updated_game} ->
-        Phoenix.PubSub.local_broadcast(
-          Songy.PubSub,
-          "room:#{updated_game.uuid}",
-          {:game_state_updated, updated_game}
-        )
+        {:noreply, updated_game, {:continue, {:init_participant_timeline, user_uuid}}}
 
-        if Game.empty?(game) do
-          cancel_termination_timer(game.uuid)
-        end
-
-        {:noreply, updated_game}
-
-      {:error, _reason} ->
-        {:noreply, game}
+      {:error, reason} ->
+        Logger.warning("Failed to add participant #{user_uuid}: #{inspect(reason)}")
+        {:noreply, game, {:continue, {:finalize_participant_initialization, user_uuid, :participant_failed}}}
     end
   end
 
@@ -426,6 +421,44 @@ defmodule Songy.Boundary.GameSession do
     else
       {:noreply, game}
     end
+  end
+
+  @impl GenServer
+  def handle_continue({:init_participant_timeline, user_uuid}, game) do
+    with {:ok, credentials} <- get_credentials(game.uuid),
+         {:ok, spotify_track} <- Spotify.search_random_track(credentials),
+         track <- Trackable.to_track(spotify_track) do
+      Logger.info("Init participant timeline with track '#{track.title}' by '#{track.artist}'")
+      game = Game.add_track_to_user_timeline(game, user_uuid, track)
+
+      {:noreply, game, {:continue, {:finalize_participant_initialization, user_uuid, :track_added}}}
+    else
+      {:error, reason} ->
+        Logger.warning("Failed to add random track for user #{user_uuid}: #{inspect(reason)}")
+        {:noreply, game, {:continue, {:finalize_participant_initialization, user_uuid, :track_failed}}}
+    end
+  end
+
+  @impl GenServer
+  def handle_continue({:finalize_participant_initialization, user_uuid, result}, game) do
+    case result do
+      :track_added ->
+        Logger.info("Added participant #{user_uuid} with random track")
+
+      :track_failed ->
+        Logger.info("Added participant #{user_uuid} but failed to add random track")
+
+      :participant_failed ->
+        Logger.warning("Failed to add participant #{user_uuid}")
+    end
+
+    Phoenix.PubSub.local_broadcast(
+      Songy.PubSub,
+      "room:#{game.uuid}",
+      {:game_state_updated, game}
+    )
+
+    {:noreply, game}
   end
 
   @impl GenServer

@@ -78,11 +78,10 @@ defmodule SongyWeb.RoomChannelTest do
       GameSession.end_game_session(game.uuid)
     end
 
-    test "stores credentials when owner joins with provider", %{current_user: current_user} do
+    test "stores credentials when owner joins with provider data", %{current_user: current_user} do
       provider = Provider.new(:spotify, %{access_token: "test_token", device_id: "test_device"})
       {:ok, game} = GameSession.create_game_session(current_user.uuid, :spotify)
 
-      # Join channel as owner with provider
       {:ok, _, _socket} = join_room_channel(current_user, game.uuid, %{provider: provider})
 
       # Verify credentials are stored

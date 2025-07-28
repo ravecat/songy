@@ -46,6 +46,8 @@ defmodule SongyWeb.RoomChannel do
   end
 
   def handle_info({:game_state_updated, game}, socket) do
+    Logger.info("Game state updated for room #{socket.topic}: #{inspect(game)}")
+
     broadcast(socket, "state_updated", game)
 
     {:noreply, socket}
