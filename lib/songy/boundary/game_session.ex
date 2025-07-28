@@ -77,12 +77,10 @@ defmodule Songy.Boundary.GameSession do
   """
   @spec end_game_session(String.t()) :: :ok
   def end_game_session(game_uuid, reason \\ :normal, timeout \\ :infinity) do
-    case lookup_game_session(game_uuid) do
-      {:ok, _} ->
-        GenServer.stop(via(game_uuid), reason, timeout)
-
-      {:error, _} ->
-        :ok
+    if game_session_exists?(game_uuid) do
+      GenServer.stop(via(game_uuid), reason, timeout)
+    else
+      :ok
     end
   end
 
@@ -102,12 +100,10 @@ defmodule Songy.Boundary.GameSession do
   """
   @spec remove_participant(String.t(), String.t()) :: {:ok, Game.t()} | {:error, atom()}
   def remove_participant(game_uuid, participant_uuid) do
-    case lookup_game_session(game_uuid) do
-      {:ok, _} ->
-        GenServer.call(via(game_uuid), {:remove_participant, participant_uuid})
-
-      {:error, _} ->
-        {:error, :game_session_not_found}
+    if game_session_exists?(game_uuid) do
+      GenServer.call(via(game_uuid), {:remove_participant, participant_uuid})
+    else
+      {:error, :game_session_not_found}
     end
   end
 
@@ -126,12 +122,10 @@ defmodule Songy.Boundary.GameSession do
   """
   @spec start_game_session(String.t()) :: {:ok, Game.t()} | {:error, atom()}
   def start_game_session(game_uuid) do
-    case lookup_game_session(game_uuid) do
-      {:ok, _} ->
-        GenServer.call(via(game_uuid), :start_game_session)
-
-      {:error, _} ->
-        {:error, :game_session_not_found}
+    if game_session_exists?(game_uuid) do
+      GenServer.call(via(game_uuid), :start_game_session)
+    else
+      {:error, :game_session_not_found}
     end
   end
 
@@ -269,6 +263,30 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @doc """
+  Checks if a game session process exists.
+
+  Fast process existence check without retrieving the full game state.
+  Use this when you only need to verify the session exists.
+
+  ## Parameters
+    * `game_uuid` - UUID of the game session
+
+  ## Examples
+      iex> GameSession.game_session_exists?("game123")
+      true
+
+      iex> GameSession.game_session_exists?("nonexistent")
+      false
+  """
+  @spec game_session_exists?(String.t()) :: boolean()
+  def game_session_exists?(game_uuid) do
+    case Registry.lookup(Songy.Registry, game_uuid) do
+      [{_pid, _}] -> true
+      [] -> false
+    end
+  end
+
+  @doc """
   Stores provider credentials in Registry for session access.
 
   Uses the Credentials protocol to extract credential data from any structure
@@ -288,12 +306,15 @@ defmodule Songy.Boundary.GameSession do
   """
   @spec set_credentials(String.t(), any()) :: :ok | {:error, :game_session_not_found}
   def set_credentials(game_uuid, credentials) do
-    case lookup_game_session(game_uuid) do
-      {:ok, _} ->
-        GenServer.call(via(game_uuid), {:set_credentials, credentials})
+    case Registry.lookup(Songy.Registry, game_uuid) do
+      [{_pid, _}] ->
+        credential_data = Credentials.fetch(credentials)
+        Registry.unregister(Songy.Registry, {:credentials, game_uuid})
+        Registry.register(Songy.Registry, {:credentials, game_uuid}, credential_data)
+        :ok
 
-      error ->
-        error
+      [] ->
+        {:error, :game_session_not_found}
     end
   end
 
@@ -309,15 +330,21 @@ defmodule Songy.Boundary.GameSession do
 
       iex> GameSession.get_credentials("nonexistent")
       {:error, :game_session_not_found}
-  """
-  @spec get_credentials(String.t()) :: {:ok, map()} | {:error, :game_session_not_found | :no_credentials}
-  def get_credentials(game_uuid) do
-    case lookup_game_session(game_uuid) do
-      {:ok, _} ->
-        GenServer.call(via(game_uuid), :get_credentials)
 
-      error ->
-        error
+      iex> GameSession.get_credentials("game_without_credentials")
+      {:error, :no_credentials}
+  """
+  @spec get_credentials(String.t()) :: {:ok, map()} | {:error, :no_credentials | :game_session_not_found}
+  def get_credentials(game_uuid) do
+    # First check if game session exists
+    if game_session_exists?(game_uuid) do
+      case Registry.lookup(Songy.Registry, {:credentials, game_uuid}) do
+        [{_pid, credentials}] when not is_nil(credentials) -> {:ok, credentials}
+        [{_pid, nil}] -> {:error, :no_credentials}
+        [] -> {:error, :no_credentials}
+      end
+    else
+      {:error, :game_session_not_found}
     end
   end
 
@@ -462,15 +489,6 @@ defmodule Songy.Boundary.GameSession do
     Registry.register(Songy.Registry, {:credentials, game.uuid}, credential_data)
 
     {:reply, :ok, game}
-  end
-
-  @impl GenServer
-  def handle_call(:get_credentials, _from, game) do
-    case Registry.lookup(Songy.Registry, {:credentials, game.uuid}) do
-      [{_pid, credentials}] when not is_nil(credentials) -> {:reply, {:ok, credentials}, game}
-      [{_pid, nil}] -> {:reply, {:error, :no_credentials}, game}
-      [] -> {:reply, {:error, :no_credentials}, game}
-    end
   end
 
   @impl GenServer
