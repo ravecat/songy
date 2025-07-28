@@ -169,8 +169,8 @@ defmodule Songy.Boundary.GameSession do
     else
       {:error, :not_found} -> {:error, :not_found}
       {:error, :no_credentials} -> {:error, :no_credentials}
-      status when status != :in_progress -> {:error, :game_not_in_progress}
       {:error, reason} -> {:error, reason}
+      status when status != :in_progress -> {:error, :game_not_in_progress}
     end
   end
 

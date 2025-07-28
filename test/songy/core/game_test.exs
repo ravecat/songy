@@ -406,4 +406,218 @@ defmodule Songy.Core.GameTest do
       assert updated_game.turn.track == track
     end
   end
+
+  describe "timelines management" do
+    test "adds track to user timeline" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      track = Track.new(title: "Test Song", artist: "Test Artist", year: 2023)
+
+      updated_game = Game.add_track_to_user_timeline(game, "user456", track)
+
+      assert Game.get_user_timeline(updated_game, "user456") == [track]
+      # other fields preserved
+      assert updated_game.uuid == game.uuid
+    end
+
+    test "adds multiple tracks to user timeline" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      track1 = Track.new(title: "Song 1", artist: "Artist 1", year: 2023)
+      track2 = Track.new(title: "Song 2", artist: "Artist 2", year: 2024)
+
+      game_with_first = Game.add_track_to_user_timeline(game, "user456", track1)
+      game_with_both = Game.add_track_to_user_timeline(game_with_first, "user456", track2)
+
+      # tracks are added to front of list
+      assert Game.get_user_timeline(game_with_both, "user456") == [track2, track1]
+    end
+
+    test "manages tracks for different users separately" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      track1 = Track.new(title: "Song 1", artist: "Artist 1", year: 2023)
+      track2 = Track.new(title: "Song 2", artist: "Artist 2", year: 2024)
+
+      game_updated =
+        game
+        |> Game.add_track_to_user_timeline("user1", track1)
+        |> Game.add_track_to_user_timeline("user2", track2)
+
+      assert Game.get_user_timeline(game_updated, "user1") == [track1]
+      assert Game.get_user_timeline(game_updated, "user2") == [track2]
+    end
+
+    test "gets empty timeline for user without tracks" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+
+      assert Game.get_user_timeline(game, "user456") == []
+    end
+
+    test "removes track from user timeline" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      track = Track.new(title: "Test Song", artist: "Test Artist", year: 2023)
+
+      game_with_track = Game.add_track_to_user_timeline(game, "user456", track)
+      game_without_track = Game.remove_track_from_user_timeline(game_with_track, "user456", track)
+
+      assert Game.get_user_timeline(game_without_track, "user456") == []
+    end
+
+    test "removes specific track from timeline with multiple tracks" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      track1 = Track.new(title: "Song 1", artist: "Artist 1", year: 2023)
+      track2 = Track.new(title: "Song 2", artist: "Artist 2", year: 2024)
+      track3 = Track.new(title: "Song 3", artist: "Artist 3", year: 2025)
+
+      game_with_timeline =
+        game
+        |> Game.add_track_to_user_timeline("user456", track1)
+        |> Game.add_track_to_user_timeline("user456", track2)
+        |> Game.add_track_to_user_timeline("user456", track3)
+
+      updated_game = Game.remove_track_from_user_timeline(game_with_timeline, "user456", track2)
+
+      # track2 removed, track3 and track1 remain in order
+      assert Game.get_user_timeline(updated_game, "user456") == [track3, track1]
+    end
+
+    test "removing track from empty timeline leaves it empty" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      track = Track.new(title: "Test Song", artist: "Test Artist", year: 2023)
+
+      updated_game = Game.remove_track_from_user_timeline(game, "user456", track)
+      assert Game.get_user_timeline(updated_game, "user456") == []
+    end
+
+    test "removing non-existent track leaves timeline unchanged" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      track1 = Track.new(title: "Song 1", artist: "Artist 1", year: 2023)
+      track2 = Track.new(title: "Song 2", artist: "Artist 2", year: 2024)
+
+      game_with_track = Game.add_track_to_user_timeline(game, "user456", track1)
+      updated_game = Game.remove_track_from_user_timeline(game_with_track, "user456", track2)
+
+      assert Game.get_user_timeline(updated_game, "user456") == [track1]
+    end
+
+    test "initializes with empty timelines" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+
+      assert game.timelines == %{}
+    end
+
+    test "adds track to head with position: 0" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      track1 = Track.new(title: "Song 1", artist: "Artist 1", year: 2023)
+      track2 = Track.new(title: "Song 2", artist: "Artist 2", year: 2024)
+
+      game_with_first = Game.add_track_to_user_timeline(game, "user456", track1)
+      game_with_both = Game.add_track_to_user_timeline(game_with_first, "user456", track2, position: 0)
+
+      assert Game.get_user_timeline(game_with_both, "user456") == [track2, track1]
+    end
+
+    test "adds track to specific position in timeline" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      track1 = Track.new(title: "Song 1", artist: "Artist 1", year: 2023)
+      track2 = Track.new(title: "Song 2", artist: "Artist 2", year: 2024)
+      track3 = Track.new(title: "Song 3", artist: "Artist 3", year: 2025)
+
+      game_with_timeline =
+        game
+        |> Game.add_track_to_user_timeline("user456", track1)
+        |> Game.add_track_to_user_timeline("user456", track2)
+
+      # Insert track3 at position 1 (between track2 and track1)
+      updated_game = Game.add_track_to_user_timeline(game_with_timeline, "user456", track3, position: 1)
+
+      assert Game.get_user_timeline(updated_game, "user456") == [track2, track3, track1]
+    end
+
+    test "adds track at end when position equals list length" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      track1 = Track.new(title: "Song 1", artist: "Artist 1", year: 2023)
+      track2 = Track.new(title: "Song 2", artist: "Artist 2", year: 2024)
+      track3 = Track.new(title: "Song 3", artist: "Artist 3", year: 2025)
+
+      game_with_timeline =
+        game
+        |> Game.add_track_to_user_timeline("user456", track1)
+        |> Game.add_track_to_user_timeline("user456", track2)
+
+      # Insert at position 2 (at the end of 2-element list)
+      updated_game = Game.add_track_to_user_timeline(game_with_timeline, "user456", track3, position: 2)
+
+      assert Game.get_user_timeline(updated_game, "user456") == [track2, track1, track3]
+    end
+
+    test "adds track at end when position is greater than list length" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      track1 = Track.new(title: "Song 1", artist: "Artist 1", year: 2023)
+      track2 = Track.new(title: "Song 2", artist: "Artist 2", year: 2024)
+
+      game_with_first = Game.add_track_to_user_timeline(game, "user456", track1)
+
+      # Insert at position 999 (much greater than list length of 1)
+      updated_game = Game.add_track_to_user_timeline(game_with_first, "user456", track2, position: 999)
+
+      assert Game.get_user_timeline(updated_game, "user456") == [track1, track2]
+    end
+
+    test "validates position option" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      track = Track.new(title: "Test Song", artist: "Test Artist", year: 2023)
+
+      # Invalid position type should raise error
+      assert_raise NimbleOptions.ValidationError, fn ->
+        Game.add_track_to_user_timeline(game, "user456", track, position: "invalid")
+      end
+
+      assert_raise NimbleOptions.ValidationError, fn ->
+        Game.add_track_to_user_timeline(game, "user456", track, position: -1)
+      end
+    end
+
+    test "supports multiple position options scenarios" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+
+      tracks =
+        for i <- 1..5 do
+          Track.new(title: "Song #{i}", artist: "Artist #{i}", year: 2020 + i)
+        end
+
+      [track1, track2, track3, track4, track5] = tracks
+
+      # Build timeline: [track1]
+      game = Game.add_track_to_user_timeline(game, "user456", track1)
+
+      # Insert at position 0: [track2, track1]
+      game = Game.add_track_to_user_timeline(game, "user456", track2, position: 0)
+
+      # Insert at position 2 (end): [track2, track1, track3]
+      game = Game.add_track_to_user_timeline(game, "user456", track3, position: 2)
+
+      # Insert at position 1: [track2, track4, track1, track3]
+      game = Game.add_track_to_user_timeline(game, "user456", track4, position: 1)
+
+      # Insert at position 999 (end): [track2, track4, track1, track3, track5]
+      game = Game.add_track_to_user_timeline(game, "user456", track5, position: 999)
+
+      expected = [track2, track4, track1, track3, track5]
+      assert Game.get_user_timeline(game, "user456") == expected
+    end
+  end
 end

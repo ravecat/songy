@@ -9,9 +9,9 @@ defmodule Songy.Core.Game do
   use TypedStruct
 
   @derive {Jason.Encoder,
-           only: [:uuid, :participants, :max_participants, :status, :owner_uuid, :provider, :player, :turn]}
+           only: [:uuid, :participants, :max_participants, :status, :owner_uuid, :provider, :player, :turn, :timelines]}
 
-  alias Songy.Core.{User, Provider, Player, Turn}
+  alias Songy.Core.{User, Provider, Player, Turn, Track}
 
   @uuid_size 6
   @type status :: :waiting | :in_progress | :finished
@@ -28,6 +28,7 @@ defmodule Songy.Core.Game do
     field :provider, Provider.t(), enforce: true
     field :player, Player.t(), enforce: true
     field :turn, Turn.t()
+    field :timelines, %{String.t() => list(Track.t())}, default: %{}
   end
 
   # Options for game creation based on NimbleOptions format
@@ -77,7 +78,8 @@ defmodule Songy.Core.Game do
           created_at: DateTime.utc_now(),
           status: :waiting,
           participants: [],
-          player: Player.new()
+          player: Player.new(),
+          timelines: %{}
         ],
         opts
       )
@@ -276,6 +278,104 @@ defmodule Songy.Core.Game do
   @spec update_turn(t(), Turn.t()) :: t()
   def update_turn(%__MODULE__{} = game, %Turn{} = turn) do
     %{game | turn: turn}
+  end
+
+  @doc """
+  Adds a track to a user's timeline.
+
+  ## Parameters
+    * `game` - The game to update
+    * `user_uuid` - UUID of the user
+    * `track` - The track to add
+    * `opts` - Options for track insertion
+
+  ## Options
+    * `:position` - Index position where to insert the track (0-based). Defaults to 0 (head).
+
+  ## Examples
+      iex> provider = Provider.new(:spotify)
+      iex> game = Game.new("owner123", provider: provider)
+      iex> track = Track.new(title: "Song", artist: "Artist", year: 2023)
+
+      # Add to head (default behavior)
+      iex> updated_game = Game.add_track_to_user_timeline(game, "user456", track)
+      iex> Game.get_user_timeline(updated_game, "user456")
+      [%Track{title: "Song", artist: "Artist", year: 2023}]
+
+      # Add to specific position
+      iex> track2 = Track.new(title: "Song2", artist: "Artist2", year: 2024)
+      iex> updated_game = Game.add_track_to_user_timeline(updated_game, "user456", track2, position: 1)
+      iex> Game.get_user_timeline(updated_game, "user456")
+      [%Track{title: "Song", artist: "Artist", year: 2023}, %Track{title: "Song2", artist: "Artist2", year: 2024}]
+  """
+  @add_track_to_timeline_options [
+    position: [
+      type: :non_neg_integer,
+      default: 0,
+      doc: "Index position where to insert the track (0-based). Defaults to 0 (head)."
+    ]
+  ]
+  @spec add_track_to_user_timeline(t(), String.t(), Track.t(), keyword()) :: t()
+  def add_track_to_user_timeline(%__MODULE__{} = game, user_uuid, %Track{} = track, opts \\ [])
+      when is_binary(user_uuid) and is_list(opts) do
+    opts = NimbleOptions.validate!(opts, @add_track_to_timeline_options)
+
+    current_timeline = Map.get(game.timelines, user_uuid, [])
+    position = Keyword.get(opts, :position, 0)
+
+    updated_timeline = List.insert_at(current_timeline, position, track)
+
+    %{game | timelines: Map.put(game.timelines, user_uuid, updated_timeline)}
+  end
+
+  @doc """
+  Gets a user's timeline (list of tracks).
+
+  ## Parameters
+    * `game` - The game to query
+    * `user_uuid` - UUID of the user
+
+  ## Returns
+    * List of Track structs for the user (empty list if no tracks)
+
+  ## Examples
+      iex> provider = Provider.new(:spotify)
+      iex> game = Game.new("owner123", provider: provider)
+      iex> Game.get_user_timeline(game, "user456")
+      []
+  """
+  @spec get_user_timeline(t(), String.t()) :: list(Track.t())
+  def get_user_timeline(%__MODULE__{} = game, user_uuid) when is_binary(user_uuid) do
+    Map.get(game.timelines, user_uuid, [])
+  end
+
+  @doc """
+  Removes a track from a user's timeline.
+
+  ## Parameters
+    * `game` - The game to update
+    * `user_uuid` - UUID of the user
+    * `track` - The track to remove
+
+  ## Returns
+    * Updated game with track removed from user's timeline
+
+  ## Examples
+      iex> provider = Provider.new(:spotify)
+      iex> game = Game.new("owner123", provider: provider)
+      iex> track = Track.new(title: "Song", artist: "Artist", year: 2023)
+      iex> game = Game.add_track_to_user_timeline(game, "user456", track)
+      iex> updated_game = Game.remove_track_from_user_timeline(game, "user456", track)
+      iex> Game.get_user_timeline(updated_game, "user456")
+      []
+  """
+  @spec remove_track_from_user_timeline(t(), String.t(), Track.t()) :: t()
+  def remove_track_from_user_timeline(%__MODULE__{} = game, user_uuid, %Track{} = track)
+      when is_binary(user_uuid) do
+    current_timeline = Map.get(game.timelines, user_uuid, [])
+    updated_timeline = List.delete(current_timeline, track)
+
+    %{game | timelines: Map.put(game.timelines, user_uuid, updated_timeline)}
   end
 
   defp user_already_joined?(%__MODULE__{participants: participants}, %User{uuid: uuid}) do
