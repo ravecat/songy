@@ -189,7 +189,6 @@ defmodule Songy.Boundary.GameSessionTest do
     test "starts playback when game in progress" do
       # Create and start game session
       provider_id = :spotify
-      credentials = %{access_token: "test-token"}
       {:ok, game} = GameSession.create_game_session("owner123", provider_id)
       {:ok, _} = GameSession.start_game_session(game.uuid)
 
@@ -205,8 +204,10 @@ defmodule Songy.Boundary.GameSessionTest do
       {:ok, initial_game} = GameSession.lookup_game_session(game.uuid)
       assert initial_game.player.is_playback == false
 
-      # Start playback
-      assert {:ok, updated_game} = GameSession.start_playback(game.uuid, :spotify, credentials)
+      credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
+      :ok = GameSession.set_credentials(game.uuid, credentials)
+
+      assert {:ok, updated_game} = GameSession.start_playback(game.uuid, :spotify)
       assert updated_game.player.is_playback == true
 
       # Verify state persisted
@@ -219,19 +220,19 @@ defmodule Songy.Boundary.GameSessionTest do
 
     test "returns error when game is in waiting status" do
       provider_id = :spotify
-      credentials = %{access_token: "test-token"}
+      credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
       {:ok, game} = GameSession.create_game_session("owner123", provider_id)
 
       # Don't start the game, leave it in :waiting status
-      assert {:error, :game_not_in_progress} = GameSession.start_playback(game.uuid, :spotify, credentials)
+      :ok = GameSession.set_credentials(game.uuid, credentials)
+      assert {:error, :game_not_in_progress} = GameSession.start_playback(game.uuid, :spotify)
 
       # Cleanup
       GameSession.end_game_session(game.uuid)
     end
 
     test "returns error for non-existent session" do
-      credentials = %{access_token: "test-token"}
-      assert {:error, :not_found} = GameSession.start_playback("nonexistent-uuid", :spotify, credentials)
+      assert {:error, :not_found} = GameSession.start_playback("nonexistent-uuid", :spotify)
     end
 
     test "idempotent when playback already started" do
@@ -240,7 +241,7 @@ defmodule Songy.Boundary.GameSessionTest do
       end)
 
       provider_id = :spotify
-      credentials = %{access_token: "test-token"}
+      credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
       {:ok, game} = GameSession.create_game_session("owner123", provider_id)
       {:ok, _} = GameSession.start_game_session(game.uuid)
 
@@ -248,8 +249,9 @@ defmodule Songy.Boundary.GameSessionTest do
       Repatch.allow(self(), pid)
 
       # Start playback twice
-      assert {:ok, first_result} = GameSession.start_playback(game.uuid, :spotify, credentials)
-      assert {:ok, second_result} = GameSession.start_playback(game.uuid, :spotify, credentials)
+      :ok = GameSession.set_credentials(game.uuid, credentials)
+      assert {:ok, first_result} = GameSession.start_playback(game.uuid, :spotify)
+      assert {:ok, second_result} = GameSession.start_playback(game.uuid, :spotify)
 
       # Both should show playback as true
       assert first_result.player.is_playback == true
@@ -271,21 +273,22 @@ defmodule Songy.Boundary.GameSessionTest do
       end)
 
       provider_id = :spotify
-      credentials = %{access_token: "test-token"}
+      credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
       {:ok, game} = GameSession.create_game_session("owner123", provider_id)
       {:ok, _} = GameSession.start_game_session(game.uuid)
 
       assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
       Repatch.allow(self(), pid)
 
-      {:ok, _} = GameSession.start_playback(game.uuid, :spotify, credentials)
+      :ok = GameSession.set_credentials(game.uuid, credentials)
+      {:ok, _} = GameSession.start_playback(game.uuid, :spotify)
 
       # Verify playback is started
       {:ok, playing_game} = GameSession.lookup_game_session(game.uuid)
       assert playing_game.player.is_playback == true
 
       # Pause playback
-      assert {:ok, updated_game} = GameSession.pause_playback(game.uuid, :spotify, credentials)
+      assert {:ok, updated_game} = GameSession.pause_playback(game.uuid, :spotify)
       assert updated_game.player.is_playback == false
 
       # Verify state persisted
@@ -302,22 +305,22 @@ defmodule Songy.Boundary.GameSessionTest do
       end)
 
       provider_id = :spotify
-      credentials = %{access_token: "test-token"}
+      credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
       {:ok, game} = GameSession.create_game_session("owner123", provider_id)
 
       assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
       Repatch.allow(self(), pid)
 
       # Don't start the game, leave it in :waiting status
-      assert {:error, :game_not_in_progress} = GameSession.pause_playback(game.uuid, :spotify, credentials)
+      :ok = GameSession.set_credentials(game.uuid, credentials)
+      assert {:error, :game_not_in_progress} = GameSession.pause_playback(game.uuid, :spotify)
 
       # Cleanup
       GameSession.end_game_session(game.uuid)
     end
 
     test "returns error for non-existent session" do
-      credentials = %{access_token: "test-token"}
-      assert {:error, :not_found} = GameSession.pause_playback("nonexistent-uuid", :spotify, credentials)
+      assert {:error, :not_found} = GameSession.pause_playback("nonexistent-uuid", :spotify)
     end
 
     test "idempotent when playback already paused" do
@@ -326,7 +329,7 @@ defmodule Songy.Boundary.GameSessionTest do
       end)
 
       provider_id = :spotify
-      credentials = %{access_token: "test-token"}
+      credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
       {:ok, game} = GameSession.create_game_session("owner123", provider_id)
       {:ok, _} = GameSession.start_game_session(game.uuid)
 
@@ -338,8 +341,9 @@ defmodule Songy.Boundary.GameSessionTest do
       assert initial_game.player.is_playback == false
 
       # Pause playback (should be idempotent)
-      assert {:ok, first_result} = GameSession.pause_playback(game.uuid, :spotify, credentials)
-      assert {:ok, second_result} = GameSession.pause_playback(game.uuid, :spotify, credentials)
+      :ok = GameSession.set_credentials(game.uuid, credentials)
+      assert {:ok, first_result} = GameSession.pause_playback(game.uuid, :spotify)
+      assert {:ok, second_result} = GameSession.pause_playback(game.uuid, :spotify)
 
       # Both should show playback as false
       assert first_result.player.is_playback == false

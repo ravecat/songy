@@ -12,8 +12,8 @@ defmodule Songy.Boundary.GameSession do
     * `remove_participant/2` - Removes a participant from an existing game session
     * `lookup_game_session/1` - Retrieves the current state of a game session
     * `start_game_session/1` - Starts the game by changing its status to in_progress
-    * `start_playback/3` - Starts playback with provider and credentials
-    * `pause_playback/3` - Pauses playback and updates internal state
+    * `start_playback/2` - Starts playback for the game session
+    * `pause_playback/2` - Pauses playback for the game session
     * `end_game_session/1` - Terminates a game session process
     * `owner?/2` - Checks if a user is the owner of a game session
     * `update_provider/2` - Updates the provider for a game session (owner only)
@@ -138,77 +138,75 @@ defmodule Songy.Boundary.GameSession do
   @doc """
   Starts playback for the game session.
 
-  Updates the internal player state to indicate that playback is active.
-  This function only works when the game is in `:in_progress` status.
-
   ## Parameters
     * `game_uuid` - UUID of the game session
-    * `provider` - Provider identifier atom (e.g., :spotify)
-    * `credentials` - Provider credentials for API calls
+    * `:spotify` - Provider identifier (only Spotify supported)
 
   ## Returns
     * `{:ok, game}` - Success with updated game state
     * `{:error, :not_found}` - Game session does not exist
     * `{:error, :game_not_in_progress}` - Game is not in the correct status
+    * `{:error, :no_credentials}` - No credentials available for session
 
   ## Examples
       iex> {:ok, game} = GameSession.create_game_session("owner123", :spotify)
       iex> {:ok, _} = GameSession.start_game_session(game.uuid)
-      iex> credentials = %{access_token: "token123"}
-      iex> {:ok, updated_game} = GameSession.start_playback(game.uuid, :spotify, credentials)
+      iex> :ok = GameSession.set_credentials(game.uuid, credentials)
+      iex> {:ok, updated_game} = GameSession.start_playback(game.uuid, :spotify)
       iex> updated_game.player.is_playback
       true
 
-      iex> GameSession.start_playback("nonexistent", :spotify, credentials)
+      iex> GameSession.start_playback("nonexistent", :spotify)
       {:error, :not_found}
   """
-  @spec start_playback(String.t(), atom(), map()) :: {:ok, Game.t()} | {:error, atom()}
-  def start_playback(game_uuid, provider, credentials) do
-    case lookup_game_session(game_uuid) do
-      {:ok, _} ->
-        GenServer.call(via(game_uuid), {:start_playback, provider, credentials})
-
-      {:error, _} ->
-        {:error, :not_found}
+  @spec start_playback(String.t(), :spotify) :: {:ok, Game.t()} | {:error, atom()}
+  def start_playback(game_uuid, :spotify) do
+    with {:ok, game} <- lookup_game_session(game_uuid),
+         :in_progress <- game.status,
+         {:ok, credentials} <- get_credentials(game_uuid),
+         {:ok, :playback_started} <- Spotify.start_playback(credentials) do
+      GenServer.call(via(game_uuid), :start_playback)
+    else
+      {:error, :not_found} -> {:error, :not_found}
+      {:error, :no_credentials} -> {:error, :no_credentials}
+      status when status != :in_progress -> {:error, :game_not_in_progress}
+      {:error, reason} -> {:error, reason}
     end
   end
 
   @doc """
   Pauses playback for the game session.
 
-  Updates the internal player state to indicate that playback is paused.
-  This function only works when the game is in `:in_progress` status.
-
   ## Parameters
     * `game_uuid` - UUID of the game session
-    * `provider` - Provider identifier atom (e.g., :spotify)
-    * `credentials` - Provider credentials for API calls
+    * `:spotify` - Provider identifier (only Spotify supported)
 
   ## Returns
     * `{:ok, game}` - Success with updated game state
     * `{:error, :not_found}` - Game session does not exist
     * `{:error, :game_not_in_progress}` - Game is not in the correct status
+    * `{:error, :no_credentials}` - No credentials available for session
 
   ## Examples
-      iex> {:ok, game} = GameSession.create_game_session("owner123", :spotify)
-      iex> {:ok, _} = GameSession.start_game_session(game.uuid)
-      iex> credentials = %{access_token: "token123"}
-      iex> {:ok, _} = GameSession.start_playback(game.uuid, :spotify, credentials)
-      iex> {:ok, updated_game} = GameSession.pause_playback(game.uuid, :spotify, credentials)
+      iex> {:ok, updated_game} = GameSession.pause_playback(game.uuid, :spotify)
       iex> updated_game.player.is_playback
       false
 
-      iex> GameSession.pause_playback("nonexistent", :spotify, credentials)
+      iex> GameSession.pause_playback("nonexistent", :spotify)
       {:error, :not_found}
   """
-  @spec pause_playback(String.t(), atom(), map()) :: {:ok, Game.t()} | {:error, atom()}
-  def pause_playback(game_uuid, provider, credentials) do
-    case lookup_game_session(game_uuid) do
-      {:ok, _} ->
-        GenServer.call(via(game_uuid), {:pause_playback, provider, credentials})
-
-      {:error, _} ->
-        {:error, :not_found}
+  @spec pause_playback(String.t(), :spotify) :: {:ok, Game.t()} | {:error, atom()}
+  def pause_playback(game_uuid, :spotify) do
+    with {:ok, game} <- lookup_game_session(game_uuid),
+         :in_progress <- game.status,
+         {:ok, credentials} <- get_credentials(game_uuid),
+         {:ok, :playback_paused} <- Spotify.pause_playback(credentials) do
+      GenServer.call(via(game_uuid), :pause_playback)
+    else
+      {:error, :not_found} -> {:error, :not_found}
+      {:error, :no_credentials} -> {:error, :no_credentials}
+      status when status != :in_progress -> {:error, :game_not_in_progress}
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -421,27 +419,15 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @impl GenServer
-  def handle_call({:start_playback, :spotify, credentials}, _from, game) do
-    with :in_progress <- game.status,
-         {:ok, :playback_started} <- Spotify.start_playback(credentials),
-         %Game{} = updated_game <- Game.start_playback(game) do
-      {:reply, {:ok, updated_game}, updated_game}
-    else
-      _ ->
-        {:reply, {:error, :game_not_in_progress}, game}
-    end
+  def handle_call(:start_playback, _from, game) do
+    updated_game = Game.start_playback(game)
+    {:reply, {:ok, updated_game}, updated_game}
   end
 
   @impl GenServer
-  def handle_call({:pause_playback, :spotify, credentials}, _from, game) do
-    with :in_progress <- game.status,
-         {:ok, :playback_paused} <- Spotify.pause_playback(credentials),
-         %Game{} = updated_game <- Game.pause_playback(game) do
-      {:reply, {:ok, updated_game}, updated_game}
-    else
-      _ ->
-        {:reply, {:error, :game_not_in_progress}, game}
-    end
+  def handle_call(:pause_playback, _from, game) do
+    updated_game = Game.pause_playback(game)
+    {:reply, {:ok, updated_game}, updated_game}
   end
 
   @impl GenServer
@@ -481,7 +467,8 @@ defmodule Songy.Boundary.GameSession do
   @impl GenServer
   def handle_call(:get_credentials, _from, game) do
     case Registry.lookup(Songy.Registry, {:credentials, game.uuid}) do
-      [{_pid, credentials}] -> {:reply, {:ok, credentials}, game}
+      [{_pid, credentials}] when not is_nil(credentials) -> {:reply, {:ok, credentials}, game}
+      [{_pid, nil}] -> {:reply, {:error, :no_credentials}, game}
       [] -> {:reply, {:error, :no_credentials}, game}
     end
   end

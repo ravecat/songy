@@ -80,14 +80,11 @@ defmodule SongyWeb.RoomChannel do
     current_user_uuid = socket.assigns.current_user_uuid
 
     with true <- GameSession.owner?(room_id, current_user_uuid),
-         {:ok, game} <- GameSession.start_playback(room_id, provider, credentials) do
+         :ok <- GameSession.set_credentials(room_id, credentials),
+         {:ok, game} <- GameSession.start_playback(room_id, provider) do
       broadcast(socket, "state_updated", game)
       {:reply, :ok, socket}
     else
-      {:error, reason} ->
-        Logger.warning("Start playback failed: #{inspect(reason)}")
-        {:noreply, socket}
-
       other ->
         Logger.warning("Start playback failed with: #{inspect(other)}")
         {:noreply, socket}
@@ -104,7 +101,8 @@ defmodule SongyWeb.RoomChannel do
     current_user_uuid = socket.assigns.current_user_uuid
 
     with true <- GameSession.owner?(room_id, current_user_uuid),
-         {:ok, game} <- GameSession.pause_playback(room_id, provider, credentials) do
+         :ok <- GameSession.set_credentials(room_id, credentials),
+         {:ok, game} <- GameSession.pause_playback(room_id, provider) do
       broadcast(socket, "state_updated", game)
       {:reply, :ok, socket}
     else
