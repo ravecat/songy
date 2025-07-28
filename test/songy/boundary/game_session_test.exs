@@ -81,7 +81,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "returns error for non-existent session" do
-      assert {:error, :not_found} = GameSession.remove_participant("nonexistent", "user123")
+      assert {:error, :game_session_not_found} = GameSession.remove_participant("nonexistent", "user123")
     end
   end
 
@@ -103,7 +103,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "returns error for non-existent session" do
-      assert {:error, :not_found} = GameSession.lookup_game_session("nonexistent")
+      assert {:error, :game_session_not_found} = GameSession.lookup_game_session("nonexistent")
     end
   end
 
@@ -140,7 +140,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "returns error for non-existent session" do
-      assert {:error, :not_found} = GameSession.start_game_session("nonexistent")
+      assert {:error, :game_session_not_found} = GameSession.start_game_session("nonexistent")
     end
   end
 
@@ -181,7 +181,7 @@ defmodule Songy.Boundary.GameSessionTest do
     test "returns error for non-existent session" do
       provider_data = %{device_id: "test-device-123"}
 
-      assert {:error, :not_found} = GameSession.update_provider("nonexistent", provider_data)
+      assert {:error, :game_session_not_found} = GameSession.update_provider("nonexistent", provider_data)
     end
   end
 
@@ -232,7 +232,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "returns error for non-existent session" do
-      assert {:error, :not_found} = GameSession.start_playback("nonexistent-uuid", :spotify)
+      assert {:error, :game_session_not_found} = GameSession.start_playback("nonexistent-uuid", :spotify)
     end
 
     test "idempotent when playback already started" do
@@ -320,7 +320,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "returns error for non-existent session" do
-      assert {:error, :not_found} = GameSession.pause_playback("nonexistent-uuid", :spotify)
+      assert {:error, :game_session_not_found} = GameSession.pause_playback("nonexistent-uuid", :spotify)
     end
 
     test "idempotent when playback already paused" do
@@ -404,7 +404,7 @@ defmodule Songy.Boundary.GameSessionTest do
 
       assert_receive {:DOWN, ^monitor_ref, :process, ^pid, :inactivity_timeout}
 
-      assert {:error, :not_found} = GameSession.lookup_game_session(game.uuid)
+      assert {:error, :game_session_not_found} = GameSession.lookup_game_session(game.uuid)
     end
   end
 
@@ -425,7 +425,7 @@ defmodule Songy.Boundary.GameSessionTest do
     test "returns error for non-existent session" do
       provider = Provider.new(:spotify, %{access_token: "test_token"})
 
-      assert {:error, :not_found} = GameSession.set_credentials("nonexistent", provider)
+      assert {:error, :game_session_not_found} = GameSession.set_credentials("nonexistent", provider)
     end
   end
 
@@ -455,7 +455,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "returns error for non-existent session" do
-      assert {:error, :not_found} = GameSession.get_credentials("nonexistent")
+      assert {:error, :game_session_not_found} = GameSession.get_credentials("nonexistent")
     end
 
     test "credentials are cleaned up when session terminates" do

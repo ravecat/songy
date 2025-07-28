@@ -30,7 +30,7 @@ defmodule SongyWeb.PageController do
         |> assign_prop(:room_id, room_id)
         |> render_inertia("Room")
 
-      {:error, :not_found} ->
+      {:error, :game_session_not_found} ->
         conn
         |> put_flash(:error, "Game session not found")
         |> redirect(to: ~p"/")

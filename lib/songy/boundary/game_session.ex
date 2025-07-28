@@ -107,7 +107,7 @@ defmodule Songy.Boundary.GameSession do
         GenServer.call(via(game_uuid), {:remove_participant, participant_uuid})
 
       {:error, _} ->
-        {:error, :not_found}
+        {:error, :game_session_not_found}
     end
   end
 
@@ -122,7 +122,7 @@ defmodule Songy.Boundary.GameSession do
       {:ok, %Game{status: :in_progress}}
 
       iex> GameSession.start_game_session("nonexistent")
-      {:error, :not_found}
+      {:error, :game_session_not_found}
   """
   @spec start_game_session(String.t()) :: {:ok, Game.t()} | {:error, atom()}
   def start_game_session(game_uuid) do
@@ -131,7 +131,7 @@ defmodule Songy.Boundary.GameSession do
         GenServer.call(via(game_uuid), :start_game_session)
 
       {:error, _} ->
-        {:error, :not_found}
+        {:error, :game_session_not_found}
     end
   end
 
@@ -144,7 +144,7 @@ defmodule Songy.Boundary.GameSession do
 
   ## Returns
     * `{:ok, game}` - Success with updated game state
-    * `{:error, :not_found}` - Game session does not exist
+    * `{:error, :game_session_not_found}` - Game session does not exist
     * `{:error, :game_not_in_progress}` - Game is not in the correct status
     * `{:error, :no_credentials}` - No credentials available for session
 
@@ -157,7 +157,7 @@ defmodule Songy.Boundary.GameSession do
       true
 
       iex> GameSession.start_playback("nonexistent", :spotify)
-      {:error, :not_found}
+      {:error, :game_session_not_found}
   """
   @spec start_playback(String.t(), :spotify) :: {:ok, Game.t()} | {:error, atom()}
   def start_playback(game_uuid, :spotify) do
@@ -167,7 +167,7 @@ defmodule Songy.Boundary.GameSession do
          {:ok, :playback_started} <- Spotify.start_playback(credentials) do
       GenServer.call(via(game_uuid), :start_playback)
     else
-      {:error, :not_found} -> {:error, :not_found}
+      {:error, :game_session_not_found} -> {:error, :game_session_not_found}
       {:error, :no_credentials} -> {:error, :no_credentials}
       {:error, reason} -> {:error, reason}
       status when status != :in_progress -> {:error, :game_not_in_progress}
@@ -183,7 +183,7 @@ defmodule Songy.Boundary.GameSession do
 
   ## Returns
     * `{:ok, game}` - Success with updated game state
-    * `{:error, :not_found}` - Game session does not exist
+    * `{:error, :game_session_not_found}` - Game session does not exist
     * `{:error, :game_not_in_progress}` - Game is not in the correct status
     * `{:error, :no_credentials}` - No credentials available for session
 
@@ -193,7 +193,7 @@ defmodule Songy.Boundary.GameSession do
       false
 
       iex> GameSession.pause_playback("nonexistent", :spotify)
-      {:error, :not_found}
+      {:error, :game_session_not_found}
   """
   @spec pause_playback(String.t(), :spotify) :: {:ok, Game.t()} | {:error, atom()}
   def pause_playback(game_uuid, :spotify) do
@@ -203,7 +203,7 @@ defmodule Songy.Boundary.GameSession do
          {:ok, :playback_paused} <- Spotify.pause_playback(credentials) do
       GenServer.call(via(game_uuid), :pause_playback)
     else
-      {:error, :not_found} -> {:error, :not_found}
+      {:error, :game_session_not_found} -> {:error, :game_session_not_found}
       {:error, :no_credentials} -> {:error, :no_credentials}
       status when status != :in_progress -> {:error, :game_not_in_progress}
       {:error, reason} -> {:error, reason}
@@ -244,7 +244,7 @@ defmodule Songy.Boundary.GameSession do
       {:ok, %Game{provider: %Provider{id: :spotify, meta: %{device_id: "abc123"}}}}
 
       iex> GameSession.update_provider("nonexistent", %{id: :spotify, meta: %{}})
-      {:error, :not_found}
+      {:error, :game_session_not_found}
   """
   @spec update_provider(String.t(), map()) :: {:ok, Game.t()} | {:error, atom()}
   def update_provider(game_uuid, attrs) do
@@ -256,16 +256,16 @@ defmodule Songy.Boundary.GameSession do
     end
   end
 
-  @spec lookup_game_session(String.t()) :: {:ok, Game.t()} | {:error, :not_found}
+  @spec lookup_game_session(String.t()) :: {:ok, Game.t()} | {:error, :game_session_not_found}
   def lookup_game_session(game_uuid) do
     case Registry.lookup(Songy.Registry, game_uuid) do
       [{pid, _value}] -> GenServer.call(pid, :lookup_game_session, 1000)
-      [] -> {:error, :not_found}
+      [] -> {:error, :game_session_not_found}
     end
   rescue
-    _ -> {:error, :not_found}
+    _ -> {:error, :game_session_not_found}
   catch
-    _, _ -> {:error, :not_found}
+    _, _ -> {:error, :game_session_not_found}
   end
 
   @doc """
@@ -284,9 +284,9 @@ defmodule Songy.Boundary.GameSession do
       :ok
 
       iex> GameSession.set_credentials("nonexistent", provider)
-      {:error, :not_found}
+      {:error, :game_session_not_found}
   """
-  @spec set_credentials(String.t(), any()) :: :ok | {:error, :not_found}
+  @spec set_credentials(String.t(), any()) :: :ok | {:error, :game_session_not_found}
   def set_credentials(game_uuid, credentials) do
     case lookup_game_session(game_uuid) do
       {:ok, _} ->
@@ -308,9 +308,9 @@ defmodule Songy.Boundary.GameSession do
       {:ok, %{access_token: "token123", device_id: "device456"}}
 
       iex> GameSession.get_credentials("nonexistent")
-      {:error, :not_found}
+      {:error, :game_session_not_found}
   """
-  @spec get_credentials(String.t()) :: {:ok, map()} | {:error, :not_found | :no_credentials}
+  @spec get_credentials(String.t()) :: {:ok, map()} | {:error, :game_session_not_found | :no_credentials}
   def get_credentials(game_uuid) do
     case lookup_game_session(game_uuid) do
       {:ok, _} ->

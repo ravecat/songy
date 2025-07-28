@@ -635,7 +635,7 @@ defmodule Songy.Core.GameTest do
         Track.new(title: "Middle Song", artist: "Artist 2", year: 2000),
         Track.new(title: "New Song", artist: "Artist 3", year: 2020)
       ]
-      
+
       assert Game.valid_timeline?(tracks) == true
     end
 
@@ -645,7 +645,7 @@ defmodule Songy.Core.GameTest do
         Track.new(title: "Song B", artist: "Artist 2", year: 2000),
         Track.new(title: "Song C", artist: "Artist 3", year: 2000)
       ]
-      
+
       assert Game.valid_timeline?(tracks) == true
     end
 
@@ -657,7 +657,7 @@ defmodule Songy.Core.GameTest do
         Track.new(title: "Song 4", artist: "Artist", year: 2000),
         Track.new(title: "Song 5", artist: "Artist", year: 2020)
       ]
-      
+
       assert Game.valid_timeline?(tracks) == true
     end
 
@@ -666,7 +666,7 @@ defmodule Songy.Core.GameTest do
         Track.new(title: "New Song", artist: "Artist 1", year: 2020),
         Track.new(title: "Old Song", artist: "Artist 2", year: 1990)
       ]
-      
+
       assert Game.valid_timeline?(tracks) == false
     end
 
@@ -677,7 +677,7 @@ defmodule Songy.Core.GameTest do
         Track.new(title: "Song 3", artist: "Artist", year: 1995),  # violation here
         Track.new(title: "Song 4", artist: "Artist", year: 2020)
       ]
-      
+
       assert Game.valid_timeline?(tracks) == false
     end
 
@@ -703,7 +703,7 @@ defmodule Songy.Core.GameTest do
       tracks = for year <- 1920..2020 do
         Track.new(title: "Song #{year}", artist: "Artist", year: year)
       end
-      
+
       assert Game.valid_timeline?(tracks) == true
 
       # Same tracks but with one out of order
