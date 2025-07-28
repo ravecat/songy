@@ -77,6 +77,45 @@ defmodule SongyWeb.RoomChannelTest do
 
       GameSession.end_game_session(game.uuid)
     end
+
+    test "stores credentials when owner joins with provider", %{current_user: current_user} do
+      provider = Provider.new(:spotify, %{access_token: "test_token", device_id: "test_device"})
+      {:ok, game} = GameSession.create_game_session(current_user.uuid, :spotify)
+
+      # Join channel as owner with provider
+      {:ok, _, _socket} = join_room_channel(current_user, game.uuid, %{provider: provider})
+
+      # Verify credentials are stored
+      assert {:ok, credentials} = GameSession.get_credentials(game.uuid)
+      assert credentials.access_token == "test_token"
+
+      GameSession.end_game_session(game.uuid)
+    end
+
+    test "does not store credentials when non-owner joins", %{current_user: current_user} do
+      provider = Provider.new(:spotify, %{access_token: "test_token"})
+      {:ok, game} = GameSession.create_game_session("other_owner", :spotify)
+
+      # Join channel as non-owner with provider
+      {:ok, _, _socket} = join_room_channel(current_user, game.uuid, %{provider: provider})
+
+      # Verify no credentials are stored
+      assert {:error, :no_credentials} = GameSession.get_credentials(game.uuid)
+
+      GameSession.end_game_session(game.uuid)
+    end
+
+    test "does not store credentials when provider is nil", %{current_user: current_user} do
+      {:ok, game} = GameSession.create_game_session(current_user.uuid, :spotify)
+
+      # Join channel as owner without provider
+      {:ok, _, _socket} = join_room_channel(current_user, game.uuid, %{provider: nil})
+
+      # Verify no credentials are stored
+      assert {:error, :no_credentials} = GameSession.get_credentials(game.uuid)
+
+      GameSession.end_game_session(game.uuid)
+    end
   end
 
   describe "provider common events" do

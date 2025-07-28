@@ -17,6 +17,8 @@ defmodule Songy.Boundary.GameSession do
     * `end_game_session/1` - Terminates a game session process
     * `owner?/2` - Checks if a user is the owner of a game session
     * `update_provider/2` - Updates the provider for a game session (owner only)
+    * `set_credentials/2` - Stores provider credentials in Registry for session access
+    * `get_credentials/1` - Retrieves stored credentials from Registry
 
   ## Process Management
 
@@ -30,6 +32,7 @@ defmodule Songy.Boundary.GameSession do
   use GenServer
 
   alias Songy.Core.{Game, User, Provider}
+  alias Songy.Core.Provider.Credentials
   alias Songy.Boundary.Spotify
 
   require Logger
@@ -267,6 +270,59 @@ defmodule Songy.Boundary.GameSession do
     _, _ -> {:error, :not_found}
   end
 
+  @doc """
+  Stores provider credentials in Registry for session access.
+
+  Uses the Credentials protocol to extract credential data from any structure
+  and stores it in Registry with a composite key for automatic cleanup.
+
+  ## Parameters
+    * `game_uuid` - UUID of the game session
+    * `credentials` - Any structure that implements the Credentials protocol
+
+  ## Examples
+      iex> provider = Provider.new(:spotify, %{access_token: "token123"})
+      iex> GameSession.set_credentials("game123", provider)
+      :ok
+
+      iex> GameSession.set_credentials("nonexistent", provider)
+      {:error, :not_found}
+  """
+  @spec set_credentials(String.t(), any()) :: :ok | {:error, :not_found}
+  def set_credentials(game_uuid, credentials) do
+    case lookup_game_session(game_uuid) do
+      {:ok, _} ->
+        GenServer.call(via(game_uuid), {:set_credentials, credentials})
+
+      error ->
+        error
+    end
+  end
+
+  @doc """
+  Retrieves stored credentials from Registry.
+
+  ## Parameters
+    * `game_uuid` - UUID of the game session
+
+  ## Examples
+      iex> GameSession.get_credentials("game123")
+      {:ok, %{access_token: "token123", device_id: "device456"}}
+
+      iex> GameSession.get_credentials("nonexistent")
+      {:error, :not_found}
+  """
+  @spec get_credentials(String.t()) :: {:ok, map()} | {:error, :not_found | :no_credentials}
+  def get_credentials(game_uuid) do
+    case lookup_game_session(game_uuid) do
+      {:ok, _} ->
+        GenServer.call(via(game_uuid), :get_credentials)
+
+      error ->
+        error
+    end
+  end
+
   def child_spec(game) do
     %{
       id: {__MODULE__, game.uuid},
@@ -413,9 +469,30 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @impl GenServer
+  def handle_call({:set_credentials, credentials}, _from, game) do
+    credential_data = Credentials.fetch(credentials)
+
+    Registry.unregister(Songy.Registry, {:credentials, game.uuid})
+    Registry.register(Songy.Registry, {:credentials, game.uuid}, credential_data)
+
+    {:reply, :ok, game}
+  end
+
+  @impl GenServer
+  def handle_call(:get_credentials, _from, game) do
+    case Registry.lookup(Songy.Registry, {:credentials, game.uuid}) do
+      [{_pid, credentials}] -> {:reply, {:ok, credentials}, game}
+      [] -> {:reply, {:error, :no_credentials}, game}
+    end
+  end
+
+  @impl GenServer
   def terminate(reason, game) do
     Logger.info("Game session #{game.uuid} terminated: #{inspect(reason)}")
     Registry.unregister(Songy.Registry, {:termination_timer, game.uuid})
+
+    # Clean up stored credentials
+    Registry.unregister(Songy.Registry, {:credentials, game.uuid})
 
     :ok
   end

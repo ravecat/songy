@@ -10,14 +10,14 @@ defmodule SongyWeb.RoomChannel do
 
   @impl true
   def join(@room_prefix <> _, _payload, socket) do
-    send(self(), :init_state)
+    send(self(), :init_client_state)
     send(self(), :track_presence)
 
     {:ok, socket}
   end
 
   @impl true
-  def handle_info(:init_state, socket) do
+  def handle_info(:init_client_state, socket) do
     @room_prefix <> room_id = socket.topic
 
     case GameSession.lookup_game_session(room_id) do
@@ -33,10 +33,14 @@ defmodule SongyWeb.RoomChannel do
 
   @impl true
   def handle_info(:track_presence, socket) do
-    {:ok, _} =
-      Presence.track(socket, socket.assigns.current_user_uuid, %{
-        online_at: inspect(System.system_time(:second))
-      })
+    @room_prefix <> room_id = socket.topic
+    user_uuid = socket.assigns.current_user_uuid
+
+    with {:ok, _} <- Presence.track(socket, user_uuid, %{online_at: inspect(System.system_time(:second))}),
+         true <- GameSession.owner?(room_id, user_uuid),
+         provider when not is_nil(provider) <- Map.get(socket.assigns, :provider) do
+      GameSession.set_credentials(room_id, provider)
+    end
 
     {:noreply, socket}
   end
@@ -44,6 +48,11 @@ defmodule SongyWeb.RoomChannel do
   def handle_info({:game_state_updated, game}, socket) do
     broadcast(socket, "state_updated", game)
 
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(_, socket) do
     {:noreply, socket}
   end
 
