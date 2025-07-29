@@ -222,7 +222,7 @@ defmodule SongyWeb.RoomChannelTest do
     end
 
     test "transfer playback to device", %{current_user: current_user} do
-      provider = Provider.new(:spotify, %{device_id: "test-device-id", access_token: "fake-token"})
+      provider = Provider.new(:spotify, %{device_id: "test-device-id"})
       {:ok, game} = GameSession.create_game_session(current_user.uuid, :spotify)
 
       {:ok, _, socket} = join_room_channel(current_user, game.uuid, %{provider: provider})
