@@ -36,11 +36,11 @@ defmodule SongyWeb.RoomChannel do
     @room_prefix <> room_id = socket.topic
     user_uuid = socket.assigns.current_user_uuid
 
-    with {:ok, _} <- Presence.track(socket, user_uuid, %{online_at: inspect(System.system_time(:second))}),
-         true <- GameSession.owner?(room_id, user_uuid),
-         provider when not is_nil(provider) <- Map.get(socket.assigns, :provider) do
-      GameSession.set_credentials(room_id, provider)
+    if GameSession.owner?(room_id, user_uuid) do
+      GameSession.set_credentials(room_id, Map.get(socket.assigns, :provider))
     end
+
+    Presence.track(socket, user_uuid, %{online_at: inspect(System.system_time(:second))})
 
     {:noreply, socket}
   end

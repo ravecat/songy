@@ -434,7 +434,7 @@ defmodule Songy.Boundary.GameSession do
       {:noreply, game, {:continue, {:finalize_participant_initialization, user_uuid, :track_added}}}
     else
       {:error, reason} ->
-        Logger.warning("Failed to add random track for user #{user_uuid}: #{inspect(reason)}")
+        Logger.warning("Failed to init timeline for user #{user_uuid}: #{inspect(reason)}")
         {:noreply, game, {:continue, {:finalize_participant_initialization, user_uuid, :track_failed}}}
     end
   end
