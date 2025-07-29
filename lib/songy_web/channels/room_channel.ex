@@ -166,6 +166,13 @@ defmodule SongyWeb.RoomChannel do
   end
 
   @impl true
+  def handle_in("get_current_user", _payload, socket) do
+    user_uuid = socket.assigns.current_user_uuid
+    user = Songy.Core.User.get_user(user_uuid)
+    {:reply, {:ok, user}, socket}
+  end
+
+  @impl true
   def handle_in(event, _payload, socket) do
     {:reply, {:error, %{reason: "unknown_event", event: event}}, socket}
   end

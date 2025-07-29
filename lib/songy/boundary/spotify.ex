@@ -151,11 +151,11 @@ defmodule Songy.Boundary.Spotify do
 
     case search(credentials, params) do
       {:ok, %{items: [track | _]}} ->
-        Logger.info("Successfully found random track with query: #{params[:q]}, offset: #{params[:offset]}")
+        Logger.info("Successfully found random track with query: #{inspect(params)}")
         {:ok, track}
 
       {:ok, %{items: []}} ->
-        Logger.warning("No tracks found for query: #{params[:q]}, offset: #{params[:offset]}")
+        Logger.warning("No tracks found for query: #{inspect(params)}")
         {:error, :no_tracks_found}
 
       {:error, reason} ->
@@ -163,6 +163,7 @@ defmodule Songy.Boundary.Spotify do
     end
   end
 
+  # That search params return a random track result in most cases. Change carefully if needed.
   defp build_random_track_search_params do
     query = generate_random_track_query()
     offset = generate_random_offset()
@@ -170,7 +171,7 @@ defmodule Songy.Boundary.Spotify do
     [
       q: query,
       type: "track",
-      limit: 1,
+      limit: 2,
       offset: offset
     ]
   end
@@ -183,7 +184,7 @@ defmodule Songy.Boundary.Spotify do
     start_year = :rand.uniform(current_year - 1900 + 1) + 1900 - 1
     end_year = :rand.uniform(current_year - start_year + 1) + start_year - 1
 
-    "*#{random_letter}*%20year:#{start_year}-#{end_year}"
+    "#{random_letter} year:#{start_year}-#{end_year}"
   end
 
   defp generate_random_latin_letter do

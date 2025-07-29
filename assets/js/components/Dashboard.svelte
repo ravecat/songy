@@ -5,7 +5,7 @@
   import GameButton from "@components/GameButton.svelte";
   import PlayerButton from "@components/PlayerButton.svelte";
   import Spinner from "@components/Spinner.svelte";
-  import TrackCard from "@components/TrackCard.svelte";
+  import TrackCard from "@/components/Timeline.svelte";
 
   const { state } = $derived(getChannelContext());
 
@@ -16,7 +16,7 @@
 <div
   class="min-h-screen flex flex-col justify-center bg-gradient-to-br from-purple-400 via-pink-500 to-red-500"
 >
-  <div class="mx-auto min-w-[24rem] space-y-2">
+  <div class="mx-auto min-w-[24rem] max-w-[36rem] space-y-2">
     {#if state}
       <Participants />
 
