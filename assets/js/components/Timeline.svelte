@@ -11,30 +11,42 @@
 <div class="timeline">
   {#each userTimeline as track, index (track.title + track.artist + track.year)}
     <div class="track-card" style="animation-delay: {index * 100}ms">
-      <div class="artist-text">
-        {#if track.artist.length > 12}
-          <div class="marquee">
-            <div>{track.artist}</div>
-            <div>{track.artist}</div>
-          </div>
-        {:else}
-          <div class="text-overflow-container">{track.artist}</div>
-        {/if}
-      </div>
-      <div class="year-container">
-        <span class="year-text">
-          {track.year}
-        </span>
-      </div>
-      <div class="title-text">
-        {#if track.title.length > 12}
-          <div class="marquee">
-            <div>{track.title}</div>
-            <div>{track.title}</div>
-          </div>
-        {:else}
-          <div class="text-overflow-container">{track.title}</div>
-        {/if}
+      <div class="card-content">
+        <div class="artist-text">
+          {#if track.artist.length > 12}
+            <div
+              class="marquee"
+              style="--speed: {Math.max(6, track.artist.length * 0.2)}s"
+            >
+              <div class="marquee-track">
+                <span>{track.artist}</span>
+                <span aria-hidden="true">{track.artist}</span>
+              </div>
+            </div>
+          {:else}
+            <div class="text-overflow-container">{track.artist}</div>
+          {/if}
+        </div>
+        <div class="year-container">
+          <span class="year-text">
+            {track.year}
+          </span>
+        </div>
+        <div class="title-text">
+          {#if track.title.length > 12}
+            <div
+              class="marquee"
+              style="--speed: {Math.max(6, track.title.length * 0.2)}s"
+            >
+              <div class="marquee-track">
+                <span>{track.title}</span>
+                <span aria-hidden="true">{track.title}</span>
+              </div>
+            </div>
+          {:else}
+            <div class="text-overflow-container">{track.title}</div>
+          {/if}
+        </div>
       </div>
     </div>
   {/each}
@@ -63,9 +75,25 @@
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding: 0 0.5rem;
+    padding: 0;
     animation: scaleIn 400ms ease-out forwards;
     transform: scale(0);
+  }
+
+  .card-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      black 1rem,
+      black calc(100% - 1rem),
+      transparent
+    );
   }
 
   .artist-text {
@@ -113,30 +141,28 @@
   }
 
   .marquee {
-    display: flex;
-    overflow: hidden;
-    white-space: nowrap;
-    user-select: none;
+    overflow: clip;
     width: 100%;
   }
 
-  .marquee > div {
-    animation: marquee 8s linear infinite;
-    padding-right: 20px;
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marquee var(--speed, 8s) linear infinite;
+  }
+
+  .marquee-track > span {
+    padding-right: 2rem;
     flex-shrink: 0;
   }
 
-  .marquee:hover > div {
+  .marquee:hover .marquee-track {
     animation-play-state: paused;
   }
 
   @keyframes marquee {
-    from {
-      transform: translateX(100%);
-    }
-
     to {
-      transform: translateX(-100%);
+      transform: translateX(-50%);
     }
   }
 </style>
