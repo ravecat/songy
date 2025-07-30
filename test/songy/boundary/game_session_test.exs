@@ -536,6 +536,79 @@ defmodule Songy.Boundary.GameSessionTest do
 
       GameSession.end_game_session(game.uuid)
     end
+
+    test "does not add duplicate track when user with existing timeline rejoins" do
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
+      %{meta: credentials} = Provider.new(:spotify, %{access_token: "test_token"})
+
+      # Setup mock for random track search - should only be called once
+      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+        {:ok,
+         %Spotify.Track{
+           id: "track123",
+           name: "Original Song",
+           artists: [%{"name" => "Original Artist"}],
+           album: %{
+             "release_date" => "2023-01-01",
+             "images" => [%{"url" => "https://example.com/cover.jpg"}]
+           }
+         }}
+      end)
+
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      Repatch.allow(self(), pid)
+
+      # Set credentials first
+      assert :ok = GameSession.set_credentials(game.uuid, credentials)
+
+      # Subscribe to state updates
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+
+      # First join - should add initial track
+      send(pid, {:participant_joined, "user456"})
+
+      assert_receive {:game_state_updated, updated_game_first}
+      assert length(updated_game_first.participants) == 1
+      assert hd(updated_game_first.participants).uuid == "user456"
+
+      # Verify initial track was added
+      user_timeline_first = Game.get_user_timeline(updated_game_first, "user456")
+      assert length(user_timeline_first) == 1
+      [first_track] = user_timeline_first
+      assert first_track.title == "Original Song"
+      assert first_track.artist == "Original Artist"
+
+      # Verify search_random_track was called once
+      assert Repatch.called?(Songy.Boundary.Spotify, :search_random_track, 1, by: pid)
+
+      # Simulate user leaving (they are removed from participants but timeline persists)
+      send(pid, {:participant_left, "user456"})
+      assert_receive {:game_state_updated, game_after_leave}
+      assert length(game_after_leave.participants) == 0
+
+      # Verify timeline still exists after leaving
+      user_timeline_after_leave = Game.get_user_timeline(game_after_leave, "user456")
+      assert length(user_timeline_after_leave) == 1
+
+      # Second join (rejoin/page refresh) - should NOT add another track
+      send(pid, {:participant_joined, "user456"})
+
+      assert_receive {:game_state_updated, updated_game_second}
+      assert length(updated_game_second.participants) == 1
+      assert hd(updated_game_second.participants).uuid == "user456"
+
+      # Verify timeline still has only 1 track (no duplicate added)
+      user_timeline_second = Game.get_user_timeline(updated_game_second, "user456")
+      assert length(user_timeline_second) == 1
+      [second_track] = user_timeline_second
+      assert second_track.title == "Original Song"
+      assert second_track.artist == "Original Artist"
+
+      # Verify search_random_track was still called only once (not called on rejoin)
+      assert Repatch.called?(Songy.Boundary.Spotify, :search_random_track, 1, by: pid)
+
+      GameSession.end_game_session(game.uuid)
+    end
   end
 
   describe "set_credentials/2" do

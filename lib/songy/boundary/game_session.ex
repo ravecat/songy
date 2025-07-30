@@ -31,7 +31,7 @@ defmodule Songy.Boundary.GameSession do
 
   use GenServer
 
-  alias Songy.Core.{Game, User, Provider, Trackable}
+  alias Songy.Core.{Game, User, Provider, Trackable, Track}
   alias Songy.Core.Provider.Credentials
   alias Songy.Boundary.Spotify
 
@@ -425,27 +425,34 @@ defmodule Songy.Boundary.GameSession do
 
   @impl GenServer
   def handle_continue({:init_participant_timeline, user_uuid}, game) do
-    with {:ok, credentials} <- get_credentials(game.uuid),
+    with [] <- Game.get_user_timeline(game, user_uuid),
+         {:ok, credentials} <- get_credentials(game.uuid),
          {:ok, spotify_track} <- Spotify.search_random_track(credentials),
          track <- Trackable.to_track(spotify_track) do
       Logger.info("Init participant timeline with track '#{track.title}' by '#{track.artist}'")
       game = Game.add_track_to_user_timeline(game, user_uuid, track)
 
-      {:noreply, game, {:continue, {:finalize_participant_initialization, user_uuid, :track_added}}}
+      {:noreply, game, {:continue, {:finalize_participant_initialization, user_uuid, :timeline_initialized}}}
     else
+      [%Track{} | _] ->
+        Logger.info("Participant #{user_uuid} already has tracks in timeline, skipping initialization")
+        {:noreply, game, {:continue, {:finalize_participant_initialization, user_uuid, :timeline_initialized}}}
+
       {:error, reason} ->
         Logger.warning("Failed to init timeline for user #{user_uuid}: #{inspect(reason)}")
-        {:noreply, game, {:continue, {:finalize_participant_initialization, user_uuid, :track_failed}}}
+
+        {:noreply, game,
+         {:continue, {:finalize_participant_initialization, user_uuid, :timeline_initialization_failed}}}
     end
   end
 
   @impl GenServer
-  def handle_continue({:finalize_participant_initialization, user_uuid, result}, game) do
-    case result do
-      :track_added ->
+  def handle_continue({:finalize_participant_initialization, user_uuid, action}, game) do
+    case action do
+      :timeline_initialized ->
         Logger.info("Added participant #{user_uuid} with random track")
 
-      :track_failed ->
+      :timeline_initialization_failed ->
         Logger.info("Added participant #{user_uuid} but failed to add random track")
 
       :participant_failed ->
