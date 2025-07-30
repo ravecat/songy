@@ -22,8 +22,7 @@ export function useSpotifyPlayer(options = {}) {
     ready: (data) => console.log("Ready with Device ID", data.device_id),
     not_ready: (data) =>
       console.log("Device ID has gone offline", data.device_id),
-    player_state_changed: (state) =>
-      console.log("Player state changed:", state),
+    player_state_changed: () => {},
     autoplay_failed: () =>
       console.log("Autoplay is not allowed by the browser autoplay rules"),
     initialization_error: (error) =>

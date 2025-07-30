@@ -4,7 +4,6 @@
   import socket from "@/socket";
 
   let { topic, children } = $props();
-
   let context = $state({ state: null, channel: null });
 
   const channel = useChannel({
@@ -17,7 +16,9 @@
     },
   });
 
-  context.channel = channel;
+  $effect.pre(() => {
+    context.channel = channel;
+  });
 
   setContext("channel", context);
 </script>

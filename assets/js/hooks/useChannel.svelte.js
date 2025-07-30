@@ -21,40 +21,48 @@ export function useChannel(options) {
     on = {},
   } = options;
 
-  const joinCallbacks = {
-    ok: (resp) => console.info(`Joined ${topic} successfully`, resp),
-    error: (resp) => console.info(`Unable to join ${topic}`, resp),
-    timeout: () => console.info(`Networking issue with ${topic}`),
-    ...join,
-  };
-
   const channel = socket.channel(topic, payload);
 
+  const joinCallbacks = {
+    ok: (resp) => {
+      console.info(`Joined ${topic} successfully`, resp);
+      join.ok?.(resp);
+    },
+    error: (resp) => {
+      console.info(`Unable to join ${topic}`, resp);
+      join.error?.(resp);
+    },
+    timeout: () => {
+      console.info(`Networking issue with ${topic}`);
+      join.timeout?.();
+    },
+  };
+
+  channel
+    .join()
+    .receive("ok", joinCallbacks.ok)
+    .receive("error", joinCallbacks.error)
+    .receive("timeout", joinCallbacks.timeout);
+
+  Object.entries(on).forEach(([eventName, handler]) => {
+    channel.on(eventName, handler);
+  });
+
+  channel.onError(
+    onError ||
+      (() => {
+        console.error(`Channel error on ${topic}, attempting to rejoin...`);
+      })
+  );
+
+  channel.onClose(
+    onClose ||
+      (() => {
+        console.info(`Channel ${topic} closed`);
+      })
+  );
+
   $effect(() => {
-    channel
-      .join()
-      .receive("ok", joinCallbacks.ok)
-      .receive("error", joinCallbacks.error)
-      .receive("timeout", joinCallbacks.timeout);
-
-    Object.entries(on).forEach(([eventName, handler]) => {
-      channel.on(eventName, handler);
-    });
-
-    channel.onError(
-      onError ||
-        (() => {
-          console.error(`Channel error on ${topic}, attempting to rejoin...`);
-        })
-    );
-
-    channel.onClose(
-      onClose ||
-        (() => {
-          console.info(`Channel ${topic} closed`);
-        })
-    );
-
     return () => {
       channel.leave();
     };

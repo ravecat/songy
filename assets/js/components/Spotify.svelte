@@ -5,8 +5,7 @@
 
   let { children } = $props();
 
-  const channelContext = getChannelContext();
-  let channel = $derived(channelContext.channel);
+  const { channel } = $derived(getChannelContext());
 
   const spotifyPlayer = useSpotifyPlayer({
     name: "Songy room",

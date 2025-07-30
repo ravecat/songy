@@ -1,4 +1,5 @@
 <script>
+  import Scope from "@/components/Scope.svelte";
   import Channel from "@components/Channel.svelte";
   import Dashboard from "@components/Dashboard.svelte";
   import Spotify from "@components/Spotify.svelte";
@@ -8,6 +9,8 @@
 
 <Channel topic={`room:${roomId}`}>
   <Spotify>
-    <Dashboard />
+    <Scope>
+      <Dashboard />
+    </Scope>
   </Spotify>
 </Channel>

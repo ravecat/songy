@@ -1,22 +1,11 @@
 <script>
+  import { getScopeContext } from "@shared/context/scope";
   import { getChannelContext } from "@shared/context/channel.js";
 
-  const { state, channel } = $derived(getChannelContext());
-  let currentUserId = $state(null);
-  let userTimeline = $derived(state?.timelines?.[currentUserId] || []);
+  const { state } = $derived.by(getChannelContext);
+  const { user } = $derived.by(getScopeContext);
 
-  $effect(() => {
-    if (channel && !currentUserId) {
-      channel
-        .push("get_current_user", {})
-        .receive("ok", (user) => {
-          currentUserId = user.uuid;
-        })
-        .receive("error", (error) => {
-          console.error("Failed to get user:", error);
-        });
-    }
-  });
+  let userTimeline = $derived(state?.timelines?.[user?.uuid] || []);
 </script>
 
 <div class="timeline">
