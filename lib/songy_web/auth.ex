@@ -125,8 +125,8 @@ defmodule SongyWeb.Auth do
       :eq ->
         {conn, provider}
 
-      _error ->
-        Logger.warning("Failed to refresh Spotify credentials")
+      error ->
+        Logger.warning("Failed to refresh Spotify credentials: #{inspect(error)}")
         {delete_session(conn, :provider), nil}
     end
   end
