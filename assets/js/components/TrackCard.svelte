@@ -61,7 +61,10 @@
     padding: 0;
     animation: scaleIn 400ms ease-out forwards;
     transform: scale(0);
+    opacity: 0;
     animation-delay: calc(sibling-index() * 100ms - 100ms);
+    user-select: none;
+    cursor: pointer;
   }
 
   .card-content {
@@ -132,6 +135,7 @@
   .marquee-track {
     display: flex;
     width: max-content;
+    will-change: transform;
     animation: marquee var(--speed, 8s) linear infinite;
   }
 
