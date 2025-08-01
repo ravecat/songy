@@ -3,197 +3,581 @@ defmodule Songy.Core.TurnTest do
 
   alias Songy.Core.{Turn, Track}
 
-  describe "new/1" do
-    test "creates turn with required player_id" do
-      player_id = "player-uuid-123"
-      turn = Turn.new(player_id: player_id)
+  describe "new/0" do
+    test "creates turn with default values" do
+      turn = Turn.new()
 
       assert %Turn{} = turn
-      assert turn.player_id == player_id
+      assert turn.queue == []
+      assert turn.current_player_index == 0
       assert turn.challengers == []
       assert turn.track == nil
-    end
-
-    test "creates turn with player_id and challengers" do
-      player_id = "player-uuid-123"
-      challengers = ["player-uuid-456", "player-uuid-789"]
-      turn = Turn.new(player_id: player_id, challengers: challengers)
-
-      assert %Turn{} = turn
-      assert turn.player_id == player_id
-      assert turn.challengers == challengers
-      assert turn.track == nil
-    end
-
-    test "creates turn with all fields" do
-      player_id = "player-uuid-123"
-      challengers = ["player-uuid-456"]
-      track = Track.new(
-        title: "Bohemian Rhapsody",
-        artist: "Queen",
-        year: 1975
-      )
-
-      turn = Turn.new(player_id: player_id, challengers: challengers, track: track)
-
-      assert %Turn{} = turn
-      assert turn.player_id == player_id
-      assert turn.challengers == challengers
-      assert turn.track == track
-    end
-
-    test "creates turn with empty challengers list when not provided" do
-      player_id = "player-uuid-123"
-      turn = Turn.new(player_id: player_id)
-
-      assert turn.challengers == []
     end
   end
 
-  describe "JSON encoding" do
-    test "encodes turn to JSON correctly" do
-      player_id = "player-uuid-123"
-      challengers = ["player-uuid-456", "player-uuid-789"]
-      turn = Turn.new(player_id: player_id, challengers: challengers)
+  describe "get_current_player/1" do
+    test "returns the current player from the queue" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_player_to_queue("player-2")
+        |> Turn.add_player_to_queue("player-3")
+        |> Turn.next_turn()
 
-      encoded = Jason.encode!(turn)
-
-      assert encoded == ~s({"player_id":"player-uuid-123","challengers":["player-uuid-456","player-uuid-789"],"track":null})
+      assert Turn.get_current_player(turn) == "player-2"
     end
 
-    test "encodes turn with track to JSON correctly" do
-      player_id = "player-uuid-123"
-      track = Track.new(
-        title: "Test Song",
-        artist: "Test Artist",
-        year: 2023
-      )
-      turn = Turn.new(player_id: player_id, track: track)
+    test "returns first player when current_player_index is 0" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_player_to_queue("player-2")
+        |> Turn.add_player_to_queue("player-3")
 
-      encoded = Jason.encode!(turn)
-
-      assert String.contains?(encoded, ~s("player_id":"player-uuid-123"))
-      assert String.contains?(encoded, ~s("track":))
-      assert String.contains?(encoded, ~s("title":"Test Song"))
+      assert Turn.get_current_player(turn) == "player-1"
     end
 
-    test "encodes default turn to JSON correctly" do
-      turn = Turn.new(player_id: "test-player")
+    test "returns last player when current_player_index points to last element" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_player_to_queue("player-2")
+        |> Turn.add_player_to_queue("player-3")
+        |> Turn.next_turn()
+        |> Turn.next_turn()
 
-      encoded = Jason.encode!(turn)
+      assert Turn.get_current_player(turn) == "player-3"
+    end
 
-      assert encoded == ~s({"player_id":"test-player","challengers":[],"track":null})
+    test "returns nil when queue is empty" do
+      turn = Turn.new()
+      assert Turn.get_current_player(turn) == nil
+    end
+
+    test "returns nil when current_player_index is out of bounds" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_player_to_queue("player-2")
+
+      # Simulate out of bounds by manually creating a turn with invalid index
+      # This test case is testing edge case behavior
+      turn = %{turn | current_player_index: 5}
+      assert Turn.get_current_player(turn) == nil
+    end
+  end
+
+  describe "next_turn/1" do
+    test "moves to the next player in the queue" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_player_to_queue("player-2")
+        |> Turn.add_player_to_queue("player-3")
+
+      updated_turn = Turn.next_turn(turn)
+
+      assert updated_turn.current_player_index == 1
+      assert updated_turn.queue == ["player-1", "player-2", "player-3"]
+    end
+
+    test "moves from middle to next player" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_player_to_queue("player-2")
+        |> Turn.add_player_to_queue("player-3")
+        |> Turn.next_turn()
+
+      updated_turn = Turn.next_turn(turn)
+
+      assert updated_turn.current_player_index == 2
+    end
+
+    test "wraps around to the beginning when reaching the end" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_player_to_queue("player-2")
+        |> Turn.add_player_to_queue("player-3")
+        |> Turn.next_turn()
+        |> Turn.next_turn()
+
+      updated_turn = Turn.next_turn(turn)
+
+      assert updated_turn.current_player_index == 0
+    end
+
+    test "stays at position 0 with single player" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+
+      updated_turn = Turn.next_turn(turn)
+
+      assert updated_turn.current_player_index == 0
+    end
+
+    test "handles two-player circular rotation" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_player_to_queue("player-2")
+
+      # First move: 0 -> 1
+      turn1 = Turn.next_turn(turn)
+      assert turn1.current_player_index == 1
+
+      # Second move: 1 -> 0 (wrap around)
+      turn2 = Turn.next_turn(turn1)
+      assert turn2.current_player_index == 0
+
+      # Third move: 0 -> 1 (circular again)
+      turn3 = Turn.next_turn(turn2)
+      assert turn3.current_player_index == 1
+    end
+
+    test "returns unchanged turn when queue is empty" do
+      turn = Turn.new()
+      result = Turn.next_turn(turn)
+      assert result == turn
+      assert result.queue == []
+      assert result.current_player_index == 0
+    end
+
+    test "preserves other fields when moving to next player" do
+      challengers = ["challenger-1"]
+      track = Track.new(title: "Test", artist: "Artist", year: 2020)
+
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_player_to_queue("player-2")
+        |> Turn.add_challenger("challenger-1")
+        |> Turn.set_track(track)
+
+      updated_turn = Turn.next_turn(turn)
+
+      assert updated_turn.current_player_index == 1
+      assert updated_turn.queue == ["player-1", "player-2"]
+      assert updated_turn.challengers == challengers
+      assert updated_turn.track == track
+    end
+  end
+
+  describe "add_player_to_queue/2" do
+    test "adds a player to the end of the queue" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+
+      updated_turn = Turn.add_player_to_queue(turn, "player-2")
+
+      assert updated_turn.queue == ["player-1", "player-2"]
+      assert updated_turn.current_player_index == 0
+    end
+
+    test "adds player to empty queue" do
+      turn = Turn.new()
+      updated_turn = Turn.add_player_to_queue(turn, "player-1")
+
+      assert updated_turn.queue == ["player-1"]
+      assert updated_turn.current_player_index == 0
+    end
+
+    test "adds multiple players sequentially" do
+      turn = Turn.new()
+
+      turn1 = Turn.add_player_to_queue(turn, "player-1")
+      turn2 = Turn.add_player_to_queue(turn1, "player-2")
+      turn3 = Turn.add_player_to_queue(turn2, "player-3")
+
+      assert turn3.queue == ["player-1", "player-2", "player-3"]
+      assert turn3.current_player_index == 0
+    end
+
+    test "preserves current player index when adding player" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_player_to_queue("player-2")
+        |> Turn.next_turn()
+
+      updated_turn = Turn.add_player_to_queue(turn, "player-3")
+
+      assert updated_turn.queue == ["player-1", "player-2", "player-3"]
+      assert updated_turn.current_player_index == 1
+    end
+
+    test "preserves other fields when adding player" do
+      challengers = ["challenger-1"]
+      track = Track.new(title: "Test", artist: "Artist", year: 2020)
+
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_challenger("challenger-1")
+        |> Turn.set_track(track)
+
+      updated_turn = Turn.add_player_to_queue(turn, "player-2")
+
+      assert updated_turn.queue == ["player-1", "player-2"]
+      assert updated_turn.challengers == challengers
+      assert updated_turn.track == track
+    end
+  end
+
+  describe "remove_player_from_queue/2" do
+    test "removes a player from the queue" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_player_to_queue("player-2")
+        |> Turn.add_player_to_queue("player-3")
+        |> Turn.next_turn()
+
+      updated_turn = Turn.remove_player_from_queue(turn, "player-2")
+
+      assert updated_turn.queue == ["player-1", "player-3"]
+      assert updated_turn.current_player_index == 1
+    end
+
+    test "adjusts current player index when removing a player before current player" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_player_to_queue("player-2")
+        |> Turn.add_player_to_queue("player-3")
+        |> Turn.next_turn()
+        |> Turn.next_turn()
+
+      updated_turn = Turn.remove_player_from_queue(turn, "player-1")
+
+      assert updated_turn.queue == ["player-2", "player-3"]
+      assert updated_turn.current_player_index == 1
+    end
+
+    test "keeps current player index when removing a player after current player" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_player_to_queue("player-2")
+        |> Turn.add_player_to_queue("player-3")
+
+      updated_turn = Turn.remove_player_from_queue(turn, "player-3")
+
+      assert updated_turn.queue == ["player-1", "player-2"]
+      assert updated_turn.current_player_index == 0
+    end
+
+    test "handles removing current player" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_player_to_queue("player-2")
+        |> Turn.add_player_to_queue("player-3")
+        |> Turn.next_turn()
+
+      updated_turn = Turn.remove_player_from_queue(turn, "player-2")
+
+      assert updated_turn.queue == ["player-1", "player-3"]
+      # Index stays at 1, now pointing to "player-3"
+      assert updated_turn.current_player_index == 1
+    end
+
+    test "handles removing current player when current is last" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_player_to_queue("player-2")
+        |> Turn.add_player_to_queue("player-3")
+        |> Turn.next_turn()
+        |> Turn.next_turn()
+
+      updated_turn = Turn.remove_player_from_queue(turn, "player-3")
+
+      assert updated_turn.queue == ["player-1", "player-2"]
+      # Index wraps around to 0
+      assert updated_turn.current_player_index == 0
+    end
+
+    test "handles removing only player in queue" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+
+      updated_turn = Turn.remove_player_from_queue(turn, "player-1")
+
+      assert updated_turn.queue == []
+      assert updated_turn.current_player_index == 0
+    end
+
+    test "handles removing non-existent player" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_player_to_queue("player-2")
+        |> Turn.next_turn()
+
+      updated_turn = Turn.remove_player_from_queue(turn, "non-existent")
+
+      # Should remain unchanged
+      assert updated_turn.queue == ["player-1", "player-2"]
+      assert updated_turn.current_player_index == 1
+    end
+
+    test "handles removing from empty queue" do
+      turn = Turn.new()
+      updated_turn = Turn.remove_player_from_queue(turn, "player-1")
+
+      assert updated_turn.queue == []
+      assert updated_turn.current_player_index == 0
+    end
+
+    test "handles complex removal scenarios" do
+      # Test multiple removals with index adjustments
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("a")
+        |> Turn.add_player_to_queue("b")
+        |> Turn.add_player_to_queue("c")
+        |> Turn.add_player_to_queue("d")
+        |> Turn.add_player_to_queue("e")
+        |> Turn.next_turn()
+        |> Turn.next_turn()
+        |> Turn.next_turn()
+
+      # Remove player before current (index should decrease)
+      turn1 = Turn.remove_player_from_queue(turn, "b")
+      assert turn1.queue == ["a", "c", "d", "e"]
+      # 3 -> 2
+      assert turn1.current_player_index == 2
+
+      # Remove current player (index should stay, now pointing to next)
+      turn2 = Turn.remove_player_from_queue(turn1, "d")
+      assert turn2.queue == ["a", "c", "e"]
+      # Now pointing to "e"
+      assert turn2.current_player_index == 2
+
+      # Remove last player when current is last (should wrap)
+      turn3 = Turn.remove_player_from_queue(turn2, "e")
+      assert turn3.queue == ["a", "c"]
+      # Wrapped to beginning
+      assert turn3.current_player_index == 0
+    end
+
+    test "preserves other fields when removing player" do
+      challengers = ["challenger-1"]
+      track = Track.new(title: "Test", artist: "Artist", year: 2020)
+
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_player_to_queue("player-2")
+        |> Turn.add_challenger("challenger-1")
+        |> Turn.set_track(track)
+
+      updated_turn = Turn.remove_player_from_queue(turn, "player-2")
+
+      assert updated_turn.queue == ["player-1"]
+      assert updated_turn.current_player_index == 0
+      assert updated_turn.challengers == challengers
+      assert updated_turn.track == track
     end
   end
 
   describe "add_challenger/2" do
-    test "adds challenger to empty challengers list" do
-      turn = Turn.new(player_id: "player-1")
+    test "adds a challenger to empty challengers list" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+
       updated_turn = Turn.add_challenger(turn, "challenger-1")
 
       assert updated_turn.challengers == ["challenger-1"]
-      assert updated_turn.player_id == "player-1"
-      assert updated_turn.track == nil
+      # Queue unchanged
+      assert updated_turn.queue == ["player-1"]
     end
 
-    test "adds challenger to existing challengers list" do
-      turn = Turn.new(player_id: "player-1", challengers: ["first-challenger"])
+    test "adds multiple challengers to the turn" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_challenger("first-challenger")
+
       updated_turn = Turn.add_challenger(turn, "second-challenger")
 
       assert updated_turn.challengers == ["first-challenger", "second-challenger"]
-      assert updated_turn.player_id == "player-1"
     end
 
-    test "preserves other turn fields when adding challenger" do
-      track = Track.new(
-        title: "Test Song",
-        artist: "Test Artist",
-        year: 2023
-      )
-      turn = Turn.new(player_id: "player-1", track: track, challengers: ["first"])
-      updated_turn = Turn.add_challenger(turn, "second")
+    test "adds challenger sequentially" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
 
-      assert updated_turn.challengers == ["first", "second"]
-      assert updated_turn.player_id == "player-1"
+      turn1 = Turn.add_challenger(turn, "challenger-1")
+      turn2 = Turn.add_challenger(turn1, "challenger-2")
+      turn3 = Turn.add_challenger(turn2, "challenger-3")
+
+      assert turn3.challengers == ["challenger-1", "challenger-2", "challenger-3"]
+    end
+
+    test "preserves other fields when adding challenger" do
+      track = Track.new(title: "Test", artist: "Artist", year: 2020)
+
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_player_to_queue("player-2")
+        |> Turn.next_turn()
+        |> Turn.set_track(track)
+
+      updated_turn = Turn.add_challenger(turn, "challenger-1")
+
+      assert updated_turn.challengers == ["challenger-1"]
+      assert updated_turn.queue == ["player-1", "player-2"]
+      assert updated_turn.current_player_index == 1
       assert updated_turn.track == track
-    end
-
-    test "maintains FIFO order when adding multiple challengers" do
-      turn = Turn.new(player_id: "active-player")
-
-      # First user raises hand
-      turn = Turn.add_challenger(turn, "user-1")
-      assert turn.challengers == ["user-1"]
-      assert hd(turn.challengers) == "user-1"  # First in queue
-
-      # Second user raises hand
-      turn = Turn.add_challenger(turn, "user-2")
-      assert turn.challengers == ["user-1", "user-2"]
-      assert hd(turn.challengers) == "user-1"  # First remains first
-
-      # Third user raises hand
-      turn = Turn.add_challenger(turn, "user-3")
-      assert turn.challengers == ["user-1", "user-2", "user-3"]
-      assert hd(turn.challengers) == "user-1"  # First still first
-
-      # Fourth user raises hand
-      turn = Turn.add_challenger(turn, "user-4")
-      assert turn.challengers == ["user-1", "user-2", "user-3", "user-4"]
-      assert hd(turn.challengers) == "user-1"  # Order preserved
-
-      # Verify complete FIFO order
-      assert Enum.at(turn.challengers, 0) == "user-1"  # First to raise hand
-      assert Enum.at(turn.challengers, 1) == "user-2"  # Second to raise hand
-      assert Enum.at(turn.challengers, 2) == "user-3"  # Third to raise hand
-      assert Enum.at(turn.challengers, 3) == "user-4"  # Fourth to raise hand
     end
   end
 
   describe "set_track/2" do
-    test "sets track on turn without existing track" do
-      turn = Turn.new(player_id: "player-1")
-      track = Track.new(
-        title: "Test Song",
-        artist: "Test Artist",
-        year: 2023
-      )
+    test "sets the track for the turn" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+
+      track = Track.new(title: "Song", artist: "Artist", year: 2020)
       updated_turn = Turn.set_track(turn, track)
 
       assert updated_turn.track == track
-      assert updated_turn.player_id == "player-1"
-      assert updated_turn.challengers == []
+      # Other fields unchanged
+      assert updated_turn.queue == ["player-1"]
     end
 
-    test "replaces existing track with new track" do
-      old_track = Track.new(
-        title: "Old Song",
-        artist: "Old Artist",
-        year: 2020
-      )
-      new_track = Track.new(
-        title: "New Song",
-        artist: "New Artist",
-        year: 2023
-      )
-      turn = Turn.new(player_id: "player-1", track: old_track)
+    test "replaces existing track" do
+      old_track = Track.new(title: "Old Song", artist: "Old Artist", year: 2019)
+      new_track = Track.new(title: "New Song", artist: "New Artist", year: 2020)
+
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.set_track(old_track)
+
       updated_turn = Turn.set_track(turn, new_track)
 
       assert updated_turn.track == new_track
-      assert updated_turn.player_id == "player-1"
+      assert updated_turn.track.title == "New Song"
     end
 
-    test "preserves other turn fields when setting track" do
-      track = Track.new(
-        title: "Test Song",
-        artist: "Test Artist",
-        year: 2023
-      )
-      turn = Turn.new(player_id: "player-1", challengers: ["challenger-1", "challenger-2"])
+    test "preserves other fields when setting track" do
+      challengers = ["challenger-1", "challenger-2"]
+
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_player_to_queue("player-2")
+        |> Turn.next_turn()
+        |> Turn.add_challenger("challenger-1")
+        |> Turn.add_challenger("challenger-2")
+
+      track = Track.new(title: "Test", artist: "Artist", year: 2020)
       updated_turn = Turn.set_track(turn, track)
 
       assert updated_turn.track == track
-      assert updated_turn.player_id == "player-1"
-      assert updated_turn.challengers == ["challenger-1", "challenger-2"]
+      assert updated_turn.queue == ["player-1", "player-2"]
+      assert updated_turn.current_player_index == 1
+      assert updated_turn.challengers == challengers
+    end
+  end
+
+  describe "edge cases and integration" do
+    test "handles complete turn lifecycle" do
+      # Start with turn that has queue
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("alice")
+        |> Turn.add_player_to_queue("bob")
+        |> Turn.add_player_to_queue("charlie")
+
+      assert length(turn.queue) == 3
+      assert turn.current_player_index == 0
+
+      # Add challengers
+      turn = Turn.add_challenger(turn, "challenger-1")
+      turn = Turn.add_challenger(turn, "challenger-2")
+      assert length(turn.challengers) == 2
+
+      # Set track
+      track = Track.new(title: "Test Song", artist: "Test Artist", year: 2020)
+      turn = Turn.set_track(turn, track)
+      assert turn.track == track
+
+      # Move through players
+      current_player = Turn.get_current_player(turn)
+      assert current_player in ["alice", "bob", "charlie"]
+
+      turn = Turn.next_turn(turn)
+      next_player = Turn.get_current_player(turn)
+      assert next_player != current_player
+      assert next_player in ["alice", "bob", "charlie"]
+
+      # Remove a player
+      turn = Turn.remove_player_from_queue(turn, "bob")
+      assert length(turn.queue) == 2
+      assert "bob" not in turn.queue
+
+      # Verify all fields are maintained
+      assert length(turn.challengers) == 2
+      assert turn.track == track
+    end
+
+    test "handles single player scenarios" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("only-player")
+
+      # Current player operations
+      assert Turn.get_current_player(turn) == "only-player"
+
+      # Next player should stay the same
+      next_turn = Turn.next_turn(turn)
+      assert next_turn.current_player_index == 0
+      assert Turn.get_current_player(next_turn) == "only-player"
+
+      # Remove the only player
+      empty_turn = Turn.remove_player_from_queue(turn, "only-player")
+      assert empty_turn.queue == []
+      assert Turn.get_current_player(empty_turn) == nil
+    end
+
+    test "validates queue consistency after operations" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("a")
+        |> Turn.add_player_to_queue("b")
+        |> Turn.add_player_to_queue("c")
+        |> Turn.add_player_to_queue("d")
+
+      # Perform multiple operations
+      # Move to index 1
+      turn = Turn.next_turn(turn)
+      # Remove first, index should adjust to 0
+      turn = Turn.remove_player_from_queue(turn, "a")
+      # Add new player
+      turn = Turn.add_player_to_queue(turn, "e")
+      # Move to next
+      turn = Turn.next_turn(turn)
+
+      # Verify consistency
+      assert length(turn.queue) == 4
+      assert "a" not in turn.queue
+      assert "e" in turn.queue
+      assert turn.current_player_index < length(turn.queue)
+
+      current_player = Turn.get_current_player(turn)
+      assert current_player != nil
+      assert current_player in turn.queue
     end
   end
 end

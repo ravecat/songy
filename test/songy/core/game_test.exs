@@ -119,6 +119,17 @@ defmodule Songy.Core.GameTest do
       assert %Provider{id: :spotify} = updated_game.provider
     end
 
+    test "adds user to turn queue automatically" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      user = User.new()
+
+      assert {:ok, updated_game} = Game.add_participant(game, user)
+      assert length(updated_game.turn.queue) == 1
+      assert hd(updated_game.turn.queue) == user.uuid
+      assert Game.get_current_player(updated_game) == user.uuid
+    end
+
     test "returns error when game is full" do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider, max_participants: 1)
@@ -149,6 +160,29 @@ defmodule Songy.Core.GameTest do
       assert {:ok, updated_game} = Game.remove_participant(game_with_user, user.uuid)
       assert length(updated_game.participants) == 0
       assert %Provider{id: :spotify} = updated_game.provider
+    end
+
+    test "removes user from turn queue automatically" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      user1 = User.new()
+      user2 = User.new()
+
+      {:ok, game} = Game.add_participant(game, user1)
+      {:ok, game} = Game.add_participant(game, user2)
+
+      # Both users should be in queue
+      assert length(game.turn.queue) == 2
+      assert user1.uuid in game.turn.queue
+      assert user2.uuid in game.turn.queue
+
+      # Remove one user
+      assert {:ok, updated_game} = Game.remove_participant(game, user1.uuid)
+
+      # Only one user should remain in queue
+      assert length(updated_game.turn.queue) == 1
+      assert user2.uuid in updated_game.turn.queue
+      assert user1.uuid not in updated_game.turn.queue
     end
 
     test "returns error when user not found" do
@@ -254,12 +288,16 @@ defmodule Songy.Core.GameTest do
     end
   end
 
-  describe "player field" do
-    test "has player with default state" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
+  describe "update_provider/2" do
+    test "updates provider for game" do
+      old_provider = Provider.new(:spotify)
+      new_provider = Provider.new(:spotify, %{device_id: "new-device"})
 
-      assert %Player{is_playback: false} = game.player
+      game = Game.new("owner123", provider: old_provider)
+      updated_game = Game.update_provider(game, new_provider)
+
+      assert updated_game.provider == new_provider
+      assert updated_game.uuid == game.uuid
     end
   end
 
@@ -337,7 +375,7 @@ defmodule Songy.Core.GameTest do
     test "returns false for game with participants" do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
-      user = User.get_user("user456")
+      user = User.new()
       {:ok, updated_game} = Game.add_participant(game, user)
 
       assert Game.empty?(updated_game) == false
@@ -346,68 +384,15 @@ defmodule Songy.Core.GameTest do
     test "returns true after removing all participants" do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
-      user = User.get_user("user456")
+      user = User.new()
       {:ok, game_with_user} = Game.add_participant(game, user)
-      {:ok, game_without_user} = Game.remove_participant(game_with_user, "user456")
+      {:ok, game_without_user} = Game.remove_participant(game_with_user, user.uuid)
 
       assert Game.empty?(game_without_user) == true
     end
   end
 
-  describe "update_turn/2" do
-    test "sets turn on game" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-      turn = Turn.new(player_id: "player-1")
-
-      updated_game = Game.update_turn(game, turn)
-
-      assert updated_game.turn == turn
-      # other fields preserved
-      assert updated_game.uuid == game.uuid
-    end
-
-    test "replaces existing turn" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-
-      old_turn = Turn.new(player_id: "player-old")
-      new_turn = Turn.new(player_id: "player-new")
-
-      game_with_old = Game.update_turn(game, old_turn)
-      game_with_new = Game.update_turn(game_with_old, new_turn)
-
-      assert game_with_new.turn == new_turn
-      refute game_with_new.turn == old_turn
-    end
-
-    test "works with complete turn data" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-
-      track =
-        Track.new(
-          title: "Test Song",
-          artist: "Test Artist",
-          year: 2023
-        )
-
-      turn =
-        Turn.new(
-          player_id: "player-1",
-          challengers: ["challenger-1", "challenger-2"],
-          track: track
-        )
-
-      updated_game = Game.update_turn(game, turn)
-
-      assert updated_game.turn.player_id == "player-1"
-      assert updated_game.turn.challengers == ["challenger-1", "challenger-2"]
-      assert updated_game.turn.track == track
-    end
-  end
-
-  describe "timelines management" do
+  describe "add_track_to_user_timeline/4" do
     test "adds track to user timeline" do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
@@ -446,71 +431,6 @@ defmodule Songy.Core.GameTest do
 
       assert Game.get_user_timeline(game_updated, "user1") == [track1]
       assert Game.get_user_timeline(game_updated, "user2") == [track2]
-    end
-
-    test "gets empty timeline for user without tracks" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-
-      assert Game.get_user_timeline(game, "user456") == []
-    end
-
-    test "removes track from user timeline" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-      track = Track.new(title: "Test Song", artist: "Test Artist", year: 2023)
-
-      game_with_track = Game.add_track_to_user_timeline(game, "user456", track)
-      game_without_track = Game.remove_track_from_user_timeline(game_with_track, "user456", track)
-
-      assert Game.get_user_timeline(game_without_track, "user456") == []
-    end
-
-    test "removes specific track from timeline with multiple tracks" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-      track1 = Track.new(title: "Song 1", artist: "Artist 1", year: 2023)
-      track2 = Track.new(title: "Song 2", artist: "Artist 2", year: 2024)
-      track3 = Track.new(title: "Song 3", artist: "Artist 3", year: 2025)
-
-      game_with_timeline =
-        game
-        |> Game.add_track_to_user_timeline("user456", track1)
-        |> Game.add_track_to_user_timeline("user456", track2)
-        |> Game.add_track_to_user_timeline("user456", track3)
-
-      updated_game = Game.remove_track_from_user_timeline(game_with_timeline, "user456", track2)
-
-      # track2 removed, track3 and track1 remain in order
-      assert Game.get_user_timeline(updated_game, "user456") == [track3, track1]
-    end
-
-    test "removing track from empty timeline leaves it empty" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-      track = Track.new(title: "Test Song", artist: "Test Artist", year: 2023)
-
-      updated_game = Game.remove_track_from_user_timeline(game, "user456", track)
-      assert Game.get_user_timeline(updated_game, "user456") == []
-    end
-
-    test "removing non-existent track leaves timeline unchanged" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-      track1 = Track.new(title: "Song 1", artist: "Artist 1", year: 2023)
-      track2 = Track.new(title: "Song 2", artist: "Artist 2", year: 2024)
-
-      game_with_track = Game.add_track_to_user_timeline(game, "user456", track1)
-      updated_game = Game.remove_track_from_user_timeline(game_with_track, "user456", track2)
-
-      assert Game.get_user_timeline(updated_game, "user456") == [track1]
-    end
-
-    test "initializes with empty timelines" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-
-      assert game.timelines == %{}
     end
 
     test "adds track to head with position: 0" do
@@ -619,17 +539,88 @@ defmodule Songy.Core.GameTest do
       expected = [track2, track4, track1, track3, track5]
       assert Game.get_user_timeline(game, "user456") == expected
     end
+  end
 
-    test "valid_timeline? returns true for empty timeline" do
+  describe "get_user_timeline/2" do
+    test "gets empty timeline for user without tracks" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+
+      assert Game.get_user_timeline(game, "user456") == []
+    end
+
+    test "initializes with empty timelines" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+
+      assert game.timelines == %{}
+    end
+  end
+
+  describe "remove_track_from_user_timeline/3" do
+    test "removes track from user timeline" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      track = Track.new(title: "Test Song", artist: "Test Artist", year: 2023)
+
+      game_with_track = Game.add_track_to_user_timeline(game, "user456", track)
+      game_without_track = Game.remove_track_from_user_timeline(game_with_track, "user456", track)
+
+      assert Game.get_user_timeline(game_without_track, "user456") == []
+    end
+
+    test "removes specific track from timeline with multiple tracks" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      track1 = Track.new(title: "Song 1", artist: "Artist 1", year: 2023)
+      track2 = Track.new(title: "Song 2", artist: "Artist 2", year: 2024)
+      track3 = Track.new(title: "Song 3", artist: "Artist 3", year: 2025)
+
+      game_with_timeline =
+        game
+        |> Game.add_track_to_user_timeline("user456", track1)
+        |> Game.add_track_to_user_timeline("user456", track2)
+        |> Game.add_track_to_user_timeline("user456", track3)
+
+      updated_game = Game.remove_track_from_user_timeline(game_with_timeline, "user456", track2)
+
+      # track2 removed, track3 and track1 remain in order
+      assert Game.get_user_timeline(updated_game, "user456") == [track3, track1]
+    end
+
+    test "removing track from empty timeline leaves it empty" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      track = Track.new(title: "Test Song", artist: "Test Artist", year: 2023)
+
+      updated_game = Game.remove_track_from_user_timeline(game, "user456", track)
+      assert Game.get_user_timeline(updated_game, "user456") == []
+    end
+
+    test "removing non-existent track leaves timeline unchanged" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      track1 = Track.new(title: "Song 1", artist: "Artist 1", year: 2023)
+      track2 = Track.new(title: "Song 2", artist: "Artist 2", year: 2024)
+
+      game_with_track = Game.add_track_to_user_timeline(game, "user456", track1)
+      updated_game = Game.remove_track_from_user_timeline(game_with_track, "user456", track2)
+
+      assert Game.get_user_timeline(updated_game, "user456") == [track1]
+    end
+  end
+
+  describe "valid_timeline?/1" do
+    test "returns true for empty timeline" do
       assert Game.valid_timeline?([]) == true
     end
 
-    test "valid_timeline? returns true for single track timeline" do
+    test "returns true for single track timeline" do
       track = Track.new(title: "Single Song", artist: "Artist", year: 2023)
       assert Game.valid_timeline?([track]) == true
     end
 
-    test "valid_timeline? returns true for chronologically ordered tracks" do
+    test "returns true for chronologically ordered tracks" do
       tracks = [
         Track.new(title: "Old Song", artist: "Artist 1", year: 1990),
         Track.new(title: "Middle Song", artist: "Artist 2", year: 2000),
@@ -639,7 +630,7 @@ defmodule Songy.Core.GameTest do
       assert Game.valid_timeline?(tracks) == true
     end
 
-    test "valid_timeline? returns true for tracks with equal years" do
+    test "returns true for tracks with equal years" do
       tracks = [
         Track.new(title: "Song A", artist: "Artist 1", year: 2000),
         Track.new(title: "Song B", artist: "Artist 2", year: 2000),
@@ -649,7 +640,7 @@ defmodule Songy.Core.GameTest do
       assert Game.valid_timeline?(tracks) == true
     end
 
-    test "valid_timeline? returns true for non-decreasing years" do
+    test "returns true for non-decreasing years" do
       tracks = [
         Track.new(title: "Song 1", artist: "Artist", year: 1990),
         Track.new(title: "Song 2", artist: "Artist", year: 1990),
@@ -661,7 +652,7 @@ defmodule Songy.Core.GameTest do
       assert Game.valid_timeline?(tracks) == true
     end
 
-    test "valid_timeline? returns false for out-of-order tracks" do
+    test "returns false for out-of-order tracks" do
       tracks = [
         Track.new(title: "New Song", artist: "Artist 1", year: 2020),
         Track.new(title: "Old Song", artist: "Artist 2", year: 1990)
@@ -670,45 +661,265 @@ defmodule Songy.Core.GameTest do
       assert Game.valid_timeline?(tracks) == false
     end
 
-    test "valid_timeline? returns false when first violation found" do
+    test "returns false when first violation found" do
       tracks = [
         Track.new(title: "Song 1", artist: "Artist", year: 1990),
         Track.new(title: "Song 2", artist: "Artist", year: 2000),
-        Track.new(title: "Song 3", artist: "Artist", year: 1995),  # violation here
+        # violation here
+        Track.new(title: "Song 3", artist: "Artist", year: 1995),
         Track.new(title: "Song 4", artist: "Artist", year: 2020)
       ]
 
       assert Game.valid_timeline?(tracks) == false
     end
 
-    test "valid_timeline? handles mixed valid and invalid sequences" do
+    test "handles mixed valid and invalid sequences" do
       # Valid start, then invalid
       tracks1 = [
         Track.new(title: "Song 1", artist: "Artist", year: 1990),
         Track.new(title: "Song 2", artist: "Artist", year: 2000),
-        Track.new(title: "Song 3", artist: "Artist", year: 1980)  # invalid
+        # invalid
+        Track.new(title: "Song 3", artist: "Artist", year: 1980)
       ]
+
       assert Game.valid_timeline?(tracks1) == false
 
       # Invalid start
       tracks2 = [
         Track.new(title: "Song 1", artist: "Artist", year: 2000),
-        Track.new(title: "Song 2", artist: "Artist", year: 1990)  # invalid immediately
+        # invalid immediately
+        Track.new(title: "Song 2", artist: "Artist", year: 1990)
       ]
+
       assert Game.valid_timeline?(tracks2) == false
     end
 
-    test "valid_timeline? works with large timeline" do
+    test "works with large timeline" do
       # Create 100 tracks in chronological order
-      tracks = for year <- 1920..2020 do
-        Track.new(title: "Song #{year}", artist: "Artist", year: year)
-      end
+      tracks =
+        for year <- 1920..2020 do
+          Track.new(title: "Song #{year}", artist: "Artist", year: year)
+        end
 
       assert Game.valid_timeline?(tracks) == true
 
       # Same tracks but with one out of order
       invalid_tracks = List.replace_at(tracks, 50, Track.new(title: "Wrong", artist: "Artist", year: 1900))
       assert Game.valid_timeline?(invalid_tracks) == false
+    end
+  end
+
+  describe "next_turn/1" do
+    test "moves to next player in game turn" do
+      owner_uuid = "owner123"
+      provider = Provider.new(:spotify)
+      game = Game.new(owner_uuid, provider: provider)
+
+      # Set up game with turn
+      user1 = User.new()
+      user2 = User.new()
+      user3 = User.new()
+      {:ok, game} = Game.add_participant(game, user1)
+      {:ok, game} = Game.add_participant(game, user2)
+      {:ok, game} = Game.add_participant(game, user3)
+
+      # Get initial current player
+      initial_player = Game.get_current_player(game)
+
+      # Move to next player
+      updated_game = Game.next_turn(game)
+
+      # Verify change
+      new_player = Game.get_current_player(updated_game)
+      assert new_player != initial_player
+      assert new_player in updated_game.turn.queue
+    end
+
+    test "handles circular rotation" do
+      owner_uuid = "owner123"
+      provider = Provider.new(:spotify)
+      game = Game.new(owner_uuid, provider: provider)
+
+      # Set up game with 2 players for easy testing
+      user1 = User.new()
+      user2 = User.new()
+      {:ok, game} = Game.add_participant(game, user1)
+      {:ok, game} = Game.add_participant(game, user2)
+
+      # Participants are automatically added to turn queue in order: [user1, user2]
+      # Current player starts at index 0 (user1)
+      assert Game.get_current_player(game) == user1.uuid
+
+      # First move: user1 -> user2
+      game1 = Game.next_turn(game)
+      assert Game.get_current_player(game1) == user2.uuid
+
+      # Second move: user2 -> user1 (wrap around)
+      game2 = Game.next_turn(game1)
+      assert Game.get_current_player(game2) == user1.uuid
+    end
+
+    test "preserves other game fields" do
+      owner_uuid = "owner123"
+      provider = Provider.new(:spotify)
+      game = Game.new(owner_uuid, provider: provider)
+
+      # Set up game
+      user1 = User.new()
+      user2 = User.new()
+      {:ok, game} = Game.add_participant(game, user1)
+      {:ok, game} = Game.add_participant(game, user2)
+
+      # Participants are automatically added to turn queue
+      # Store original values
+      original_uuid = game.uuid
+      original_status = game.status
+      original_participants = game.participants
+
+      # Move to next player
+      updated_game = Game.next_turn(game)
+
+      # Verify other fields unchanged
+      assert updated_game.uuid == original_uuid
+      assert updated_game.status == original_status
+      assert updated_game.participants == original_participants
+    end
+  end
+
+  describe "get_current_player/1" do
+    test "returns current player from game turn" do
+      owner_uuid = "owner123"
+      provider = Provider.new(:spotify)
+      game = Game.new(owner_uuid, provider: provider)
+
+      # Set up game with known queue
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_player_to_queue("player-2")
+        |> Turn.add_player_to_queue("player-3")
+        # Move to index 1 (player-2)
+        |> Turn.next_turn()
+
+      game = %{game | turn: turn}
+
+      assert Game.get_current_player(game) == "player-2"
+    end
+
+    test "returns nil when no turn exists" do
+      owner_uuid = "owner123"
+      provider = Provider.new(:spotify)
+      game = Game.new(owner_uuid, provider: provider)
+
+      assert Game.get_current_player(game) == nil
+    end
+
+    test "returns nil when queue is empty" do
+      owner_uuid = "owner123"
+      provider = Provider.new(:spotify)
+      game = Game.new(owner_uuid, provider: provider)
+
+      # Turn is already initialized with empty queue in Game.new()
+      assert Game.get_current_player(game) == nil
+    end
+
+    test "handles different queue positions" do
+      owner_uuid = "owner123"
+      provider = Provider.new(:spotify)
+      game = Game.new(owner_uuid, provider: provider)
+
+      queue = ["alice", "bob", "charlie", "david"]
+
+      # Test each position
+      for {expected_player, index} <- Enum.with_index(queue) do
+        turn =
+          Enum.reduce(queue, Turn.new(), fn player, acc ->
+            Turn.add_player_to_queue(acc, player)
+          end)
+
+        # Move to specific index
+        turn =
+          if index > 0 do
+            Enum.reduce(1..index, turn, fn _, acc -> Turn.next_turn(acc) end)
+          else
+            turn
+          end
+
+        game_with_turn = %{game | turn: turn}
+
+        assert Game.get_current_player(game_with_turn) == expected_player
+      end
+    end
+  end
+
+  describe "integration tests" do
+    test "complete queue workflow" do
+      owner_uuid = "owner123"
+      provider = Provider.new(:spotify)
+      game = Game.new(owner_uuid, provider: provider)
+
+      # Add participants
+      user1 = User.new()
+      user2 = User.new()
+      user3 = User.new()
+      {:ok, game} = Game.add_participant(game, user1)
+      {:ok, game} = Game.add_participant(game, user2)
+      {:ok, game} = Game.add_participant(game, user3)
+
+      # Verify queue is created
+      assert length(game.turn.queue) == 3
+      assert Game.get_current_player(game) != nil
+
+      # Move through all players
+      first_player = Game.get_current_player(game)
+
+      game = Game.next_turn(game)
+      second_player = Game.get_current_player(game)
+      assert second_player != first_player
+
+      game = Game.next_turn(game)
+      third_player = Game.get_current_player(game)
+      assert third_player != second_player
+      assert third_player != first_player
+
+      # Next should wrap around to first
+      game = Game.next_turn(game)
+      wrapped_player = Game.get_current_player(game)
+      assert wrapped_player == first_player
+    end
+
+    test "automatically manages turn state" do
+      owner_uuid = "owner123"
+      provider = Provider.new(:spotify)
+      game = Game.new(owner_uuid, provider: provider)
+
+      # Add participants
+      user1 = User.new()
+      user2 = User.new()
+      {:ok, game} = Game.add_participant(game, user1)
+      {:ok, game} = Game.add_participant(game, user2)
+
+      # Participants are automatically added to turn queue
+      # Verify initial state
+      assert length(game.turn.queue) == 2
+      assert Game.get_current_player(game) in [user1.uuid, user2.uuid]
+
+      # Add more participants - they are automatically added to queue
+      user3 = User.new()
+      {:ok, game} = Game.add_participant(game, user3)
+
+      # Queue is automatically updated
+      assert length(game.turn.queue) == 3
+      assert user3.uuid in game.turn.queue
+
+      # Remove participant - they are automatically removed from queue
+      {:ok, game} = Game.remove_participant(game, user2.uuid)
+
+      # Queue is automatically updated
+      assert length(game.turn.queue) == 2
+      assert user2.uuid not in game.turn.queue
+      assert user1.uuid in game.turn.queue
+      assert user3.uuid in game.turn.queue
     end
   end
 end

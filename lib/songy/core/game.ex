@@ -79,7 +79,8 @@ defmodule Songy.Core.Game do
           status: :waiting,
           participants: [],
           player: Player.new(),
-          timelines: %{}
+          timelines: %{},
+          turn: Turn.new()
         ],
         opts
       )
@@ -108,7 +109,9 @@ defmodule Songy.Core.Game do
         {:error, :user_already_joined}
 
       true ->
-        {:ok, %{game | participants: [user | game.participants]}}
+        updated_participants = [user | game.participants]
+        updated_turn = Turn.add_player_to_queue(game.turn, user.uuid)
+        {:ok, %{game | participants: updated_participants, turn: updated_turn}}
     end
   end
 
@@ -133,7 +136,8 @@ defmodule Songy.Core.Game do
         {:error, :user_not_found}
 
       _ ->
-        {:ok, %{game | participants: updated_participants}}
+        updated_turn = Turn.remove_player_from_queue(game.turn, user_uuid)
+        {:ok, %{game | participants: updated_participants, turn: updated_turn}}
     end
   end
 
@@ -258,26 +262,6 @@ defmodule Songy.Core.Game do
   @spec empty?(t()) :: boolean()
   def empty?(%__MODULE__{participants: participants}) do
     Enum.empty?(participants)
-  end
-
-  @doc """
-  Updates the turn for the game.
-
-  ## Parameters
-    * `game` - The game to update
-    * `turn` - The turn to set
-
-  ## Examples
-      iex> provider = Provider.new(:spotify)
-      iex> game = Game.new("owner123", provider: provider)
-      iex> turn = Turn.new(player_id: "player-1")
-      iex> updated_game = Game.update_turn(game, turn)
-      iex> updated_game.turn.player_id
-      "player-1"
-  """
-  @spec update_turn(t(), Turn.t()) :: t()
-  def update_turn(%__MODULE__{} = game, %Turn{} = turn) do
-    %{game | turn: turn}
   end
 
   @doc """
@@ -413,10 +397,42 @@ defmodule Songy.Core.Game do
   @spec valid_timeline?(list(Track.t())) :: boolean()
   def valid_timeline?([]), do: true
   def valid_timeline?([_single]), do: true
+
   def valid_timeline?([%Track{year: year1}, %Track{year: year2} = second | rest]) when year1 <= year2 do
     valid_timeline?([second | rest])
   end
+
   def valid_timeline?([%Track{}, %Track{} | _rest]), do: false
+
+  @doc """
+  Moves to the next turn in the game.
+
+  ## Parameters
+    * `game` - The game to update
+
+  ## Returns
+    * updated_game - Game with next turn
+  """
+  @spec next_turn(t()) :: t()
+  def next_turn(%__MODULE__{turn: turn} = game) do
+    %{game | turn: Turn.next_turn(turn)}
+  end
+
+  @doc """
+  Gets the current active player from the game queue.
+
+  ## Parameters
+    * `game` - The game to get the current player from
+
+  ## Returns
+    * UUID of the current player or nil if queue is empty or no turn
+  """
+  @spec get_current_player(t()) :: String.t() | nil
+  def get_current_player(%__MODULE__{turn: nil}), do: nil
+
+  def get_current_player(%__MODULE__{turn: turn}) do
+    Turn.get_current_player(turn)
+  end
 
   defp user_already_joined?(%__MODULE__{participants: participants}, %User{uuid: uuid}) do
     Enum.any?(participants, &(&1.uuid == uuid))
