@@ -136,6 +136,7 @@ defmodule Songy.Core.TrackableTest do
       assert result.artist == "Fabrizio De André"
       assert result.year == 1967
       assert result.cover_url == "https://i.scdn.co/image/ab67616d0000b2738eeb336aff3e753c3359df51"
+      assert result.meta == %{uri: "spotify:track:732hl1bSexhqKxC3B0T3IU"}
     end
 
     test "extracts cover URL from album images", %{track: track} do
@@ -324,6 +325,24 @@ defmodule Songy.Core.TrackableTest do
 
       assert %Track{} = result
       assert result.artist == nil
+    end
+
+    test "handles missing URI field", %{track: track} do
+      track_without_uri = %{track | uri: nil}
+
+      result = Trackable.to_track(track_without_uri)
+
+      assert %Track{} = result
+      assert result.meta == %{}
+    end
+
+    test "handles empty URI field", %{track: track} do
+      track_with_empty_uri = %{track | uri: ""}
+
+      result = Trackable.to_track(track_with_empty_uri)
+
+      assert %Track{} = result
+      assert result.meta == %{}
     end
   end
 end

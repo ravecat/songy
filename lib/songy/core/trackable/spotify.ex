@@ -7,12 +7,14 @@ defimpl Songy.Core.Trackable, for: Spotify.Track do
   - artist: All meaningful artist names joined with comma
   - year: Extracted from album release_date
   - cover_url: Album cover image URL from album.images[0].url
+  - meta: Spotify-specific metadata for playback
 
   ## Examples
 
       iex> track = %Spotify.Track{
       ...>   id: "623rRTKwGmgjH6sjE9uWLh",
       ...>   name: "Scatman (ski-ba-bop-ba-dop-bop)",
+      ...>   uri: "spotify:track:623rRTKwGmgjH6sjE9uWLh",
       ...>   artists: [%{"name" => "Scatman John"}, %{"name" => "Featured Artist"}],
       ...>   album: %{
       ...>     "release_date" => "1995-06-01",
@@ -25,7 +27,8 @@ defimpl Songy.Core.Trackable, for: Spotify.Track do
         title: "Scatman (ski-ba-bop-ba-dop-bop)",
         artist: "Scatman John, Featured Artist",
         year: 1995,
-        cover_url: "https://i.scdn.co/image/example"
+        cover_url: "https://i.scdn.co/image/example",
+        meta: %{uri: "spotify:track:623rRTKwGmgjH6sjE9uWLh"}
       }
 
   """
@@ -34,7 +37,8 @@ defimpl Songy.Core.Trackable, for: Spotify.Track do
       title: extract_title(track),
       artist: extract_artist(track),
       year: extract_year(track),
-      cover_url: extract_cover_url(track)
+      cover_url: extract_cover_url(track),
+      meta: extract_meta(track)
     )
   end
 
@@ -71,4 +75,11 @@ defimpl Songy.Core.Trackable, for: Spotify.Track do
   end
 
   defp extract_year(_), do: nil
+
+  # Extract Spotify-specific metadata including URI for playback
+  defp extract_meta(%Spotify.Track{uri: uri}) when is_binary(uri) and uri != "" do
+    %{uri: uri}
+  end
+
+  defp extract_meta(_), do: %{}
 end
