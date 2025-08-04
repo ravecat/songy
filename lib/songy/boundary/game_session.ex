@@ -164,7 +164,7 @@ defmodule Songy.Boundary.GameSession do
       {:error, :game_session_not_found} -> {:error, :game_session_not_found}
       {:error, :no_credentials} -> {:error, :no_credentials}
       {:error, reason} -> {:error, reason}
-      status when status != :in_progress -> {:error, :game_not_in_progress}
+      _status -> {:error, :game_not_in_progress}
     end
   end
 
@@ -199,8 +199,8 @@ defmodule Songy.Boundary.GameSession do
     else
       {:error, :game_session_not_found} -> {:error, :game_session_not_found}
       {:error, :no_credentials} -> {:error, :no_credentials}
-      status when status != :in_progress -> {:error, :game_not_in_progress}
       {:error, reason} -> {:error, reason}
+      _status -> {:error, :game_not_in_progress}
     end
   end
 
@@ -475,12 +475,24 @@ defmodule Songy.Boundary.GameSession do
 
   @impl GenServer
   def handle_call(:start_game_session, _from, game) do
-    case game.status do
-      :waiting ->
-        updated_game = %{game | status: :in_progress}
-        {:reply, {:ok, updated_game}, updated_game}
+    with :waiting <- game.status,
+         {:ok, credentials} <- get_credentials(game.uuid),
+         {:ok, spotify_track} <- Spotify.search_random_track(credentials),
+         track <- Trackable.to_track(spotify_track),
+         {:ok, game_with_track} <- Game.set_turn_track(game, track),
+         {:ok, started_game} <- {:ok, Game.update_status(game_with_track, :in_progress)} do
+      {:reply, {:ok, started_game}, started_game}
+    else
+      {:error, :no_credentials} ->
+        {:reply, {:error, :no_credentials}, game}
 
-      _ ->
+      {:error, :no_turn} ->
+        {:reply, {:error, :no_turn}, game}
+
+      {:error, reason} ->
+        {:reply, {:error, reason}, game}
+
+      _status ->
         {:reply, {:error, :game_already_started}, game}
     end
   end

@@ -419,6 +419,33 @@ defmodule Songy.Core.Game do
   end
 
   @doc """
+  Sets a track for the current turn.
+
+  ## Parameters
+    * `game` - The game to update
+    * `track` - The track to set
+
+  ## Returns
+    * `{:ok, updated_game}` - Success with updated game containing track in turn
+    * `{:error, :no_turn}` - If game has no active turn
+
+  ## Examples
+      iex> provider = Provider.new(:spotify)
+      iex> game = Game.new("owner123", provider: provider)
+      iex> track = Track.new(title: "Song", artist: "Artist", year: 2023)
+      iex> Game.set_turn_track(game, track)
+      {:ok, %Game{turn: %Turn{track: %Track{title: "Song"}}}}
+  """
+  @spec set_turn_track(t(), Track.t()) :: {:ok, t()} | {:error, atom()}
+  def set_turn_track(%__MODULE__{turn: nil} = _game, %Track{} = _track) do
+    {:error, :no_turn}
+  end
+
+  def set_turn_track(%__MODULE__{turn: turn} = game, %Track{} = track) do
+    {:ok, %{game | turn: Turn.set_track(turn, track)}}
+  end
+
+  @doc """
   Gets the current active player from the game queue.
 
   ## Parameters

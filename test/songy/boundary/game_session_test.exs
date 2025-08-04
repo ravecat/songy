@@ -117,6 +117,26 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "starts the game by changing status to in_progress", %{game: game} do
+      # Setup credentials and mock for successful track search
+      credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
+      :ok = GameSession.set_credentials(game.uuid, credentials)
+
+      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+        {:ok,
+         %Spotify.Track{
+           id: "track123",
+           name: "Random Song",
+           artists: [%{"name" => "Random Artist"}],
+           album: %{
+             "release_date" => "2023-01-01",
+             "images" => [%{"url" => "https://example.com/cover.jpg"}]
+           }
+         }}
+      end)
+
+      [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      Repatch.allow(self(), pid)
+
       # Verify initial status is :waiting
       assert {:ok, initial_game} = GameSession.lookup_game_session(game.uuid)
       assert initial_game.status == :waiting
@@ -124,13 +144,36 @@ defmodule Songy.Boundary.GameSessionTest do
       # Start the game
       assert {:ok, updated_game} = GameSession.start_game_session(game.uuid)
       assert updated_game.status == :in_progress
+      assert updated_game.turn.track != nil
+      assert updated_game.turn.track.title == "Random Song"
 
       # Verify the game state was persisted
       assert {:ok, persisted_game} = GameSession.lookup_game_session(game.uuid)
       assert persisted_game.status == :in_progress
+      assert persisted_game.turn.track != nil
     end
 
     test "returns error when game is already started", %{game: game} do
+      # Setup credentials and mock for successful track search
+      credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
+      :ok = GameSession.set_credentials(game.uuid, credentials)
+
+      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+        {:ok,
+         %Spotify.Track{
+           id: "track123",
+           name: "Random Song",
+           artists: [%{"name" => "Random Artist"}],
+           album: %{
+             "release_date" => "2023-01-01",
+             "images" => [%{"url" => "https://example.com/cover.jpg"}]
+           }
+         }}
+      end)
+
+      [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      Repatch.allow(self(), pid)
+
       # Start the game first
       assert {:ok, _} = GameSession.start_game_session(game.uuid)
 
@@ -189,15 +232,33 @@ defmodule Songy.Boundary.GameSessionTest do
       # Create and start game session
       provider_id = :spotify
       {:ok, game} = GameSession.create_game_session("owner123", provider_id)
-      {:ok, _} = GameSession.start_game_session(game.uuid)
+
+      # Setup credentials and mock for successful track search
+      credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
+      :ok = GameSession.set_credentials(game.uuid, credentials)
+
+      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+        {:ok,
+         %Spotify.Track{
+           id: "track123",
+           name: "Random Song",
+           artists: [%{"name" => "Random Artist"}],
+           album: %{
+             "release_date" => "2023-01-01",
+             "images" => [%{"url" => "https://example.com/cover.jpg"}]
+           }
+         }}
+      end)
 
       Repatch.patch(Songy.Boundary.Spotify, :start_playback, [mode: :shared], fn _credentials, _params ->
         {:ok, :playback_started}
       end)
 
-      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
 
       Repatch.allow(self(), pid)
+
+      {:ok, _} = GameSession.start_game_session(game.uuid)
 
       # Verify initial playback state
       {:ok, initial_game} = GameSession.lookup_game_session(game.uuid)
@@ -239,13 +300,27 @@ defmodule Songy.Boundary.GameSessionTest do
         {:ok, :playback_started}
       end)
 
-      provider_id = :spotify
       credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
-      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
-      {:ok, _} = GameSession.start_game_session(game.uuid)
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
+      :ok = GameSession.set_credentials(game.uuid, credentials)
 
-      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+        {:ok,
+         %Spotify.Track{
+           id: "track123",
+           name: "Random Song",
+           artists: [%{"name" => "Random Artist"}],
+           album: %{
+             "release_date" => "2023-01-01",
+             "images" => [%{"url" => "https://example.com/cover.jpg"}]
+           }
+         }}
+      end)
+
+      [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
       Repatch.allow(self(), pid)
+
+      {:ok, _} = GameSession.start_game_session(game.uuid)
 
       # Start playback twice
       :ok = GameSession.set_credentials(game.uuid, credentials)
@@ -263,6 +338,17 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "pause_playback/3" do
     test "pauses playback when game is in progress" do
+      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+        {:ok,
+         %Spotify.Track{
+           id: "track123",
+           name: "Test Track",
+           artists: [%{name: "Test Artist"}],
+           duration_ms: 180_000,
+           preview_url: "http://example.com/preview.mp3"
+         }}
+      end)
+
       Repatch.patch(Songy.Boundary.Spotify, :start_playback, [mode: :shared], fn _credentials, _params ->
         {:ok, :playback_started}
       end)
@@ -271,15 +357,18 @@ defmodule Songy.Boundary.GameSessionTest do
         {:ok, :playback_paused}
       end)
 
-      provider_id = :spotify
       credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
-      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
-      {:ok, _} = GameSession.start_game_session(game.uuid)
+
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
       assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+
       Repatch.allow(self(), pid)
 
       :ok = GameSession.set_credentials(game.uuid, credentials)
+
+      {:ok, _} = GameSession.start_game_session(game.uuid)
+
       {:ok, _} = GameSession.start_playback(game.uuid, :spotify)
 
       # Verify playback is started
@@ -327,20 +416,32 @@ defmodule Songy.Boundary.GameSessionTest do
         {:ok, :playback_paused}
       end)
 
-      provider_id = :spotify
+      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+        {:ok,
+         %Spotify.Track{
+           id: "track123",
+           name: "Test Track",
+           artists: [%{name: "Test Artist"}],
+           duration_ms: 180_000,
+           preview_url: "http://example.com/preview.mp3"
+         }}
+      end)
+
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
       credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
-      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
-      {:ok, _} = GameSession.start_game_session(game.uuid)
+      :ok = GameSession.set_credentials(game.uuid, credentials)
 
       assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+
       Repatch.allow(self(), pid)
+
+      {:ok, _} = GameSession.start_game_session(game.uuid)
 
       # Verify playback is initially stopped
       {:ok, initial_game} = GameSession.lookup_game_session(game.uuid)
       assert initial_game.player.is_playback == false
 
       # Pause playback (should be idempotent)
-      :ok = GameSession.set_credentials(game.uuid, credentials)
       assert {:ok, first_result} = GameSession.pause_playback(game.uuid, :spotify)
       assert {:ok, second_result} = GameSession.pause_playback(game.uuid, :spotify)
 
@@ -372,12 +473,26 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "updates game state with new participant" do
-      provider_id = :spotify
-      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
+      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _provider ->
+        {:ok,
+         %Spotify.Track{
+           id: "track123",
+           name: "Test Track",
+           artists: [%{name: "Test Artist"}],
+           duration_ms: 180_000,
+           preview_url: "http://example.com/preview.mp3"
+         }}
+      end)
+
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
+
       assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
+      :ok = GameSession.set_credentials(game.uuid, credentials)
+
+      Repatch.allow(self(), pid)
 
       assert {:ok, game} = GameSession.start_game_session(game.uuid)
-
       assert length(game.participants) == 0
 
       send(pid, {:participant_joined, "owner123"})

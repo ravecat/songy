@@ -29,7 +29,27 @@ defmodule SongyWeb.RoomChannelTest do
     end
 
     test "changes game status and broadcasts update", %{current_user: current_user} do
+      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+        {:ok,
+         %Spotify.Track{
+           id: "track123",
+           name: "Random Song",
+           artists: [%{"name" => "Random Artist"}],
+           album: %{
+             "release_date" => "2023-01-01",
+             "images" => [%{"url" => "https://example.com/cover.jpg"}]
+           }
+         }}
+      end)
+
+      credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
+
       {:ok, game} = GameSession.create_game_session("owner123", :spotify)
+      :ok = GameSession.set_credentials(game.uuid, credentials)
+
+      [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+
+      Repatch.allow(self(), pid)
 
       {:ok, _, socket} = join_room_channel(current_user, game.uuid)
 
