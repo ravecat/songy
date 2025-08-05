@@ -65,7 +65,6 @@ defmodule Songy.MixProject do
       {:nimble_options, "~> 1.1"},
       {:repatch, "~> 1.5", only: :test},
       {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false},
-      {:assert_eventually, "~> 1.0.0", only: :test},
       {:faker, "~> 0.19.0-alpha.1"},
       {:polymorphic_embed, git: "https://github.com/mathieuprog/polymorphic_embed.git", tag: "v5.0.3"},
       # Temporary dependency until `spotify_ex` is resolved by https://github.com/jsncmgs1/spotify_ex/pull/59
