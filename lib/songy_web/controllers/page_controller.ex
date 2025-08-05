@@ -5,7 +5,9 @@ defmodule SongyWeb.PageController do
   alias Songy.Boundary.GameSession
 
   def home(conn, _params) do
-    render(conn, :home)
+    conn
+    |> assign_prop(:provider, conn.assigns[:provider])
+    |> render_inertia("Home")
   end
 
   def create(conn, _params) do

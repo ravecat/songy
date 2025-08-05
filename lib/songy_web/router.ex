@@ -35,13 +35,7 @@ defmodule SongyWeb.Router do
   end
 
   scope "/", SongyWeb do
-    pipe_through [:browser]
-
-    get "/", PageController, :home
-  end
-
-  scope "/", SongyWeb do
-    pipe_through [:browser, :require_provider]
+    pipe_through [:inertia, :require_provider]
 
     post "/create", PageController, :create
   end
@@ -49,6 +43,7 @@ defmodule SongyWeb.Router do
   scope "/", SongyWeb do
     pipe_through [:inertia]
 
+    get "/", PageController, :home
     get "/:room_id", PageController, :join
   end
 

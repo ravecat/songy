@@ -1,12 +1,15 @@
 defmodule SongyWeb.PageControllerTest do
   use SongyWeb.ConnCase
 
+  import Inertia.Testing
+
   alias Songy.Boundary.GameSession
   alias Songy.Core.Provider
 
   test "GET /", %{conn: conn} do
     conn = get(conn, ~p"/")
-    assert html_response(conn, 200) =~ "Spotify"
+
+    assert inertia_component(conn) == "Home"
   end
 
   describe "start/2" do
@@ -52,12 +55,11 @@ defmodule SongyWeb.PageControllerTest do
     end
 
     test "allows access to existing game session", %{conn: conn} do
-      %{id: provider_id} = Provider.new(:spotify)
-      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
       conn = get(conn, ~p"/#{game.uuid}")
 
-      assert html_response(conn, 200)
+      assert inertia_component(conn) == "Room"
 
       GameSession.end_game_session(game.uuid)
     end
