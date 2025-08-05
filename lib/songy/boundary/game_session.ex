@@ -306,15 +306,10 @@ defmodule Songy.Boundary.GameSession do
   """
   @spec set_credentials(String.t(), any()) :: :ok | {:error, :game_session_not_found}
   def set_credentials(game_uuid, credentials) do
-    case Registry.lookup(Songy.Registry, game_uuid) do
-      [{_pid, _}] ->
-        credential_data = Credentials.fetch(credentials)
-        Registry.unregister(Songy.Registry, {:credentials, game_uuid})
-        Registry.register(Songy.Registry, {:credentials, game_uuid}, credential_data)
-        :ok
-
-      [] ->
-        {:error, :game_session_not_found}
+    if game_session_exists?(game_uuid) do
+      GenServer.call(via(game_uuid), {:set_credentials, credentials})
+    else
+      {:error, :game_session_not_found}
     end
   end
 

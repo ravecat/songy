@@ -1,6 +1,5 @@
 defmodule Songy.Boundary.GameSessionTest do
   use ExUnit.Case, async: true
-  use AssertEventually
 
   alias Songy.Boundary.GameSession
   alias Songy.Core.{Provider, Game}
@@ -782,17 +781,20 @@ defmodule Songy.Boundary.GameSessionTest do
 
       provider = Provider.new(:spotify, %{access_token: "test_token"})
       assert :ok = GameSession.set_credentials(game.uuid, provider)
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
 
       # Verify credentials are stored
       assert [{_pid, _credentials}] = Registry.lookup(Songy.Registry, {:credentials, game.uuid})
 
+      monitor_ref = Process.monitor(pid)
+
       # Terminate session
       GameSession.end_game_session(game.uuid)
 
+      assert_receive {:DOWN, ^monitor_ref, :process, ^pid, _reason}
+
       # Verify credentials are cleaned up
-      eventually(fn ->
-        assert [] = Registry.lookup(Songy.Registry, {:credentials, game.uuid})
-      end)
+      assert [] == Registry.lookup(Songy.Registry, {:credentials, game.uuid})
     end
   end
 end
