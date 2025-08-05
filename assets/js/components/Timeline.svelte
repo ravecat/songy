@@ -1,51 +1,43 @@
 <script>
-  import { getScopeContext } from "@shared/context/scope";
-  import { getChannelContext } from "@shared/context/channel.js";
-  import TrackCard from "@components/TrackCard.svelte";
   import { dndzone } from "svelte-dnd-action";
   import { flip } from "svelte/animate";
 
-  const { state } = $derived.by(getChannelContext);
-  const { user } = $derived.by(getScopeContext);
+  let {
+    items = [],
+    flipDurationMs = 150,
+    onConsider,
+    onFinalize,
+    type = "timeline",
+    children,
+    ...props
+  } = $props();
 
-  let participantTimeline = $derived.by(() => {
-    const timeline = state?.timelines?.[user?.uuid] || [];
-
-    return timeline.map((track, index) => ({
-      id: index,
-      track,
-    }));
-  });
-
-  const flipDurationMs = 150;
-
-  function handleDndConsider(e) {
-    participantTimeline = e.detail.items;
+  function defaultHandleConsider(e) {
+    items = e.detail.items;
   }
 
-  function handleDndFinalize({ detail: { items, info } }) {
-    participantTimeline = items;
-
-    const draggedId = info.id;
-    const newPosition = items.findIndex((item) => item.id === draggedId);
-
-    console.log(`Element ${draggedId} moved to position ${newPosition}`);
+  function defaultHandleFinalize(e) {
+    items = e.detail.items;
   }
+
+  const handleConsider = onConsider || defaultHandleConsider;
+  const handleFinalize = onFinalize || defaultHandleFinalize;
 </script>
 
 <div
   class="timeline"
   use:dndzone={{
-    items: participantTimeline,
+    items,
     flipDurationMs,
-    dropTargetStyle: {},
+    type,
+    ...props,
   }}
-  onconsider={handleDndConsider}
-  onfinalize={handleDndFinalize}
+  onconsider={handleConsider}
+  onfinalize={handleFinalize}
 >
-  {#each participantTimeline as item (item.id)}
+  {#each items as item (item.id)}
     <div animate:flip={{ duration: flipDurationMs }}>
-      <TrackCard track={item.track} />
+      {@render children?.(item)}
     </div>
   {/each}
 </div>

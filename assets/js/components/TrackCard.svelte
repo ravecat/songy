@@ -1,70 +1,113 @@
 <script>
-  let { track } = $props();
+  let { track, revealed = true } = $props();
 </script>
 
-<div class="track-card">
-  <div class="card-content">
-    <div class="artist-text">
-      {#if track.artist && track.artist.length > 12}
-        <div
-          class="marquee"
-          style="--speed: {Math.max(6, track.artist.length * 0.2)}s"
-        >
-          <div class="marquee-track">
-            <span>{track.artist}</span>
-            <span aria-hidden="true">{track.artist}</span>
+<div class="wrapper">
+  <button
+    class="track-card"
+    style:transform={revealed ? "rotateY(0)" : ""}
+    aria-expanded={revealed}
+    data-revealed={revealed}
+  >
+    {#if revealed}
+      <div
+        class="front"
+        aria-label={`Track: ${track.artist} - ${track.title} (${track.year})`}
+      >
+        <div class="card-content">
+          <div class="artist-text">
+            {#if track.artist && track.artist.length > 12}
+              <div
+                class="marquee"
+                style="--speed: {Math.max(6, track.artist.length * 0.2)}s"
+              >
+                <div class="marquee-track">
+                  <span>{track.artist}</span>
+                  <span aria-hidden="true">{track.artist}</span>
+                </div>
+              </div>
+            {:else}
+              <div class="text-overflow-container">{track.artist || ""}</div>
+            {/if}
+          </div>
+          <div class="year-container">
+            <span class="year-text">
+              {track.year || ""}
+            </span>
+          </div>
+          <div class="title-text">
+            {#if track.title && track.title.length > 12}
+              <div
+                class="marquee"
+                style="--speed: {Math.max(6, track.title.length * 0.2)}s"
+              >
+                <div class="marquee-track">
+                  <span>{track.title}</span>
+                  <span aria-hidden="true">{track.title}</span>
+                </div>
+              </div>
+            {:else}
+              <div class="text-overflow-container">{track.title || ""}</div>
+            {/if}
           </div>
         </div>
-      {:else}
-        <div class="text-overflow-container">{track.artist || ""}</div>
-      {/if}
-    </div>
-    <div class="year-container">
-      <span class="year-text">
-        {track.year || ""}
-      </span>
-    </div>
-    <div class="title-text">
-      {#if track.title && track.title.length > 12}
-        <div
-          class="marquee"
-          style="--speed: {Math.max(6, track.title.length * 0.2)}s"
-        >
-          <div class="marquee-track">
-            <span>{track.title}</span>
-            <span aria-hidden="true">{track.title}</span>
-          </div>
+      </div>
+    {/if}
+
+    {#if !revealed}
+      <div class="back" aria-label="Hidden track card">
+        <div class="card-content">
+          <div class="year-text">?</div>
         </div>
-      {:else}
-        <div class="text-overflow-container">{track.title || ""}</div>
-      {/if}
-    </div>
-  </div>
+      </div>
+    {/if}
+  </button>
 </div>
 
 <style>
-  .track-card {
-    position: relative;
-    overflow: hidden;
-    width: 8rem;
-    height: 8rem;
-    background: linear-gradient(135deg, #facc15, #f97316);
-    border-radius: 0.5rem;
-    box-shadow:
-      0 10px 15px -3px rgba(0, 0, 0, 0.1),
-      0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  .wrapper {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    text-align: center;
+    perspective: 1000px;
+  }
+
+  .track-card {
+    position: relative;
+    width: 8rem;
+    height: 8rem;
+    background: linear-gradient(135deg, #facc15, #f97316);
+    border-radius: 0.5rem;
+    transform: rotateY(180deg);
+    transition: transform 0.4s;
+    transform-style: preserve-3d;
     padding: 0;
-    animation: scaleIn 400ms ease-out forwards;
-    transform: scale(0);
-    opacity: 0;
-    animation-delay: calc(sibling-index() * 100ms - 100ms);
     user-select: none;
     cursor: pointer;
+    border: none;
+    box-shadow:
+      0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  .front,
+  .back {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left: 0;
+    top: 0;
+    backface-visibility: hidden;
+    border-radius: 0.5rem;
+    box-sizing: border-box;
+  }
+
+  .back {
+    transform: rotateY(180deg);
   }
 
   .card-content {
