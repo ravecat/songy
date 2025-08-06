@@ -160,7 +160,7 @@ defmodule Songy.Boundary.GameSession do
     with {:ok, game} <- lookup_game_session(game_uuid),
          :in_progress <- Game.get_status(game),
          {:ok, credentials} <- get_credentials(game_uuid),
-         %Track{meta: %{uri: track_uri}} <- Game.get_turn_track(game) |> dbg,
+         %Track{meta: %{uri: track_uri}} <- Game.get_turn_track(game),
          {:ok, :playback_started} <- Spotify.start_playback(credentials, uris: [track_uri]) do
       GenServer.call(via(game_uuid), :start_playback)
     else
@@ -478,7 +478,7 @@ defmodule Songy.Boundary.GameSession do
     with :waiting <- game.status,
          {:ok, credentials} <- get_credentials(game.uuid),
          {:ok, random_track} <- Spotify.search_random_track(credentials),
-         track <- Trackable.to_track(random_track) |> dbg,
+         track <- Trackable.to_track(random_track),
          {:ok, game_with_track} <- Game.set_turn_track(game, track),
          {:ok, started_game} <- {:ok, Game.update_status(game_with_track, :in_progress)} do
       {:reply, {:ok, started_game}, started_game}

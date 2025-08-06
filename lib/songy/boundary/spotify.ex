@@ -151,7 +151,7 @@ defmodule Songy.Boundary.Spotify do
 
     case search(credentials, params) do
       {:ok, %{items: [track | _]}} ->
-        Logger.info("Successfully found random track with query: #{inspect(params)}")
+        Logger.info("Successfully found random track #{inspect(track)} with query: #{inspect(params)}")
         {:ok, track}
 
       {:ok, %{items: []}} ->
@@ -165,6 +165,8 @@ defmodule Songy.Boundary.Spotify do
 
   # That search params return a random track result in most cases. Change carefully if needed.
   defp build_random_track_search_params do
+    :rand.seed(:exsss, :os.system_time(:nanosecond))
+
     query = generate_random_track_query()
     offset = generate_random_offset()
 
@@ -177,14 +179,18 @@ defmodule Songy.Boundary.Spotify do
   end
 
   defp generate_random_track_query do
-    current_year = Date.utc_today().year
     random_letter = generate_random_latin_letter()
+    {start_year, end_year} = generate_random_time_range()
 
-    # Generate random year range between 1900 and current year
+    "#{random_letter} year:#{start_year}-#{end_year}"
+  end
+
+  defp generate_random_time_range do
+    current_year = Date.utc_today().year
     start_year = :rand.uniform(current_year - 1900 + 1) + 1900 - 1
     end_year = :rand.uniform(current_year - start_year + 1) + start_year - 1
 
-    "#{random_letter} year:#{start_year}-#{end_year}"
+    {start_year, end_year}
   end
 
   defp generate_random_latin_letter do
