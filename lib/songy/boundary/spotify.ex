@@ -12,7 +12,8 @@ defmodule Songy.Boundary.Spotify do
           {:ok, :playback_transferred} | {:error, :invalid_credentials | :no_device_id | :playback_transfer_failed}
   def transfer_playback(credentials, %{"device_id" => device_id}) do
     with {:ok, credentials} <- ensure_credentials(credentials),
-         :ok <- Spotify.Player.transfer_playback(credentials, [device_id]) do
+         response <- Spotify.Player.transfer_playback(credentials, [device_id]),
+         {:ok, _} <- handle_api_response(response) do
       Logger.info("Successfully transferred playback to device #{device_id}")
       {:ok, :playback_transferred}
     else
@@ -31,7 +32,8 @@ defmodule Songy.Boundary.Spotify do
           {:ok, :playback_started} | {:error, :invalid_credentials | :playback_start_failed}
   def start_playback(credentials, params \\ []) do
     with {:ok, credentials} <- ensure_credentials(credentials),
-         :ok <- Spotify.Player.play(credentials, params) do
+         response <- Spotify.Player.play(credentials, params),
+         {:ok, _} <- handle_api_response(response) do
       Logger.info("Successfully started playback with options: #{inspect(params)}")
       {:ok, :playback_started}
     else
@@ -48,7 +50,8 @@ defmodule Songy.Boundary.Spotify do
           {:ok, :playback_paused} | {:error, :invalid_credentials | :playback_pause_failed}
   def pause_playback(credentials, params \\ []) do
     with {:ok, credentials} <- ensure_credentials(credentials),
-         :ok <- Spotify.Player.pause(credentials, params) do
+         response <- Spotify.Player.pause(credentials, params),
+         {:ok, _} <- handle_api_response(response) do
       Logger.info("Successfully paused playback with options: #{inspect(params)}")
       {:ok, :playback_paused}
     else
@@ -99,15 +102,10 @@ defmodule Songy.Boundary.Spotify do
           {:ok, map()} | {:error, :invalid_credentials | :search_failed}
   def search(credentials, params \\ []) do
     with {:ok, credentials} <- ensure_credentials(credentials),
-         {:ok, result} <- Spotify.Search.query(credentials, params) do
-      case result do
-        %{"error" => reason} ->
-          {:error, reason}
-
-        _valid_result ->
-          Logger.info("Successfully performed search with query: #{params[:q]}")
-          {:ok, result}
-      end
+         response <- Spotify.Search.query(credentials, params),
+         {:ok, result} <- handle_api_response(response) do
+      Logger.info("Successfully performed search with params: #{inspect(params)}")
+      {:ok, result}
     else
       {:error, :invalid_credentials} ->
         {:error, :invalid_credentials}
@@ -225,4 +223,11 @@ defmodule Songy.Boundary.Spotify do
   end
 
   defp ensure_credentials(_), do: {:error, :invalid_credentials}
+
+  defp handle_api_response({:error, reason}), do: {:error, reason}
+  defp handle_api_response({:ok, %{"error" => %{"message" => reason}}}), do: {:error, reason}
+  defp handle_api_response({:ok, %{"error" => reason}}) when is_binary(reason), do: {:error, reason}
+  defp handle_api_response({:ok, result}), do: {:ok, result}
+  defp handle_api_response(:ok), do: {:ok, :ok}
+  defp handle_api_response(result), do: {:ok, result}
 end
