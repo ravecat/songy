@@ -141,6 +141,8 @@ defmodule Songy.Boundary.GameSession do
     * `{:error, :game_session_not_found}` - Game session does not exist
     * `{:error, :game_not_in_progress}` - Game is not in the correct status
     * `{:error, :no_credentials}` - No credentials available for session
+    * `{:error, :no_current_track}` - No track is set for the current turn
+    * `{:error, :no_track_uri}` - Track does not have Spotify URI in metadata
 
   ## Examples
       iex> {:ok, game} = GameSession.create_game_session("owner123", :spotify)
@@ -153,17 +155,20 @@ defmodule Songy.Boundary.GameSession do
       iex> GameSession.start_playback("nonexistent", :spotify)
       {:error, :game_session_not_found}
   """
-  @spec start_playback(String.t(), :spotify) :: {:ok, Game.t()} | {:error, atom()}
+  @spec start_playback(String.t(), atom()) :: {:ok, Game.t()} | {:error, atom()}
   def start_playback(game_uuid, :spotify) do
     with {:ok, game} <- lookup_game_session(game_uuid),
-         :in_progress <- game.status,
+         :in_progress <- Game.get_status(game),
          {:ok, credentials} <- get_credentials(game_uuid),
-         {:ok, :playback_started} <- Spotify.start_playback(credentials) do
+         %Track{meta: %{uri: track_uri}} <- Game.get_turn_track(game) |> dbg,
+         {:ok, :playback_started} <- Spotify.start_playback(credentials, uris: [track_uri]) do
       GenServer.call(via(game_uuid), :start_playback)
     else
       {:error, :game_session_not_found} -> {:error, :game_session_not_found}
       {:error, :no_credentials} -> {:error, :no_credentials}
       {:error, reason} -> {:error, reason}
+      %Track{meta: meta} when not is_map_key(meta, :uri) -> {:error, :no_track_uri}
+      nil -> {:error, :no_current_track}
       _status -> {:error, :game_not_in_progress}
     end
   end
@@ -472,8 +477,8 @@ defmodule Songy.Boundary.GameSession do
   def handle_call(:start_game_session, _from, game) do
     with :waiting <- game.status,
          {:ok, credentials} <- get_credentials(game.uuid),
-         {:ok, spotify_track} <- Spotify.search_random_track(credentials),
-         track <- Trackable.to_track(spotify_track),
+         {:ok, random_track} <- Spotify.search_random_track(credentials),
+         track <- Trackable.to_track(random_track) |> dbg,
          {:ok, game_with_track} <- Game.set_turn_track(game, track),
          {:ok, started_game} <- {:ok, Game.update_status(game_with_track, :in_progress)} do
       {:reply, {:ok, started_game}, started_game}

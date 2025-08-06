@@ -125,6 +125,7 @@ defmodule Songy.Boundary.GameSessionTest do
          %Spotify.Track{
            id: "track123",
            name: "Random Song",
+           uri: "spotify:track:track123",
            artists: [%{"name" => "Random Artist"}],
            album: %{
              "release_date" => "2023-01-01",
@@ -162,6 +163,7 @@ defmodule Songy.Boundary.GameSessionTest do
          %Spotify.Track{
            id: "track123",
            name: "Random Song",
+           uri: "spotify:track:track123",
            artists: [%{"name" => "Random Artist"}],
            album: %{
              "release_date" => "2023-01-01",
@@ -241,6 +243,7 @@ defmodule Songy.Boundary.GameSessionTest do
          %Spotify.Track{
            id: "track123",
            name: "Random Song",
+           uri: "spotify:track:track123",
            artists: [%{"name" => "Random Artist"}],
            album: %{
              "release_date" => "2023-01-01",
@@ -308,6 +311,7 @@ defmodule Songy.Boundary.GameSessionTest do
          %Spotify.Track{
            id: "track123",
            name: "Random Song",
+           uri: "spotify:track:track123",
            artists: [%{"name" => "Random Artist"}],
            album: %{
              "release_date" => "2023-01-01",
@@ -342,6 +346,7 @@ defmodule Songy.Boundary.GameSessionTest do
          %Spotify.Track{
            id: "track123",
            name: "Test Track",
+           uri: "spotify:track:track123",
            artists: [%{name: "Test Artist"}],
            duration_ms: 180_000,
            preview_url: "http://example.com/preview.mp3"
@@ -420,6 +425,7 @@ defmodule Songy.Boundary.GameSessionTest do
          %Spotify.Track{
            id: "track123",
            name: "Test Track",
+           uri: "spotify:track:track123",
            artists: [%{name: "Test Artist"}],
            duration_ms: 180_000,
            preview_url: "http://example.com/preview.mp3"
@@ -477,6 +483,7 @@ defmodule Songy.Boundary.GameSessionTest do
          %Spotify.Track{
            id: "track123",
            name: "Test Track",
+           uri: "spotify:track:track123",
            artists: [%{name: "Test Artist"}],
            duration_ms: 180_000,
            preview_url: "http://example.com/preview.mp3"
@@ -512,6 +519,7 @@ defmodule Songy.Boundary.GameSessionTest do
          %Spotify.Track{
            id: "track123",
            name: "Random Song",
+           uri: "spotify:track:track123",
            artists: [%{"name" => "Random Artist"}],
            album: %{
              "release_date" => "2023-01-01",
@@ -661,6 +669,7 @@ defmodule Songy.Boundary.GameSessionTest do
          %Spotify.Track{
            id: "track123",
            name: "Original Song",
+           uri: "spotify:track:track123",
            artists: [%{"name" => "Original Artist"}],
            album: %{
              "release_date" => "2023-01-01",

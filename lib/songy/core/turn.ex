@@ -77,6 +77,23 @@ defmodule Songy.Core.Turn do
   end
 
   @doc """
+  Gets the track for the current turn.
+
+  Returns the track assigned to this turn for players to guess.
+
+  ## Examples
+      iex> track = Track.new(title: "Bohemian Rhapsody", artist: "Queen", year: 1975)
+      iex> turn = Turn.new() |> Turn.set_track(track)
+      iex> Turn.get_track(turn)
+      %Track{title: "Bohemian Rhapsody", artist: "Queen", year: 1975}
+
+      iex> Turn.get_track(Turn.new())
+      nil
+  """
+  @spec get_track(t()) :: Track.t() | nil
+  def get_track(%__MODULE__{track: track}), do: track
+
+  @doc """
   Gets the current player from the turn queue.
 
   ## Parameters

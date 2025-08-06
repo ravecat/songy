@@ -445,6 +445,13 @@ defmodule Songy.Core.Game do
     {:ok, %{game | turn: Turn.set_track(turn, track)}}
   end
 
+  @spec get_turn_track(t()) :: Track.t() | nil
+  def get_turn_track(%__MODULE__{turn: nil}), do: nil
+
+  def get_turn_track(%__MODULE__{turn: turn}) do
+    Turn.get_track(turn)
+  end
+
   @doc """
   Gets the current active player from the game queue.
 
@@ -460,6 +467,9 @@ defmodule Songy.Core.Game do
   def get_current_player(%__MODULE__{turn: turn}) do
     Turn.get_current_player(turn)
   end
+
+  @spec get_status(t()) :: status()
+  def get_status(%__MODULE__{status: status}), do: status
 
   defp user_already_joined?(%__MODULE__{participants: participants}, %User{uuid: uuid}) do
     Enum.any?(participants, &(&1.uuid == uuid))
