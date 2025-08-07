@@ -197,7 +197,7 @@ defmodule Songy.Boundary.GameSession do
   @spec pause_playback(String.t(), :spotify) :: {:ok, Game.t()} | {:error, atom()}
   def pause_playback(game_uuid, :spotify) do
     with {:ok, game} <- lookup_game_session(game_uuid),
-         :in_progress <- game.status,
+         :in_progress <- Game.get_status(game),
          {:ok, credentials} <- get_credentials(game_uuid),
          {:ok, :playback_paused} <- Spotify.pause_playback(credentials) do
       GenServer.call(via(game_uuid), :pause_playback)
@@ -248,7 +248,7 @@ defmodule Songy.Boundary.GameSession do
   @spec update_provider(String.t(), map()) :: {:ok, Game.t()} | {:error, atom()}
   def update_provider(game_uuid, attrs) do
     with {:ok, game} <- lookup_game_session(game_uuid),
-         %Provider{} = provider <- Provider.update(game.provider, attrs) do
+         %Provider{} = provider <- Provider.update(Game.get_provider(game), attrs) do
       GenServer.call(via(game_uuid), {:update_provider, provider})
     else
       error -> error
@@ -475,7 +475,7 @@ defmodule Songy.Boundary.GameSession do
 
   @impl GenServer
   def handle_call(:start_game_session, _from, game) do
-    with :waiting <- game.status,
+    with :waiting <- Game.get_status(game),
          {:ok, credentials} <- get_credentials(game.uuid),
          {:ok, random_track} <- Spotify.search_random_track(credentials),
          track <- Trackable.to_track(random_track),

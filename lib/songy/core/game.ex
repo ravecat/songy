@@ -471,6 +471,18 @@ defmodule Songy.Core.Game do
   @spec get_status(t()) :: status()
   def get_status(%__MODULE__{status: status}), do: status
 
+  @doc """
+  Gets the provider for the game.
+
+  ## Examples
+      iex> provider = Provider.new(:spotify)
+      iex> game = Game.new("user123", provider: provider)
+      iex> Game.get_provider(game)
+      %Provider{id: :spotify}
+  """
+  @spec get_provider(t()) :: Provider.t()
+  def get_provider(%__MODULE__{provider: provider}), do: provider
+
   defp user_already_joined?(%__MODULE__{participants: participants}, %User{uuid: uuid}) do
     Enum.any?(participants, &(&1.uuid == uuid))
   end

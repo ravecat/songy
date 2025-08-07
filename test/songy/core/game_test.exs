@@ -301,6 +301,26 @@ defmodule Songy.Core.GameTest do
     end
   end
 
+  describe "get_provider/1" do
+    test "returns provider for game" do
+      provider = Provider.new(:spotify, %{device_id: "test-device"})
+      game = Game.new("owner123", provider: provider)
+
+      assert Game.get_provider(game) == provider
+    end
+
+    test "returns provider with different configurations" do
+      provider1 = Provider.new(:spotify)
+      provider2 = Provider.new(:spotify, %{device_id: "device123", access_token: "token456"})
+
+      game1 = Game.new("owner123", provider: provider1)
+      game2 = Game.new("owner456", provider: provider2)
+
+      assert Game.get_provider(game1) == provider1
+      assert Game.get_provider(game2) == provider2
+    end
+  end
+
   describe "start_playback/1" do
     test "starts playback for the game" do
       provider = Provider.new(:spotify)
