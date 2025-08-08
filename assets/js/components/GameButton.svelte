@@ -3,13 +3,37 @@
   import { getChannelContext } from "@shared/context/channel.js";
 
   const { channel } = $derived(getChannelContext());
+  let isLoading = $state(false);
+
+  const handleStartGame = () => {
+    isLoading = true;
+
+    channel
+      .push("start_game", {})
+      .receive("ok", () => {
+        isLoading = false;
+      })
+      .receive("error", () => {
+        isLoading = false;
+      });
+  };
 </script>
 
 <button
   in:slide={{ duration: 400 }}
   out:fly={{ y: 400, duration: 400 }}
-  class="w-full px-8 py-4 bg-white text-purple-600 rounded-lg font-bold text-xl hover:bg-white/90 transition-all duration-300 hover:slide-105 shadow-2xl border-4 border-white/50"
-  onclick={() => channel.push("start_game", {})}
+  class="btn w-full"
+  onclick={handleStartGame}
+  disabled={isLoading}
 >
-  Start
+  {#if isLoading}
+    <div class="flex items-center justify-center space-x-2">
+      <div
+        class="w-5 h-5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"
+      ></div>
+      <span>Starting...</span>
+    </div>
+  {:else}
+    Start
+  {/if}
 </button>

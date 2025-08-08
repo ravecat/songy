@@ -1,7 +1,7 @@
 <script>
-  import Scope from "@/components/Scope.svelte";
+  import Scope from "@components/Scope.svelte";
   import Channel from "@components/Channel.svelte";
-  import Dashboard from "@components/Dashboard.svelte";
+  import GameView from "@components/GameView.svelte";
   import Spotify from "@components/Spotify.svelte";
 
   let { roomId } = $props();
@@ -10,7 +10,7 @@
 <Channel topic={`room:${roomId}`}>
   <Spotify>
     <Scope>
-      <Dashboard />
+      <GameView />
     </Scope>
   </Spotify>
 </Channel>
