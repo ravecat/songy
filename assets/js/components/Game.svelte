@@ -1,5 +1,4 @@
 <script>
-  import { getChannelContext } from "@shared/context/channel.js";
   import Participants from "@components/Participants.svelte";
   import PlayerButton from "@components/PlayerButton.svelte";
   import CurrentTrack from "@components/CurrentTrack.svelte";

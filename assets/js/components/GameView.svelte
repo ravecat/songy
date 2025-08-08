@@ -23,11 +23,10 @@
 
 <style>
   .wrapper {
-    min-height: 100vh;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    background: linear-gradient(to bottom right, #c084fc, #ec4899, #ef4444);
+    min-height: 100vh;
   }
 
   .content {
