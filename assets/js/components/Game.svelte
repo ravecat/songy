@@ -4,20 +4,13 @@
   import PlayerButton from "@components/PlayerButton.svelte";
   import CurrentTrack from "@components/CurrentTrack.svelte";
   import ParticipantTimeline from "@components/ParticipantTimeline.svelte";
-  import Spinner from "@components/Spinner.svelte";
-
-  const { state } = $derived(getChannelContext());
 </script>
 
 <div class="mx-auto min-w-[24rem] max-w-[36rem] space-y-2">
-  {#if state}
-    <Participants />
-    <PlayerButton />
-    <div class="flex items-center justify-center gap-4 py-4">
-      <CurrentTrack />
-      <ParticipantTimeline />
-    </div>
-  {:else}
-    <Spinner />
-  {/if}
+  <Participants />
+  <PlayerButton />
+  <div class="flex items-center justify-center gap-4 py-4">
+    <CurrentTrack />
+    <ParticipantTimeline />
+  </div>
 </div>
