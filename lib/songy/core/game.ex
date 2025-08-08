@@ -405,17 +405,17 @@ defmodule Songy.Core.Game do
   def valid_timeline?([%Track{}, %Track{} | _rest]), do: false
 
   @doc """
-  Moves to the next turn in the game.
+  Moves to the next phase in the game.
 
   ## Parameters
     * `game` - The game to update
 
   ## Returns
-    * updated_game - Game with next turn
+    * updated_game - Game with next phase
   """
-  @spec next_turn(t()) :: t()
-  def next_turn(%__MODULE__{turn: turn} = game) do
-    %{game | turn: Turn.next_turn(turn)}
+  @spec next_phase(t()) :: t()
+  def next_phase(%__MODULE__{turn: turn} = game) do
+    %{game | turn: Turn.next_phase(turn)}
   end
 
   @doc """

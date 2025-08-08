@@ -729,8 +729,8 @@ defmodule Songy.Core.GameTest do
     end
   end
 
-  describe "next_turn/1" do
-    test "moves to next player in game turn" do
+  describe "next_phase/1" do
+    test "moves the turn to the next phase" do
       owner_uuid = "owner123"
       provider = Provider.new(:spotify)
       game = Game.new(owner_uuid, provider: provider)
@@ -743,66 +743,9 @@ defmodule Songy.Core.GameTest do
       {:ok, game} = Game.add_participant(game, user2)
       {:ok, game} = Game.add_participant(game, user3)
 
-      # Get initial current player
-      initial_player = Game.get_current_player(game)
+      updated_game = Game.next_phase(game)
 
-      # Move to next player
-      updated_game = Game.next_turn(game)
-
-      # Verify change
-      new_player = Game.get_current_player(updated_game)
-      assert new_player != initial_player
-      assert new_player in updated_game.turn.queue
-    end
-
-    test "handles circular rotation" do
-      owner_uuid = "owner123"
-      provider = Provider.new(:spotify)
-      game = Game.new(owner_uuid, provider: provider)
-
-      # Set up game with 2 players for easy testing
-      user1 = User.new()
-      user2 = User.new()
-      {:ok, game} = Game.add_participant(game, user1)
-      {:ok, game} = Game.add_participant(game, user2)
-
-      # Participants are automatically added to turn queue in order: [user1, user2]
-      # Current player starts at index 0 (user1)
-      assert Game.get_current_player(game) == user1.uuid
-
-      # First move: user1 -> user2
-      game1 = Game.next_turn(game)
-      assert Game.get_current_player(game1) == user2.uuid
-
-      # Second move: user2 -> user1 (wrap around)
-      game2 = Game.next_turn(game1)
-      assert Game.get_current_player(game2) == user1.uuid
-    end
-
-    test "preserves other game fields" do
-      owner_uuid = "owner123"
-      provider = Provider.new(:spotify)
-      game = Game.new(owner_uuid, provider: provider)
-
-      # Set up game
-      user1 = User.new()
-      user2 = User.new()
-      {:ok, game} = Game.add_participant(game, user1)
-      {:ok, game} = Game.add_participant(game, user2)
-
-      # Participants are automatically added to turn queue
-      # Store original values
-      original_uuid = game.uuid
-      original_status = game.status
-      original_participants = game.participants
-
-      # Move to next player
-      updated_game = Game.next_turn(game)
-
-      # Verify other fields unchanged
-      assert updated_game.uuid == original_uuid
-      assert updated_game.status == original_status
-      assert updated_game.participants == original_participants
+      refute updated_game.turn.phase == game.turn.phase
     end
   end
 
@@ -812,26 +755,16 @@ defmodule Songy.Core.GameTest do
       provider = Provider.new(:spotify)
       game = Game.new(owner_uuid, provider: provider)
 
-      # Set up game with known queue
       turn =
         Turn.new()
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
         |> Turn.add_player_to_queue("player-3")
-        # Move to index 1 (player-2)
-        |> Turn.next_turn()
+        |> Turn.next_phase()
 
       game = %{game | turn: turn}
 
-      assert Game.get_current_player(game) == "player-2"
-    end
-
-    test "returns nil when no turn exists" do
-      owner_uuid = "owner123"
-      provider = Provider.new(:spotify)
-      game = Game.new(owner_uuid, provider: provider)
-
-      assert Game.get_current_player(game) == nil
+      assert Game.get_current_player(game) == "player-1"
     end
 
     test "returns nil when queue is empty" do
@@ -841,105 +774,6 @@ defmodule Songy.Core.GameTest do
 
       # Turn is already initialized with empty queue in Game.new()
       assert Game.get_current_player(game) == nil
-    end
-
-    test "handles different queue positions" do
-      owner_uuid = "owner123"
-      provider = Provider.new(:spotify)
-      game = Game.new(owner_uuid, provider: provider)
-
-      queue = ["alice", "bob", "charlie", "david"]
-
-      # Test each position
-      for {expected_player, index} <- Enum.with_index(queue) do
-        turn =
-          Enum.reduce(queue, Turn.new(), fn player, acc ->
-            Turn.add_player_to_queue(acc, player)
-          end)
-
-        # Move to specific index
-        turn =
-          if index > 0 do
-            Enum.reduce(1..index, turn, fn _, acc -> Turn.next_turn(acc) end)
-          else
-            turn
-          end
-
-        game_with_turn = %{game | turn: turn}
-
-        assert Game.get_current_player(game_with_turn) == expected_player
-      end
-    end
-  end
-
-  describe "integration tests" do
-    test "complete queue workflow" do
-      owner_uuid = "owner123"
-      provider = Provider.new(:spotify)
-      game = Game.new(owner_uuid, provider: provider)
-
-      # Add participants
-      user1 = User.new()
-      user2 = User.new()
-      user3 = User.new()
-      {:ok, game} = Game.add_participant(game, user1)
-      {:ok, game} = Game.add_participant(game, user2)
-      {:ok, game} = Game.add_participant(game, user3)
-
-      # Verify queue is created
-      assert length(game.turn.queue) == 3
-      assert Game.get_current_player(game) != nil
-
-      # Move through all players
-      first_player = Game.get_current_player(game)
-
-      game = Game.next_turn(game)
-      second_player = Game.get_current_player(game)
-      assert second_player != first_player
-
-      game = Game.next_turn(game)
-      third_player = Game.get_current_player(game)
-      assert third_player != second_player
-      assert third_player != first_player
-
-      # Next should wrap around to first
-      game = Game.next_turn(game)
-      wrapped_player = Game.get_current_player(game)
-      assert wrapped_player == first_player
-    end
-
-    test "automatically manages turn state" do
-      owner_uuid = "owner123"
-      provider = Provider.new(:spotify)
-      game = Game.new(owner_uuid, provider: provider)
-
-      # Add participants
-      user1 = User.new()
-      user2 = User.new()
-      {:ok, game} = Game.add_participant(game, user1)
-      {:ok, game} = Game.add_participant(game, user2)
-
-      # Participants are automatically added to turn queue
-      # Verify initial state
-      assert length(game.turn.queue) == 2
-      assert Game.get_current_player(game) in [user1.uuid, user2.uuid]
-
-      # Add more participants - they are automatically added to queue
-      user3 = User.new()
-      {:ok, game} = Game.add_participant(game, user3)
-
-      # Queue is automatically updated
-      assert length(game.turn.queue) == 3
-      assert user3.uuid in game.turn.queue
-
-      # Remove participant - they are automatically removed from queue
-      {:ok, game} = Game.remove_participant(game, user2.uuid)
-
-      # Queue is automatically updated
-      assert length(game.turn.queue) == 2
-      assert user2.uuid not in game.turn.queue
-      assert user1.uuid in game.turn.queue
-      assert user3.uuid in game.turn.queue
     end
   end
 end

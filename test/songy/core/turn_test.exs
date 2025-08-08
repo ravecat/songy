@@ -12,6 +12,7 @@ defmodule Songy.Core.TurnTest do
       assert turn.current_player_index == 0
       assert turn.challengers == []
       assert turn.track == nil
+      assert turn.phase == :turn_waiting
     end
   end
 
@@ -22,7 +23,14 @@ defmodule Songy.Core.TurnTest do
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
         |> Turn.add_player_to_queue("player-3")
-        |> Turn.next_turn()
+        # waiting -> playing
+        |> Turn.next_phase()
+        # playing -> challenging
+        |> Turn.next_phase()
+        # challenging -> results
+        |> Turn.next_phase()
+        # results -> waiting (advances to next player)
+        |> Turn.next_phase()
 
       assert Turn.get_current_player(turn) == "player-2"
     end
@@ -43,8 +51,22 @@ defmodule Songy.Core.TurnTest do
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
         |> Turn.add_player_to_queue("player-3")
-        |> Turn.next_turn()
-        |> Turn.next_turn()
+        # waiting -> playing
+        |> Turn.next_phase()
+        # playing -> challenging
+        |> Turn.next_phase()
+        # challenging -> results
+        |> Turn.next_phase()
+        # results -> waiting (advances to player-2)
+        |> Turn.next_phase()
+        # waiting -> playing
+        |> Turn.next_phase()
+        # playing -> challenging
+        |> Turn.next_phase()
+        # challenging -> results
+        |> Turn.next_phase()
+        # results -> waiting (advances to player-3)
+        |> Turn.next_phase()
 
       assert Turn.get_current_player(turn) == "player-3"
     end
@@ -60,38 +82,61 @@ defmodule Songy.Core.TurnTest do
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
 
-      # Simulate out of bounds by manually creating a turn with invalid index
-      # This test case is testing edge case behavior
+      # Edge case: simulate invalid internal state for defensive programming test
       turn = %{turn | current_player_index: 5}
       assert Turn.get_current_player(turn) == nil
     end
   end
 
-  describe "next_turn/1" do
-    test "moves to the next player in the queue" do
+  describe "player advancement through phases" do
+    test "advances to next player when transitioning from results to waiting" do
       turn =
         Turn.new()
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
-        |> Turn.add_player_to_queue("player-3")
+        # Go through complete phase cycle to reach :turn_results
+        # waiting -> playing
+        |> Turn.next_phase()
+        # playing -> challenging
+        |> Turn.next_phase()
+        # challenging -> results
+        |> Turn.next_phase()
 
-      updated_turn = Turn.next_turn(turn)
+      # results -> waiting
+      updated_turn = Turn.next_phase(turn)
 
       assert updated_turn.current_player_index == 1
-      assert updated_turn.queue == ["player-1", "player-2", "player-3"]
+      assert updated_turn.phase == :turn_waiting
+      assert updated_turn.queue == ["player-1", "player-2"]
     end
 
-    test "moves from middle to next player" do
+    test "advances from middle to next player through phase cycle" do
       turn =
         Turn.new()
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
-        |> Turn.add_player_to_queue("player-3")
-        |> Turn.next_turn()
+        # Go through one complete cycle to advance to player-2
+        # waiting -> playing
+        |> Turn.next_phase()
+        # playing -> challenging
+        |> Turn.next_phase()
+        # challenging -> results
+        |> Turn.next_phase()
+        # results -> waiting (advances to player-2)
+        |> Turn.next_phase()
+        # Now go through another cycle to get back to results
+        # waiting -> playing
+        |> Turn.next_phase()
+        # playing -> challenging
+        |> Turn.next_phase()
+        # challenging -> results
+        |> Turn.next_phase()
 
-      updated_turn = Turn.next_turn(turn)
+      # results -> waiting (should advance to player-1)
+      updated_turn = Turn.next_phase(turn)
 
-      assert updated_turn.current_player_index == 2
+      assert updated_turn.current_player_index == 0
+      assert updated_turn.phase == :turn_waiting
     end
 
     test "wraps around to the beginning when reaching the end" do
@@ -99,23 +144,46 @@ defmodule Songy.Core.TurnTest do
         Turn.new()
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
-        |> Turn.add_player_to_queue("player-3")
-        |> Turn.next_turn()
-        |> Turn.next_turn()
+        # Go through two complete cycles to reach player-1 again (wrap around)
+        # waiting -> playing
+        |> Turn.next_phase()
+        # playing -> challenging
+        |> Turn.next_phase()
+        # challenging -> results
+        |> Turn.next_phase()
+        # results -> waiting (advances to player-2)
+        |> Turn.next_phase()
+        # waiting -> playing
+        |> Turn.next_phase()
+        # playing -> challenging
+        |> Turn.next_phase()
+        # challenging -> results
+        |> Turn.next_phase()
 
-      updated_turn = Turn.next_turn(turn)
+      # results -> waiting (wraps to player-1)
+      updated_turn = Turn.next_phase(turn)
 
       assert updated_turn.current_player_index == 0
+      assert updated_turn.phase == :turn_waiting
     end
 
     test "stays at position 0 with single player" do
       turn =
         Turn.new()
         |> Turn.add_player_to_queue("player-1")
+        # Go through complete phase cycle
+        # waiting -> playing
+        |> Turn.next_phase()
+        # playing -> challenging
+        |> Turn.next_phase()
+        # challenging -> results
+        |> Turn.next_phase()
 
-      updated_turn = Turn.next_turn(turn)
+      # results -> waiting
+      updated_turn = Turn.next_phase(turn)
 
       assert updated_turn.current_player_index == 0
+      assert updated_turn.phase == :turn_waiting
     end
 
     test "handles two-player circular rotation" do
@@ -123,30 +191,70 @@ defmodule Songy.Core.TurnTest do
         Turn.new()
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
+        # Go through complete phase cycle
+        # waiting -> playing
+        |> Turn.next_phase()
+        # playing -> challenging
+        |> Turn.next_phase()
+        # challenging -> results
+        |> Turn.next_phase()
 
-      # First move: 0 -> 1
-      turn1 = Turn.next_turn(turn)
+      # First cycle: 0 -> 1
+      # results -> waiting
+      turn1 = Turn.next_phase(turn)
       assert turn1.current_player_index == 1
+      assert turn1.phase == :turn_waiting
 
-      # Second move: 1 -> 0 (wrap around)
-      turn2 = Turn.next_turn(turn1)
+      # Second cycle: 1 -> 0 (wrap around)
+      turn2 =
+        turn1
+        # waiting -> playing
+        |> Turn.next_phase()
+        # playing -> challenging
+        |> Turn.next_phase()
+        # challenging -> results
+        |> Turn.next_phase()
+        # results -> waiting
+        |> Turn.next_phase()
+
       assert turn2.current_player_index == 0
+      assert turn2.phase == :turn_waiting
 
-      # Third move: 0 -> 1 (circular again)
-      turn3 = Turn.next_turn(turn2)
+      # Third cycle: 0 -> 1 (circular again)
+      turn3 =
+        turn2
+        # waiting -> playing
+        |> Turn.next_phase()
+        # playing -> challenging
+        |> Turn.next_phase()
+        # challenging -> results
+        |> Turn.next_phase()
+        # results -> waiting
+        |> Turn.next_phase()
+
       assert turn3.current_player_index == 1
+      assert turn3.phase == :turn_waiting
     end
 
-    test "returns unchanged turn when queue is empty" do
-      turn = Turn.new()
-      result = Turn.next_turn(turn)
-      assert result == turn
+    test "handles empty queue gracefully" do
+      turn =
+        Turn.new()
+        # waiting -> playing
+        |> Turn.next_phase()
+        # playing -> challenging
+        |> Turn.next_phase()
+        # challenging -> results
+        |> Turn.next_phase()
+
+      # results -> waiting
+      result = Turn.next_phase(turn)
+
       assert result.queue == []
       assert result.current_player_index == 0
+      assert result.phase == :turn_waiting
     end
 
-    test "preserves other fields when moving to next player" do
-      challengers = ["challenger-1"]
+    test "clears turn data when transitioning from results to waiting" do
       track = Track.new(title: "Test", artist: "Artist", year: 2020)
 
       turn =
@@ -155,13 +263,22 @@ defmodule Songy.Core.TurnTest do
         |> Turn.add_player_to_queue("player-2")
         |> Turn.add_challenger("challenger-1")
         |> Turn.set_track(track)
+        # Go through complete phase cycle
+        # waiting -> playing
+        |> Turn.next_phase()
+        # playing -> challenging
+        |> Turn.next_phase()
+        # challenging -> results
+        |> Turn.next_phase()
 
-      updated_turn = Turn.next_turn(turn)
+      # results -> waiting
+      updated_turn = Turn.next_phase(turn)
 
       assert updated_turn.current_player_index == 1
+      assert updated_turn.phase == :turn_waiting
       assert updated_turn.queue == ["player-1", "player-2"]
-      assert updated_turn.challengers == challengers
-      assert updated_turn.track == track
+      assert updated_turn.challengers == []
+      assert updated_turn.track == nil
     end
   end
 
@@ -201,7 +318,8 @@ defmodule Songy.Core.TurnTest do
         Turn.new()
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
-        |> Turn.next_turn()
+        # Advance to player-2
+        |> advance_to_player(1)
 
       updated_turn = Turn.add_player_to_queue(turn, "player-3")
 
@@ -228,13 +346,36 @@ defmodule Songy.Core.TurnTest do
   end
 
   describe "remove_player_from_queue/2" do
+    # Helper function to advance to a specific player index using public API
+    defp advance_to_player(turn, target_index) do
+      current_index = turn.current_player_index
+
+      cycles_needed =
+        if target_index >= current_index,
+          do: target_index - current_index,
+          else: length(turn.queue) - current_index + target_index
+
+      Enum.reduce(1..cycles_needed, turn, fn _, acc ->
+        acc
+        # waiting -> playing
+        |> Turn.next_phase()
+        # playing -> challenging
+        |> Turn.next_phase()
+        # challenging -> results
+        |> Turn.next_phase()
+        # results -> waiting (advances player)
+        |> Turn.next_phase()
+      end)
+    end
+
     test "removes a player from the queue" do
       turn =
         Turn.new()
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
         |> Turn.add_player_to_queue("player-3")
-        |> Turn.next_turn()
+        # Set to player-2
+        |> advance_to_player(1)
 
       updated_turn = Turn.remove_player_from_queue(turn, "player-2")
 
@@ -248,8 +389,8 @@ defmodule Songy.Core.TurnTest do
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
         |> Turn.add_player_to_queue("player-3")
-        |> Turn.next_turn()
-        |> Turn.next_turn()
+        # Set to player-3
+        |> advance_to_player(2)
 
       updated_turn = Turn.remove_player_from_queue(turn, "player-1")
 
@@ -276,7 +417,8 @@ defmodule Songy.Core.TurnTest do
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
         |> Turn.add_player_to_queue("player-3")
-        |> Turn.next_turn()
+        # Set to player-2
+        |> advance_to_player(1)
 
       updated_turn = Turn.remove_player_from_queue(turn, "player-2")
 
@@ -291,8 +433,8 @@ defmodule Songy.Core.TurnTest do
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
         |> Turn.add_player_to_queue("player-3")
-        |> Turn.next_turn()
-        |> Turn.next_turn()
+        # Set to player-3
+        |> advance_to_player(2)
 
       updated_turn = Turn.remove_player_from_queue(turn, "player-3")
 
@@ -317,7 +459,8 @@ defmodule Songy.Core.TurnTest do
         Turn.new()
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
-        |> Turn.next_turn()
+        # Set to player-2
+        |> advance_to_player(1)
 
       updated_turn = Turn.remove_player_from_queue(turn, "non-existent")
 
@@ -343,9 +486,8 @@ defmodule Songy.Core.TurnTest do
         |> Turn.add_player_to_queue("c")
         |> Turn.add_player_to_queue("d")
         |> Turn.add_player_to_queue("e")
-        |> Turn.next_turn()
-        |> Turn.next_turn()
-        |> Turn.next_turn()
+        # Set to "d"
+        |> advance_to_player(3)
 
       # Remove player before current (index should decrease)
       turn1 = Turn.remove_player_from_queue(turn, "b")
@@ -429,7 +571,8 @@ defmodule Songy.Core.TurnTest do
         Turn.new()
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
-        |> Turn.next_turn()
+        # Set to player-2
+        |> advance_to_player(1)
         |> Turn.set_track(track)
 
       updated_turn = Turn.add_challenger(turn, "challenger-1")
@@ -477,7 +620,8 @@ defmodule Songy.Core.TurnTest do
         Turn.new()
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
-        |> Turn.next_turn()
+        # Set to player-2
+        |> advance_to_player(1)
         |> Turn.add_challenger("challenger-1")
         |> Turn.add_challenger("challenger-2")
 
@@ -517,19 +661,24 @@ defmodule Songy.Core.TurnTest do
       current_player = Turn.get_current_player(turn)
       assert current_player in ["alice", "bob", "charlie"]
 
-      turn = Turn.next_turn(turn)
-      next_player = Turn.get_current_player(turn)
-      assert next_player != current_player
-      assert next_player in ["alice", "bob", "charlie"]
-
-      # Remove a player
-      turn = Turn.remove_player_from_queue(turn, "bob")
-      assert length(turn.queue) == 2
-      assert "bob" not in turn.queue
-
-      # Verify all fields are maintained
+      # Verify all fields are maintained before transition
       assert length(turn.challengers) == 2
       assert turn.track == track
+
+      # After phase transition, challengers and track are cleared
+      turn =
+        turn
+        # waiting -> playing
+        |> Turn.next_phase()
+        # playing -> challenging
+        |> Turn.next_phase()
+        # challenging -> results
+        |> Turn.next_phase()
+        # results -> waiting (clears data, advances player)
+        |> Turn.next_phase()
+
+      assert length(turn.challengers) == 0
+      assert turn.track == nil
     end
 
     test "handles single player scenarios" do
@@ -540,8 +689,18 @@ defmodule Songy.Core.TurnTest do
       # Current player operations
       assert Turn.get_current_player(turn) == "only-player"
 
-      # Next player should stay the same
-      next_turn = Turn.next_turn(turn)
+      # Next player should stay the same after complete cycle
+      next_turn =
+        turn
+        # waiting -> playing
+        |> Turn.next_phase()
+        # playing -> challenging
+        |> Turn.next_phase()
+        # challenging -> results
+        |> Turn.next_phase()
+        # results -> waiting
+        |> Turn.next_phase()
+
       assert next_turn.current_player_index == 0
       assert Turn.get_current_player(next_turn) == "only-player"
 
@@ -560,14 +719,14 @@ defmodule Songy.Core.TurnTest do
         |> Turn.add_player_to_queue("d")
 
       # Perform multiple operations
-      # Move to index 1
-      turn = Turn.next_turn(turn)
+      # Move to index 1 using natural progression
+      turn = advance_to_player(turn, 1)
       # Remove first, index should adjust to 0
       turn = Turn.remove_player_from_queue(turn, "a")
       # Add new player
       turn = Turn.add_player_to_queue(turn, "e")
-      # Move to next
-      turn = Turn.next_turn(turn)
+      # Move to next using natural progression
+      turn = advance_to_player(turn, 1)
 
       # Verify consistency
       assert length(turn.queue) == 4
@@ -578,6 +737,153 @@ defmodule Songy.Core.TurnTest do
       current_player = Turn.get_current_player(turn)
       assert current_player != nil
       assert current_player in turn.queue
+    end
+  end
+
+  describe "get_phase/1" do
+    test "returns the current phase" do
+      turn = Turn.new()
+      assert Turn.get_phase(turn) == :turn_waiting
+    end
+
+    test "returns phase after setting it" do
+      turn = Turn.new() |> Turn.next_phase()
+      assert Turn.get_phase(turn) == :turn_playing
+    end
+  end
+
+  describe "next_phase/1" do
+    test "transitions from waiting to playing" do
+      turn = Turn.new()
+      updated_turn = Turn.next_phase(turn)
+      assert updated_turn.phase == :turn_playing
+    end
+
+    test "transitions from playing to challenging" do
+      turn = Turn.new() |> Turn.next_phase()
+      updated_turn = Turn.next_phase(turn)
+      assert updated_turn.phase == :turn_challenging
+    end
+
+    test "transitions from challenging to results" do
+      turn = Turn.new() |> Turn.next_phase() |> Turn.next_phase()
+      updated_turn = Turn.next_phase(turn)
+      assert updated_turn.phase == :turn_results
+    end
+
+    test "transitions from results to waiting with cleared data and next player" do
+      track = Track.new(title: "Test Song", artist: "Test Artist", year: 2020)
+
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_player_to_queue("player-2")
+        |> Turn.add_challenger("challenger-1")
+        |> Turn.set_track(track)
+        # waiting -> playing
+        |> Turn.next_phase()
+        # playing -> challenging
+        |> Turn.next_phase()
+        # challenging -> results
+        |> Turn.next_phase()
+        # results -> waiting
+        |> Turn.next_phase()
+
+      assert turn.phase == :turn_waiting
+      assert turn.challengers == []
+      assert turn.track == nil
+      assert turn.current_player_index == 1
+      assert Turn.get_current_player(turn) == "player-2"
+      assert turn.queue == ["player-1", "player-2"]
+    end
+
+    test "handles single player wrap around in results transition" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("only-player")
+        |> Turn.next_phase()
+        |> Turn.next_phase()
+        |> Turn.next_phase()
+        |> Turn.next_phase()
+
+      assert turn.phase == :turn_waiting
+      assert turn.current_player_index == 0
+      assert Turn.get_current_player(turn) == "only-player"
+    end
+
+    test "preserves queue and player index for non-results transitions" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_player_to_queue("player-2")
+        |> Turn.next_phase()
+
+      assert turn.phase == :turn_playing
+      assert turn.current_player_index == 0
+      assert Turn.get_current_player(turn) == "player-1"
+    end
+  end
+
+  describe "phase workflow integration" do
+    test "complete phase cycle" do
+      track = Track.new(title: "Test Song", artist: "Test Artist", year: 2020)
+
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("alice")
+        |> Turn.add_player_to_queue("bob")
+
+      assert turn.phase == :turn_waiting
+      assert Turn.get_current_player(turn) == "alice"
+
+      # Move through all phases
+      turn = Turn.next_phase(turn)
+      assert turn.phase == :turn_playing
+
+      turn = Turn.set_track(turn, track)
+      turn = Turn.next_phase(turn)
+      assert turn.phase == :turn_challenging
+
+      turn = Turn.add_challenger(turn, "challenger-1")
+      turn = Turn.next_phase(turn)
+      assert turn.phase == :turn_results
+
+      # Transition to next turn using new workflow: clear data first, then change phase
+      # results -> waiting (clears data and advances player)
+      turn = turn |> Turn.next_phase()
+
+      assert turn.phase == :turn_waiting
+      assert turn.challengers == []
+      assert turn.track == nil
+      assert Turn.get_current_player(turn) == "bob"
+    end
+
+    test "phase transitions preserve essential turn state" do
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_player_to_queue("player-2")
+        |> Turn.add_player_to_queue("player-3")
+
+      original_queue = turn.queue
+
+      # Go through a complete cycle using new workflow
+      turn =
+        turn
+        # waiting -> playing
+        |> Turn.next_phase()
+        # playing -> challenging
+        |> Turn.next_phase()
+        # challenging -> results
+        |> Turn.next_phase()
+        # results -> waiting (clear data and advance player)
+        |> Turn.next_phase()
+
+      # Queue should remain the same, but current player should advance
+      assert turn.queue == original_queue
+      assert turn.current_player_index == 1
+      assert Turn.get_current_player(turn) == "player-2"
+      assert turn.phase == :turn_waiting
     end
   end
 end

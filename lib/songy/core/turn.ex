@@ -13,13 +13,16 @@ defmodule Songy.Core.Turn do
 
   alias Songy.Core.Track
 
-  @derive {Jason.Encoder, only: [:queue, :current_player_index, :challengers, :track]}
+  @type phase :: :turn_waiting | :turn_playing | :turn_challenging | :turn_results
+
+  @derive {Jason.Encoder, only: [:queue, :current_player_index, :challengers, :track, :phase]}
 
   typedstruct do
     field :queue, list(String.t()), default: []
     field :current_player_index, non_neg_integer(), default: 0
     field :challengers, list(String.t()), default: []
     field :track, Track.t()
+    field :phase, phase(), default: :turn_waiting
   end
 
   @doc """
@@ -27,7 +30,7 @@ defmodule Songy.Core.Turn do
 
   ## Examples
       iex> Turn.new()
-      %Songy.Core.Turn{queue: [], current_player_index: 0, challengers: [], track: nil}
+      %Songy.Core.Turn{queue: [], current_player_index: 0, challengers: [], track: nil, phase: :turn_waiting}
   """
   @spec new() :: t()
   def new, do: %__MODULE__{}
@@ -117,36 +120,6 @@ defmodule Songy.Core.Turn do
   end
 
   @doc """
-  Moves to the next turn in the game.
-
-  ## Parameters
-    * `turn` - The current turn state
-
-  ## Returns
-    * Updated turn with next player as current, or unchanged turn if queue is empty
-
-  ## Examples
-      iex> turn = Turn.new(queue: ["player-1", "player-2", "player-3"], current_player_index: 0)
-      iex> Turn.next_turn(turn)
-      %Songy.Core.Turn{queue: ["player-1", "player-2", "player-3"], current_player_index: 1, challengers: [], track: nil}
-
-      iex> turn = Turn.new(queue: ["player-1"], current_player_index: 0)
-      iex> Turn.next_turn(turn)
-      %Songy.Core.Turn{queue: ["player-1"], current_player_index: 0, challengers: [], track: nil}
-
-      iex> turn = Turn.new(queue: [], current_player_index: 0)
-      iex> Turn.next_turn(turn)
-      %Songy.Core.Turn{queue: [], current_player_index: 0, challengers: [], track: nil}
-  """
-  @spec next_turn(t()) :: t()
-  def next_turn(%__MODULE__{queue: []} = turn), do: turn
-
-  def next_turn(%__MODULE__{queue: queue, current_player_index: index} = turn) do
-    next_index = rem(index + 1, length(queue))
-    %{turn | current_player_index: next_index}
-  end
-
-  @doc """
   Adds a player to the end of the queue.
 
   ## Parameters
@@ -213,5 +186,102 @@ defmodule Songy.Core.Turn do
 
         %{turn | queue: new_queue, current_player_index: adjusted_index}
     end
+  end
+
+  @doc """
+  Gets the current phase of the turn.
+
+  ## Parameters
+    * `turn` - The current turn state
+
+  ## Returns
+    * Current phase atom
+
+  ## Examples
+      iex> turn = Turn.new()
+      iex> Turn.get_phase(turn)
+      :turn_waiting
+
+      iex> turn = Turn.new() |> Turn.next_phase()
+      iex> Turn.get_phase(turn)
+      :turn_playing
+  """
+  @spec get_phase(t()) :: phase()
+  def get_phase(%__MODULE__{phase: phase}), do: phase
+
+  @doc false
+  @spec clear_challengers_data(t()) :: t()
+  defp clear_challengers_data(%__MODULE__{} = turn) do
+    %{turn | challengers: []}
+  end
+
+  @doc false
+  @spec clear_track_data(t()) :: t()
+  defp clear_track_data(%__MODULE__{} = turn) do
+    %{turn | track: nil}
+  end
+
+  @doc false
+  @spec next_turn_player(t()) :: t()
+  defp next_turn_player(%__MODULE__{queue: []} = turn), do: turn
+
+  defp next_turn_player(%__MODULE__{queue: queue, current_player_index: index} = turn) do
+    next_index = rem(index + 1, length(queue))
+    %{turn | current_player_index: next_index}
+  end
+
+  @doc """
+  Moves to the next phase in the turn workflow.
+
+  Automatically handles the transition logic:
+  - :turn_waiting -> :turn_playing
+  - :turn_playing -> :turn_challenging
+  - :turn_challenging -> :turn_results
+  - :turn_results -> :turn_waiting (clears data and advances to next player)
+
+  ## Parameters
+    * `turn` - The current turn state
+
+  ## Returns
+    * Updated turn with next phase
+
+  ## Examples
+      iex> turn = Turn.new()
+      iex> Turn.next_phase(turn)
+      %Songy.Core.Turn{phase: :turn_playing, ...}
+
+      iex> turn = Turn.new() |> Turn.next_phase()
+      iex> Turn.next_phase(turn)
+      %Songy.Core.Turn{phase: :turn_challenging, ...}
+
+      iex> # Complete cycle with player advancement
+      iex> turn = Turn.new()
+      iex>   |> Turn.add_player_to_queue("alice")
+      iex>   |> Turn.add_player_to_queue("bob")
+      iex>   |> Turn.next_phase()  # waiting -> playing
+      iex>   |> Turn.next_phase()  # playing -> challenging
+      iex>   |> Turn.next_phase()  # challenging -> results
+      iex>   |> Turn.next_phase()  # results -> waiting (next player)
+      iex> Turn.get_current_player(turn)
+      "bob"
+  """
+  @spec next_phase(t()) :: t()
+  def next_phase(%__MODULE__{phase: :turn_waiting} = turn) do
+    %{turn | phase: :turn_playing}
+  end
+
+  def next_phase(%__MODULE__{phase: :turn_playing} = turn) do
+    %{turn | phase: :turn_challenging}
+  end
+
+  def next_phase(%__MODULE__{phase: :turn_challenging} = turn) do
+    %{turn | phase: :turn_results}
+  end
+
+  def next_phase(%__MODULE__{phase: :turn_results} = turn) do
+    %{turn | phase: :turn_waiting}
+    |> clear_challengers_data()
+    |> clear_track_data()
+    |> next_turn_player()
   end
 end
