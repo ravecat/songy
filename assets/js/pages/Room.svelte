@@ -1,4 +1,5 @@
 <script>
+  import { Modals } from "svelte-modals";
   import Scope from "@components/Scope.svelte";
   import Channel from "@components/Channel.svelte";
   import GameView from "@components/GameView.svelte";
@@ -17,3 +18,4 @@
     </Scope>
   </Spotify>
 </Channel>
+<Modals />
