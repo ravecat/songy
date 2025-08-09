@@ -14,5 +14,5 @@
       <GameView />
     </Scope>
   </Spotify>
+  <Modals />
 </Channel>
-<Modals />

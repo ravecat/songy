@@ -3,6 +3,27 @@ import { expect, test, describe } from "vitest";
 import TurnWaitingModal from "@components/TurnWaitingModal.svelte";
 
 describe("TurnWaitingModal", () => {
+  const mockChannelContext = {
+    state: {
+      turn: {
+        queue: ["user-1", "user-2"],
+        current_player_index: 0,
+      },
+      participants: [
+        {
+          uuid: "user-1",
+          name: "Alice",
+          avatar_url: "https://example.com/alice.jpg",
+        },
+        {
+          uuid: "user-2",
+          name: "Bob",
+          avatar_url: "https://example.com/bob.jpg",
+        },
+      ],
+    },
+  };
+
   test("renders modal when isOpen is true", () => {
     const mockClose = () => {};
 
@@ -11,11 +32,11 @@ describe("TurnWaitingModal", () => {
         isOpen: true,
         close: mockClose,
       },
+      context: new Map([["channel", mockChannelContext]]),
     });
 
-    expect(screen.getByText("Turn Waiting")).toBeInTheDocument();
-    expect(screen.getByText("Waiting for your turn...")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "OK" })).toBeInTheDocument();
+    expect(screen.getByText("Alice turn")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ready?" })).toBeInTheDocument();
   });
 
   test("does not render modal when isOpen is false", () => {
@@ -26,15 +47,13 @@ describe("TurnWaitingModal", () => {
         isOpen: false,
         close: mockClose,
       },
+      context: new Map([["channel", mockChannelContext]]),
     });
 
-    expect(screen.queryByText("Turn Waiting")).not.toBeInTheDocument();
-    expect(
-      screen.queryByText("Waiting for your turn...")
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Alice turn")).not.toBeInTheDocument();
   });
 
-  test("calls close function when OK button is clicked", async () => {
+  test("calls close function when Ready button is clicked", async () => {
     let closeCalled = false;
     const mockClose = () => {
       closeCalled = true;
@@ -45,9 +64,10 @@ describe("TurnWaitingModal", () => {
         isOpen: true,
         close: mockClose,
       },
+      context: new Map([["channel", mockChannelContext]]),
     });
 
-    const button = screen.getByRole("button", { name: "OK" });
+    const button = screen.getByRole("button", { name: "Ready?" });
     await fireEvent.click(button);
 
     expect(closeCalled).toBe(true);
@@ -61,11 +81,12 @@ describe("TurnWaitingModal", () => {
         isOpen: true,
         close: mockClose,
       },
+      context: new Map([["channel", mockChannelContext]]),
     });
 
     const dialog = screen.getByRole("dialog", { hidden: true });
     expect(dialog).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "OK" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ready?" })).toBeInTheDocument();
   });
 
   test("dialog element is present when modal is open", () => {
@@ -76,6 +97,7 @@ describe("TurnWaitingModal", () => {
         isOpen: true,
         close: mockClose,
       },
+      context: new Map([["channel", mockChannelContext]]),
     });
 
     expect(screen.getByRole("dialog", { hidden: true })).toBeInTheDocument();
@@ -89,6 +111,7 @@ describe("TurnWaitingModal", () => {
         isOpen: false,
         close: mockClose,
       },
+      context: new Map([["channel", mockChannelContext]]),
     });
 
     expect(
@@ -104,9 +127,10 @@ describe("TurnWaitingModal", () => {
         isOpen: true,
         close: mockClose,
       },
+      context: new Map([["channel", mockChannelContext]]),
     });
 
-    const button = screen.getByRole("button", { name: "OK" });
+    const button = screen.getByRole("button", { name: "Ready?" });
     expect(button).toHaveAttribute("autofocus");
   });
 
@@ -121,6 +145,7 @@ describe("TurnWaitingModal", () => {
         isOpen: true,
         close: mockClose,
       },
+      context: new Map([["channel", mockChannelContext]]),
     });
 
     const dialog = screen.getByRole("dialog", { hidden: true });
@@ -142,9 +167,10 @@ describe("TurnWaitingModal", () => {
         isOpen: true,
         close: mockClose,
       },
+      context: new Map([["channel", mockChannelContext]]),
     });
 
-    const heading = screen.getByText("Turn Waiting");
+    const heading = screen.getByText("Alice turn");
     await fireEvent.click(heading);
 
     expect(closeCalled).toBe(false);
@@ -158,10 +184,28 @@ describe("TurnWaitingModal", () => {
         isOpen: true,
         close: mockClose,
       },
+      context: new Map([["channel", mockChannelContext]]),
     });
 
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(
-      "Turn Waiting"
+      "Alice turn"
     );
+  });
+
+  test("displays player avatar and information", () => {
+    const mockClose = () => {};
+
+    render(TurnWaitingModal, {
+      props: {
+        isOpen: true,
+        close: mockClose,
+      },
+      context: new Map([["channel", mockChannelContext]]),
+    });
+
+    const avatar = screen.getByAltText("Alice");
+    expect(avatar).toBeInTheDocument();
+    expect(avatar).toHaveAttribute("src", "https://example.com/alice.jpg");
+    expect(screen.getByText("Alice turn")).toBeInTheDocument();
   });
 });

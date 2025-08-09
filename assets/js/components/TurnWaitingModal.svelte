@@ -1,7 +1,17 @@
 <script>
+  import { getChannelContext } from "@shared/context/channel.js";
+
   const { isOpen, close } = $props();
+  const { state } = $derived(getChannelContext());
 
   let dialog = $state();
+
+  const currentPlayer = $derived.by(() => {
+    const currentPlayerUuid =
+      state?.turn?.queue?.[state?.turn?.current_player_index];
+
+    return state?.participants?.find(({ uuid }) => uuid === currentPlayerUuid);
+  });
 
   $effect(() => {
     if (isOpen && dialog) {
@@ -20,10 +30,18 @@
       if (e.target === dialog) close();
     }}
   >
-    <h2>Turn Waiting</h2>
-    <p>Waiting for your turn...</p>
+    <div class="player-info">
+      <img
+        src={currentPlayer.avatar_url}
+        alt={currentPlayer.name}
+        class="player-avatar"
+      />
+      <h2>{currentPlayer.name} turn</h2>
+    </div>
     <!-- svelte-ignore a11y_autofocus -->
-    <button autofocus onclick={() => close()}>OK</button>
+    <button class="btn btn-primary w-full" autofocus onclick={() => close()}>
+      Ready?
+    </button>
   </dialog>
 {/if}
 
@@ -47,7 +65,6 @@
     align-items: center;
   }
 
-  /* Mobile: fullscreen with margins */
   @media (max-width: 768px) {
     dialog {
       width: calc(100vw - 4rem);
@@ -93,23 +110,20 @@
     font-size: 1.5rem;
   }
 
-  p {
-    margin: 0 0 1.5rem 0;
-    color: #666;
-    font-size: 1rem;
+  .player-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
   }
 
-  button {
-    background: #3b82f6;
-    color: white;
-    border: none;
-    padding: 0.5rem 1.5rem;
-    border-radius: 0.25rem;
-    cursor: pointer;
-    font-size: 1rem;
-  }
-
-  button:hover {
-    background: #2563eb;
+  .player-avatar {
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #3b82f6;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   }
 </style>
