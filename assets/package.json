@@ -3,7 +3,6 @@
     "../deps/*"
   ],
   "scripts": {
-    "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "test:watch": "vitest --watch",
