@@ -9,9 +9,10 @@
   import TurnWaitingModal from "@components/TurnWaitingModal.svelte";
 
   const { state } = $derived(getChannelContext());
+  const turnPhase = $derived(state?.turn?.phase);
 
   $effect(() => {
-    if (state?.turn?.phase === "turn_waiting") {
+    if (turnPhase === "turn_waiting") {
       untrack(() => {
         modals.open(TurnWaitingModal);
       });
