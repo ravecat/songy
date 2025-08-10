@@ -1,0 +1,42 @@
+{
+  "extends": "@tsconfig/svelte/tsconfig.json",
+  "compilerOptions": {
+    // Override Svelte base settings for our needs
+    "target": "ES2022",
+    "allowJs": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "lib": ["DOM", "DOM.Iterable", "ES6"],
+    
+    // Project-specific settings
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["js/*"],
+      "@hooks/*": ["js/hooks/*"],
+      "@pages/*": ["js/pages/*"],
+      "@components/*": ["js/components/*"],
+      "@shared/*": ["js/shared/*"],
+      "@mocks/*": ["__mocks__/*"]
+    },
+    "types": ["vite/client", "vitest"],
+    "plugins": [
+      {
+        "name": "typescript-svelte-plugin",
+        "enabled": true,
+        "assumeIsSvelteProject": true
+      }
+    ]
+  },
+  "include": [
+    "js/**/*.ts",
+    "js/**/*.js",
+    "js/**/*.svelte",
+    "__mocks__/**/*.ts",
+    "__mocks__/**/*.js",
+    "tests/**/*.ts",
+    "tests/**/*.js"
+  ],
+  "exclude": ["node_modules", "../priv/static"]
+}
