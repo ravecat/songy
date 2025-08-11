@@ -18,6 +18,7 @@
       "@pages/*": ["js/pages/*"],
       "@components/*": ["js/components/*"],
       "@shared/*": ["js/shared/*"],
+      "@types/*": ["js/shared/types/*"],
       "@mocks/*": ["__mocks__/*"]
     },
     "types": ["vite/client", "vitest"],

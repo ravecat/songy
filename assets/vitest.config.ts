@@ -9,7 +9,6 @@ export default mergeConfig(
     resolve: {
       conditions: ['browser'],
       alias: {
-        // Add only test-specific mock alias
         'phoenix': path.resolve(__dirname, '__mocks__/phoenix.js'),
       },
     },

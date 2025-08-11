@@ -16,6 +16,7 @@ export default defineConfig({
       '@hooks': path.resolve(__dirname, 'js/hooks'),
       '@pages': path.resolve(__dirname, 'js/pages'),
       '@shared': path.resolve(__dirname, 'js/shared'),
+      '@types': path.resolve(__dirname, 'js/shared/types'),
       '@mocks': path.resolve(__dirname, '__mocks__'),
       '@components': path.resolve(__dirname, 'js/components'),
     },
