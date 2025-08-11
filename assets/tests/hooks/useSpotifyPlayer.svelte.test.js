@@ -1,7 +1,7 @@
 import { expect, test, vi, beforeEach, afterEach } from "vitest";
 import { flushSync } from "svelte";
 import { useSpotifyPlayer } from "@hooks/useSpotifyPlayer.svelte";
-import Spotify from "@mocks/spotify.js";
+import Spotify from "@mocks/spotify";
 
 vi.stubGlobal("Spotify", Spotify);
 
@@ -48,10 +48,10 @@ describe("useSpotifyPlayer", () => {
       const player = window.Spotify.Player.mock.results[0].value;
 
       expect(player.connect).toHaveBeenCalled();
-      expect(typeof player.togglePlay).toBe("function");
-      expect(typeof player.pause).toBe("function");
-      expect(typeof player.resume).toBe("function");
-      expect(returnedValue.player).toStrictEqual(player);
+      expect(typeof returnedValue.togglePlay).toBe("function");
+      expect(typeof returnedValue.pause).toBe("function");
+      expect(typeof returnedValue.resume).toBe("function");
+      // Player instance is now encapsulated and not exposed
     });
 
     cleanup();
@@ -120,9 +120,12 @@ describe("useSpotifyPlayer", () => {
 
       window.onSpotifyWebPlaybackSDKReady();
 
-      expect(player.player).toStrictEqual(
-        window.Spotify.Player.mock.results[0].value
-      );
+      // Player instance is encapsulated, verify cleanup behavior instead
+      expect(window.Spotify.Player).toHaveBeenCalledWith({
+        name: "test-player",
+        getOAuthToken: expect.any(Function),
+        volume: 0.5,
+      });
     });
 
     cleanup();
