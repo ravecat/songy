@@ -1,5 +1,5 @@
 <script>
-  import { getChannelContext } from "@shared/context/channel.js";
+  import { getChannelContext } from "@shared/context/channel";
   import TrackCard from "@components/TrackCard.svelte";
   import Timeline from "@components/Timeline.svelte";
 

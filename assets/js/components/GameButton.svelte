@@ -1,6 +1,6 @@
 <script>
   import { slide, fly } from "svelte/transition";
-  import { getChannelContext } from "@shared/context/channel.js";
+  import { getChannelContext } from "@shared/context/channel";
 
   const { channel } = $derived(getChannelContext());
   let isLoading = $state(false);

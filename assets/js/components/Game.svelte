@@ -1,7 +1,7 @@
-<script>
+<script lang="ts">
   import { untrack } from "svelte";
   import { modals } from "svelte-modals";
-  import { getChannelContext } from "@shared/context/channel.js";
+  import { getChannelContext } from "@shared/context/channel";
   import Participants from "@components/Participants.svelte";
   import Player from "@components/Player.svelte";
   import CurrentTrack from "@components/CurrentTrack.svelte";

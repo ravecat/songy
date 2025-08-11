@@ -48,7 +48,7 @@ export interface Game {
   player: Player;
 
   /** Current turn information */
-  turn?: Turn;
+  turn: Turn;
 
   /** Player timelines mapping UUID to track arrays */
   timelines: Record<string, Track[]>;

@@ -1,6 +1,6 @@
 <script>
   import { setContext } from "svelte";
-  import { getChannelContext } from "@shared/context/channel.js";
+  import { getChannelContext } from "@shared/context/channel";
 
   let { children } = $props();
 

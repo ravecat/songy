@@ -1,5 +1,5 @@
 <script>
-  import { getChannelContext } from "@shared/context/channel.js";
+  import { getChannelContext } from "@shared/context/channel";
 
   const { isOpen, close } = $props();
   const { state } = $derived(getChannelContext());
