@@ -210,6 +210,41 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @doc """
+  Advances the game turn to the next phase.
+
+  Moves the turn through the phase workflow:
+  - :turn_waiting -> :turn_playing
+  - :turn_playing -> :turn_challenging
+  - :turn_challenging -> :turn_results
+  - :turn_results -> :turn_waiting (clears data and advances to next player)
+
+  ## Parameters
+    * `game_uuid` - UUID of the game session
+
+  ## Returns
+    * `{:ok, game}` - Success with updated game state
+    * `{:error, :game_session_not_found}` - Game session does not exist
+    * `{:error, :game_not_in_progress}` - Game is not in the correct status
+
+  ## Examples
+      iex> GameSession.next_phase("game123")
+      {:ok, %Game{turn: %Turn{phase: :turn_playing}}}
+
+      iex> GameSession.next_phase("nonexistent")
+      {:error, :game_session_not_found}
+  """
+  @spec next_phase(String.t()) :: {:ok, Game.t()} | {:error, atom()}
+  def next_phase(game_uuid) do
+    with {:ok, game} <- lookup_game_session(game_uuid),
+         :in_progress <- Game.get_status(game) do
+      GenServer.call(via(game_uuid), :next_phase)
+    else
+      {:error, :game_session_not_found} -> {:error, :game_session_not_found}
+      _status -> {:error, :game_not_in_progress}
+    end
+  end
+
+  @doc """
   Checks if the given user is the owner of the game session.
 
   ## Parameters
@@ -506,6 +541,19 @@ defmodule Songy.Boundary.GameSession do
   @impl GenServer
   def handle_call(:pause_playback, _from, game) do
     updated_game = Game.pause_playback(game)
+    {:reply, {:ok, updated_game}, updated_game}
+  end
+
+  @impl GenServer
+  def handle_call(:next_phase, _from, game) do
+    updated_game = Game.next_phase(game)
+
+    Phoenix.PubSub.local_broadcast(
+      Songy.PubSub,
+      "room:#{updated_game.uuid}",
+      {:game_state_updated, updated_game}
+    )
+
     {:reply, {:ok, updated_game}, updated_game}
   end
 

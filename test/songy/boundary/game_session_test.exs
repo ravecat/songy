@@ -459,6 +459,114 @@ defmodule Songy.Boundary.GameSessionTest do
     end
   end
 
+  describe "next_phase/1" do
+    test "advances turn to next phase" do
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
+
+      credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
+
+      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+        {:ok,
+         %Spotify.Track{
+           id: "track123",
+           name: "Random Song",
+           artists: [%{"name" => "Random Artist"}],
+           album: %{
+             "release_date" => "2023-01-01",
+             "images" => [%{"url" => "https://example.com/cover.jpg"}]
+           }
+         }}
+      end)
+
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      Repatch.allow(self(), pid)
+
+      :ok = GameSession.set_credentials(game.uuid, credentials)
+      {:ok, started_game} = GameSession.start_game_session(game.uuid)
+
+      # Subscribe to state updates
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+
+      # Test next_phase call
+      {:ok, updated_game} = GameSession.next_phase(game.uuid)
+
+      # Verify phase advanced from turn_waiting to turn_playing
+      assert started_game.turn.phase == :turn_waiting
+      assert updated_game.turn.phase == :turn_playing
+
+      # Verify state update was broadcast
+      assert_receive {:game_state_updated, broadcast_game}
+      assert broadcast_game.turn.phase == :turn_playing
+
+      GameSession.end_game_session(game.uuid)
+    end
+
+    test "returns error for non-existent game session" do
+      assert {:error, :game_session_not_found} = GameSession.next_phase("nonexistent")
+    end
+
+    test "returns error for game not in progress" do
+      provider_id = :spotify
+      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
+
+      # Game is still in waiting status, not started
+      assert {:error, :game_not_in_progress} = GameSession.next_phase(game.uuid)
+
+      GameSession.end_game_session(game.uuid)
+    end
+
+    test "cycles through all phases correctly" do
+      provider_id = :spotify
+      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
+
+      credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
+
+      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+        {:ok,
+         %Spotify.Track{
+           id: "track123",
+           name: "Random Song",
+           artists: [%{"name" => "Random Artist"}],
+           album: %{
+             "release_date" => "2023-01-01",
+             "images" => [%{"url" => "https://example.com/cover.jpg"}]
+           }
+         }}
+      end)
+
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      Repatch.allow(self(), pid)
+
+      :ok = GameSession.set_credentials(game.uuid, credentials)
+      {:ok, started_game} = GameSession.start_game_session(game.uuid)
+
+      # Add participants to test full cycle
+      send(pid, {:participant_joined, "user1"})
+      send(pid, {:participant_joined, "user2"})
+
+      # Wait for participant addition to complete
+      Process.sleep(50)
+
+      # Cycle through phases: waiting -> playing -> challenging -> results -> waiting
+      assert started_game.turn.phase == :turn_waiting
+
+      {:ok, playing_game} = GameSession.next_phase(game.uuid)
+      assert playing_game.turn.phase == :turn_playing
+
+      {:ok, challenging_game} = GameSession.next_phase(game.uuid)
+      assert challenging_game.turn.phase == :turn_challenging
+
+      {:ok, results_game} = GameSession.next_phase(game.uuid)
+      assert results_game.turn.phase == :turn_results
+
+      {:ok, next_waiting_game} = GameSession.next_phase(game.uuid)
+      assert next_waiting_game.turn.phase == :turn_waiting
+      # Should advance to next player (if multiple players)
+
+      GameSession.end_game_session(game.uuid)
+    end
+  end
+
   describe ":participant_joined event" do
     test "broadcasts event state update" do
       provider_id = :spotify

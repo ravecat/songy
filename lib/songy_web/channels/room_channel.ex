@@ -173,6 +173,20 @@ defmodule SongyWeb.RoomChannel do
   end
 
   @impl true
+  def handle_in("next_phase", _payload, socket) do
+    @room_prefix <> room_id = socket.topic
+
+    case GameSession.next_phase(room_id) do
+      {:ok, game} ->
+        broadcast(socket, "state_updated", game)
+        {:reply, :ok, socket}
+
+      {:error, _} ->
+        {:noreply, socket}
+    end
+  end
+
+  @impl true
   def handle_in(event, _payload, socket) do
     {:reply, {:error, %{reason: "unknown_event", event: event}}, socket}
   end

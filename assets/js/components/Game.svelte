@@ -1,28 +1,22 @@
 <script lang="ts">
-  import { untrack } from "svelte";
-  import { modals } from "svelte-modals";
   import { getChannelContext } from "@shared/context/channel";
-  import Participants from "@components/Participants.svelte";
-  import Player from "@components/Player.svelte";
-  import CurrentTrack from "@components/CurrentTrack.svelte";
-  import ParticipantTimeline from "@components/ParticipantTimeline.svelte";
-  import TurnWaitingModal from "@components/TurnWaitingModal.svelte";
+  import TurnWaiting from "@components/TurnWaiting.svelte";
+  import TurnPlaying from "@components/TurnPlaying.svelte";
+  import TurnChallenging from "@components/TurnChallenging.svelte";
+  import TurnResults from "@components/TurnResults.svelte";
 
-  const { state } = $derived(getChannelContext());
+  const { state } = $derived.by(getChannelContext);
   const turnPhase = $derived(state?.turn?.phase);
-
-  $effect(() => {
-    if (turnPhase === "turn_waiting") {
-      untrack(() => {
-        modals.open(TurnWaitingModal);
-      });
-    }
-  });
 </script>
 
-<Participants />
-<div class="flex items-center justify-center gap-4 py-4">
-  <CurrentTrack />
-  <ParticipantTimeline />
-</div>
-<Player />
+{#if turnPhase === "turn_waiting"}
+  <TurnWaiting />
+{:else if turnPhase === "turn_playing"}
+  <TurnPlaying />
+{:else if turnPhase === "turn_challenging"}
+  <TurnChallenging />
+{:else if turnPhase === "turn_results"}
+  <TurnResults />
+{:else}
+  <TurnPlaying />
+{/if}

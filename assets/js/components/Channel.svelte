@@ -28,6 +28,7 @@
     },
   });
 
+  // Prepare channel context before rendering children
   $effect.pre(() => {
     context.channel = channel;
   });
