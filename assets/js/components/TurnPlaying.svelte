@@ -6,8 +6,6 @@
 </script>
 
 <Participants />
-<div class="flex items-center justify-center gap-4 py-4">
-  <CurrentTrack />
-  <ParticipantTimeline />
-</div>
+<ParticipantTimeline />
+<CurrentTrack />
 <Player />

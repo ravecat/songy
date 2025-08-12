@@ -1,27 +1,35 @@
-<script>
+<script lang="ts" generics="TimelineItem extends { id: any }">
   import { dndzone } from "svelte-dnd-action";
+  import type { DndEvent, Options, DndZoneAttributes } from "svelte-dnd-action";
   import { flip } from "svelte/animate";
+  import type { Snippet } from "svelte";
+
+  interface TimelineProps<T extends { id: any }>
+    extends Options<T>,
+      DndZoneAttributes<T> {
+    children?: Snippet<[T]>;
+  }
 
   let {
-    items = [],
+    items = [] as TimelineItem[],
     flipDurationMs = 150,
-    onConsider,
-    onFinalize,
+    onconsider,
+    onfinalize,
     type = "timeline",
     children,
     ...props
-  } = $props();
+  }: TimelineProps<TimelineItem> = $props();
 
-  function defaultHandleConsider(e) {
+  function defaultHandleConsider(e: CustomEvent<DndEvent<TimelineItem>>) {
     items = e.detail.items;
   }
 
-  function defaultHandleFinalize(e) {
+  function defaultHandleFinalize(e: CustomEvent<DndEvent<TimelineItem>>) {
     items = e.detail.items;
   }
 
-  const handleConsider = onConsider || defaultHandleConsider;
-  const handleFinalize = onFinalize || defaultHandleFinalize;
+  const handleConsider = onconsider || defaultHandleConsider;
+  const handleFinalize = onfinalize || defaultHandleFinalize;
 </script>
 
 <div

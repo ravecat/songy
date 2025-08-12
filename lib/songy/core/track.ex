@@ -9,9 +9,12 @@ defmodule Songy.Core.Track do
 
   use TypedStruct
 
-  @derive {Jason.Encoder, only: [:title, :artist, :year, :cover_url, :meta]}
+  @derive {Jason.Encoder, only: [:id, :title, :artist, :year, :cover_url, :meta]}
+
+  @id_size 4
 
   typedstruct do
+    field :id, String.t(), enforce: true
     field :title, String.t(), enforce: true
     field :artist, String.t(), enforce: true
     field :year, pos_integer(), enforce: true
@@ -31,17 +34,28 @@ defmodule Songy.Core.Track do
       * `:meta` - Provider-specific metadata map (default: %{})
 
   ## Examples
-      iex> Track.new(title: "Bohemian Rhapsody", artist: "Queen", year: 1975)
-      %Track{title: "Bohemian Rhapsody", artist: "Queen", year: 1975, meta: %{}}
+      iex> track = Track.new(title: "Another One Bites the Dust", artist: "Queen", year: 1980, cover_url: "https://i.scdn.co/image/example")
+      iex> track.title
+      "Another One Bites the Dust"
 
-      iex> Track.new(title: "Another One Bites the Dust", artist: "Queen", year: 1980, cover_url: "https://i.scdn.co/image/example")
-      %Track{title: "Another One Bites the Dust", artist: "Queen", year: 1980, cover_url: "https://i.scdn.co/image/example", meta: %{}}
-
-      iex> Track.new(title: "Hotel California", artist: "Eagles", year: 1976, meta: %{uri: "spotify:track:40riOy7x9W7GXjyGp4pjAv"})
-      %Track{title: "Hotel California", artist: "Eagles", year: 1976, meta: %{uri: "spotify:track:40riOy7x9W7GXjyGp4pjAv"}}
+      iex> track = Track.new(title: "Hotel California", artist: "Eagles", year: 1976, meta: %{uri: "spotify:track:40riOy7x9W7GXjyGp4pjAv"})
+      iex> track.meta
+      %{uri: "spotify:track:40riOy7x9W7GXjyGp4pjAv"}
   """
   @spec new(keyword()) :: t()
   def new(attrs) when is_list(attrs) do
-    struct!(__MODULE__, attrs)
+    struct!(
+      __MODULE__,
+      Keyword.merge(
+        [id: generate_uuid()],
+        attrs
+      )
+    )
+  end
+
+  defp generate_uuid do
+    @id_size
+    |> :crypto.strong_rand_bytes()
+    |> Base.url_encode64(padding: false)
   end
 end

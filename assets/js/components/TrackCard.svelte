@@ -7,7 +7,6 @@
     class="track-card"
     style:transform={revealed ? "rotateY(0)" : ""}
     aria-expanded={revealed}
-    data-revealed={revealed}
   >
     {#if revealed}
       <div

@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { getChannelContext } from "~shared/context/channel";
   import TrackCard from "~components/TrackCard.svelte";
   import Timeline from "~components/Timeline.svelte";
@@ -10,7 +10,7 @@
     return track
       ? [
           {
-            id: track.title,
+            id: track.id,
             track: track,
             current: true,
           },

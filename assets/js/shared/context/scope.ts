@@ -6,7 +6,7 @@ import type { User } from "~shared/types/user";
  */
 export interface ScopeContext {
   /** Current authenticated user */
-  user: User | null;
+  user: User;
 }
 
 /**

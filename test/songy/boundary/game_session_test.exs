@@ -123,7 +123,6 @@ defmodule Songy.Boundary.GameSessionTest do
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
          %Spotify.Track{
-           id: "track123",
            name: "Random Song",
            uri: "spotify:track:track123",
            artists: [%{"name" => "Random Artist"}],
@@ -161,7 +160,6 @@ defmodule Songy.Boundary.GameSessionTest do
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
          %Spotify.Track{
-           id: "track123",
            name: "Random Song",
            uri: "spotify:track:track123",
            artists: [%{"name" => "Random Artist"}],
@@ -241,7 +239,6 @@ defmodule Songy.Boundary.GameSessionTest do
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
          %Spotify.Track{
-           id: "track123",
            name: "Random Song",
            uri: "spotify:track:track123",
            artists: [%{"name" => "Random Artist"}],
@@ -309,7 +306,6 @@ defmodule Songy.Boundary.GameSessionTest do
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
          %Spotify.Track{
-           id: "track123",
            name: "Random Song",
            uri: "spotify:track:track123",
            artists: [%{"name" => "Random Artist"}],
@@ -344,7 +340,6 @@ defmodule Songy.Boundary.GameSessionTest do
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
          %Spotify.Track{
-           id: "track123",
            name: "Test Track",
            uri: "spotify:track:track123",
            artists: [%{name: "Test Artist"}],
@@ -423,7 +418,6 @@ defmodule Songy.Boundary.GameSessionTest do
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
          %Spotify.Track{
-           id: "track123",
            name: "Test Track",
            uri: "spotify:track:track123",
            artists: [%{name: "Test Artist"}],
@@ -468,7 +462,6 @@ defmodule Songy.Boundary.GameSessionTest do
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
          %Spotify.Track{
-           id: "track123",
            name: "Random Song",
            artists: [%{"name" => "Random Artist"}],
            album: %{
@@ -524,7 +517,6 @@ defmodule Songy.Boundary.GameSessionTest do
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
          %Spotify.Track{
-           id: "track123",
            name: "Random Song",
            artists: [%{"name" => "Random Artist"}],
            album: %{
@@ -543,9 +535,6 @@ defmodule Songy.Boundary.GameSessionTest do
       # Add participants to test full cycle
       send(pid, {:participant_joined, "user1"})
       send(pid, {:participant_joined, "user2"})
-
-      # Wait for participant addition to complete
-      Process.sleep(50)
 
       # Cycle through phases: waiting -> playing -> challenging -> results -> waiting
       assert started_game.turn.phase == :turn_waiting
@@ -579,6 +568,7 @@ defmodule Songy.Boundary.GameSessionTest do
       send(pid, {:participant_joined, "user456"})
 
       assert_receive {:game_state_updated, updated_game}
+
       assert length(updated_game.participants) == 1
       assert hd(updated_game.participants).uuid == "user456"
 
@@ -589,7 +579,6 @@ defmodule Songy.Boundary.GameSessionTest do
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _provider ->
         {:ok,
          %Spotify.Track{
-           id: "track123",
            name: "Test Track",
            uri: "spotify:track:track123",
            artists: [%{name: "Test Artist"}],
@@ -625,7 +614,6 @@ defmodule Songy.Boundary.GameSessionTest do
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
          %Spotify.Track{
-           id: "track123",
            name: "Random Song",
            uri: "spotify:track:track123",
            artists: [%{"name" => "Random Artist"}],
@@ -775,7 +763,6 @@ defmodule Songy.Boundary.GameSessionTest do
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
          %Spotify.Track{
-           id: "track123",
            name: "Original Song",
            uri: "spotify:track:track123",
            artists: [%{"name" => "Original Artist"}],
@@ -912,6 +899,225 @@ defmodule Songy.Boundary.GameSessionTest do
 
       # Verify credentials are cleaned up
       assert [] == Registry.lookup(Songy.Registry, {:credentials, game.uuid})
+    end
+  end
+
+  describe "extend_timeline/3" do
+    setup do
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
+
+      credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
+      :ok = GameSession.set_credentials(game.uuid, credentials)
+
+      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+        {:ok,
+         %Spotify.Track{
+           name: "Turn Track",
+           uri: "spotify:track:track123",
+           artists: [%{"name" => "Turn Artist"}],
+           album: %{
+             "release_date" => "2023-01-01",
+             "images" => [%{"url" => "https://example.com/cover.jpg"}]
+           }
+         }}
+      end)
+
+      [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      Repatch.allow(self(), pid)
+
+      # Start game to set turn track
+      {:ok, started_game} = GameSession.start_game_session(game.uuid)
+
+      %{game: started_game, pid: pid}
+    end
+
+    test "adds current turn track to user timeline at specified position", %{game: game, pid: pid} do
+      user_uuid = "user123"
+
+      # Subscribe to state updates before adding participant
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+
+      # Add participant and wait for initialization to complete
+      send(pid, {:participant_joined, user_uuid})
+
+      assert_receive {:game_state_updated, _game_with_participant}
+
+      # Extend timeline by adding turn track at position 1
+      assert {:ok, updated_game} = GameSession.extend_timeline(game.uuid, user_uuid, 1)
+
+      # Verify turn track was added to timeline
+      user_timeline = Game.get_user_timeline(updated_game, user_uuid)
+      # 1 initial + 1 from turn
+      assert length(user_timeline) == 2
+
+      # Verify the turn track is at position 1
+      [_initial_track, turn_track] = user_timeline
+      assert turn_track.title == "Turn Track"
+      assert turn_track.artist == "Turn Artist"
+
+      # Verify state update was broadcast
+      assert_receive {:game_state_updated, broadcast_game}
+
+      timeline = Game.get_user_timeline(broadcast_game, user_uuid)
+
+      assert length(timeline) == 2
+    end
+
+    test "adds turn track at position 0 (beginning of timeline)", %{game: game, pid: pid} do
+      user_uuid = "user123"
+
+      # Subscribe to state updates before adding participant
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+
+      # Add participant and wait for initialization to complete
+      send(pid, {:participant_joined, user_uuid})
+      assert_receive {:game_state_updated, _game_with_participant}
+
+      # Add turn track at position 0
+      assert {:ok, updated_game} = GameSession.extend_timeline(game.uuid, user_uuid, 0)
+
+      user_timeline = Game.get_user_timeline(updated_game, user_uuid)
+      assert length(user_timeline) == 2
+
+      # Verify turn track is at the beginning
+      [turn_track, _initial_track] = user_timeline
+      assert turn_track.title == "Turn Track"
+    end
+
+    test "uses default position 0 when position not specified", %{game: game, pid: pid} do
+      user_uuid = "user123"
+
+      # Subscribe to state updates before adding participant
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+
+      # Add participant and wait for initialization to complete
+      send(pid, {:participant_joined, user_uuid})
+      assert_receive {:game_state_updated, _game_with_participant}
+
+      # Add turn track using default position (should be 0)
+      assert {:ok, updated_game} = GameSession.extend_timeline(game.uuid, user_uuid)
+
+      user_timeline = Game.get_user_timeline(updated_game, user_uuid)
+      assert length(user_timeline) == 2
+
+      # Verify turn track is at the beginning (position 0)
+      [turn_track, _initial_track] = user_timeline
+      assert turn_track.title == "Turn Track"
+    end
+
+    test "returns error when no current turn track exists", %{} do
+      # Create a new game without starting it (no turn track)
+      {:ok, new_game} = GameSession.create_game_session("owner456", :spotify)
+
+      assert {:error, :no_current_track} = GameSession.extend_timeline(new_game.uuid, "user123", 0)
+
+      GameSession.end_game_session(new_game.uuid)
+    end
+
+    test "returns error for non-existent game session" do
+      assert {:error, :game_session_not_found} = GameSession.extend_timeline("nonexistent", "user123", 0)
+    end
+  end
+
+  describe "reorder_timeline/4" do
+    setup do
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
+
+      # Setup credentials
+      credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
+      :ok = GameSession.set_credentials(game.uuid, credentials)
+
+      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+        {:ok,
+         %Spotify.Track{
+           name: "Test Track",
+           uri: "spotify:track:test123",
+           artists: [%{"name" => "Test Artist"}],
+           album: %{
+             "release_date" => "2023-01-01",
+             "images" => [%{"url" => "https://example.com/test.jpg"}]
+           }
+         }}
+      end)
+
+      [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      Repatch.allow(self(), pid)
+
+      # Add participant to get initial timeline
+      user_uuid = "user123"
+
+      # Subscribe to state updates before adding participant
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+
+      send(pid, {:participant_joined, user_uuid})
+      assert_receive {:game_state_updated, game_with_user}
+
+      %{game: game_with_user, pid: pid, user_uuid: user_uuid}
+    end
+
+    test "reorders existing track to new position", %{game: game, user_uuid: user_uuid} do
+      # Start game to create turn track
+      {:ok, started_game} = GameSession.start_game_session(game.uuid)
+
+      # Add turn track to timeline at position 1
+      {:ok, game_with_multiple} = GameSession.extend_timeline(started_game.uuid, user_uuid, 1)
+
+      timeline_before = Game.get_user_timeline(game_with_multiple, user_uuid)
+      assert length(timeline_before) == 2
+      [first_track, second_track] = timeline_before
+
+      # Subscribe to state updates
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+
+      # Reorder second track to position 0
+      assert {:ok, reordered_game} =
+               GameSession.reorder_timeline(game_with_multiple.uuid, user_uuid, second_track.id, 0)
+
+      timeline_after = Game.get_user_timeline(reordered_game, user_uuid)
+      assert length(timeline_after) == 2
+
+      # Verify track order changed
+      [reordered_first, reordered_second] = timeline_after
+      assert reordered_first.id == second_track.id
+      assert reordered_second.id == first_track.id
+
+      # Verify state update was broadcast
+      assert_receive {:game_state_updated, broadcast_game}
+      broadcast_timeline = Game.get_user_timeline(broadcast_game, user_uuid)
+      assert length(broadcast_timeline) == 2
+    end
+
+    test "returns error for non-existent track ID", %{game: game, user_uuid: user_uuid} do
+      assert {:error, :track_not_found} = GameSession.reorder_timeline(game.uuid, user_uuid, "nonexistent_track", 0)
+    end
+
+    test "returns error for non-existent game session" do
+      assert {:error, :game_session_not_found} = GameSession.reorder_timeline("nonexistent", "user123", "track123", 0)
+    end
+
+    test "handles reordering single track (idempotent)", %{game: game, user_uuid: user_uuid} do
+      timeline = Game.get_user_timeline(game, user_uuid)
+      assert length(timeline) == 1
+      [track] = timeline
+
+      # Reorder single track to position 0 (should be no-op)
+      assert {:ok, updated_game} = GameSession.reorder_timeline(game.uuid, user_uuid, track.id, 0)
+
+      updated_timeline = Game.get_user_timeline(updated_game, user_uuid)
+      assert length(updated_timeline) == 1
+      [updated_track] = updated_timeline
+      assert updated_track.id == track.id
+    end
+
+    test "broadcasts state update even when reordering fails", %{game: game, user_uuid: user_uuid} do
+      # Subscribe to state updates
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+
+      # Try to reorder non-existent track
+      assert {:error, :track_not_found} = GameSession.reorder_timeline(game.uuid, user_uuid, "nonexistent", 0)
+
+      # Should not receive any broadcast for failed operation
+      refute_receive {:game_state_updated, _}, 100
     end
   end
 end

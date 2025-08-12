@@ -2,9 +2,12 @@
  * Musical track entity for the guessing game.
  * 
  * Contains essential information needed for gameplay including
- * title, artist, release year, and provider-specific metadata.
+ * unique identifier, title, artist, release year, and provider-specific metadata.
  */
 export interface Track {
+  /** Unique track identifier */
+  id: string;
+  
   /** Song title */
   title: string;
   

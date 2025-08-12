@@ -72,7 +72,6 @@ defmodule SongyWeb.RoomChannelTest do
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
          %Spotify.Track{
-           id: "track123",
            name: "Random Song",
            artists: [%{"name" => "Random Artist"}],
            album: %{
@@ -82,9 +81,9 @@ defmodule SongyWeb.RoomChannelTest do
          }}
       end)
 
-      credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
-
       {:ok, game} = GameSession.create_game_session("owner123", :spotify)
+
+      credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
       :ok = GameSession.set_credentials(game.uuid, credentials)
 
       [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
@@ -271,7 +270,6 @@ defmodule SongyWeb.RoomChannelTest do
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
          %Spotify.Track{
-           id: "track123",
            name: "Random Song",
            artists: [%{"name" => "Random Artist"}],
            album: %{
@@ -323,6 +321,124 @@ defmodule SongyWeb.RoomChannelTest do
       refute_reply ref, :ok
 
       GameSession.end_game_session(game.uuid)
+    end
+  end
+
+  describe "extend_timeline event" do
+    test "extends user timeline and broadcasts state update", %{current_user: current_user} do
+      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+        {:ok,
+         %Spotify.Track{
+           name: "Random Song",
+           artists: [%{"name" => "Random Artist"}],
+           album: %{
+             "release_date" => "2023-01-01",
+             "images" => [%{"url" => "https://example.com/cover.jpg"}]
+           }
+         }}
+      end)
+
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
+
+      credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
+      :ok = GameSession.set_credentials(game.uuid, credentials)
+
+      [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      Repatch.allow(self(), pid)
+
+      {:ok, _, socket} = join_room_channel(current_user, game.uuid)
+
+      push(socket, "start_game", %{})
+
+      current_user_uuid = current_user.uuid
+
+      assert_broadcast "state_updated", %Songy.Core.Game{
+        status: :in_progress,
+        turn: %{track: track, phase: :turn_waiting},
+        timelines: %{
+          ^current_user_uuid => [initial_track]
+        }
+      }
+
+      push(socket, "extend_timeline", %{"position" => 0})
+
+      assert_broadcast "state_updated", %Songy.Core.Game{
+        status: :in_progress,
+        turn: %{phase: :turn_waiting},
+        timelines: %{
+          ^current_user_uuid => [^track, ^initial_track]
+        }
+      }
+
+      GameSession.end_game_session(game.uuid)
+    end
+
+    test "handles error gracefully when game session does not exist", %{current_user: current_user} do
+      {:ok, _, socket} = join_room_channel(current_user, "nonexistent")
+
+      push(socket, "extend_timeline", %{"position" => 0})
+
+      refute_broadcast "state_updated", _
+    end
+  end
+
+  describe "reorder_timeline event" do
+    test "reorders user timeline and broadcasts state update", %{current_user: current_user} do
+      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+        {:ok,
+         %Spotify.Track{
+           name: "Random Song",
+           artists: [%{"name" => "Random Artist"}],
+           album: %{
+             "release_date" => "2023-01-01",
+             "images" => [%{"url" => "https://example.com/cover.jpg"}]
+           }
+         }}
+      end)
+
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
+
+      credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
+      :ok = GameSession.set_credentials(game.uuid, credentials)
+
+      [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+
+      Repatch.allow(self(), pid)
+
+      {:ok, _, socket} = join_room_channel(current_user, game.uuid)
+
+      push(socket, "start_game", %{})
+
+      current_user_uuid = current_user.uuid
+
+      assert_broadcast "state_updated", %Songy.Core.Game{
+        status: :in_progress,
+        turn: %{track: track, phase: :turn_waiting},
+        timelines: %{
+          ^current_user_uuid => [initial_track]
+        }
+      }
+
+      # Test reorder_timeline event and verify broadcast with updated game state
+      push(socket, "reorder_timeline", %{"track_id" => initial_track.id, "position" => 0})
+
+      assert_broadcast "state_updated", %Songy.Core.Game{
+        status: :in_progress,
+        turn: %{track: ^track, phase: :turn_waiting},
+        timelines: %{
+          ^current_user_uuid => [^initial_track]
+        }
+      }
+
+      GameSession.end_game_session(game.uuid)
+    end
+
+    test "handles error gracefully when game session does not exist", %{current_user: current_user} do
+      {:ok, _, socket} = join_room_channel(current_user, "nonexistent")
+
+      push(socket, "reorder_timeline", %{"track_id" => "track123", "position" => 0})
+
+      refute_broadcast "state_updated", _
     end
   end
 end
