@@ -1,8 +1,8 @@
 <script lang="ts">
   import { setContext } from "svelte";
-  import { getChannelContext } from "@shared/context/channel";
-  import type { User } from "@shared/types/user";
-  import type { ScopeContext } from "@shared/context/scope";
+  import { getChannelContext } from "~shared/context/channel";
+  import type { User } from "~shared/types/user";
+  import type { ScopeContext } from "~shared/context/scope";
   import type { Snippet } from "svelte";
 
   let { children }: { children: Snippet } = $props();

@@ -1,6 +1,6 @@
 <script>
   import { slide } from "svelte/transition";
-  import { getChannelContext } from "@shared/context/channel";
+  import { getChannelContext } from "~shared/context/channel";
 
   const { state } = $derived(getChannelContext());
 

@@ -1,7 +1,6 @@
 {
   "extends": "@tsconfig/svelte/tsconfig.json",
   "compilerOptions": {
-    // Override Svelte base settings for our needs
     "target": "ES2022",
     "allowJs": true,
     "noEmit": true,
@@ -9,17 +8,16 @@
     "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true,
     "lib": ["DOM", "DOM.Iterable", "ES6"],
-    
-    // Project-specific settings
+
     "baseUrl": ".",
     "paths": {
-      "@/*": ["js/*"],
-      "@hooks/*": ["js/hooks/*"],
-      "@pages/*": ["js/pages/*"],
-      "@components/*": ["js/components/*"],
-      "@shared/*": ["js/shared/*"],
-      "@types/*": ["js/shared/types/*"],
-      "@mocks/*": ["__mocks__/*"]
+      "~/*": ["js/*"],
+      "~hooks/*": ["js/hooks/*"],
+      "~pages/*": ["js/pages/*"],
+      "~components/*": ["js/components/*"],
+      "~shared/*": ["js/shared/*"],
+      "~types/*": ["js/shared/types/*"],
+      "~mocks/*": ["__mocks__/*"]
     },
     "types": ["vite/client", "vitest"],
     "plugins": [
@@ -32,12 +30,12 @@
   },
   "include": [
     "js/**/*.ts",
-    "js/**/*.js",
     "js/**/*.svelte",
-    "__mocks__/**/*.ts",
-    "__mocks__/**/*.js",
     "tests/**/*.ts",
-    "tests/**/*.js"
+    "tests/**/*.js",
+    "*.ts",
+    "*.js",
+    "*.svelte"
   ],
-  "exclude": ["node_modules", "../priv/static"]
+  "exclude": ["node_modules", "dist", "_build", "../priv"]
 }

@@ -1,6 +1,6 @@
 import { getContext } from "svelte";
 import type { Channel } from "phoenix";
-import type { Game } from "@shared/types/game";
+import type { Game } from "~shared/types/game";
 
 /**
  * Channel context interface providing game state and Phoenix channel access

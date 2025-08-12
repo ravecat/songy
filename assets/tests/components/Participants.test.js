@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe } from "vitest";
-import Participants from "@components/Participants.svelte";
+import Participants from "~components/Participants.svelte";
 
 describe("Participants", () => {
   const mockParticipants = [

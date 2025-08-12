@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe } from "vitest";
-import TrackCard from "@components/TrackCard.svelte";
+import TrackCard from "~components/TrackCard.svelte";
 
 describe("TrackCard", () => {
   const mockTrack = {

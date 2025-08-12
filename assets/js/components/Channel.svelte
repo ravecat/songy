@@ -1,10 +1,10 @@
 <script lang="ts">
   import { setContext } from "svelte";
-  import { useChannel } from "@hooks/useChannel.svelte";
-  import socket from "@/socket";
+  import { useChannel } from "~hooks/useChannel.svelte";
+  import socket from "~/socket";
   import type { Channel } from "phoenix";
-  import type { Game } from "@shared/types/game";
-  import type { ChannelContext } from "@shared/context/channel";
+  import type { Game } from "~shared/types/game";
+  import type { ChannelContext } from "~shared/context/channel";
   import type { Snippet } from "svelte";
 
   interface Props {

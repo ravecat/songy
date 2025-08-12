@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi } from "vitest";
 import { Channel } from "phoenix";
 
-import TurnWaiting from "@components/TurnWaiting.svelte";
+import TurnWaiting from "~components/TurnWaiting.svelte";
 
 vi.mock("phoenix");
 

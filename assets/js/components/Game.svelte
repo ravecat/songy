@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { getChannelContext } from "@shared/context/channel";
-  import TurnWaiting from "@components/TurnWaiting.svelte";
-  import TurnPlaying from "@components/TurnPlaying.svelte";
-  import TurnChallenging from "@components/TurnChallenging.svelte";
-  import TurnResults from "@components/TurnResults.svelte";
+  import { getChannelContext } from "~shared/context/channel";
+  import TurnWaiting from "~components/TurnWaiting.svelte";
+  import TurnPlaying from "~components/TurnPlaying.svelte";
+  import TurnChallenging from "~components/TurnChallenging.svelte";
+  import TurnResults from "~components/TurnResults.svelte";
 
   const { state } = $derived.by(getChannelContext);
   const turnPhase = $derived(state?.turn?.phase);

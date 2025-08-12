@@ -1,5 +1,5 @@
 import { getContext } from "svelte";
-import type { User } from "@shared/types/user";
+import type { User } from "~shared/types/user";
 
 /**
  * Scope context interface providing user information

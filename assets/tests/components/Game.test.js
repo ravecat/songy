@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach } from "vitest";
 
-import Game from "@components/Game.svelte";
+import Game from "~components/Game.svelte";
 
 describe("Game", () => {
   let mockChannelContext;

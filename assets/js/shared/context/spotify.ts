@@ -1,5 +1,5 @@
 import { getContext } from "svelte";
-import type { UseSpotifyPlayerReturn } from "@hooks/useSpotifyPlayer.svelte";
+import type { UseSpotifyPlayerReturn } from "~hooks/useSpotifyPlayer.svelte";
 
 /**
  * Spotify player context interface

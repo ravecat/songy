@@ -1,8 +1,8 @@
 <script>
-  import { getScopeContext } from "@shared/context/scope";
-  import { getChannelContext } from "@shared/context/channel";
-  import TrackCard from "@components/TrackCard.svelte";
-  import Timeline from "@components/Timeline.svelte";
+  import { getScopeContext } from "~shared/context/scope";
+  import { getChannelContext } from "~shared/context/channel";
+  import TrackCard from "~components/TrackCard.svelte";
+  import Timeline from "~components/Timeline.svelte";
 
   const { state } = $derived.by(getChannelContext);
   const { user } = $derived.by(getScopeContext);

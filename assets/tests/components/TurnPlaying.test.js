@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach } from "vitest";
 
-import TurnPlaying from "@components/TurnPlaying.svelte";
+import TurnPlaying from "~components/TurnPlaying.svelte";
 
 describe("TurnPlaying", () => {
   let mockChannelContext;

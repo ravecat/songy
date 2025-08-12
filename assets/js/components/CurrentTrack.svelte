@@ -1,7 +1,7 @@
 <script>
-  import { getChannelContext } from "@shared/context/channel";
-  import TrackCard from "@components/TrackCard.svelte";
-  import Timeline from "@components/Timeline.svelte";
+  import { getChannelContext } from "~shared/context/channel";
+  import TrackCard from "~components/TrackCard.svelte";
+  import Timeline from "~components/Timeline.svelte";
 
   const { state } = $derived.by(getChannelContext);
   const track = $derived(state?.turn?.track);

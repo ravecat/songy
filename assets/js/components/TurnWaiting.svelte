@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getChannelContext } from "@shared/context/channel";
+  import { getChannelContext } from "~shared/context/channel";
 
   const { state, channel } = $derived.by(getChannelContext);
 

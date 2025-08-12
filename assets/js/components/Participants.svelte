@@ -1,7 +1,7 @@
 <script>
   import { slide } from "svelte/transition";
-  import { getChannelContext } from "@shared/context/channel";
-  import { getScopeContext } from "@shared/context/scope";
+  import { getChannelContext } from "~shared/context/channel";
+  import { getScopeContext } from "~shared/context/scope";
 
   const { state } = $derived(getChannelContext());
   const { user } = $derived(getScopeContext());

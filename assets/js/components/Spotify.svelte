@@ -1,8 +1,8 @@
 <script lang="ts">
   import { setContext } from "svelte";
   import type { Snippet } from "svelte";
-  import { getChannelContext } from "@shared/context/channel";
-  import { useSpotifyPlayer } from "@hooks/useSpotifyPlayer.svelte";
+  import { getChannelContext } from "~shared/context/channel";
+  import { useSpotifyPlayer } from "~hooks/useSpotifyPlayer.svelte";
 
   interface Props {
     children?: Snippet;
