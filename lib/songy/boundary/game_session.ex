@@ -670,6 +670,8 @@ defmodule Songy.Boundary.GameSession do
   def handle_call({:extend_timeline, user_uuid, track, position}, _from, game) do
     updated_game = Game.extend_user_timeline(game, user_uuid, track, position)
 
+    Logger.info("Extend timeline for user #{user_uuid} with track '#{track.id}' at position #{position}")
+
     Phoenix.PubSub.local_broadcast(
       Songy.PubSub,
       "room:#{updated_game.uuid}",
@@ -683,6 +685,8 @@ defmodule Songy.Boundary.GameSession do
   def handle_call({:reorder_timeline, user_uuid, track_id, position}, _from, game) do
     case Game.reorder_user_timeline(game, user_uuid, track_id, position) do
       {:ok, updated_game} ->
+        Logger.info("Reorder timeline for user #{user_uuid} with track ID #{track_id} at position #{position}")
+
         Phoenix.PubSub.local_broadcast(
           Songy.PubSub,
           "room:#{updated_game.uuid}",
