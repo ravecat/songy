@@ -1,6 +1,8 @@
 import { render, screen, fireEvent } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi } from "vitest";
 import { Channel } from "phoenix";
+import { TURN_PHASE } from "~shared/types/turn";
+import { TURN_PHASE } from "~shared/types/turn";
 
 import TurnWaiting from "~components/TurnWaiting.svelte";
 
@@ -27,7 +29,7 @@ describe("TurnWaiting", () => {
         turn: {
           queue: ["user-1", "user-2"],
           current_player_index: 0,
-          phase: "turn_waiting",
+          phase: TURN_PHASE.WAITING,
         },
       },
       channel: new Channel("room:123", {}, null),

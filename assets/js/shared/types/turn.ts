@@ -7,11 +7,12 @@ import type { Track } from './track';
 /**
  * Possible phases during a game turn
  */
-export type TurnPhase = 
-  | 'turn_waiting'      // Waiting for player readiness
-  | 'turn_playing'      // Playing track and placing on timeline  
-  | 'turn_challenging'  // Challenge phase from other players
-  | 'turn_results';     // Results and scoring phase
+export enum TURN_PHASE {
+  WAITING = 'turn_waiting',
+  PLAYING = 'turn_playing',
+  CHALLENGING = 'turn_challenging',
+  RESULTS = 'turn_results'
+}
 
 /**
  * Represents an active turn in the music guessing game.
@@ -33,5 +34,5 @@ export interface Turn {
   track?: Track;
   
   /** Current phase of the turn */
-  phase: TurnPhase;
+  phase: TURN_PHASE;
 }

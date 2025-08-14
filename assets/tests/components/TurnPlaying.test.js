@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach } from "vitest";
+import { TURN_PHASE } from "~shared/types/turn";
 
 import TurnPlaying from "~components/TurnPlaying.svelte";
 
@@ -30,7 +31,7 @@ describe("TurnPlaying", () => {
           },
         ],
         turn: {
-          phase: "turn_playing",
+          phase: TURN_PHASE.PLAYING,
         },
       },
     };

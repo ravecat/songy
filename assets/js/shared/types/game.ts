@@ -11,10 +11,11 @@ import type { Turn } from './turn';
 /**
  * Game status indicating current state
  */
-export type GameStatus =
-  | 'waiting'       // Waiting for players to join
-  | 'in_progress'   // Game is actively being played
-  | 'finished';     // Game has ended
+export enum GAME_STATUS {
+  WAITING = 'waiting',       // Waiting for players to join
+  IN_PROGRESS = 'in_progress', // Game is actively being played
+  FINISHED = 'finished'      // Game has ended
+}
 
 /**
  * Represents a multiplayer game room for the music quiz.
@@ -36,7 +37,7 @@ export interface Game {
   created_at: string;
 
   /** Current game status */
-  status: GameStatus;
+  status: GAME_STATUS;
 
   /** UUID of the game owner/creator */
   owner_uuid: string;

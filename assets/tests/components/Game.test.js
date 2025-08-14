@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach } from "vitest";
+import { TURN_PHASE } from "~shared/types/turn";
 
 import Game from "~components/Game.svelte";
 
@@ -25,7 +26,7 @@ describe("Game", () => {
           },
         ],
         turn: {
-          phase: "turn_playing",
+          phase: TURN_PHASE.PLAYING,
           queue: ["user-1"],
           current_player_index: 0,
         },
@@ -34,7 +35,7 @@ describe("Game", () => {
   });
 
   test("displays game interface on turn_playing phase", () => {
-    mockChannelContext.state.turn.phase = "turn_playing";
+    mockChannelContext.state.turn.phase = TURN_PHASE.PLAYING;
 
     render(Game, {
       context: new Map([
@@ -48,7 +49,7 @@ describe("Game", () => {
   });
 
   test("displays waiting view on turn_waiting phase", () => {
-    mockChannelContext.state.turn.phase = "turn_waiting";
+    mockChannelContext.state.turn.phase = TURN_PHASE.WAITING;
 
     render(Game, {
       context: new Map([
@@ -63,7 +64,7 @@ describe("Game", () => {
   });
 
   test("displays challenge view on turn_challenging phase", () => {
-    mockChannelContext.state.turn.phase = "turn_challenging";
+    mockChannelContext.state.turn.phase = TURN_PHASE.CHALLENGING;
 
     render(Game, {
       context: new Map([
@@ -76,7 +77,7 @@ describe("Game", () => {
   });
 
   test("displays results view on turn_results phase", () => {
-    mockChannelContext.state.turn.phase = "turn_results";
+    mockChannelContext.state.turn.phase = TURN_PHASE.RESULTS;
 
     render(Game, {
       context: new Map([
@@ -145,10 +146,10 @@ describe("Game", () => {
 
   test("displays correct view for each game phase", () => {
     const phases = [
-      { phase: "turn_playing", expectedText: "Alice" }, // Game interface shows participants
-      { phase: "turn_waiting", expectedText: "Alice turn" }, // Waiting view shows player turn
-      { phase: "turn_challenging", expectedText: "turn_challenging" }, // Stub component
-      { phase: "turn_results", expectedText: "turn_results" }, // Stub component
+      { phase: TURN_PHASE.PLAYING, expectedText: "Alice" }, // Game interface shows participants
+      { phase: TURN_PHASE.WAITING, expectedText: "Alice turn" }, // Waiting view shows player turn
+      { phase: TURN_PHASE.CHALLENGING, expectedText: "turn_challenging" }, // Stub component
+      { phase: TURN_PHASE.RESULTS, expectedText: "turn_results" }, // Stub component
     ];
 
     phases.forEach(({ phase, expectedText }) => {
