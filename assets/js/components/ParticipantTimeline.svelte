@@ -45,12 +45,12 @@
     const newPosition = items.findIndex(({ id }) => id === draggedId);
 
     if (originZone === zoneId) {
-      channel?.push("reorder_timeline", {
+      channel.push("reorder_timeline", {
         track_id: draggedId,
         position: newPosition,
       });
     } else {
-      channel?.push("extend_timeline", {
+      channel.push("extend_timeline", {
         position: newPosition,
       });
     }

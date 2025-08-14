@@ -11,7 +11,7 @@
   });
 
   const handleReady = () => {
-    channel?.push("next_phase", {});
+    channel.push("next_phase", {});
   };
 </script>
 

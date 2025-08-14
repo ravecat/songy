@@ -9,7 +9,7 @@ export interface ChannelContext {
   /** Current game state received from the channel */
   state: Game | null;
   /** Phoenix channel instance for real-time communication */
-  channel: Channel | null;
+  channel: Channel;
 }
 
 /**

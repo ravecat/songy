@@ -23,7 +23,7 @@
     },
     on: {
       ready: ({ device_id }: { device_id: string }) => {
-        channel?.push("update_provider", { device_id });
+        channel.push("update_provider", { device_id });
       },
     },
   });
