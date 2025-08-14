@@ -216,8 +216,8 @@ defmodule Songy.Boundary.GameSession do
   Advances the game turn to the next phase.
 
   Moves the turn through the phase workflow:
-  - :turn_waiting -> :turn_playing
-  - :turn_playing -> :turn_challenging
+  - :turn_waiting -> :turn_ready
+  - :turn_ready -> :turn_challenging
   - :turn_challenging -> :turn_results
   - :turn_results -> :turn_waiting (clears data and advances to next player)
 
@@ -231,7 +231,7 @@ defmodule Songy.Boundary.GameSession do
 
   ## Examples
       iex> GameSession.next_phase("game123")
-      {:ok, %Game{turn: %Turn{phase: :turn_playing}}}
+      {:ok, %Game{turn: %Turn{phase: :turn_ready}}}
 
       iex> GameSession.next_phase("nonexistent")
       {:error, :game_session_not_found}
@@ -668,7 +668,10 @@ defmodule Songy.Boundary.GameSession do
 
   @impl GenServer
   def handle_call({:extend_timeline, user_uuid, track, position}, _from, game) do
-    updated_game = Game.extend_user_timeline(game, user_uuid, track, position)
+    updated_game =
+      game
+      |> Game.extend_user_timeline(user_uuid, track, position)
+      |> Game.next_phase()
 
     Logger.info("Extend timeline for user #{user_uuid} with track '#{track.id}' at position #{position}")
 

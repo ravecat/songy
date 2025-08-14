@@ -298,7 +298,7 @@ defmodule SongyWeb.RoomChannelTest do
       ref = push(socket, "next_phase", %{})
 
       assert_reply ref, :ok
-      assert_broadcast "state_updated", %{turn: %{phase: :turn_playing}}
+      assert_broadcast "state_updated", %{turn: %{phase: :turn_ready}}
 
       GameSession.end_game_session(game.uuid)
     end
@@ -360,11 +360,18 @@ defmodule SongyWeb.RoomChannelTest do
         }
       }
 
+      push(socket, "next_phase", %{})
+
+      assert_broadcast "state_updated", %Songy.Core.Game{
+        status: :in_progress,
+        turn: %{track: ^track, phase: :turn_ready}
+      }
+
       push(socket, "extend_timeline", %{"position" => 0})
 
       assert_broadcast "state_updated", %Songy.Core.Game{
         status: :in_progress,
-        turn: %{phase: :turn_waiting},
+        turn: %{track: ^track, phase: :turn_steady},
         timelines: %{
           ^current_user_uuid => [^track, ^initial_track]
         }
@@ -419,14 +426,30 @@ defmodule SongyWeb.RoomChannelTest do
         }
       }
 
-      # Test reorder_timeline event and verify broadcast with updated game state
+      push(socket, "next_phase", %{})
+
+      assert_broadcast "state_updated", %Songy.Core.Game{
+        status: :in_progress,
+        turn: %{track: ^track, phase: :turn_ready}
+      }
+
+      push(socket, "extend_timeline", %{"position" => 0})
+
+      assert_broadcast "state_updated", %Songy.Core.Game{
+        status: :in_progress,
+        turn: %{track: ^track, phase: :turn_steady},
+        timelines: %{
+          ^current_user_uuid => [^track, ^initial_track]
+        }
+      }
+
       push(socket, "reorder_timeline", %{"track_id" => initial_track.id, "position" => 0})
 
       assert_broadcast "state_updated", %Songy.Core.Game{
         status: :in_progress,
-        turn: %{track: ^track, phase: :turn_waiting},
+        turn: %{track: ^track, phase: :turn_steady},
         timelines: %{
-          ^current_user_uuid => [^initial_track]
+          ^current_user_uuid => [^initial_track, ^track]
         }
       }
 

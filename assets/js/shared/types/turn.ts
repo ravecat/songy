@@ -9,7 +9,7 @@ import type { Track } from './track';
  */
 export enum TURN_PHASE {
   WAITING = 'turn_waiting',
-  PLAYING = 'turn_playing',
+  PLAYING = 'turn_ready',
   CHALLENGING = 'turn_challenging',
   RESULTS = 'turn_results'
 }

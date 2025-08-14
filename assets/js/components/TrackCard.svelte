@@ -1,5 +1,16 @@
-<script>
-  let { track, revealed = true } = $props();
+<script lang="ts">
+  import type { Track } from '~shared/types/track';
+  
+  interface TrackCardProps {
+    /** Track data to display */
+    track: Track;
+    /** Whether the track card is revealed (shows content) */
+    revealed?: boolean;
+    /** Whether the track is in ready state */
+    ready?: boolean;
+  }
+  
+  let { track, revealed = true, ready = false }: TrackCardProps = $props();
 </script>
 
 <div class="wrapper">

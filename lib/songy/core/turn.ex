@@ -13,7 +13,7 @@ defmodule Songy.Core.Turn do
 
   alias Songy.Core.Track
 
-  @type phase :: :turn_waiting | :turn_playing | :turn_challenging | :turn_results
+  @typep phase :: :turn_waiting | :turn_ready | :turn_steady | :turn_challenging | :turn_results
 
   @derive {Jason.Encoder, only: [:queue, :current_player_index, :challengers, :track, :phase]}
 
@@ -204,7 +204,7 @@ defmodule Songy.Core.Turn do
 
       iex> turn = Turn.new() |> Turn.next_phase()
       iex> Turn.get_phase(turn)
-      :turn_playing
+      :turn_ready
   """
   @spec get_phase(t()) :: phase()
   def get_phase(%__MODULE__{phase: phase}), do: phase
@@ -234,8 +234,9 @@ defmodule Songy.Core.Turn do
   Moves to the next phase in the turn workflow.
 
   Automatically handles the transition logic:
-  - :turn_waiting -> :turn_playing
-  - :turn_playing -> :turn_challenging
+  - :turn_waiting -> :turn_ready
+  - :turn_ready -> :turn_steady
+  - :turn_steady -> :turn_challenging
   - :turn_challenging -> :turn_results
   - :turn_results -> :turn_waiting (clears data and advances to next player)
 
@@ -248,18 +249,19 @@ defmodule Songy.Core.Turn do
   ## Examples
       iex> turn = Turn.new()
       iex> Turn.next_phase(turn)
-      %Songy.Core.Turn{phase: :turn_playing, ...}
+      %Songy.Core.Turn{phase: :turn_ready, ...}
 
       iex> turn = Turn.new() |> Turn.next_phase()
       iex> Turn.next_phase(turn)
-      %Songy.Core.Turn{phase: :turn_challenging, ...}
+      %Songy.Core.Turn{phase: :turn_steady, ...}
 
       iex> # Complete cycle with player advancement
       iex> turn = Turn.new()
       iex>   |> Turn.add_player_to_queue("alice")
       iex>   |> Turn.add_player_to_queue("bob")
-      iex>   |> Turn.next_phase()  # waiting -> playing
-      iex>   |> Turn.next_phase()  # playing -> challenging
+      iex>   |> Turn.next_phase()  # waiting -> ready
+      iex>   |> Turn.next_phase()  # ready -> steady
+      iex>   |> Turn.next_phase()  # steady -> challenging
       iex>   |> Turn.next_phase()  # challenging -> results
       iex>   |> Turn.next_phase()  # results -> waiting (next player)
       iex> Turn.get_current_player(turn)
@@ -267,10 +269,14 @@ defmodule Songy.Core.Turn do
   """
   @spec next_phase(t()) :: t()
   def next_phase(%__MODULE__{phase: :turn_waiting} = turn) do
-    %{turn | phase: :turn_playing}
+    %{turn | phase: :turn_ready}
   end
 
-  def next_phase(%__MODULE__{phase: :turn_playing} = turn) do
+  def next_phase(%__MODULE__{phase: :turn_ready} = turn) do
+    %{turn | phase: :turn_steady}
+  end
+
+  def next_phase(%__MODULE__{phase: :turn_steady} = turn) do
     %{turn | phase: :turn_challenging}
   end
 

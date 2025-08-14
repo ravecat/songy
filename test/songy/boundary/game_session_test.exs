@@ -485,11 +485,11 @@ defmodule Songy.Boundary.GameSessionTest do
 
       # Verify phase advanced from turn_waiting to turn_playing
       assert started_game.turn.phase == :turn_waiting
-      assert updated_game.turn.phase == :turn_playing
+      assert updated_game.turn.phase == :turn_ready
 
       # Verify state update was broadcast
       assert_receive {:game_state_updated, broadcast_game}
-      assert broadcast_game.turn.phase == :turn_playing
+      assert broadcast_game.turn.phase == :turn_ready
 
       GameSession.end_game_session(game.uuid)
     end
@@ -536,11 +536,14 @@ defmodule Songy.Boundary.GameSessionTest do
       send(pid, {:participant_joined, "user1"})
       send(pid, {:participant_joined, "user2"})
 
-      # Cycle through phases: waiting -> playing -> challenging -> results -> waiting
+      # Cycle through phases: waiting -> ready -> steady -> challenging -> results -> waiting
       assert started_game.turn.phase == :turn_waiting
 
-      {:ok, playing_game} = GameSession.next_phase(game.uuid)
-      assert playing_game.turn.phase == :turn_playing
+      {:ok, ready_game} = GameSession.next_phase(game.uuid)
+      assert ready_game.turn.phase == :turn_ready
+
+      {:ok, steady_game} = GameSession.next_phase(game.uuid)
+      assert steady_game.turn.phase == :turn_steady
 
       {:ok, challenging_game} = GameSession.next_phase(game.uuid)
       assert challenging_game.turn.phase == :turn_challenging

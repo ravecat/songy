@@ -23,11 +23,13 @@ defmodule Songy.Core.TurnTest do
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
         |> Turn.add_player_to_queue("player-3")
-        # waiting -> playing
+        # waiting -> ready
         |> Turn.next_phase()
-        # playing -> challenging
+        # ready -> steady
         |> Turn.next_phase()
-        # challenging -> results
+        # steady -> challenging
+        |> Turn.next_phase()
+        # steady -> challenging
         |> Turn.next_phase()
         # results -> waiting (advances to next player)
         |> Turn.next_phase()
@@ -51,17 +53,21 @@ defmodule Songy.Core.TurnTest do
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
         |> Turn.add_player_to_queue("player-3")
-        # waiting -> playing
+        # waiting -> ready
         |> Turn.next_phase()
-        # playing -> challenging
+        # ready -> steady
+        |> Turn.next_phase()
+        # steady -> challenging
         |> Turn.next_phase()
         # challenging -> results
         |> Turn.next_phase()
         # results -> waiting (advances to player-2)
         |> Turn.next_phase()
-        # waiting -> playing
+        # waiting -> ready
         |> Turn.next_phase()
-        # playing -> challenging
+        # ready -> steady
+        |> Turn.next_phase()
+        # steady -> challenging
         |> Turn.next_phase()
         # challenging -> results
         |> Turn.next_phase()
@@ -95,11 +101,13 @@ defmodule Songy.Core.TurnTest do
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
         # Go through complete phase cycle to reach :turn_results
-        # waiting -> playing
+        # waiting -> ready
         |> Turn.next_phase()
-        # playing -> challenging
+        # ready -> steady
         |> Turn.next_phase()
-        # challenging -> results
+        # steady -> challenging
+        |> Turn.next_phase()
+        # steady -> challenging
         |> Turn.next_phase()
 
       # results -> waiting
@@ -116,18 +124,22 @@ defmodule Songy.Core.TurnTest do
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
         # Go through one complete cycle to advance to player-2
-        # waiting -> playing
+        # waiting -> ready
         |> Turn.next_phase()
-        # playing -> challenging
+        # ready -> steady
+        |> Turn.next_phase()
+        # steady -> challenging
         |> Turn.next_phase()
         # challenging -> results
         |> Turn.next_phase()
         # results -> waiting (advances to player-2)
         |> Turn.next_phase()
         # Now go through another cycle to get back to results
-        # waiting -> playing
+        # waiting -> ready
         |> Turn.next_phase()
-        # playing -> challenging
+        # ready -> steady
+        |> Turn.next_phase()
+        # steady -> challenging
         |> Turn.next_phase()
         # challenging -> results
         |> Turn.next_phase()
@@ -145,17 +157,21 @@ defmodule Songy.Core.TurnTest do
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
         # Go through two complete cycles to reach player-1 again (wrap around)
-        # waiting -> playing
+        # waiting -> ready
         |> Turn.next_phase()
-        # playing -> challenging
+        # ready -> steady
+        |> Turn.next_phase()
+        # steady -> challenging
         |> Turn.next_phase()
         # challenging -> results
         |> Turn.next_phase()
         # results -> waiting (advances to player-2)
         |> Turn.next_phase()
-        # waiting -> playing
+        # waiting -> ready
         |> Turn.next_phase()
-        # playing -> challenging
+        # ready -> steady
+        |> Turn.next_phase()
+        # steady -> challenging
         |> Turn.next_phase()
         # challenging -> results
         |> Turn.next_phase()
@@ -172,9 +188,11 @@ defmodule Songy.Core.TurnTest do
         Turn.new()
         |> Turn.add_player_to_queue("player-1")
         # Go through complete phase cycle
-        # waiting -> playing
+        # waiting -> ready
         |> Turn.next_phase()
-        # playing -> challenging
+        # ready -> steady
+        |> Turn.next_phase()
+        # steady -> challenging
         |> Turn.next_phase()
         # challenging -> results
         |> Turn.next_phase()
@@ -192,9 +210,11 @@ defmodule Songy.Core.TurnTest do
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
         # Go through complete phase cycle
-        # waiting -> playing
+        # waiting -> ready
         |> Turn.next_phase()
-        # playing -> challenging
+        # ready -> steady
+        |> Turn.next_phase()
+        # steady -> challenging
         |> Turn.next_phase()
         # challenging -> results
         |> Turn.next_phase()
@@ -208,9 +228,11 @@ defmodule Songy.Core.TurnTest do
       # Second cycle: 1 -> 0 (wrap around)
       turn2 =
         turn1
-        # waiting -> playing
+        # waiting -> ready
         |> Turn.next_phase()
-        # playing -> challenging
+        # ready -> steady
+        |> Turn.next_phase()
+        # steady -> challenging
         |> Turn.next_phase()
         # challenging -> results
         |> Turn.next_phase()
@@ -223,9 +245,11 @@ defmodule Songy.Core.TurnTest do
       # Third cycle: 0 -> 1 (circular again)
       turn3 =
         turn2
-        # waiting -> playing
+        # waiting -> ready
         |> Turn.next_phase()
-        # playing -> challenging
+        # ready -> steady
+        |> Turn.next_phase()
+        # steady -> challenging
         |> Turn.next_phase()
         # challenging -> results
         |> Turn.next_phase()
@@ -239,9 +263,11 @@ defmodule Songy.Core.TurnTest do
     test "handles empty queue gracefully" do
       turn =
         Turn.new()
-        # waiting -> playing
+        # waiting -> ready
         |> Turn.next_phase()
-        # playing -> challenging
+        # ready -> steady
+        |> Turn.next_phase()
+        # steady -> challenging
         |> Turn.next_phase()
         # challenging -> results
         |> Turn.next_phase()
@@ -264,9 +290,11 @@ defmodule Songy.Core.TurnTest do
         |> Turn.add_challenger("challenger-1")
         |> Turn.set_track(track)
         # Go through complete phase cycle
-        # waiting -> playing
+        # waiting -> ready
         |> Turn.next_phase()
-        # playing -> challenging
+        # ready -> steady
+        |> Turn.next_phase()
+        # steady -> challenging
         |> Turn.next_phase()
         # challenging -> results
         |> Turn.next_phase()
@@ -357,9 +385,11 @@ defmodule Songy.Core.TurnTest do
 
       Enum.reduce(1..cycles_needed, turn, fn _, acc ->
         acc
-        # waiting -> playing
+        # waiting -> ready
         |> Turn.next_phase()
-        # playing -> challenging
+        # ready -> steady
+        |> Turn.next_phase()
+        # steady -> challenging
         |> Turn.next_phase()
         # challenging -> results
         |> Turn.next_phase()
@@ -668,9 +698,11 @@ defmodule Songy.Core.TurnTest do
       # After phase transition, challengers and track are cleared
       turn =
         turn
-        # waiting -> playing
+        # waiting -> ready
         |> Turn.next_phase()
-        # playing -> challenging
+        # ready -> steady
+        |> Turn.next_phase()
+        # steady -> challenging
         |> Turn.next_phase()
         # challenging -> results
         |> Turn.next_phase()
@@ -692,11 +724,11 @@ defmodule Songy.Core.TurnTest do
       # Next player should stay the same after complete cycle
       next_turn =
         turn
-        # waiting -> playing
+        # waiting -> ready
         |> Turn.next_phase()
-        # playing -> challenging
+        # ready -> steady
         |> Turn.next_phase()
-        # challenging -> results
+        # steady -> challenging
         |> Turn.next_phase()
         # results -> waiting
         |> Turn.next_phase()
@@ -748,25 +780,31 @@ defmodule Songy.Core.TurnTest do
 
     test "returns phase after setting it" do
       turn = Turn.new() |> Turn.next_phase()
-      assert Turn.get_phase(turn) == :turn_playing
+      assert Turn.get_phase(turn) == :turn_ready
     end
   end
 
   describe "next_phase/1" do
-    test "transitions from waiting to playing" do
+    test "transitions from waiting to ready" do
       turn = Turn.new()
       updated_turn = Turn.next_phase(turn)
-      assert updated_turn.phase == :turn_playing
+      assert updated_turn.phase == :turn_ready
     end
 
-    test "transitions from playing to challenging" do
+    test "transitions from ready to steady" do
       turn = Turn.new() |> Turn.next_phase()
+      updated_turn = Turn.next_phase(turn)
+      assert updated_turn.phase == :turn_steady
+    end
+
+    test "transitions from steady to challenging" do
+      turn = Turn.new() |> Turn.next_phase() |> Turn.next_phase()
       updated_turn = Turn.next_phase(turn)
       assert updated_turn.phase == :turn_challenging
     end
 
     test "transitions from challenging to results" do
-      turn = Turn.new() |> Turn.next_phase() |> Turn.next_phase()
+      turn = Turn.new() |> Turn.next_phase() |> Turn.next_phase() |> Turn.next_phase()
       updated_turn = Turn.next_phase(turn)
       assert updated_turn.phase == :turn_results
     end
@@ -780,9 +818,11 @@ defmodule Songy.Core.TurnTest do
         |> Turn.add_player_to_queue("player-2")
         |> Turn.add_challenger("challenger-1")
         |> Turn.set_track(track)
-        # waiting -> playing
+        # waiting -> ready
         |> Turn.next_phase()
-        # playing -> challenging
+        # ready -> steady
+        |> Turn.next_phase()
+        # steady -> challenging
         |> Turn.next_phase()
         # challenging -> results
         |> Turn.next_phase()
@@ -801,9 +841,15 @@ defmodule Songy.Core.TurnTest do
       turn =
         Turn.new()
         |> Turn.add_player_to_queue("only-player")
+        # waiting -> ready
         |> Turn.next_phase()
+        # ready -> steady
         |> Turn.next_phase()
+        # steady -> challenging
         |> Turn.next_phase()
+        # challenging -> results
+        |> Turn.next_phase()
+        # results -> waiting
         |> Turn.next_phase()
 
       assert turn.phase == :turn_waiting
@@ -818,7 +864,7 @@ defmodule Songy.Core.TurnTest do
         |> Turn.add_player_to_queue("player-2")
         |> Turn.next_phase()
 
-      assert turn.phase == :turn_playing
+      assert turn.phase == :turn_ready
       assert turn.current_player_index == 0
       assert Turn.get_current_player(turn) == "player-1"
     end
@@ -838,9 +884,12 @@ defmodule Songy.Core.TurnTest do
 
       # Move through all phases
       turn = Turn.next_phase(turn)
-      assert turn.phase == :turn_playing
+      assert turn.phase == :turn_ready
 
       turn = Turn.set_track(turn, track)
+      turn = Turn.next_phase(turn)
+      assert turn.phase == :turn_steady
+
       turn = Turn.next_phase(turn)
       assert turn.phase == :turn_challenging
 
@@ -859,6 +908,8 @@ defmodule Songy.Core.TurnTest do
     end
 
     test "phase transitions preserve essential turn state" do
+      track = Track.new(title: "Test Song", artist: "Test Artist", year: 2020)
+
       turn =
         Turn.new()
         |> Turn.add_player_to_queue("player-1")
@@ -870,11 +921,15 @@ defmodule Songy.Core.TurnTest do
       # Go through a complete cycle using new workflow
       turn =
         turn
-        # waiting -> playing
+        # waiting -> ready
         |> Turn.next_phase()
-        # playing -> challenging
+        # Set track and ready -> steady
+        |> Turn.set_track(track)
         |> Turn.next_phase()
-        # challenging -> results
+        # steady -> challenging
+        |> Turn.next_phase()
+        # Add challenger and challenging -> results
+        |> Turn.add_challenger("challenger-1")
         |> Turn.next_phase()
         # results -> waiting (clear data and advance player)
         |> Turn.next_phase()

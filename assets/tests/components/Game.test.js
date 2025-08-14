@@ -34,7 +34,7 @@ describe("Game", () => {
     };
   });
 
-  test("displays game interface on turn_playing phase", () => {
+  test("displays game interface on turn_ready phase", () => {
     mockChannelContext.state.turn.phase = TURN_PHASE.PLAYING;
 
     render(Game, {
