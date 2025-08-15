@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi } from "vitest";
 import { Channel } from "phoenix";
 import { TURN_PHASE } from "~shared/types/turn";
-import { TURN_PHASE } from "~shared/types/turn";
+import { GAME_CONTEXT_KEY } from "~components/GameContext.svelte";
 
 import TurnWaiting from "~components/TurnWaiting.svelte";
 
@@ -38,7 +38,7 @@ describe("TurnWaiting", () => {
 
   test("displays current player's name and avatar", () => {
     render(TurnWaiting, {
-      context: new Map([["channel", mockChannelContext]]),
+      context: new Map([[GAME_CONTEXT_KEY, mockChannelContext]]),
     });
 
     expect(screen.getByText("Alice turn")).toBeInTheDocument();
@@ -51,7 +51,7 @@ describe("TurnWaiting", () => {
 
   test("displays ready button", () => {
     render(TurnWaiting, {
-      context: new Map([["channel", mockChannelContext]]),
+      context: new Map([[GAME_CONTEXT_KEY, mockChannelContext]]),
     });
 
     expect(screen.getByText("Ready?")).toBeInTheDocument();
@@ -62,24 +62,24 @@ describe("TurnWaiting", () => {
     mockChannelContext.state.turn.current_player_index = 1;
 
     render(TurnWaiting, {
-      context: new Map([["channel", mockChannelContext]]),
+      context: new Map([[GAME_CONTEXT_KEY, mockChannelContext]]),
     });
 
     expect(screen.getByText("Bob turn")).toBeInTheDocument();
     expect(screen.getByAltText("Bob")).toBeInTheDocument();
   });
 
-  test("throws error when channel context is missing", () => {
+  test("throws error when gameContext is missing", () => {
     expect(() => {
       render(TurnWaiting, {
         context: new Map(),
       });
-    }).toThrow("getChannelContext() must be called within a Channel component");
+    }).toThrow("getGameContext() must be called within a game context");
   });
 
   test("sends next_phase event when Ready button is clicked", async () => {
     render(TurnWaiting, {
-      context: new Map([["channel", mockChannelContext]]),
+      context: new Map([[GAME_CONTEXT_KEY, mockChannelContext]]),
     });
 
     const readyButton = screen.getByText("Ready?");

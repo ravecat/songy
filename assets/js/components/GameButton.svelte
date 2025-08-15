@@ -1,8 +1,8 @@
 <script>
   import { slide, fly } from "svelte/transition";
-  import { getChannelContext } from "~shared/context/channel";
+  import { getGameContext } from "~components/GameContext.svelte";
 
-  const { channel } = $derived(getChannelContext());
+  const { channel } = $derived(getGameContext());
   let isLoading = $state(false);
 
   const handleStartGame = () => {

@@ -1,19 +1,19 @@
 <script lang="ts">
   import { getScopeContext } from "~shared/context/scope";
-  import { getChannelContext } from "~shared/context/channel";
+  import { getGameContext } from "~components/GameContext.svelte";
   import TrackCard from "~components/TrackCard.svelte";
   import Timeline from "~components/Timeline.svelte";
   import { type DndEvent, TRIGGERS } from "svelte-dnd-action";
   import { dragOriginZone } from "~shared/stores/dragOrigin";
   import { get } from "svelte/store";
 
-  const { state, channel } = $derived.by(getChannelContext);
+  const { state, channel } = $derived.by(getGameContext);
   const { user } = $derived.by(getScopeContext);
   const currentTrack = $derived(state?.turn?.track);
-  const zoneId = $derived(`participant-timeline-${user?.uuid}`);
+  const zoneId = $derived(`participant-timeline-${user.uuid}`);
 
   let timeline = $derived.by(() => {
-    const timeline = state?.timelines?.[user?.uuid] || [];
+    const timeline = state?.timelines?.[user.uuid] || [];
 
     return timeline.map((track) => ({
       id: track.id,

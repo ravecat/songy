@@ -77,15 +77,16 @@ export function useChannel(options: UseChannelOptions): Channel {
     },
   };
 
+  Object.entries(on).forEach(([eventName, handler]) => {
+    channel.on(eventName, handler);
+  });
+
   channel
     .join()
     .receive("ok", joinCallbacks.ok)
     .receive("error", joinCallbacks.error)
     .receive("timeout", joinCallbacks.timeout);
 
-  Object.entries(on).forEach(([eventName, handler]) => {
-    channel.on(eventName, handler);
-  });
 
   channel.onError(onError);
   channel.onClose(onClose);

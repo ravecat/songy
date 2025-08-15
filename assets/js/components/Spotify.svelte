@@ -1,7 +1,7 @@
 <script lang="ts">
   import { setContext } from "svelte";
   import type { Snippet } from "svelte";
-  import { getChannelContext } from "~shared/context/channel";
+  import { getGameContext } from "~components/GameContext.svelte";
   import { useSpotifyPlayer } from "~hooks/useSpotifyPlayer.svelte";
 
   interface Props {
@@ -10,7 +10,7 @@
 
   let { children }: Props = $props();
 
-  const { channel } = $derived(getChannelContext());
+  const { channel } = $derived(getGameContext());
 
   const player = useSpotifyPlayer({
     name: "Songy room",

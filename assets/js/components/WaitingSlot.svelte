@@ -1,8 +1,8 @@
 <script>
   import { slide } from "svelte/transition";
-  import { getChannelContext } from "~shared/context/channel";
+  import { getGameContext } from "~components/GameContext.svelte";
 
-  const { state } = $derived(getChannelContext());
+  const { state } = $derived(getGameContext());
 
   let userCount = $derived(state?.participants?.length ?? 0);
 </script>

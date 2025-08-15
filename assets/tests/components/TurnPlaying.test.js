@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach } from "vitest";
 import { TURN_PHASE } from "~shared/types/turn";
+import { GAME_CONTEXT_KEY } from "~components/GameContext.svelte";
 
 import TurnPlaying from "~components/TurnPlaying.svelte";
 
@@ -40,7 +41,7 @@ describe("TurnPlaying", () => {
   test("renders participants component", () => {
     render(TurnPlaying, {
       context: new Map([
-        ["channel", mockChannelContext],
+        [GAME_CONTEXT_KEY, mockChannelContext],
         ["scope", mockScopeContext],
       ]),
     });
@@ -52,7 +53,7 @@ describe("TurnPlaying", () => {
   test("renders current track and timeline section", () => {
     render(TurnPlaying, {
       context: new Map([
-        ["channel", mockChannelContext],
+        [GAME_CONTEXT_KEY, mockChannelContext],
         ["scope", mockScopeContext],
       ]),
     });
@@ -62,7 +63,7 @@ describe("TurnPlaying", () => {
     expect(container).toBeInTheDocument();
   });
 
-  test("throws error when channel context is missing", () => {
+  test("throws error when gameContext is missing", () => {
     expect(() => {
       render(TurnPlaying, {
         context: new Map([["scope", mockScopeContext]]),
@@ -73,7 +74,7 @@ describe("TurnPlaying", () => {
   test("throws error when scope context is missing", () => {
     expect(() => {
       render(TurnPlaying, {
-        context: new Map([["channel", mockChannelContext]]),
+        context: new Map([[GAME_CONTEXT_KEY, mockChannelContext]]),
       });
     }).toThrow();
   });
@@ -82,7 +83,7 @@ describe("TurnPlaying", () => {
     expect(() => {
       render(TurnPlaying, {
         context: new Map([
-          ["channel", mockChannelContext],
+          [GAME_CONTEXT_KEY, mockChannelContext],
           ["scope", mockScopeContext],
         ]),
       });

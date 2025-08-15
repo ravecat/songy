@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach } from "vitest";
 import { TURN_PHASE } from "~shared/types/turn";
+import { GAME_CONTEXT_KEY } from "~components/GameContext.svelte";
 
 import Game from "~components/Game.svelte";
 
@@ -39,7 +40,7 @@ describe("Game", () => {
 
     render(Game, {
       context: new Map([
-        ["channel", mockChannelContext],
+        [GAME_CONTEXT_KEY, mockChannelContext],
         ["scope", mockScopeContext],
       ]),
     });
@@ -53,7 +54,7 @@ describe("Game", () => {
 
     render(Game, {
       context: new Map([
-        ["channel", mockChannelContext],
+        [GAME_CONTEXT_KEY, mockChannelContext],
         ["scope", mockScopeContext],
       ]),
     });
@@ -68,7 +69,7 @@ describe("Game", () => {
 
     render(Game, {
       context: new Map([
-        ["channel", mockChannelContext],
+        [GAME_CONTEXT_KEY, mockChannelContext],
         ["scope", mockScopeContext],
       ]),
     });
@@ -81,7 +82,7 @@ describe("Game", () => {
 
     render(Game, {
       context: new Map([
-        ["channel", mockChannelContext],
+        [GAME_CONTEXT_KEY, mockChannelContext],
         ["scope", mockScopeContext],
       ]),
     });
@@ -94,7 +95,7 @@ describe("Game", () => {
 
     render(Game, {
       context: new Map([
-        ["channel", mockChannelContext],
+        [GAME_CONTEXT_KEY, mockChannelContext],
         ["scope", mockScopeContext],
       ]),
     });
@@ -112,7 +113,7 @@ describe("Game", () => {
 
     render(Game, {
       context: new Map([
-        ["channel", mockChannelContext],
+        [GAME_CONTEXT_KEY, mockChannelContext],
         ["scope", mockScopeContext],
       ]),
     });
@@ -127,7 +128,7 @@ describe("Game", () => {
 
     render(Game, {
       context: new Map([
-        ["channel", mockChannelContext],
+        [GAME_CONTEXT_KEY, mockChannelContext],
         ["scope", mockScopeContext],
       ]),
     });
@@ -136,12 +137,12 @@ describe("Game", () => {
     expect(screen.getByText("Alice")).toBeInTheDocument();
   });
 
-  test("throws error when channel context is missing", () => {
+  test("throws error when gameContext is missing", () => {
     expect(() => {
       render(Game, {
         context: new Map(),
       });
-    }).toThrow("getChannelContext() must be called within a Channel component");
+    }).toThrow("getGameContext() must be called within a game context");
   });
 
   test("displays correct view for each game phase", () => {
@@ -157,7 +158,7 @@ describe("Game", () => {
 
       const { unmount } = render(Game, {
         context: new Map([
-          ["channel", mockChannelContext],
+          [GAME_CONTEXT_KEY, mockChannelContext],
           ["scope", mockScopeContext],
         ]),
       });
@@ -174,7 +175,7 @@ describe("Game", () => {
 
       render(Game, {
         context: new Map([
-          ["channel", mockChannelContext],
+          [GAME_CONTEXT_KEY, mockChannelContext],
           ["scope", mockScopeContext],
         ]),
       });

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { getChannelContext } from "~shared/context/channel";
+  import { getGameContext } from "~components/GameContext.svelte";
 
-  const { state, channel } = $derived.by(getChannelContext);
+  const { state, channel } = $derived.by(getGameContext);
 
   const currentPlayer = $derived.by(() => {
     const currentPlayerUuid =

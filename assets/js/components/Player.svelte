@@ -1,7 +1,7 @@
 <script>
-  import { getChannelContext } from "~shared/context/channel";
+  import { getGameContext } from "~components/GameContext.svelte";
 
-  const { state, channel } = $derived(getChannelContext());
+  const { state, channel } = $derived(getGameContext());
 
   let isPlayback = $derived(state?.player?.is_playback ?? false);
 </script>

@@ -1,10 +1,10 @@
 <script>
-  import { getChannelContext } from "~shared/context/channel";
+  import { getGameContext } from "~components/GameContext.svelte";
   import Lobby from "~components/Lobby.svelte";
   import Game from "~components/Game.svelte";
   import Logo from "~components/Logo.svelte";
 
-  const { state } = $derived.by(getChannelContext);
+  const { state } = $derived.by(getGameContext);
 
   let isWaiting = $derived(state?.status === "waiting");
 </script>

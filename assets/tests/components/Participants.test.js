@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe } from "vitest";
+import { GAME_CONTEXT_KEY } from "~components/GameContext.svelte";
 import Participants from "~components/Participants.svelte";
 
 describe("Participants", () => {
@@ -37,7 +38,7 @@ describe("Participants", () => {
   test("renders participants when participants list is not empty", () => {
     render(Participants, {
       context: new Map([
-        ["channel", mockChannelContext],
+        [GAME_CONTEXT_KEY, mockChannelContext],
         ["scope", mockScopeContext],
       ]),
     });
@@ -50,7 +51,7 @@ describe("Participants", () => {
   test("shows star indicator for current user's avatar", () => {
     render(Participants, {
       context: new Map([
-        ["channel", mockChannelContext],
+        [GAME_CONTEXT_KEY, mockChannelContext],
         ["scope", mockScopeContext],
       ]),
     });
@@ -65,7 +66,7 @@ describe("Participants", () => {
 
     render(Participants, {
       context: new Map([
-        ["channel", mockChannelContext],
+        [GAME_CONTEXT_KEY, mockChannelContext],
         ["scope", noUserScopeContext],
       ]),
     });
@@ -83,7 +84,7 @@ describe("Participants", () => {
 
     render(Participants, {
       context: new Map([
-        ["channel", mockChannelContext],
+        [GAME_CONTEXT_KEY, mockChannelContext],
         ["scope", differentUserContext],
       ]),
     });
@@ -100,7 +101,7 @@ describe("Participants", () => {
 
     render(Participants, {
       context: new Map([
-        ["channel", emptyChannelContext],
+        [GAME_CONTEXT_KEY, emptyChannelContext],
         ["scope", mockScopeContext],
       ]),
     });
@@ -113,7 +114,7 @@ describe("Participants", () => {
   test("renders avatar images with correct alt text", () => {
     render(Participants, {
       context: new Map([
-        ["channel", mockChannelContext],
+        [GAME_CONTEXT_KEY, mockChannelContext],
         ["scope", mockScopeContext],
       ]),
     });
