@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { Track } from '~shared/types/track';
-  
+  import type { Track } from "~shared/types/track";
+
   interface TrackCardProps {
     /** Track data to display */
     track: Track;
@@ -9,15 +9,17 @@
     /** Whether the track is in ready state */
     ready?: boolean;
   }
-  
+
   let { track, revealed = true, ready = false }: TrackCardProps = $props();
 </script>
 
 <div class="wrapper">
-  <button
+  <div
     class="track-card"
     style:transform={revealed ? "rotateY(0)" : ""}
-    aria-expanded={revealed}
+    aria-label={revealed
+      ? `Track: ${track.artist} - ${track.title} (${track.year})`
+      : "Hidden track card"}
   >
     {#if revealed}
       <div
@@ -68,10 +70,19 @@
       <div class="back" aria-label="Hidden track card">
         <div class="card-content">
           <div class="year-text">?</div>
+          {#if ready}
+            <button
+              class="btn"
+              aria-label="Mark as ready to submit guess"
+              type="button"
+            >
+              Ready
+            </button>
+          {/if}
         </div>
       </div>
     {/if}
-  </button>
+  </div>
 </div>
 
 <style>
@@ -94,8 +105,6 @@
     transform-style: preserve-3d;
     padding: 0;
     user-select: none;
-    cursor: pointer;
-    border: none;
     box-shadow:
       0 10px 15px -3px rgba(0, 0, 0, 0.1),
       0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -104,6 +113,7 @@
   .front,
   .back {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     position: absolute;

@@ -63,6 +63,6 @@
   onfinalize={handleFinalize}
 >
   {#snippet children(item)}
-    <TrackCard revealed={!item.current} track={item.track} />
+    <TrackCard revealed={!item.current} track={item.track} ready={item.current} />
   {/snippet}
 </Timeline>

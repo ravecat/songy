@@ -215,12 +215,6 @@ defmodule Songy.Boundary.GameSession do
   @doc """
   Advances the game turn to the next phase.
 
-  Moves the turn through the phase workflow:
-  - :turn_waiting -> :turn_ready
-  - :turn_ready -> :turn_challenging
-  - :turn_challenging -> :turn_results
-  - :turn_results -> :turn_waiting (clears data and advances to next player)
-
   ## Parameters
     * `game_uuid` - UUID of the game session
 
