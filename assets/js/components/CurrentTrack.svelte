@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getGameContext } from "~components/GameContext.svelte";
-  import { getScopeContext } from "~shared/context/scope";
+  import { getScopeContext } from "~components/Scope.svelte";
   import TrackCard from "~components/TrackCard.svelte";
   import Timeline from "~components/Timeline.svelte";
   import { type DndEvent, TRIGGERS } from "svelte-dnd-action";

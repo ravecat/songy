@@ -1,7 +1,7 @@
 <script>
   import { slide } from "svelte/transition";
   import { getGameContext } from "~components/GameContext.svelte";
-  import { getScopeContext } from "~shared/context/scope";
+  import { getScopeContext } from "~components/Scope.svelte";
 
   const { state } = $derived(getGameContext());
   const { user } = $derived(getScopeContext());

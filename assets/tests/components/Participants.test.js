@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe } from "vitest";
 import { GAME_CONTEXT_KEY } from "~components/GameContext.svelte";
+import { SCOPE_CONTEXT_KEY } from "~components/Scope.svelte";
 import Participants from "~components/Participants.svelte";
 
 describe("Participants", () => {
@@ -39,7 +40,7 @@ describe("Participants", () => {
     render(Participants, {
       context: new Map([
         [GAME_CONTEXT_KEY, mockChannelContext],
-        ["scope", mockScopeContext],
+        [SCOPE_CONTEXT_KEY, mockScopeContext],
       ]),
     });
 
@@ -52,7 +53,7 @@ describe("Participants", () => {
     render(Participants, {
       context: new Map([
         [GAME_CONTEXT_KEY, mockChannelContext],
-        ["scope", mockScopeContext],
+        [SCOPE_CONTEXT_KEY, mockScopeContext],
       ]),
     });
 
@@ -67,7 +68,7 @@ describe("Participants", () => {
     render(Participants, {
       context: new Map([
         [GAME_CONTEXT_KEY, mockChannelContext],
-        ["scope", noUserScopeContext],
+        [SCOPE_CONTEXT_KEY, noUserScopeContext],
       ]),
     });
 
@@ -85,7 +86,7 @@ describe("Participants", () => {
     render(Participants, {
       context: new Map([
         [GAME_CONTEXT_KEY, mockChannelContext],
-        ["scope", differentUserContext],
+        [SCOPE_CONTEXT_KEY, differentUserContext],
       ]),
     });
 
@@ -102,7 +103,7 @@ describe("Participants", () => {
     render(Participants, {
       context: new Map([
         [GAME_CONTEXT_KEY, emptyChannelContext],
-        ["scope", mockScopeContext],
+        [SCOPE_CONTEXT_KEY, mockScopeContext],
       ]),
     });
 
@@ -115,7 +116,7 @@ describe("Participants", () => {
     render(Participants, {
       context: new Map([
         [GAME_CONTEXT_KEY, mockChannelContext],
-        ["scope", mockScopeContext],
+        [SCOPE_CONTEXT_KEY, mockScopeContext],
       ]),
     });
 

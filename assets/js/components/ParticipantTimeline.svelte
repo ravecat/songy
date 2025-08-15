@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getScopeContext } from "~shared/context/scope";
+  import { getScopeContext } from "~components/Scope.svelte";
   import { getGameContext } from "~components/GameContext.svelte";
   import TrackCard from "~components/TrackCard.svelte";
   import Timeline from "~components/Timeline.svelte";

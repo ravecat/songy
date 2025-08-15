@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach } from "vitest";
 import { TURN_PHASE } from "~shared/types/turn";
 import { GAME_CONTEXT_KEY } from "~components/GameContext.svelte";
+import { SCOPE_CONTEXT_KEY } from "~components/Scope.svelte";
 
 import Game from "~components/Game.svelte";
 
@@ -41,7 +42,7 @@ describe("Game", () => {
     render(Game, {
       context: new Map([
         [GAME_CONTEXT_KEY, mockChannelContext],
-        ["scope", mockScopeContext],
+        [SCOPE_CONTEXT_KEY, mockScopeContext],
       ]),
     });
 
@@ -55,7 +56,7 @@ describe("Game", () => {
     render(Game, {
       context: new Map([
         [GAME_CONTEXT_KEY, mockChannelContext],
-        ["scope", mockScopeContext],
+        [SCOPE_CONTEXT_KEY, mockScopeContext],
       ]),
     });
 
@@ -70,7 +71,7 @@ describe("Game", () => {
     render(Game, {
       context: new Map([
         [GAME_CONTEXT_KEY, mockChannelContext],
-        ["scope", mockScopeContext],
+        [SCOPE_CONTEXT_KEY, mockScopeContext],
       ]),
     });
 
@@ -83,7 +84,7 @@ describe("Game", () => {
     render(Game, {
       context: new Map([
         [GAME_CONTEXT_KEY, mockChannelContext],
-        ["scope", mockScopeContext],
+        [SCOPE_CONTEXT_KEY, mockScopeContext],
       ]),
     });
 
@@ -96,7 +97,7 @@ describe("Game", () => {
     render(Game, {
       context: new Map([
         [GAME_CONTEXT_KEY, mockChannelContext],
-        ["scope", mockScopeContext],
+        [SCOPE_CONTEXT_KEY, mockScopeContext],
       ]),
     });
 
@@ -114,7 +115,7 @@ describe("Game", () => {
     render(Game, {
       context: new Map([
         [GAME_CONTEXT_KEY, mockChannelContext],
-        ["scope", mockScopeContext],
+        [SCOPE_CONTEXT_KEY, mockScopeContext],
       ]),
     });
 
@@ -129,7 +130,7 @@ describe("Game", () => {
     render(Game, {
       context: new Map([
         [GAME_CONTEXT_KEY, mockChannelContext],
-        ["scope", mockScopeContext],
+        [SCOPE_CONTEXT_KEY, mockScopeContext],
       ]),
     });
 
@@ -159,7 +160,7 @@ describe("Game", () => {
       const { unmount } = render(Game, {
         context: new Map([
           [GAME_CONTEXT_KEY, mockChannelContext],
-          ["scope", mockScopeContext],
+          [SCOPE_CONTEXT_KEY, mockScopeContext],
         ]),
       });
 
@@ -176,7 +177,7 @@ describe("Game", () => {
       render(Game, {
         context: new Map([
           [GAME_CONTEXT_KEY, mockChannelContext],
-          ["scope", mockScopeContext],
+          [SCOPE_CONTEXT_KEY, mockScopeContext],
         ]),
       });
 
