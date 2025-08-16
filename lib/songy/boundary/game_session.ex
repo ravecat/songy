@@ -125,10 +125,17 @@ defmodule Songy.Boundary.GameSession do
   """
   @spec start_game_session(String.t()) :: {:ok, Game.t()} | {:error, atom()}
   def start_game_session(game_uuid) do
-    if game_session_exists?(game_uuid) do
-      GenServer.call(via(game_uuid), :start_game_session)
+    with {:ok, game} <- lookup_game_session(game_uuid),
+         :waiting <- Game.get_status(game),
+         {:ok, credentials} <- get_credentials(game_uuid),
+         {:ok, random_track} <- Spotify.search_random_track(credentials),
+         track <- Trackable.to_track(random_track) do
+      GenServer.call(via(game_uuid), {:start_game_session, track})
     else
-      {:error, :game_session_not_found}
+      {:error, :game_session_not_found} -> {:error, :game_session_not_found}
+      {:error, :no_credentials} -> {:error, :no_credentials}
+      {:error, reason} -> {:error, reason}
+      _status -> {:error, :game_already_started}
     end
   end
 
@@ -578,25 +585,16 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @impl GenServer
-  def handle_call(:start_game_session, _from, game) do
+  def handle_call({:start_game_session, track}, _from, game) do
     with :waiting <- Game.get_status(game),
-         {:ok, credentials} <- get_credentials(game.uuid),
-         {:ok, random_track} <- Spotify.search_random_track(credentials),
-         track <- Trackable.to_track(random_track),
          {:ok, game_with_track} <- Game.set_turn_track(game, track),
          {:ok, started_game} <- {:ok, Game.update_status(game_with_track, :in_progress)} do
       {:reply, {:ok, started_game}, started_game}
     else
-      {:error, :no_credentials} ->
-        {:reply, {:error, :no_credentials}, game}
-
-      {:error, :no_turn} ->
-        {:reply, {:error, :no_turn}, game}
-
       {:error, reason} ->
         {:reply, {:error, reason}, game}
 
-      _status ->
+      _other_status ->
         {:reply, {:error, :game_already_started}, game}
     end
   end
