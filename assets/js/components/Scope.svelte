@@ -1,6 +1,7 @@
 <script lang="ts" module>
   import { getContext, setContext } from "svelte";
   import type { User } from "~shared/types/user";
+  import Logo from "~components/Logo.svelte";
 
   /**
    * Scope context interface providing user information
@@ -68,4 +69,6 @@
   setScopeContext(context);
 </script>
 
-{@render children?.()}
+<Logo loading={!context.user}>
+  {@render children?.()}
+</Logo>
