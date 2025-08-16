@@ -6,11 +6,13 @@
   import { type DndEvent, TRIGGERS } from "svelte-dnd-action";
   import { dragOriginZone } from "~shared/stores/dragOrigin";
   import { get } from "svelte/store";
+  import { TURN_PHASE } from "~shared/types/turn";
 
   const { state, channel } = $derived.by(getGameContext);
   const { user } = $derived.by(getScopeContext);
   const currentTrack = $derived(state?.turn?.track);
   const zoneId = $derived(`participant-timeline-${user.uuid}`);
+  const turnPhase = $derived(state?.turn?.phase);
 
   let timeline = $derived.by(() => {
     const timeline = state?.timelines?.[user.uuid] || [];
@@ -55,6 +57,10 @@
       });
     }
   }
+
+  const handleSteady = () => {
+    channel.push("next_phase", {});
+  };
 </script>
 
 <Timeline
@@ -63,6 +69,11 @@
   onfinalize={handleFinalize}
 >
   {#snippet children(item)}
-    <TrackCard revealed={!item.current} track={item.track} ready={item.current} />
+    <TrackCard
+      revealed={!item.current}
+      track={item.track}
+      ready={item.current && turnPhase === TURN_PHASE.STEADY}
+      onsteady={handleSteady}
+    />
   {/snippet}
 </Timeline>

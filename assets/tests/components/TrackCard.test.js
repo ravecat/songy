@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/svelte";
-import { expect, test, describe } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/svelte";
+import { expect, test, describe, vi } from "vitest";
 import TrackCard from "~components/TrackCard.svelte";
 
 describe("TrackCard", () => {
@@ -86,5 +86,34 @@ describe("TrackCard", () => {
     expect(
       screen.getByRole("button", { name: /mark as ready to submit guess/i })
     ).toBeInTheDocument();
+  });
+
+  test("calls onsteady callback when ready button is clicked", async () => {
+    const onsteady = vi.fn();
+    
+    render(TrackCard, {
+      props: { track: mockTrack, revealed: false, ready: true, onsteady },
+    });
+
+    const readyButton = screen.getByRole("button", {
+      name: /mark as ready to submit guess/i,
+    });
+    
+    await fireEvent.click(readyButton);
+    
+    expect(onsteady).toHaveBeenCalledOnce();
+  });
+
+  test("does not fail when onsteady is not provided and button is clicked", async () => {
+    render(TrackCard, {
+      props: { track: mockTrack, revealed: false, ready: true },
+    });
+
+    const readyButton = screen.getByRole("button", {
+      name: /mark as ready to submit guess/i,
+    });
+    
+    // Should not throw an error
+    await fireEvent.click(readyButton);
   });
 });

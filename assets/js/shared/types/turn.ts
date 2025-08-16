@@ -9,7 +9,8 @@ import type { Track } from './track';
  */
 export enum TURN_PHASE {
   WAITING = 'turn_waiting',
-  PLAYING = 'turn_ready',
+  READY = 'turn_ready',
+  STEADY = 'turn_steady',
   CHALLENGING = 'turn_challenging',
   RESULTS = 'turn_results'
 }
@@ -23,16 +24,16 @@ export enum TURN_PHASE {
 export interface Turn {
   /** Queue of player UUIDs */
   queue: string[];
-  
+
   /** Index of current active player in queue */
   current_player_index: number;
-  
+
   /** List of challenger UUIDs */
   challengers: string[];
-  
+
   /** Currently playing track */
   track?: Track;
-  
+
   /** Current phase of the turn */
   phase: TURN_PHASE;
 }

@@ -65,19 +65,6 @@ describe("Game", () => {
     expect(screen.getByText("Ready?")).toBeInTheDocument();
   });
 
-  test("displays challenge view on turn_challenging phase", () => {
-    mockChannelContext.state.turn.phase = TURN_PHASE.CHALLENGING;
-
-    render(Game, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext],
-        [SCOPE_CONTEXT_KEY, mockScopeContext],
-      ]),
-    });
-
-    expect(screen.getByText("turn_challenging")).toBeInTheDocument();
-  });
-
   test("displays results view on turn_results phase", () => {
     mockChannelContext.state.turn.phase = TURN_PHASE.RESULTS;
 
@@ -144,29 +131,6 @@ describe("Game", () => {
         context: new Map(),
       });
     }).toThrow("getGameContext() must be called within a game context");
-  });
-
-  test("displays correct view for each game phase", () => {
-    const phases = [
-      { phase: TURN_PHASE.PLAYING, expectedText: "Alice" }, // Game interface shows participants
-      { phase: TURN_PHASE.WAITING, expectedText: "Alice turn" }, // Waiting view shows player turn
-      { phase: TURN_PHASE.CHALLENGING, expectedText: "turn_challenging" }, // Stub component
-      { phase: TURN_PHASE.RESULTS, expectedText: "turn_results" }, // Stub component
-    ];
-
-    phases.forEach(({ phase, expectedText }) => {
-      mockChannelContext.state.turn.phase = phase;
-
-      const { unmount } = render(Game, {
-        context: new Map([
-          [GAME_CONTEXT_KEY, mockChannelContext],
-          [SCOPE_CONTEXT_KEY, mockScopeContext],
-        ]),
-      });
-
-      expect(screen.getByText(expectedText)).toBeInTheDocument();
-      unmount();
-    });
   });
 
   test.each(["turn_countdown", "", "unknown_phase", 123, {}, []])(

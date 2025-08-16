@@ -1,31 +1,24 @@
 <script lang="ts">
-  // Stub component for turn_challenging phase
+  import Participants from "~components/Participants.svelte";
+  import Player from "~components/Player.svelte";
+  import ParticipantTimeline from "~components/ParticipantTimeline.svelte";
+  import { getGameContext } from "~components/GameContext.svelte";
+  import { getScopeContext } from "~components/Scope.svelte";
+
+  const { state } = $derived.by(getGameContext);
+  const { user: currentPlayer } = $derived.by(getScopeContext);
+  const activePlayerUuid = $derived.by(() => {
+    return state?.turn?.queue?.[state?.turn?.current_player_index];
+  });
+  const activePlayer = $derived.by(() => {
+    return state?.participants?.find(({ uuid }) => uuid === activePlayerUuid);
+  });
 </script>
 
-<div class="turn-phase-screen">
-  <h1>turn_challenging</h1>
-  <p>Challenge phase implementation coming soon...</p>
-</div>
-
-<style>
-  .turn-phase-screen {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    min-height: 60vh;
-    text-align: center;
-    padding: 2rem;
-  }
-
-  h1 {
-    font-size: 2rem;
-    margin-bottom: 1rem;
-    color: #333;
-  }
-
-  p {
-    color: #666;
-    font-size: 1.1rem;
-  }
-</style>
+{#if activePlayer?.uuid === currentPlayer?.uuid}
+  <Participants />
+  <ParticipantTimeline />
+  <Player />
+{:else}
+  <p>Challenge view</p>
+{/if}

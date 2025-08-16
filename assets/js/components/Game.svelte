@@ -12,8 +12,6 @@
 
 {#if turnPhase === TURN_PHASE.WAITING}
   <TurnWaiting />
-{:else if turnPhase === TURN_PHASE.PLAYING}
-  <TurnPlaying />
 {:else if turnPhase === TURN_PHASE.CHALLENGING}
   <TurnChallenging />
 {:else if turnPhase === TURN_PHASE.RESULTS}

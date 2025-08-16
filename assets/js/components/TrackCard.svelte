@@ -8,9 +8,16 @@
     revealed?: boolean;
     /** Whether the track is in ready state */
     ready?: boolean;
+    /** Callback function when ready button is clicked */
+    onsteady?: () => void;
   }
 
-  let { track, revealed = true, ready = false }: TrackCardProps = $props();
+  let {
+    track,
+    revealed = true,
+    ready = false,
+    onsteady,
+  }: TrackCardProps = $props();
 </script>
 
 <div class="wrapper">
@@ -75,6 +82,7 @@
               class="btn"
               aria-label="Mark as ready to submit guess"
               type="button"
+              onclick={onsteady}
             >
               Ready
             </button>
