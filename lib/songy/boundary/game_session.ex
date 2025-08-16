@@ -588,7 +588,7 @@ defmodule Songy.Boundary.GameSession do
   def handle_call({:start_game_session, track}, _from, game) do
     with :waiting <- Game.get_status(game),
          {:ok, game_with_track} <- Game.set_turn_track(game, track),
-         {:ok, started_game} <- {:ok, Game.update_status(game_with_track, :in_progress)} do
+         {:ok, started_game} <- Game.update_status(game_with_track) do
       {:reply, {:ok, started_game}, started_game}
     else
       {:error, reason} ->

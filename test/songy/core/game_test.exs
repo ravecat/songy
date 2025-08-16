@@ -242,32 +242,48 @@ defmodule Songy.Core.GameTest do
     end
   end
 
-  describe "update_status/2" do
-    test "updates status to in_progress" do
+  describe "update_status/1" do
+    test "advances from waiting to in_progress" do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
 
-      updated_game = Game.update_status(game, :in_progress)
+      assert {:ok, updated_game} = Game.update_status(game)
       assert updated_game.status == :in_progress
     end
 
-    test "updates status to finished" do
+    test "advances from in_progress to finished" do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
 
-      updated_game = Game.update_status(game, :finished)
-      assert updated_game.status == :finished
+      {:ok, in_progress_game} = Game.update_status(game)
+      assert {:ok, finished_game} = Game.update_status(in_progress_game)
+      assert finished_game.status == :finished
     end
 
-    test "updates status back to waiting" do
+    test "rejects advancing finished game" do
       provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
 
-      game =
-        Game.new("owner123", provider: provider)
-        |> Game.update_status(:in_progress)
+      {:ok, in_progress_game} = Game.update_status(game)
+      {:ok, finished_game} = Game.update_status(in_progress_game)
 
-      updated_game = Game.update_status(game, :waiting)
-      assert updated_game.status == :waiting
+      assert {:error, :game_already_finished} = Game.update_status(finished_game)
+    end
+
+    test "full lifecycle progression" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+
+      # waiting -> in_progress
+      assert {:ok, in_progress_game} = Game.update_status(game)
+      assert in_progress_game.status == :in_progress
+
+      # in_progress -> finished
+      assert {:ok, finished_game} = Game.update_status(in_progress_game)
+      assert finished_game.status == :finished
+
+      # finished -> error
+      assert {:error, :game_already_finished} = Game.update_status(finished_game)
     end
   end
 

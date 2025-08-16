@@ -158,12 +158,43 @@ defmodule Songy.Core.Game do
   end
 
   @doc """
-  Updates the game status.
+  Moves the game to the next status automatically.
+
+  Automatically transitions through the game states:
+  - :waiting -> :in_progress
+  - :in_progress -> :finished
+  - :finished -> error (game cannot be advanced further)
+
+  ## Examples
+      iex> provider = Provider.new(:spotify)
+      iex> game = Game.new("owner123", provider: provider)
+      iex> Game.update_status(game)
+      {:ok, %Game{status: :in_progress}}
+
+      iex> provider = Provider.new(:spotify)
+      iex> game = Game.new("owner123", provider: provider)
+      iex> {:ok, in_progress_game} = Game.update_status(game)
+      iex> Game.update_status(in_progress_game)
+      {:ok, %Game{status: :finished}}
+
+      iex> provider = Provider.new(:spotify)
+      iex> game = Game.new("owner123", provider: provider)
+      iex> {:ok, in_progress_game} = Game.update_status(game)
+      iex> {:ok, finished_game} = Game.update_status(in_progress_game)
+      iex> Game.update_status(finished_game)
+      {:error, :game_already_finished}
   """
-  @spec update_status(t(), status()) :: t()
-  def update_status(%__MODULE__{} = game, status)
-      when status in [:waiting, :in_progress, :finished] do
-    %{game | status: status}
+  @spec update_status(t()) :: {:ok, t()} | {:error, atom()}
+  def update_status(%__MODULE__{status: :waiting} = game) do
+    {:ok, %{game | status: :in_progress}}
+  end
+
+  def update_status(%__MODULE__{status: :in_progress} = game) do
+    {:ok, %{game | status: :finished}}
+  end
+
+  def update_status(%__MODULE__{status: :finished}) do
+    {:error, :game_already_finished}
   end
 
   @doc """
