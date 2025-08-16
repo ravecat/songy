@@ -323,12 +323,10 @@ defmodule Songy.Boundary.GameSession do
   @spec extend_timeline(String.t(), String.t(), non_neg_integer()) :: {:ok, Game.t()} | {:error, atom()}
   def extend_timeline(game_uuid, user_uuid, position \\ 0)
       when is_binary(game_uuid) and is_binary(user_uuid) and is_integer(position) and position >= 0 do
-    with {:ok, game} <- lookup_game_session(game_uuid),
-         %Track{} = track <- Game.get_turn_track(game) do
-      GenServer.call(via(game_uuid), {:extend_timeline, user_uuid, track, position})
+    if game_session_exists?(game_uuid) do
+      GenServer.call(via(game_uuid), {:extend_timeline, user_uuid, position})
     else
-      {:error, :game_session_not_found} -> {:error, :game_session_not_found}
-      nil -> {:error, :no_current_track}
+      {:error, :game_session_not_found}
     end
   end
 
@@ -659,21 +657,22 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @impl GenServer
-  def handle_call({:extend_timeline, user_uuid, track, position}, _from, game) do
-    updated_game =
-      game
-      |> Game.extend_user_timeline(user_uuid, track, position)
-      |> Game.next_phase()
+  def handle_call({:extend_timeline, user_uuid, position}, _from, game) do
+    with %Track{} = track <- Game.get_turn_track(game),
+         game_with_extended_timeline <- Game.extend_user_timeline(game, user_uuid, track, position),
+         steady_game <- Game.next_phase(game_with_extended_timeline) do
+      Logger.info("Extend timeline for user #{user_uuid} with track '#{inspect(track)}' at position #{position}")
 
-    Logger.info("Extend timeline for user #{user_uuid} with track '#{track.id}' at position #{position}")
+      Phoenix.PubSub.local_broadcast(
+        Songy.PubSub,
+        "room:#{steady_game.uuid}",
+        {:game_state_updated, steady_game}
+      )
 
-    Phoenix.PubSub.local_broadcast(
-      Songy.PubSub,
-      "room:#{updated_game.uuid}",
-      {:game_state_updated, updated_game}
-    )
-
-    {:reply, {:ok, updated_game}, updated_game}
+      {:reply, {:ok, steady_game}, steady_game}
+    else
+      nil -> {:reply, {:error, :no_current_track}, game}
+    end
   end
 
   @impl GenServer
