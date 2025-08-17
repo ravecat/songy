@@ -1,5 +1,6 @@
 <script>
   import { getGameContext } from "~components/GameContext.svelte";
+  import { PUSH_EVENT } from "~shared/types/channel";
 
   const { state, channel } = $derived(getGameContext());
 
@@ -11,7 +12,7 @@
     class="play"
     aria-label={isPlayback ? "Pause track" : "Play track"}
     onclick={() => {
-      channel.push(isPlayback ? "pause_playback" : "start_playback", {});
+      channel.push(isPlayback ? PUSH_EVENT.PAUSE_PLAYBACK : PUSH_EVENT.START_PLAYBACK, {});
     }}
   >
     {#if isPlayback}

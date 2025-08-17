@@ -7,6 +7,7 @@
   import { dragOriginZone } from "~shared/stores/dragOrigin";
   import { get } from "svelte/store";
   import { TURN_PHASE } from "~shared/types/turn";
+  import { PUSH_EVENT } from "~shared/types/channel";
 
   const { state, channel } = $derived.by(getGameContext);
   const { user } = $derived.by(getScopeContext);
@@ -47,19 +48,19 @@
     const newPosition = items.findIndex(({ id }) => id === draggedId);
 
     if (originZone === zoneId) {
-      channel.push("reorder_timeline", {
+      channel.push(PUSH_EVENT.REORDER_TIMELINE, {
         track_id: draggedId,
         position: newPosition,
       });
     } else {
-      channel.push("extend_timeline", {
+      channel.push(PUSH_EVENT.EXTEND_TIMELINE, {
         position: newPosition,
       });
     }
   }
 
   const handleSteady = () => {
-    channel.push("next_phase", {});
+    channel.push(PUSH_EVENT.NEXT_PHASE, {});
   };
 </script>
 

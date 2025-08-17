@@ -52,6 +52,7 @@
 
 <script lang="ts">
   import { getGameContext } from "~components/GameContext.svelte";
+  import { PUSH_EVENT } from "~shared/types/channel";
   import type { Snippet } from "svelte";
 
   let { children }: { children: Snippet } = $props();
@@ -61,7 +62,7 @@
   let context = $state<ScopeContext>({ user: null! });
 
   $effect(() => {
-    channel.push("get_current_user", {}).receive("ok", (response: User) => {
+    channel.push(PUSH_EVENT.GET_CURRENT_USER, {}).receive("ok", (response: User) => {
       context.user = response;
     });
   });

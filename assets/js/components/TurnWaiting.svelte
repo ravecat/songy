@@ -1,5 +1,6 @@
 <script lang="ts">
   import { getGameContext } from "~components/GameContext.svelte";
+  import { PUSH_EVENT } from "~shared/types/channel";
 
   const { state, channel } = $derived.by(getGameContext);
 
@@ -11,7 +12,7 @@
   });
 
   const handleReady = () => {
-    channel.push("next_phase", {});
+    channel.push(PUSH_EVENT.NEXT_PHASE, {});
   };
 </script>
 
