@@ -36,7 +36,7 @@ describe("TurnChallenging", () => {
         turn: {
           phase: TURN_PHASE.CHALLENGING,
           queue: ["user-1", "user-2", "user-3"],
-          current_player_index: 0, // Alice is active player
+          cursor: 0, // Alice is active player
         },
       },
     };
@@ -87,7 +87,7 @@ describe("TurnChallenging", () => {
           turn: {
             phase: TURN_PHASE.CHALLENGING,
             queue: ["user-1", "user-2", "user-3"],
-            current_player_index: 2, // Charlie is now active
+            cursor: 2, // Charlie is now active
           },
         },
       };
@@ -137,7 +137,7 @@ describe("TurnChallenging", () => {
           turn: {
             phase: TURN_PHASE.CHALLENGING,
             queue: ["user-1", "user-2", "user-3"],
-            current_player_index: 1, // Bob is now active
+            cursor: 1, // Bob is now active
           },
         },
       };
@@ -167,7 +167,7 @@ describe("TurnChallenging", () => {
           turn: {
             phase: TURN_PHASE.CHALLENGING,
             queue: ["user-1", "user-2", "user-3"],
-            current_player_index: 99, // Invalid index
+            cursor: 99, // Invalid index
           },
         },
       };
@@ -190,7 +190,7 @@ describe("TurnChallenging", () => {
           turn: {
             phase: TURN_PHASE.CHALLENGING,
             queue: [],
-            current_player_index: 0,
+            cursor: 0,
           },
         },
       };

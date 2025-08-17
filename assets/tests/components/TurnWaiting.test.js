@@ -28,7 +28,7 @@ describe("TurnWaiting", () => {
         ],
         turn: {
           queue: ["user-1", "user-2"],
-          current_player_index: 0,
+          cursor: 0,
           phase: TURN_PHASE.WAITING,
         },
       },
@@ -58,8 +58,8 @@ describe("TurnWaiting", () => {
     expect(screen.getByRole("button")).toBeInTheDocument();
   });
 
-  test("displays second player when current_player_index is 1", () => {
-    mockChannelContext.state.turn.current_player_index = 1;
+  test("displays second player when cursor is 1", () => {
+    mockChannelContext.state.turn.cursor = 1;
 
     render(TurnWaiting, {
       context: new Map([[GAME_CONTEXT_KEY, mockChannelContext]]),

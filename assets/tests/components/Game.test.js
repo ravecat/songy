@@ -30,7 +30,7 @@ describe("Game", () => {
         turn: {
           phase: TURN_PHASE.PLAYING,
           queue: ["user-1"],
-          current_player_index: 0,
+          cursor: 0,
         },
       },
     };

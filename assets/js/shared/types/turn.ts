@@ -26,7 +26,7 @@ export interface Turn {
   queue: string[];
 
   /** Index of current active player in queue */
-  current_player_index: number;
+  cursor: number;
 
   /** List of challenger UUIDs */
   challengers: string[];

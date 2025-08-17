@@ -8,7 +8,7 @@
   const { state } = $derived.by(getGameContext);
   const { user: currentPlayer } = $derived.by(getScopeContext);
   const activePlayerUuid = $derived.by(() => {
-    return state?.turn?.queue?.[state?.turn?.current_player_index];
+    return state?.turn?.queue?.[state?.turn?.cursor];
   });
   const activePlayer = $derived.by(() => {
     return state?.participants?.find(({ uuid }) => uuid === activePlayerUuid);
@@ -20,5 +20,6 @@
   <ParticipantTimeline />
   <Player />
 {:else}
+  <Participants />
   <p>Challenge view</p>
 {/if}

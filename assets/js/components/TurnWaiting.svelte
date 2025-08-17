@@ -3,11 +3,11 @@
 
   const { state, channel } = $derived.by(getGameContext);
 
-  const currentPlayer = $derived.by(() => {
-    const currentPlayerUuid =
-      state?.turn?.queue?.[state?.turn?.current_player_index];
+  const activePlayer = $derived.by(() => {
+    const activePlayerUuid =
+      state?.turn?.queue?.[state?.turn?.cursor];
 
-    return state?.participants?.find(({ uuid }) => uuid === currentPlayerUuid)!;
+    return state?.participants?.find(({ uuid }) => uuid === activePlayerUuid)!;
   });
 
   const handleReady = () => {
@@ -18,11 +18,11 @@
 <div class="turn-waiting-screen">
   <div class="player-info">
     <img
-      src={currentPlayer.avatar_url}
-      alt={currentPlayer.name}
+      src={activePlayer.avatar_url}
+      alt={activePlayer.name}
       class="player-avatar"
     />
-    <h2>{currentPlayer.name} turn</h2>
+    <h2>{activePlayer.name} turn</h2>
   </div>
   <button class="btn btn-primary w-full" onclick={handleReady}>Ready?</button>
 </div>
