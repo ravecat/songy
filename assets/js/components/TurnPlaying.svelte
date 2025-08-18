@@ -2,10 +2,10 @@
   import Participants from "~components/Participants.svelte";
   import Player from "~components/Player.svelte";
   import CurrentTrack from "~components/CurrentTrack.svelte";
-  import ParticipantTimeline from "~components/ParticipantTimeline.svelte";
+  import ActiveTimeline from "~components/ActiveTimeline.svelte";
 </script>
 
 <Participants />
-<ParticipantTimeline />
+<ActiveTimeline />
 <CurrentTrack />
 <Player />

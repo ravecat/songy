@@ -1,7 +1,7 @@
 <script lang="ts">
   import Participants from "~components/Participants.svelte";
   import Player from "~components/Player.svelte";
-  import ParticipantTimeline from "~components/ParticipantTimeline.svelte";
+  import ActiveTimeline from "~components/ActiveTimeline.svelte";
   import { getGameContext } from "~components/GameContext.svelte";
   import { getScopeContext } from "~components/Scope.svelte";
 
@@ -17,7 +17,7 @@
 
 {#if activePlayer?.uuid === currentPlayer?.uuid}
   <Participants />
-  <ParticipantTimeline />
+  <ActiveTimeline />
   <Player />
 {:else}
   <Participants />
