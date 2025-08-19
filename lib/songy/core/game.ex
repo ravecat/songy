@@ -450,11 +450,11 @@ defmodule Songy.Core.Game do
   @spec next_phase(t()) :: t()
   def next_phase(%__MODULE__{turn: %Turn{phase: :results} = turn} = game) do
     # Create snapshot of new active player's timeline when starting their turn
-    updated_turn = Turn.next_phase(turn)
-    new_active_player_uuid = Turn.get_current_player(updated_turn)
+    new_turn = Turn.next_phase(turn)
+    new_active_player_uuid = Turn.get_active_player(new_turn)
     new_active_player_timeline = get_user_timeline(game, new_active_player_uuid)
 
-    updated_turn = Turn.set_timeline_snapshot(updated_turn, new_active_player_timeline)
+    updated_turn = Turn.set_timeline_snapshot(new_turn, new_active_player_timeline)
 
     %{game | turn: updated_turn}
   end
@@ -501,16 +501,16 @@ defmodule Songy.Core.Game do
   Gets the current active player from the game queue.
 
   ## Parameters
-    * `game` - The game to get the current player from
+    * `game` - The game to get the active player from
 
   ## Returns
-    * UUID of the current player or nil if queue is empty or no turn
+    * UUID of the active player or nil if queue is empty or no turn
   """
-  @spec get_current_player(t()) :: String.t() | nil
-  def get_current_player(%__MODULE__{turn: nil}), do: nil
+  @spec get_active_player(t()) :: String.t() | nil
+  def get_active_player(%__MODULE__{turn: nil}), do: nil
 
-  def get_current_player(%__MODULE__{turn: turn}) do
-    Turn.get_current_player(turn)
+  def get_active_player(%__MODULE__{turn: turn}) do
+    Turn.get_active_player(turn)
   end
 
   @spec get_status(t()) :: status()

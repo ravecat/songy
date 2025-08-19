@@ -127,7 +127,7 @@ defmodule Songy.Core.GameTest do
       assert {:ok, updated_game} = Game.add_participant(game, user)
       assert length(updated_game.turn.queue) == 1
       assert hd(updated_game.turn.queue) == user.uuid
-      assert Game.get_current_player(updated_game) == user.uuid
+      assert Game.get_active_player(updated_game) == user.uuid
     end
 
     test "returns error when game is full" do
@@ -818,7 +818,7 @@ defmodule Songy.Core.GameTest do
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
       track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
 
-      first_player_uuid = Turn.get_current_player(game.turn)
+      first_player_uuid = Turn.get_active_player(game.turn)
       game =
         game
         |> Game.extend_user_timeline(first_player_uuid, track1)
@@ -844,7 +844,7 @@ defmodule Songy.Core.GameTest do
       assert updated_game.turn.timeline == []
 
       # Current player should be second player now
-      second_player_uuid = Turn.get_current_player(updated_game.turn)
+      second_player_uuid = Turn.get_active_player(updated_game.turn)
       assert second_player_uuid != first_player_uuid
     end
 
@@ -938,7 +938,7 @@ defmodule Songy.Core.GameTest do
       # Snapshot should include the extra track from second player
       assert length(updated_game.turn.timeline) == 4
       assert List.first(updated_game.turn.timeline).title == "Extra Song"
-      assert Turn.get_current_player(updated_game.turn) == second_player_uuid
+      assert Turn.get_active_player(updated_game.turn) == second_player_uuid
     end
 
     test "adding tracks after snapshot creation does not affect snapshot" do
@@ -988,7 +988,7 @@ defmodule Songy.Core.GameTest do
     end
   end
 
-  describe "get_current_player/1" do
+  describe "get_active_player/1" do
     test "returns current player from game turn" do
       owner_uuid = "owner123"
       provider = Provider.new(:spotify)
@@ -1003,7 +1003,7 @@ defmodule Songy.Core.GameTest do
 
       game = %{game | turn: turn}
 
-      assert Game.get_current_player(game) == "player-1"
+      assert Game.get_active_player(game) == "player-1"
     end
 
     test "returns nil when queue is empty" do
@@ -1012,7 +1012,7 @@ defmodule Songy.Core.GameTest do
       game = Game.new(owner_uuid, provider: provider)
 
       # Turn is already initialized with empty queue in Game.new()
-      assert Game.get_current_player(game) == nil
+      assert Game.get_active_player(game) == nil
     end
   end
 end

@@ -99,25 +99,25 @@ defmodule Songy.Core.Turn do
   def get_track(%__MODULE__{track: track}), do: track
 
   @doc """
-  Gets the current player from the turn queue.
+  Gets the active player from the turn queue.
 
   ## Parameters
     * `turn` - The current turn state
 
   ## Returns
-    * UUID of the current player or nil if queue is empty
+    * UUID of the active player or nil if queue is empty
 
   ## Examples
       iex> turn = Turn.new(queue: ["player-1", "player-2"], cursor: 0)
-      iex> Turn.get_current_player(turn)
+      iex> Turn.get_active_player(turn)
       "player-1"
 
       iex> turn = Turn.new(queue: [], cursor: 0)
-      iex> Turn.get_current_player(turn)
+      iex> Turn.get_active_player(turn)
       nil
   """
-  @spec get_current_player(t()) :: String.t() | nil
-  def get_current_player(%__MODULE__{queue: queue, cursor: index}) do
+  @spec get_active_player(t()) :: String.t() | nil
+  def get_active_player(%__MODULE__{queue: queue, cursor: index}) do
     Enum.at(queue, index)
   end
 
@@ -270,7 +270,7 @@ defmodule Songy.Core.Turn do
       iex>   |> Turn.next_phase()  # steady -> challenging
       iex>   |> Turn.next_phase()  # challenging -> results
       iex>   |> Turn.next_phase()  # results -> waiting (next player)
-      iex> Turn.get_current_player(turn)
+      iex> Turn.get_active_player(turn)
       "bob"
   """
   @spec next_phase(t()) :: t()
