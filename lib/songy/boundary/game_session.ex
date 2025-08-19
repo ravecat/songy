@@ -178,7 +178,6 @@ defmodule Songy.Boundary.GameSession do
       {:error, :no_credentials} -> {:error, :no_credentials}
       {:error, reason} -> {:error, reason}
       %Track{meta: meta} when not is_map_key(meta, :uri) -> {:error, :no_track_uri}
-      nil -> {:error, :no_current_track}
       _status -> {:error, :game_not_in_progress}
     end
   end
@@ -658,21 +657,19 @@ defmodule Songy.Boundary.GameSession do
 
   @impl GenServer
   def handle_call({:extend_timeline, user_uuid, position}, _from, game) do
-    with %Track{} = track <- Game.get_turn_track(game),
-         game_with_extended_timeline <- Game.extend_user_timeline(game, user_uuid, track, position),
-         steady_game <- Game.next_phase(game_with_extended_timeline) do
-      Logger.info("Extend timeline for user #{user_uuid} with track '#{inspect(track)}' at position #{position}")
+    track = Game.get_turn_track(game)
+    game_with_extended_timeline = Game.extend_user_timeline(game, user_uuid, track, position)
+    steady_game = Game.next_phase(game_with_extended_timeline)
 
-      Phoenix.PubSub.local_broadcast(
-        Songy.PubSub,
-        "room:#{steady_game.uuid}",
-        {:game_state_updated, steady_game}
-      )
+    Logger.info("Extend timeline for user #{user_uuid} with track '#{inspect(track)}' at position #{position}")
 
-      {:reply, {:ok, steady_game}, steady_game}
-    else
-      nil -> {:reply, {:error, :no_current_track}, game}
-    end
+    Phoenix.PubSub.local_broadcast(
+      Songy.PubSub,
+      "room:#{steady_game.uuid}",
+      {:game_state_updated, steady_game}
+    )
+
+    {:reply, {:ok, steady_game}, steady_game}
   end
 
   @impl GenServer

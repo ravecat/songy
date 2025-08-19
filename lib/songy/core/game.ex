@@ -298,6 +298,9 @@ defmodule Songy.Core.Game do
   @doc """
   Extends a user's timeline by adding a track at the specified position.
 
+  This function is used for initializing and managing user timelines outside of active turns.
+  For active turn timeline modifications, use extend_active_timeline/3 instead.
+
   ## Parameters
     * `game` - The game to update
     * `user_uuid` - UUID of the user
@@ -327,6 +330,39 @@ defmodule Songy.Core.Game do
     updated_timeline = List.insert_at(current_timeline, position, track)
 
     %{game | timelines: Map.put(game.timelines, user_uuid, updated_timeline)}
+  end
+
+  @doc """
+  Extends the active player's timeline by adding a track at the specified position during the current turn.
+
+  This function works with the turn's timeline snapshot, not the user's persistent timeline.
+  It modifies the timeline stored in the current turn structure.
+
+  ## Parameters
+    * `game` - The game to update
+    * `track` - The track to add
+    * `position` - Index position where to insert the track (0-based). Defaults to 0 (head).
+
+  ## Examples
+      iex> provider = Provider.new(:spotify)
+      iex> game = Game.new("owner123", provider: provider)
+      iex> track = Track.new(title: "Song", artist: "Artist", year: 2023)
+
+      # Add to head (default behavior)
+      iex> updated_game = Game.extend_active_timeline(game, track)
+      iex> updated_game.turn.timeline
+      [%Track{title: "Song", artist: "Artist", year: 2023}]
+
+      # Add to specific position
+      iex> track2 = Track.new(title: "Song2", artist: "Artist2", year: 2024)
+      iex> updated_game = Game.extend_active_timeline(updated_game, track2, 1)
+      iex> updated_game.turn.timeline
+      [%Track{title: "Song", artist: "Artist", year: 2023}, %Track{title: "Song2", artist: "Artist2", year: 2024}]
+  """
+  @spec extend_active_timeline(t(), Track.t(), non_neg_integer()) :: t()
+  def extend_active_timeline(%__MODULE__{turn: turn} = game, %Track{} = track, position \\ 0)
+      when is_integer(position) and position >= 0 do
+    %{game | turn: Turn.extend_timeline(turn, track, position)}
   end
 
   @doc """
@@ -448,14 +484,12 @@ defmodule Songy.Core.Game do
     * updated_game - Game with next phase
   """
   @spec next_phase(t()) :: t()
-  def next_phase(%__MODULE__{turn: %Turn{phase: :results} = turn} = game) do
-    # Create snapshot of new active player's timeline when starting their turn
+  def next_phase(%__MODULE__{turn: %Turn{phase: :waiting} = turn} = game) do
+    # Create snapshot of active player's timeline when starting their turn
     new_turn = Turn.next_phase(turn)
     new_active_player_uuid = Turn.get_active_player(new_turn)
     new_active_player_timeline = get_user_timeline(game, new_active_player_uuid)
-
     updated_turn = Turn.set_timeline_snapshot(new_turn, new_active_player_timeline)
-
     %{game | turn: updated_turn}
   end
 
@@ -490,9 +524,7 @@ defmodule Songy.Core.Game do
     {:ok, %{game | turn: Turn.set_track(turn, track)}}
   end
 
-  @spec get_turn_track(t()) :: Track.t() | nil
-  def get_turn_track(%__MODULE__{turn: nil}), do: nil
-
+  @spec get_turn_track(t()) :: Track.t()
   def get_turn_track(%__MODULE__{turn: turn}) do
     Turn.get_track(turn)
   end

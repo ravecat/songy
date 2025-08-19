@@ -1063,4 +1063,121 @@ defmodule Songy.Core.TurnTest do
       assert turn.assumptions == []
     end
   end
+
+  describe "extend_timeline/3" do
+    test "adds track to turn timeline at head by default" do
+      turn = Turn.new()
+      track = Track.new(title: "Song", artist: "Artist", year: 2023)
+
+      updated_turn = Turn.extend_timeline(turn, track)
+
+      assert updated_turn.timeline == [track]
+    end
+
+    test "adds multiple tracks to timeline" do
+      turn = Turn.new()
+      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
+      track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
+
+      turn_with_first = Turn.extend_timeline(turn, track1)
+      turn_with_both = Turn.extend_timeline(turn_with_first, track2)
+
+      assert turn_with_both.timeline == [track2, track1]
+    end
+
+    test "adds track to head with position: 0" do
+      turn = Turn.new()
+      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
+      track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
+
+      turn_with_first = Turn.extend_timeline(turn, track1)
+      turn_with_both = Turn.extend_timeline(turn_with_first, track2, 0)
+
+      assert turn_with_both.timeline == [track2, track1]
+    end
+
+    test "adds track to specific position in timeline" do
+      turn = Turn.new()
+      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
+      track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
+      track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
+
+      turn_with_timeline = turn
+        |> Turn.extend_timeline(track1)
+        |> Turn.extend_timeline(track2)
+
+      updated_turn = Turn.extend_timeline(turn_with_timeline, track3, 1)
+
+      assert updated_turn.timeline == [track2, track3, track1]
+    end
+
+    test "adds track at end when position equals list length" do
+      turn = Turn.new()
+      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
+      track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
+      track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
+
+      turn_with_timeline = turn
+        |> Turn.extend_timeline(track1)
+        |> Turn.extend_timeline(track2)
+
+      updated_turn = Turn.extend_timeline(turn_with_timeline, track3, 2)
+
+      assert updated_turn.timeline == [track2, track1, track3]
+    end
+
+    test "adds track at end when position is greater than list length" do
+      turn = Turn.new()
+      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
+      track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
+
+      turn_with_first = Turn.extend_timeline(turn, track1)
+
+      updated_turn = Turn.extend_timeline(turn_with_first, track2, 999)
+
+      assert updated_turn.timeline == [track1, track2]
+    end
+
+    test "validates position argument types" do
+      turn = Turn.new()
+      track = Track.new(title: "Song", artist: "Artist", year: 2023)
+
+      assert_raise FunctionClauseError, fn ->
+        Turn.extend_timeline(turn, track, "invalid")
+      end
+
+      assert_raise FunctionClauseError, fn ->
+        Turn.extend_timeline(turn, track, -1)
+      end
+    end
+
+    test "supports multiple position options scenarios" do
+      turn = Turn.new()
+
+      tracks =
+        for i <- 1..5 do
+          Track.new(title: "Song #{i}", artist: "Artist #{i}", year: 2020 + i)
+        end
+
+      [track1, track2, track3, track4, track5] = tracks
+
+      # Build timeline: [track1]
+      turn = Turn.extend_timeline(turn, track1)
+
+      # Insert at position 0: [track2, track1]
+      turn = Turn.extend_timeline(turn, track2, 0)
+
+      # Insert at position 2 (end): [track2, track1, track3]
+      turn = Turn.extend_timeline(turn, track3, 2)
+
+      # Insert at position 1: [track2, track4, track1, track3]
+      turn = Turn.extend_timeline(turn, track4, 1)
+
+      # Insert at position 999 (end): [track2, track4, track1, track3, track5]
+      turn = Turn.extend_timeline(turn, track5, 999)
+
+      expected = [track2, track4, track1, track3, track5]
+      assert turn.timeline == expected
+    end
+  end
 end

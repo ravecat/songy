@@ -295,4 +295,33 @@ defmodule Songy.Core.Turn do
     |> Map.put(:queue, queue)
     |> Map.put(:cursor, rem(cursor + 1, max(length(queue), 1)))
   end
+
+  @doc """
+  Extends the turn's timeline by adding a track at the specified position.
+
+  ## Parameters
+    * `turn` - The turn to update
+    * `track` - The track to add
+    * `position` - Index position where to insert the track (0-based). Defaults to 0 (head).
+
+  ## Examples
+      iex> turn = Turn.new()
+      iex> track = Track.new(title: "Song", artist: "Artist", year: 2023)
+
+      # Add to head (default behavior)
+      iex> updated_turn = Turn.extend_timeline(turn, track)
+      iex> updated_turn.timeline
+      [%Track{title: "Song", artist: "Artist", year: 2023}]
+
+      # Add to specific position
+      iex> track2 = Track.new(title: "Song2", artist: "Artist2", year: 2024)
+      iex> updated_turn = Turn.extend_timeline(updated_turn, track2, 1)
+      iex> updated_turn.timeline
+      [%Track{title: "Song", artist: "Artist", year: 2023}, %Track{title: "Song2", artist: "Artist2", year: 2024}]
+  """
+  @spec extend_timeline(t(), Track.t(), non_neg_integer()) :: t()
+  def extend_timeline(%__MODULE__{timeline: timeline} = turn, %Track{} = track, position \\ 0)
+      when is_integer(position) and position >= 0 do
+    %{turn | timeline: List.insert_at(timeline, position, track)}
+  end
 end

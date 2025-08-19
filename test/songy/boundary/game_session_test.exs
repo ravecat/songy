@@ -62,11 +62,14 @@ defmodule Songy.Boundary.GameSessionTest do
     test "removes participant from game session", %{game: game, pid: pid} do
       participant_uuid = "user123"
 
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+
       # Simulate participant joining via Presence (direct GenServer message)
       send(pid, {:participant_joined, participant_uuid})
 
+      assert_receive {:game_state_updated, game_with_participant}
+
       # Verify participant was added
-      assert {:ok, game_with_participant} = GameSession.lookup_game_session(game.uuid)
       assert length(game_with_participant.participants) == 1
 
       # Remove participant via API
@@ -454,46 +457,6 @@ defmodule Songy.Boundary.GameSessionTest do
   end
 
   describe "next_phase/1" do
-    test "advances turn to next phase" do
-      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
-
-      credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
-
-      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
-        {:ok,
-         %Spotify.Track{
-           name: "Random Song",
-           artists: [%{"name" => "Random Artist"}],
-           album: %{
-             "release_date" => "2023-01-01",
-             "images" => [%{"url" => "https://example.com/cover.jpg"}]
-           }
-         }}
-      end)
-
-      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
-      Repatch.allow(self(), pid)
-
-      :ok = GameSession.set_credentials(game.uuid, credentials)
-      {:ok, started_game} = GameSession.start_game_session(game.uuid)
-
-      # Subscribe to state updates
-      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
-
-      # Test next_phase call
-      {:ok, updated_game} = GameSession.next_phase(game.uuid)
-
-      # Verify phase advanced from waiting to ready
-      assert started_game.turn.phase == :waiting
-      assert updated_game.turn.phase == :ready
-
-      # Verify state update was broadcast
-      assert_receive {:game_state_updated, broadcast_game}
-      assert broadcast_game.turn.phase == :ready
-
-      GameSession.end_game_session(game.uuid)
-    end
-
     test "returns error for non-existent game session" do
       assert {:error, :game_session_not_found} = GameSession.next_phase("nonexistent")
     end
@@ -532,9 +495,13 @@ defmodule Songy.Boundary.GameSessionTest do
       :ok = GameSession.set_credentials(game.uuid, credentials)
       {:ok, started_game} = GameSession.start_game_session(game.uuid)
 
-      # Add participants to test full cycle
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+
       send(pid, {:participant_joined, "user1"})
+      assert_receive {:game_state_updated, _updated_game_1}
+
       send(pid, {:participant_joined, "user2"})
+      assert_receive {:game_state_updated, _updated_game_2}
 
       # Cycle through phases: waiting -> ready -> steady -> challenging -> results -> waiting
       assert started_game.turn.phase == :waiting
@@ -601,7 +568,11 @@ defmodule Songy.Boundary.GameSessionTest do
       assert {:ok, game} = GameSession.start_game_session(game.uuid)
       assert length(game.participants) == 0
 
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+
       send(pid, {:participant_joined, "owner123"})
+
+      assert_receive {:game_state_updated, _updated_game}
 
       assert {:ok, updated_game} = GameSession.lookup_game_session(game.uuid)
 
@@ -644,6 +615,7 @@ defmodule Songy.Boundary.GameSessionTest do
       send(pid, {:participant_joined, "user456"})
 
       assert_receive {:game_state_updated, updated_game}
+
       assert length(updated_game.participants) == 1
       assert hd(updated_game.participants).uuid == "user456"
 
@@ -1006,15 +978,6 @@ defmodule Songy.Boundary.GameSessionTest do
       # Verify turn track is at the beginning (position 0)
       [turn_track, _initial_track] = user_timeline
       assert turn_track.title == "Turn Track"
-    end
-
-    test "returns error when no current turn track exists", %{} do
-      # Create a new game without starting it (no turn track)
-      {:ok, new_game} = GameSession.create_game_session("owner456", :spotify)
-
-      assert {:error, :no_current_track} = GameSession.extend_timeline(new_game.uuid, "user123", 0)
-
-      GameSession.end_game_session(new_game.uuid)
     end
 
     test "returns error for non-existent game session" do

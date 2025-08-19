@@ -14,9 +14,8 @@
   const currentTrack = $derived(state?.turn?.track);
   const zoneId = $derived(`participant-timeline-${user.uuid}`);
   const turnPhase = $derived(state?.turn?.phase);
-
   let timeline = $derived.by(() => {
-    const timeline = state?.timelines?.[user.uuid] || [];
+    const timeline = state?.turn?.timeline || [];
 
     return timeline.map((track) => ({
       id: track.id,
