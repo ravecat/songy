@@ -448,6 +448,17 @@ defmodule Songy.Core.Game do
     * updated_game - Game with next phase
   """
   @spec next_phase(t()) :: t()
+  def next_phase(%__MODULE__{turn: %Turn{phase: :results} = turn} = game) do
+    # Create snapshot of new active player's timeline when starting their turn
+    updated_turn = Turn.next_phase(turn)
+    new_active_player_uuid = Turn.get_current_player(updated_turn)
+    new_active_player_timeline = get_user_timeline(game, new_active_player_uuid)
+
+    updated_turn = Turn.set_timeline_snapshot(updated_turn, new_active_player_timeline)
+
+    %{game | turn: updated_turn}
+  end
+
   def next_phase(%__MODULE__{turn: turn} = game) do
     %{game | turn: Turn.next_phase(turn)}
   end

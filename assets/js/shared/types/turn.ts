@@ -36,4 +36,10 @@ export interface Turn {
 
   /** Current phase of the turn */
   phase: TURN_PHASE;
+
+  /** Timeline snapshot for challenging phase */
+  timeline?: Track[];
+
+  /** Player position assumptions: [position, player_id] */
+  assumptions?: Array<[number, string]>;
 }

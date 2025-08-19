@@ -15,7 +15,7 @@ defmodule Songy.Core.Turn do
 
   @typep phase :: :waiting | :ready | :steady | :challenging | :results
 
-  @derive {Jason.Encoder, only: [:queue, :cursor, :challengers, :track, :phase]}
+  @derive {Jason.Encoder, only: [:queue, :cursor, :challengers, :track, :phase, :timeline, :assumptions]}
 
   typedstruct do
     field :queue, list(String.t()), default: []
@@ -23,6 +23,8 @@ defmodule Songy.Core.Turn do
     field :challengers, list(String.t()), default: []
     field :track, Track.t()
     field :phase, phase(), default: :waiting
+    field :timeline, list(Track.t()), default: []
+    field :assumptions, list({non_neg_integer(), String.t()}), default: []
   end
 
   @doc """
@@ -189,45 +191,49 @@ defmodule Songy.Core.Turn do
   end
 
   @doc """
-  Gets the current phase of the turn.
+  Adds a position assumption for a player in the challenging phase.
+
+  Uses FIFO (First In, First Out) behavior - all assumptions are preserved
+  in chronological order, allowing multiple attempts from the same player.
 
   ## Parameters
     * `turn` - The current turn state
-
-  ## Returns
-    * Current phase atom
+    * `position` - Position where player thinks track should go (0-based)
+    * `player_id` - UUID of the player making the assumption
 
   ## Examples
       iex> turn = Turn.new()
-      iex> Turn.get_phase(turn)
-      :waiting
+      iex> Turn.add_assumption(turn, 2, "player-1")
+      %Songy.Core.Turn{assumptions: [{2, "player-1"}]}
 
-      iex> turn = Turn.new() |> Turn.next_phase()
-      iex> Turn.get_phase(turn)
-      :ready
+      iex> turn = turn |> Turn.add_assumption(1, "player-1") |> Turn.add_assumption(3, "player-1")
+      iex> turn.assumptions
+      [{1, "player-1"}, {3, "player-1"}]
   """
-  @spec get_phase(t()) :: phase()
-  def get_phase(%__MODULE__{phase: phase}), do: phase
-
-  @doc false
-  @spec clear_challengers_data(t()) :: t()
-  defp clear_challengers_data(%__MODULE__{} = turn) do
-    %{turn | challengers: []}
+  @spec add_assumption(t(), non_neg_integer(), String.t()) :: t()
+  def add_assumption(%__MODULE__{} = turn, position, player_id)
+      when is_integer(position) and position >= 0 and is_binary(player_id) do
+    %{turn | assumptions: turn.assumptions ++ [{position, player_id}]}
   end
 
-  @doc false
-  @spec clear_track_data(t()) :: t()
-  defp clear_track_data(%__MODULE__{} = turn) do
-    %{turn | track: nil}
-  end
+  @doc """
+  Sets the timeline snapshot for the challenging phase.
 
-  @doc false
-  @spec next_turn_player(t()) :: t()
-  defp next_turn_player(%__MODULE__{queue: []} = turn), do: turn
+  ## Parameters
+    * `turn` - The current turn state
+    * `timeline` - List of tracks representing the active player's timeline
 
-  defp next_turn_player(%__MODULE__{queue: queue, cursor: index} = turn) do
-    next_index = rem(index + 1, length(queue))
-    %{turn | cursor: next_index}
+  ## Examples
+      iex> track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
+      iex> track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
+      iex> timeline = [track1, track2]
+      iex> turn = Turn.new() |> Turn.set_timeline_snapshot(timeline)
+      iex> turn.timeline
+      [%Track{title: "Song 1", year: 2020}, %Track{title: "Song 2", year: 2021}]
+  """
+  @spec set_timeline_snapshot(t(), list(Track.t())) :: t()
+  def set_timeline_snapshot(%__MODULE__{} = turn, timeline) when is_list(timeline) do
+    %{turn | timeline: timeline}
   end
 
   @doc """
@@ -284,10 +290,9 @@ defmodule Songy.Core.Turn do
     %{turn | phase: :results}
   end
 
-  def next_phase(%__MODULE__{phase: :results} = turn) do
-    %{turn | phase: :waiting}
-    |> clear_challengers_data()
-    |> clear_track_data()
-    |> next_turn_player()
+  def next_phase(%__MODULE__{phase: :results, queue: queue, cursor: cursor}) do
+    __MODULE__.new()
+    |> Map.put(:queue, queue)
+    |> Map.put(:cursor, rem(cursor + 1, max(length(queue), 1)))
   end
 end

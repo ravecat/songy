@@ -801,6 +801,191 @@ defmodule Songy.Core.GameTest do
 
       refute updated_game.turn.phase == game.turn.phase
     end
+
+    test "creates timeline snapshot when transitioning from results to waiting (new player's turn)" do
+      owner_uuid = "owner123"
+      provider = Provider.new(:spotify)
+      game = Game.new(owner_uuid, provider: provider)
+
+      # Add participants
+      user1 = User.new()
+      user2 = User.new()
+      {:ok, game} = Game.add_participant(game, user1)
+      {:ok, game} = Game.add_participant(game, user2)
+
+      # Add tracks to first player's timeline
+      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
+      track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
+      track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
+
+      first_player_uuid = Turn.get_current_player(game.turn)
+      game =
+        game
+        |> Game.extend_user_timeline(first_player_uuid, track1)
+        |> Game.extend_user_timeline(first_player_uuid, track2)
+        |> Game.extend_user_timeline(first_player_uuid, track3)
+
+      # Move through complete first player's turn
+      game =
+        game
+        |> Game.next_phase()  # waiting -> ready
+        |> Game.next_phase()  # ready -> steady
+        |> Game.next_phase()  # steady -> challenging
+        |> Game.next_phase()  # challenging -> results
+
+      assert game.turn.phase == :results
+      assert game.turn.timeline == []  # No snapshot yet
+
+      # Transition to waiting should create snapshot for NEW player
+      updated_game = Game.next_phase(game)  # results -> waiting (next player)
+
+      assert updated_game.turn.phase == :waiting
+      # Should have snapshot of second player's timeline (empty in this case)
+      assert updated_game.turn.timeline == []
+
+      # Current player should be second player now
+      second_player_uuid = Turn.get_current_player(updated_game.turn)
+      assert second_player_uuid != first_player_uuid
+    end
+
+    test "does not create snapshot for non-results phase transitions" do
+      owner_uuid = "owner123"
+      provider = Provider.new(:spotify)
+      game = Game.new(owner_uuid, provider: provider)
+
+      # Add participants
+      user1 = User.new()
+      user2 = User.new()
+      {:ok, game} = Game.add_participant(game, user1)
+      {:ok, game} = Game.add_participant(game, user2)
+
+      # Move through non-results phases
+      game =
+        game
+        |> Game.next_phase()  # waiting -> ready
+        |> Game.next_phase()  # ready -> steady
+        |> Game.next_phase()  # steady -> challenging
+
+      assert game.turn.phase == :challenging
+      assert game.turn.timeline == []  # No snapshot created for these transitions
+    end
+
+    test "handles empty timeline when creating snapshot" do
+      owner_uuid = "owner123"
+      provider = Provider.new(:spotify)
+      game = Game.new(owner_uuid, provider: provider)
+
+      # Add participants
+      user1 = User.new()
+      user2 = User.new()
+      {:ok, game} = Game.add_participant(game, user1)
+      {:ok, game} = Game.add_participant(game, user2)
+
+      # Complete first player's turn (who has no timeline)
+      game =
+        game
+        |> Game.next_phase()  # waiting -> ready
+        |> Game.next_phase()  # ready -> steady
+        |> Game.next_phase()  # steady -> challenging
+        |> Game.next_phase()  # challenging -> results
+
+      # Transition to next player should create empty snapshot
+      updated_game = Game.next_phase(game)  # results -> waiting (next player)
+
+      assert updated_game.turn.phase == :waiting
+      assert updated_game.turn.timeline == []  # Empty timeline snapshot for new player
+    end
+
+    test "snapshot reflects new active player's timeline at time of transition" do
+      owner_uuid = "owner123"
+      provider = Provider.new(:spotify)
+      game = Game.new(owner_uuid, provider: provider)
+
+      # Add participants
+      user1 = User.new()
+      user2 = User.new()
+      {:ok, game} = Game.add_participant(game, user1)
+      {:ok, game} = Game.add_participant(game, user2)
+
+      # Add tracks to second player's timeline (who will be next)
+      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
+      track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
+      track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
+
+      # Find second player UUID
+      second_player_uuid = game.turn.queue |> Enum.at(1)
+      game =
+        game
+        |> Game.extend_user_timeline(second_player_uuid, track1)
+        |> Game.extend_user_timeline(second_player_uuid, track2)
+        |> Game.extend_user_timeline(second_player_uuid, track3)
+
+      # Add one more track to second player before transition
+      extra_track = Track.new(title: "Extra Song", artist: "Artist", year: 2023)
+      game = Game.extend_user_timeline(game, second_player_uuid, extra_track)
+
+      # Complete first player's turn
+      game =
+        game
+        |> Game.next_phase()  # waiting -> ready
+        |> Game.next_phase()  # ready -> steady
+        |> Game.next_phase()  # steady -> challenging
+        |> Game.next_phase()  # challenging -> results
+
+      # Transition to second player should create snapshot of their timeline
+      updated_game = Game.next_phase(game)  # results -> waiting (second player)
+
+      # Snapshot should include the extra track from second player
+      assert length(updated_game.turn.timeline) == 4
+      assert List.first(updated_game.turn.timeline).title == "Extra Song"
+      assert Turn.get_current_player(updated_game.turn) == second_player_uuid
+    end
+
+    test "adding tracks after snapshot creation does not affect snapshot" do
+      owner_uuid = "owner123"
+      provider = Provider.new(:spotify)
+      game = Game.new(owner_uuid, provider: provider)
+
+      # Add participants
+      user1 = User.new()
+      user2 = User.new()
+      {:ok, game} = Game.add_participant(game, user1)
+      {:ok, game} = Game.add_participant(game, user2)
+
+      # Add tracks to second player's timeline
+      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
+      track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
+      track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
+
+      second_player_uuid = game.turn.queue |> Enum.at(1)
+      game =
+        game
+        |> Game.extend_user_timeline(second_player_uuid, track1)
+        |> Game.extend_user_timeline(second_player_uuid, track2)
+        |> Game.extend_user_timeline(second_player_uuid, track3)
+
+      original_timeline = [track3, track2, track1]
+
+      # Complete first player's turn and create snapshot of second player
+      game =
+        game
+        |> Game.next_phase()  # waiting -> ready
+        |> Game.next_phase()  # ready -> steady
+        |> Game.next_phase()  # steady -> challenging
+        |> Game.next_phase()  # challenging -> results
+        |> Game.next_phase()  # results -> waiting (creates snapshot)
+
+      assert game.turn.timeline == original_timeline
+
+      # Add track to second player after snapshot creation
+      new_track = Track.new(title: "New Song", artist: "Artist", year: 2024)
+      updated_game = Game.extend_user_timeline(game, second_player_uuid, new_track)
+
+      # Snapshot should remain unchanged
+      assert updated_game.turn.timeline == original_timeline
+      # But user's actual timeline should be updated
+      assert length(Game.get_user_timeline(updated_game, second_player_uuid)) == 4
+    end
   end
 
   describe "get_current_player/1" do

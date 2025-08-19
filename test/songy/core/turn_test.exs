@@ -772,18 +772,6 @@ defmodule Songy.Core.TurnTest do
     end
   end
 
-  describe "get_phase/1" do
-    test "returns the current phase" do
-      turn = Turn.new()
-      assert Turn.get_phase(turn) == :waiting
-    end
-
-    test "returns phase after setting it" do
-      turn = Turn.new() |> Turn.next_phase()
-      assert Turn.get_phase(turn) == :ready
-    end
-  end
-
   describe "next_phase/1" do
     test "transitions from waiting to ready" do
       turn = Turn.new()
@@ -939,6 +927,140 @@ defmodule Songy.Core.TurnTest do
       assert turn.cursor == 1
       assert Turn.get_current_player(turn) == "player-2"
       assert turn.phase == :waiting
+    end
+  end
+
+  describe "add_assumption/3" do
+    test "adds assumption for player" do
+      turn = Turn.new()
+      updated_turn = Turn.add_assumption(turn, 2, "player-1")
+
+      assert updated_turn.assumptions == [{2, "player-1"}]
+    end
+
+    test "preserves previous assumptions from same player (FIFO behavior)" do
+      turn =
+        Turn.new()
+        |> Turn.add_assumption(1, "player-1")
+        |> Turn.add_assumption(3, "player-1")
+
+      assert turn.assumptions == [{1, "player-1"}, {3, "player-1"}]
+    end
+
+    test "keeps assumptions from different players in chronological order" do
+      turn =
+        Turn.new()
+        |> Turn.add_assumption(1, "player-1")
+        |> Turn.add_assumption(2, "player-2")
+        |> Turn.add_assumption(3, "player-1")  # Preserves all player-1's assumptions
+
+      assert turn.assumptions == [{1, "player-1"}, {2, "player-2"}, {3, "player-1"}]
+    end
+
+    test "handles zero position" do
+      turn = Turn.new() |> Turn.add_assumption(0, "player-1")
+
+      assert turn.assumptions == [{0, "player-1"}]
+    end
+
+    test "maintains chronological order for multiple players" do
+      turn =
+        Turn.new()
+        |> Turn.add_assumption(1, "player-1")
+        |> Turn.add_assumption(2, "player-2")
+        |> Turn.add_assumption(3, "player-3")
+        |> Turn.add_assumption(4, "player-1")
+        |> Turn.add_assumption(5, "player-2")
+
+      expected = [
+        {1, "player-1"},
+        {2, "player-2"},
+        {3, "player-3"},
+        {4, "player-1"},
+        {5, "player-2"}
+      ]
+
+      assert turn.assumptions == expected
+    end
+  end
+
+  describe "set_timeline_snapshot/2" do
+    test "sets timeline snapshot" do
+      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
+      track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
+      timeline = [track1, track2]
+
+      turn = Turn.new() |> Turn.set_timeline_snapshot(timeline)
+
+      assert turn.timeline == timeline
+    end
+
+    test "replaces existing timeline" do
+      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
+      track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
+      track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
+
+      turn =
+        Turn.new()
+        |> Turn.set_timeline_snapshot([track1])
+        |> Turn.set_timeline_snapshot([track2, track3])
+
+      assert turn.timeline == [track2, track3]
+    end
+
+    test "handles empty timeline" do
+      turn = Turn.new() |> Turn.set_timeline_snapshot([])
+
+      assert turn.timeline == []
+    end
+  end
+
+  describe "clear_challenging_data/1 (via phase transitions)" do
+    test "clears timeline and assumptions when transitioning from results to waiting" do
+      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
+      track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
+
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.add_player_to_queue("player-2")
+        |> Turn.set_timeline_snapshot([track1, track2])
+        |> Turn.add_assumption(1, "player-1")
+        |> Turn.add_assumption(2, "player-2")
+        # Move to results phase
+        |> Turn.next_phase()  # waiting -> ready
+        |> Turn.next_phase()  # ready -> steady
+        |> Turn.next_phase()  # steady -> challenging
+        |> Turn.next_phase()  # challenging -> results
+        |> Turn.next_phase()  # results -> waiting (clears data)
+
+      assert turn.timeline == []
+      assert turn.assumptions == []
+      assert turn.phase == :waiting
+    end
+
+    test "preserves challenging data during other phase transitions" do
+      track = Track.new(title: "Song", artist: "Artist", year: 2020)
+
+      turn =
+        Turn.new()
+        |> Turn.add_player_to_queue("player-1")
+        |> Turn.set_timeline_snapshot([track])
+        |> Turn.add_assumption(1, "player-1")
+        |> Turn.next_phase()  # waiting -> ready
+
+      assert turn.timeline == [track]
+      assert turn.assumptions == [{1, "player-1"}]
+      assert turn.phase == :ready
+    end
+  end
+
+  describe "new/0 with challenging fields" do
+    test "creates turn with empty timeline and assumptions" do
+      turn = Turn.new()
+
+      assert turn.timeline == []
+      assert turn.assumptions == []
     end
   end
 end
