@@ -1,9 +1,9 @@
 <script lang="ts">
-  // Stub component for turn_results phase
+  // Stub component for results phase
 </script>
 
 <div class="turn-phase-screen">
-  <h1>turn_results</h1>
+  <h1>results</h1>
   <p>Results phase implementation coming soon...</p>
 </div>
 

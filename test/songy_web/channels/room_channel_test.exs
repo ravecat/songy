@@ -298,7 +298,7 @@ defmodule SongyWeb.RoomChannelTest do
       ref = push(socket, "next_phase", %{})
 
       assert_reply ref, :ok
-      assert_broadcast "state_updated", %{turn: %{phase: :turn_ready}}
+      assert_broadcast "state_updated", %{turn: %{phase: :ready}}
 
       GameSession.end_game_session(game.uuid)
     end
@@ -354,7 +354,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       assert_broadcast "state_updated", %Songy.Core.Game{
         status: :in_progress,
-        turn: %{track: track, phase: :turn_waiting},
+        turn: %{track: track, phase: :waiting},
         timelines: %{
           ^current_user_uuid => [initial_track]
         }
@@ -364,14 +364,14 @@ defmodule SongyWeb.RoomChannelTest do
 
       assert_broadcast "state_updated", %Songy.Core.Game{
         status: :in_progress,
-        turn: %{track: ^track, phase: :turn_ready}
+        turn: %{track: ^track, phase: :ready}
       }
 
       push(socket, "extend_timeline", %{"position" => 0})
 
       assert_broadcast "state_updated", %Songy.Core.Game{
         status: :in_progress,
-        turn: %{track: ^track, phase: :turn_steady},
+        turn: %{track: ^track, phase: :steady},
         timelines: %{
           ^current_user_uuid => [^track, ^initial_track]
         }
@@ -420,7 +420,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       assert_broadcast "state_updated", %Songy.Core.Game{
         status: :in_progress,
-        turn: %{track: track, phase: :turn_waiting},
+        turn: %{track: track, phase: :waiting},
         timelines: %{
           ^current_user_uuid => [initial_track]
         }
@@ -430,14 +430,14 @@ defmodule SongyWeb.RoomChannelTest do
 
       assert_broadcast "state_updated", %Songy.Core.Game{
         status: :in_progress,
-        turn: %{track: ^track, phase: :turn_ready}
+        turn: %{track: ^track, phase: :ready}
       }
 
       push(socket, "extend_timeline", %{"position" => 0})
 
       assert_broadcast "state_updated", %Songy.Core.Game{
         status: :in_progress,
-        turn: %{track: ^track, phase: :turn_steady},
+        turn: %{track: ^track, phase: :steady},
         timelines: %{
           ^current_user_uuid => [^track, ^initial_track]
         }
@@ -447,7 +447,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       assert_broadcast "state_updated", %Songy.Core.Game{
         status: :in_progress,
-        turn: %{track: ^track, phase: :turn_steady},
+        turn: %{track: ^track, phase: :steady},
         timelines: %{
           ^current_user_uuid => [^initial_track, ^track]
         }

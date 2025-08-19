@@ -36,7 +36,7 @@ describe("Game", () => {
     };
   });
 
-  test("displays game interface on turn_ready phase", () => {
+  test("displays game interface on ready phase", () => {
     mockChannelContext.state.turn.phase = TURN_PHASE.PLAYING;
 
     render(Game, {
@@ -50,7 +50,7 @@ describe("Game", () => {
     expect(screen.getByText("Alice")).toBeInTheDocument();
   });
 
-  test("displays waiting view on turn_waiting phase", () => {
+  test("displays waiting view on waiting phase", () => {
     mockChannelContext.state.turn.phase = TURN_PHASE.WAITING;
 
     render(Game, {
@@ -65,7 +65,7 @@ describe("Game", () => {
     expect(screen.getByText("Ready?")).toBeInTheDocument();
   });
 
-  test("displays results view on turn_results phase", () => {
+  test("displays results view on results phase", () => {
     mockChannelContext.state.turn.phase = TURN_PHASE.RESULTS;
 
     render(Game, {
@@ -75,7 +75,7 @@ describe("Game", () => {
       ]),
     });
 
-    expect(screen.getByText("turn_results")).toBeInTheDocument();
+    expect(screen.getByText("results")).toBeInTheDocument();
   });
 
   test("defaults to game interface when turn phase is undefined", () => {
@@ -108,7 +108,7 @@ describe("Game", () => {
 
     // Should display game interface as fallback - we can't check for specific text
     // since participants array is empty, but component should render without error
-    expect(screen.queryByText("turn_waiting")).not.toBeInTheDocument();
+    expect(screen.queryByText("waiting")).not.toBeInTheDocument();
   });
 
   test("defaults to game interface when turn phase is null", () => {

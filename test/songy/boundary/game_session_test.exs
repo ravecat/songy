@@ -483,13 +483,13 @@ defmodule Songy.Boundary.GameSessionTest do
       # Test next_phase call
       {:ok, updated_game} = GameSession.next_phase(game.uuid)
 
-      # Verify phase advanced from turn_waiting to turn_playing
-      assert started_game.turn.phase == :turn_waiting
-      assert updated_game.turn.phase == :turn_ready
+      # Verify phase advanced from waiting to ready
+      assert started_game.turn.phase == :waiting
+      assert updated_game.turn.phase == :ready
 
       # Verify state update was broadcast
       assert_receive {:game_state_updated, broadcast_game}
-      assert broadcast_game.turn.phase == :turn_ready
+      assert broadcast_game.turn.phase == :ready
 
       GameSession.end_game_session(game.uuid)
     end
@@ -537,22 +537,22 @@ defmodule Songy.Boundary.GameSessionTest do
       send(pid, {:participant_joined, "user2"})
 
       # Cycle through phases: waiting -> ready -> steady -> challenging -> results -> waiting
-      assert started_game.turn.phase == :turn_waiting
+      assert started_game.turn.phase == :waiting
 
       {:ok, ready_game} = GameSession.next_phase(game.uuid)
-      assert ready_game.turn.phase == :turn_ready
+      assert ready_game.turn.phase == :ready
 
       {:ok, steady_game} = GameSession.next_phase(game.uuid)
-      assert steady_game.turn.phase == :turn_steady
+      assert steady_game.turn.phase == :steady
 
       {:ok, challenging_game} = GameSession.next_phase(game.uuid)
-      assert challenging_game.turn.phase == :turn_challenging
+      assert challenging_game.turn.phase == :challenging
 
       {:ok, results_game} = GameSession.next_phase(game.uuid)
-      assert results_game.turn.phase == :turn_results
+      assert results_game.turn.phase == :results
 
       {:ok, next_waiting_game} = GameSession.next_phase(game.uuid)
-      assert next_waiting_game.turn.phase == :turn_waiting
+      assert next_waiting_game.turn.phase == :waiting
       # Should advance to next player (if multiple players)
 
       GameSession.end_game_session(game.uuid)

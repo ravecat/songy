@@ -232,7 +232,7 @@ defmodule Songy.Boundary.GameSession do
 
   ## Examples
       iex> GameSession.next_phase("game123")
-      {:ok, %Game{turn: %Turn{phase: :turn_ready}}}
+      {:ok, %Game{turn: %Turn{phase: :ready}}}
 
       iex> GameSession.next_phase("nonexistent")
       {:error, :game_session_not_found}

@@ -8,11 +8,11 @@ import type { Track } from './track';
  * Possible phases during a game turn
  */
 export enum TURN_PHASE {
-  WAITING = 'turn_waiting',
-  READY = 'turn_ready',
-  STEADY = 'turn_steady',
-  CHALLENGING = 'turn_challenging',
-  RESULTS = 'turn_results'
+  WAITING = 'waiting',
+  READY = 'ready',
+  STEADY = 'steady',
+  CHALLENGING = 'challenging',
+  RESULTS = 'results'
 }
 
 /**
