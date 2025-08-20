@@ -996,7 +996,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
   end
 
-  describe "reorder_timeline/4" do
+  describe "reorder_timeline/3" do
     setup do
       {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
@@ -1032,65 +1032,51 @@ defmodule Songy.Boundary.GameSessionTest do
       %{game: game_with_user, pid: pid, user_uuid: user_uuid}
     end
 
-    test "reorders existing track to new position", %{game: game, user_uuid: user_uuid} do
-      # Start game to create turn track
-      {:ok, started_game} = GameSession.start_game_session(game.uuid)
+    test "reorders existing track to new position in active timeline", %{game: game, user_uuid: user_uuid} do
+      # Start the game using public API
+      {:ok, _started_game} = GameSession.start_game_session(game.uuid)
 
-      # Add turn track to timeline at position 1
-      {:ok, game_with_multiple} = GameSession.make_assumption(started_game.uuid, user_uuid, 1)
+      {:ok, game_with_timeline} = GameSession.make_assumption(game.uuid, user_uuid, 0)
 
-      timeline_before = Game.get_user_timeline(game_with_multiple, user_uuid)
-      assert length(timeline_before) == 1
-      [first_track] = timeline_before
+      active_timeline = game_with_timeline.turn.timeline
+      assert length(active_timeline) == 1
+      [track_in_timeline] = active_timeline
 
       # Subscribe to state updates
       Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
 
-      # Reorder first track to position 0
+      # Try to reorder to same position (should succeed but not change anything)
       assert {:ok, reordered_game} =
-               GameSession.reorder_timeline(game_with_multiple.uuid, user_uuid, first_track.id, 0)
+               GameSession.reorder_timeline(game_with_timeline.uuid, track_in_timeline.id, 0)
 
-      timeline_after = Game.get_user_timeline(reordered_game, user_uuid)
-      assert length(timeline_after) == 1
-
-      # Verify track order changed
-      [reordered_first] = timeline_after
-      assert reordered_first.id == first_track.id
+      active_timeline_after = reordered_game.turn.timeline
+      assert length(active_timeline_after) == 1
+      [track_after] = active_timeline_after
+      assert track_after.id == track_in_timeline.id
 
       # Verify state update was broadcast
-      assert_receive {:game_state_updated, broadcast_game}
-      broadcast_timeline = Game.get_user_timeline(broadcast_game, user_uuid)
-      assert length(broadcast_timeline) == 1
+      assert_receive {:game_state_updated, _broadcast_game}
     end
 
-    test "returns error for non-existent track ID", %{game: game, user_uuid: user_uuid} do
-      assert {:error, :track_not_found} = GameSession.reorder_timeline(game.uuid, user_uuid, "nonexistent_track", 0)
+    test "returns error for non-existent track ID", %{game: game} do
+      assert {:error, :track_not_found} = GameSession.reorder_timeline(game.uuid, "nonexistent_track", 0)
     end
 
     test "returns error for non-existent game session" do
-      assert {:error, :game_session_not_found} = GameSession.reorder_timeline("nonexistent", "user123", "track123", 0)
+      assert {:error, :game_session_not_found} = GameSession.reorder_timeline("nonexistent", "track123", 0)
     end
 
-    test "handles reordering single track (idempotent)", %{game: game, user_uuid: user_uuid} do
-      timeline = Game.get_user_timeline(game, user_uuid)
-      assert length(timeline) == 1
-      [track] = timeline
-
-      # Reorder single track to position 0 (should be no-op)
-      assert {:ok, updated_game} = GameSession.reorder_timeline(game.uuid, user_uuid, track.id, 0)
-
-      updated_timeline = Game.get_user_timeline(updated_game, user_uuid)
-      assert length(updated_timeline) == 1
-      [updated_track] = updated_timeline
-      assert updated_track.id == track.id
+    test "returns error when active timeline is empty", %{game: game} do
+      # Game has turn but empty timeline, should return track not found
+      assert {:error, :track_not_found} = GameSession.reorder_timeline(game.uuid, "any_track", 0)
     end
 
-    test "broadcasts state update even when reordering fails", %{game: game, user_uuid: user_uuid} do
+    test "broadcasts state update even when reordering fails", %{game: game} do
       # Subscribe to state updates
       Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
 
       # Try to reorder non-existent track
-      assert {:error, :track_not_found} = GameSession.reorder_timeline(game.uuid, user_uuid, "nonexistent", 0)
+      assert {:error, :track_not_found} = GameSession.reorder_timeline(game.uuid, "nonexistent", 0)
 
       # Should not receive any broadcast for failed operation
       refute_receive {:game_state_updated, _}, 100

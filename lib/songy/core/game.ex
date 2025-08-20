@@ -419,48 +419,45 @@ defmodule Songy.Core.Game do
   end
 
   @doc """
-  Reorders a track in user's timeline by moving it to a new position.
+  Reorders a track in the active timeline by moving it to a new position.
 
   ## Parameters
     * `game` - The game to update
-    * `user_uuid` - UUID of the user
     * `track_id` - ID of the track to reorder
     * `new_position` - New position for the track (0-based)
 
   ## Returns
     * `{:ok, updated_game}` - Success with updated timeline
     * `{:error, :track_not_found}` - If track not in timeline
+    * `{:error, :no_turn}` - If game has no active turn
 
   ## Examples
       iex> track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       iex> track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
       iex> track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
 
-      # Build timeline: [track3, track2, track1]
+      # Build active timeline: [track3, track2, track1]
       iex> game = game
-      ...> |> Game.extend_user_timeline("user456", track1)
-      ...> |> Game.extend_user_timeline("user456", track2)
-      ...> |> Game.extend_user_timeline("user456", track3)
+      ...> |> Game.extend_active_timeline(track1)
+      ...> |> Game.extend_active_timeline(track2)
+      ...> |> Game.extend_active_timeline(track3)
 
       # Move track1 to position 0: [track1, track3, track2]
-      iex> {:ok, updated_game} = Game.reorder_user_timeline(game, "user456", track1.id, 0)
+      iex> {:ok, updated_game} = Game.reorder_active_timeline(game, track1.id, 0)
   """
-  @spec reorder_user_timeline(t(), String.t(), String.t(), non_neg_integer()) :: {:ok, t()} | {:error, atom()}
-  def reorder_user_timeline(%__MODULE__{} = game, user_uuid, track_id, new_position)
-      when is_binary(user_uuid) and is_binary(track_id) and is_integer(new_position) and new_position >= 0 do
-    timeline = get_user_timeline(game, user_uuid)
+  @spec reorder_active_timeline(t(), String.t(), non_neg_integer()) :: {:ok, t()} | {:error, atom()}
+  def reorder_active_timeline(%__MODULE__{turn: nil} = _game, _track_id, _new_position) do
+    {:error, :no_turn}
+  end
 
-    case Enum.find(timeline, &(&1.id == track_id)) do
-      nil ->
-        {:error, :track_not_found}
+  def reorder_active_timeline(%__MODULE__{turn: turn} = game, track_id, new_position)
+      when is_binary(track_id) and is_integer(new_position) and new_position >= 0 do
+    case Turn.reorder_timeline(turn, track_id, new_position) do
+      {:ok, updated_turn} ->
+        {:ok, %{game | turn: updated_turn}}
 
-      track ->
-        # Remove track from current position, then add at new position
-        updated_timeline = List.delete(timeline, track)
-        final_timeline = List.insert_at(updated_timeline, new_position, track)
-
-        updated_game = %{game | timelines: Map.put(game.timelines, user_uuid, final_timeline)}
-        {:ok, updated_game}
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 

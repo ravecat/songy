@@ -10,13 +10,13 @@
   const { user } = $derived.by(getScopeContext);
   const currentTrack = $derived(state?.turn?.track);
   const zoneId = $derived(`current-track-${user.uuid}`);
-  const currentUserTimeline = $derived(state?.timelines?.[user.uuid] || []);
+  const activeTimeline = $derived(state?.turn?.timeline || []);
 
   let timeline = $derived.by(() => {
     if (!currentTrack) return [];
 
-    const isCurrentTrackInProcess = currentUserTimeline.some(
-      (track: any) => track.id === currentTrack.id
+    const isCurrentTrackInProcess = activeTimeline.some(
+      ({ id }) => id === currentTrack.id
     );
 
     return isCurrentTrackInProcess

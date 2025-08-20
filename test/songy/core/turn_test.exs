@@ -952,7 +952,8 @@ defmodule Songy.Core.TurnTest do
         Turn.new()
         |> Turn.add_assumption(1, "player-1")
         |> Turn.add_assumption(2, "player-2")
-        |> Turn.add_assumption(3, "player-1")  # Preserves all player-1's assumptions
+        # Preserves all player-1's assumptions
+        |> Turn.add_assumption(3, "player-1")
 
       assert turn.assumptions == [{1, "player-1"}, {2, "player-2"}, {3, "player-1"}]
     end
@@ -1028,11 +1029,16 @@ defmodule Songy.Core.TurnTest do
         |> Turn.add_assumption(1, "player-1")
         |> Turn.add_assumption(2, "player-2")
         # Move to results phase
-        |> Turn.next_phase()  # waiting -> ready
-        |> Turn.next_phase()  # ready -> steady
-        |> Turn.next_phase()  # steady -> challenging
-        |> Turn.next_phase()  # challenging -> results
-        |> Turn.next_phase()  # results -> waiting (clears data)
+        # waiting -> ready
+        |> Turn.next_phase()
+        # ready -> steady
+        |> Turn.next_phase()
+        # steady -> challenging
+        |> Turn.next_phase()
+        # challenging -> results
+        |> Turn.next_phase()
+        # results -> waiting (clears data)
+        |> Turn.next_phase()
 
       assert turn.timeline == []
       assert turn.assumptions == []
@@ -1047,7 +1053,8 @@ defmodule Songy.Core.TurnTest do
         |> Turn.add_player_to_queue("player-1")
         |> Turn.set_timeline_snapshot([track])
         |> Turn.add_assumption(1, "player-1")
-        |> Turn.next_phase()  # waiting -> ready
+        # waiting -> ready
+        |> Turn.next_phase()
 
       assert turn.timeline == [track]
       assert turn.assumptions == [{1, "player-1"}]
@@ -1102,7 +1109,8 @@ defmodule Songy.Core.TurnTest do
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
       track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
 
-      turn_with_timeline = turn
+      turn_with_timeline =
+        turn
         |> Turn.extend_timeline(track1)
         |> Turn.extend_timeline(track2)
 
@@ -1117,7 +1125,8 @@ defmodule Songy.Core.TurnTest do
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
       track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
 
-      turn_with_timeline = turn
+      turn_with_timeline =
+        turn
         |> Turn.extend_timeline(track1)
         |> Turn.extend_timeline(track2)
 
@@ -1178,6 +1187,106 @@ defmodule Songy.Core.TurnTest do
 
       expected = [track2, track4, track1, track3, track5]
       assert turn.timeline == expected
+    end
+  end
+
+  describe "reorder_timeline/3" do
+    setup do
+      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
+      track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
+      track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
+
+      turn =
+        Turn.new()
+        |> Turn.extend_timeline(track1)
+        |> Turn.extend_timeline(track2)
+        |> Turn.extend_timeline(track3)
+
+      %{turn: turn, track1: track1, track2: track2, track3: track3}
+    end
+
+    test "moves track to beginning of timeline", %{
+      turn: turn,
+      track1: track1,
+      track2: track2,
+      track3: track3
+    } do
+      # Move track1 to position 0: [track1, track3, track2]
+      {:ok, updated_turn} = Turn.reorder_timeline(turn, track1.id, 0)
+
+      assert updated_turn.timeline == [track1, track3, track2]
+    end
+
+    test "moves track to middle of timeline", %{
+      turn: turn,
+      track1: track1,
+      track2: track2,
+      track3: track3
+    } do
+      # Move track1 to position 1: [track3, track1, track2]
+      {:ok, updated_turn} = Turn.reorder_timeline(turn, track1.id, 1)
+
+      assert updated_turn.timeline == [track3, track1, track2]
+    end
+
+    test "moves track to end of timeline", %{
+      turn: turn,
+      track1: track1,
+      track2: track2,
+      track3: track3
+    } do
+      # Move track3 to position 2: [track2, track1, track3]
+      {:ok, updated_turn} = Turn.reorder_timeline(turn, track3.id, 2)
+
+      assert updated_turn.timeline == [track2, track1, track3]
+    end
+
+    test "handles position beyond timeline length", %{
+      turn: turn,
+      track1: track1,
+      track2: track2,
+      track3: track3
+    } do
+      {:ok, updated_turn} = Turn.reorder_timeline(turn, track1.id, 10)
+
+      assert updated_turn.timeline == [track3, track2, track1]
+    end
+
+    test "returns error for non-existent track", %{turn: turn} do
+      non_existent_id = "non_existent_track_id"
+
+      result = Turn.reorder_timeline(turn, non_existent_id, 0)
+
+      assert result == {:error, :track_not_found}
+    end
+
+    test "moving track to same position leaves timeline unchanged", %{
+      turn: turn,
+      track1: track1,
+      track2: track2,
+      track3: track3
+    } do
+      # Move track2 to its current position (index 1)
+      {:ok, updated_turn} = Turn.reorder_timeline(turn, track2.id, 1)
+
+      assert updated_turn.timeline == [track3, track2, track1]
+    end
+
+    test "works with empty timeline" do
+      turn = Turn.new()
+
+      result = Turn.reorder_timeline(turn, "any_id", 0)
+
+      assert result == {:error, :track_not_found}
+    end
+
+    test "works with single track timeline" do
+      track = Track.new(title: "Song", artist: "Artist", year: 2020)
+      turn = Turn.extend_timeline(Turn.new(), track)
+
+      {:ok, updated_turn} = Turn.reorder_timeline(turn, track.id, 0)
+
+      assert updated_turn.timeline == [track]
     end
   end
 end

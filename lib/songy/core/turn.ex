@@ -324,4 +324,45 @@ defmodule Songy.Core.Turn do
       when is_integer(position) and position >= 0 do
     %{turn | timeline: List.insert_at(timeline, position, track)}
   end
+
+  @doc """
+  Reorders a track in the turn's timeline by moving it to a new position.
+
+  ## Parameters
+    * `turn` - The turn to update
+    * `track_id` - ID of the track to reorder
+    * `new_position` - New position for the track (0-based)
+
+  ## Returns
+    * `{:ok, updated_turn}` - Success with updated timeline
+    * `{:error, :track_not_found}` - If track not in timeline
+
+  ## Examples
+      iex> track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
+      iex> track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
+      iex> turn = Turn.new()
+      iex> turn = Turn.extend_timeline(turn, track1)
+      iex> turn = Turn.extend_timeline(turn, track2)
+      iex> {:ok, updated_turn} = Turn.reorder_timeline(turn, track1.id, 1)
+      iex> updated_turn.timeline
+      [%Track{title: "Song 2"}, %Track{title: "Song 1"}]
+  """
+  @spec reorder_timeline(t(), String.t(), non_neg_integer()) :: {:ok, t()} | {:error, atom()}
+  def reorder_timeline(%__MODULE__{timeline: timeline} = turn, track_id, new_position)
+      when is_binary(track_id) and is_integer(new_position) and new_position >= 0 do
+    case Enum.find(timeline, &(&1.id == track_id)) do
+      nil ->
+        {:error, :track_not_found}
+
+      track ->
+        {:ok,
+         %{
+           turn
+           | timeline:
+               timeline
+               |> List.delete(track)
+               |> List.insert_at(new_position, track)
+         }}
+    end
+  end
 end

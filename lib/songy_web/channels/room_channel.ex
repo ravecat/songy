@@ -205,9 +205,8 @@ defmodule SongyWeb.RoomChannel do
   @impl true
   def handle_in("reorder_timeline", %{"track_id" => track_id, "position" => position}, socket) do
     @room_prefix <> room_id = socket.topic
-    current_user_uuid = socket.assigns.current_user_uuid
 
-    case GameSession.reorder_timeline(room_id, current_user_uuid, track_id, position) do
+    case GameSession.reorder_timeline(room_id, track_id, position) do
       {:ok, game} ->
         broadcast(socket, "state_updated", game)
 

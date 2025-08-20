@@ -798,104 +798,101 @@ defmodule Songy.Core.GameTest do
     end
   end
 
-  describe "reorder_user_timeline/4" do
+  describe "reorder_active_timeline/3" do
     setup do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
-      user_uuid = "user456"
 
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
       track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
 
-      # Build initial timeline: [track3, track2, track1] (newest first)
+      # Build initial active timeline: [track3, track2, track1] (newest first)
       {:ok, game_with_track1} = Game.set_turn_track(game, track1)
-      game_step1 = Game.extend_user_timeline(game_with_track1, user_uuid)
+      game_step1 = Game.extend_active_timeline(game_with_track1)
 
       {:ok, game_with_track2} = Game.set_turn_track(game_step1, track2)
-      game_step2 = Game.extend_user_timeline(game_with_track2, user_uuid)
+      game_step2 = Game.extend_active_timeline(game_with_track2)
 
       {:ok, game_with_track3} = Game.set_turn_track(game_step2, track3)
-      final_game = Game.extend_user_timeline(game_with_track3, user_uuid)
+      final_game = Game.extend_active_timeline(game_with_track3)
 
-      %{game: final_game, user_uuid: user_uuid, track1: track1, track2: track2, track3: track3}
+      %{game: final_game, track1: track1, track2: track2, track3: track3}
     end
 
-    test "moves track to beginning of timeline", %{
+    test "moves track to beginning of active timeline", %{
       game: game,
-      user_uuid: user_uuid,
       track1: track1,
       track2: track2,
       track3: track3
     } do
       # Move track1 to position 0: [track1, track3, track2]
-      {:ok, updated_game} = Game.reorder_user_timeline(game, user_uuid, track1.id, 0)
-      timeline = Game.get_user_timeline(updated_game, user_uuid)
+      {:ok, updated_game} = Game.reorder_active_timeline(game, track1.id, 0)
+      timeline = updated_game.turn.timeline
 
       assert timeline == [track1, track3, track2]
     end
 
-    test "moves track to middle of timeline", %{
+    test "moves track to middle of active timeline", %{
       game: game,
-      user_uuid: user_uuid,
       track1: track1,
       track2: track2,
       track3: track3
     } do
       # Move track1 to position 1: [track3, track1, track2]
-      {:ok, updated_game} = Game.reorder_user_timeline(game, user_uuid, track1.id, 1)
-      timeline = Game.get_user_timeline(updated_game, user_uuid)
+      {:ok, updated_game} = Game.reorder_active_timeline(game, track1.id, 1)
+      timeline = updated_game.turn.timeline
 
       assert timeline == [track3, track1, track2]
     end
 
-    test "moves track to end of timeline", %{
+    test "moves track to end of active timeline", %{
       game: game,
-      user_uuid: user_uuid,
       track1: track1,
       track2: track2,
       track3: track3
     } do
       # Move track3 to position 2: [track2, track1, track3]
-      {:ok, updated_game} = Game.reorder_user_timeline(game, user_uuid, track3.id, 2)
-      timeline = Game.get_user_timeline(updated_game, user_uuid)
+      {:ok, updated_game} = Game.reorder_active_timeline(game, track3.id, 2)
+      timeline = updated_game.turn.timeline
 
       assert timeline == [track2, track1, track3]
     end
 
-    test "handles position beyond timeline length", %{
+    test "handles position beyond active timeline length", %{
       game: game,
-      user_uuid: user_uuid,
       track1: track1,
       track2: track2,
       track3: track3
     } do
       # Move track1 to position 10 (beyond end) - should move to end
-      {:ok, updated_game} = Game.reorder_user_timeline(game, user_uuid, track1.id, 10)
-      timeline = Game.get_user_timeline(updated_game, user_uuid)
+      {:ok, updated_game} = Game.reorder_active_timeline(game, track1.id, 10)
+      timeline = updated_game.turn.timeline
 
       assert timeline == [track3, track2, track1]
     end
 
-    test "returns error for non-existent track", %{game: game, user_uuid: user_uuid} do
+    test "returns error for non-existent track", %{game: game} do
       non_existent_id = "non_existent_track_id"
 
-      result = Game.reorder_user_timeline(game, user_uuid, non_existent_id, 0)
+      result = Game.reorder_active_timeline(game, non_existent_id, 0)
 
       assert result == {:error, :track_not_found}
     end
 
-    test "returns error for non-existent user", %{game: game, track1: track1} do
-      non_existent_user = "non_existent_user"
+    test "returns error when game has no turn", %{track1: track1} do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      # Clear the turn to simulate no active turn
+      game_without_turn = %{game | turn: nil}
 
-      result = Game.reorder_user_timeline(game, non_existent_user, track1.id, 0)
+      result = Game.reorder_active_timeline(game_without_turn, track1.id, 0)
 
-      assert result == {:error, :track_not_found}
+      assert result == {:error, :no_turn}
     end
 
-    test "preserves other users' timelines", %{
+    test "preserves user timelines when reordering active timeline", %{
       game: game,
-      user_uuid: user_uuid,
       track1: track1,
       track2: track2,
       track3: track3
@@ -903,28 +900,28 @@ defmodule Songy.Core.GameTest do
       other_user = "other_user"
       other_track = Track.new(title: "Other Song", artist: "Other Artist", year: 2023)
 
-      # Add track to other user
+      # Add track to user timeline
       {:ok, game_with_other_track} = Game.set_turn_track(game, other_track)
       game = Game.extend_user_timeline(game_with_other_track, other_user)
 
-      # Reorder first user's timeline
-      {:ok, updated_game} = Game.reorder_user_timeline(game, user_uuid, track1.id, 0)
+      # Reorder active timeline
+      {:ok, updated_game} = Game.reorder_active_timeline(game, track1.id, 0)
 
-      # Other user's timeline should be unchanged
+      # User's timeline should be unchanged
       assert Game.get_user_timeline(updated_game, other_user) == [other_track]
-      assert Game.get_user_timeline(updated_game, user_uuid) == [track1, track3, track2]
+      # Active timeline should be reordered
+      assert updated_game.turn.timeline == [track1, track3, track2]
     end
 
-    test "moving track to same position leaves timeline unchanged", %{
+    test "moving track to same position leaves active timeline unchanged", %{
       game: game,
-      user_uuid: user_uuid,
       track1: track1,
       track2: track2,
       track3: track3
     } do
       # Move track2 to its current position (index 1)
-      {:ok, updated_game} = Game.reorder_user_timeline(game, user_uuid, track2.id, 1)
-      timeline = Game.get_user_timeline(updated_game, user_uuid)
+      {:ok, updated_game} = Game.reorder_active_timeline(game, track2.id, 1)
+      timeline = updated_game.turn.timeline
 
       assert timeline == [track3, track2, track1]
     end

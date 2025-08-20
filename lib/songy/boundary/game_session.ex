@@ -331,34 +331,34 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @doc """
-  Reorders a track in user's timeline by moving it to a new position.
+  Reorders a track in the active timeline by moving it to a new position.
 
-  Moves an existing track in the user's timeline to a different position.
+  Moves an existing track in the active timeline to a different position.
 
   ## Parameters
     * `game_uuid` - UUID of the game session
-    * `user_uuid` - UUID of the user whose timeline to reorder
     * `track_id` - ID of the track to move
     * `position` - New position for the track (0-based index)
 
   ## Returns
     * `{:ok, game}` - Success with updated game state
     * `{:error, :game_session_not_found}` - Game session does not exist
-    * `{:error, :track_not_found}` - Track not found in user's timeline
+    * `{:error, :track_not_found}` - Track not found in active timeline
+    * `{:error, :no_turn}` - Game has no active turn
 
   ## Examples
-      iex> GameSession.reorder_timeline("game123", "user456", "track_id", 2)
-      {:ok, %Game{timelines: %{"user456" => [track1, track2, moved_track]}}}
+      iex> GameSession.reorder_timeline("game123", "track_id", 2)
+      {:ok, %Game{turn: %{timeline: [track1, track2, moved_track]}}}
 
-      iex> GameSession.reorder_timeline("game123", "user456", "nonexistent_id", 0)
+      iex> GameSession.reorder_timeline("game123", "nonexistent_id", 0)
       {:error, :track_not_found}
   """
-  @spec reorder_timeline(String.t(), String.t(), String.t(), non_neg_integer()) :: {:ok, Game.t()} | {:error, atom()}
-  def reorder_timeline(game_uuid, user_uuid, track_id, position \\ 0)
-      when is_binary(game_uuid) and is_binary(user_uuid) and is_binary(track_id) and is_integer(position) and
+  @spec reorder_timeline(String.t(), String.t(), non_neg_integer()) :: {:ok, Game.t()} | {:error, atom()}
+  def reorder_timeline(game_uuid, track_id, position \\ 0)
+      when is_binary(game_uuid) and is_binary(track_id) and is_integer(position) and
              position >= 0 do
     if game_session_exists?(game_uuid) do
-      GenServer.call(via(game_uuid), {:reorder_timeline, user_uuid, track_id, position})
+      GenServer.call(via(game_uuid), {:reorder_timeline, track_id, position})
     else
       {:error, :game_session_not_found}
     end
@@ -673,10 +673,10 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @impl GenServer
-  def handle_call({:reorder_timeline, user_uuid, track_id, position}, _from, game) do
-    case Game.reorder_user_timeline(game, user_uuid, track_id, position) do
+  def handle_call({:reorder_timeline, track_id, position}, _from, game) do
+    case Game.reorder_active_timeline(game, track_id, position) do
       {:ok, updated_game} ->
-        Logger.info("Reorder timeline for user #{user_uuid} with track ID #{track_id} at position #{position}")
+        Logger.info("Reorder active timeline with track ID #{track_id} at position #{position}")
 
         Phoenix.PubSub.local_broadcast(
           Songy.PubSub,
