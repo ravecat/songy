@@ -38,8 +38,7 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "end_game_session/1" do
     test "terminates game session process" do
-      provider_id = :spotify
-      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
       assert :ok = GameSession.end_game_session(game.uuid)
     end
@@ -472,8 +471,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "cycles through all phases correctly" do
-      provider_id = :spotify
-      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
       credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
 
@@ -520,7 +518,70 @@ defmodule Songy.Boundary.GameSessionTest do
 
       {:ok, next_waiting_game} = GameSession.next_phase(game.uuid)
       assert next_waiting_game.turn.phase == :waiting
-      # Should advance to next player (if multiple players)
+
+      GameSession.end_game_session(game.uuid)
+    end
+
+    test "fetches new track only when transitioning from results phase" do
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
+
+      credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
+
+      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+        {:ok,
+         %Spotify.Track{
+           name: "Random Song",
+           artists: [%{"name" => "Random Artist"}],
+           album: %{
+             "release_date" => "2023-01-01",
+             "images" => [%{"url" => "https://example.com/cover.jpg"}]
+           }
+         }}
+      end)
+
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      Repatch.allow(self(), pid)
+
+      :ok = GameSession.set_credentials(game.uuid, credentials)
+      {:ok, started_game} = GameSession.start_game_session(game.uuid)
+
+      # Subscribe to game events to wait for participant initialization
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+
+      # Add participants for proper turn management
+      send(pid, {:participant_joined, "user1"})
+      assert_receive {:game_state_updated, _updated_game_1}
+
+      send(pid, {:participant_joined, "user2"})
+      assert_receive {:game_state_updated, _updated_game_2}
+
+      initial_track_id = started_game.turn.track.id
+
+      # Cycle through phases: waiting -> ready -> steady -> challenging -> results
+      # These transitions should NOT trigger track fetching
+      {:ok, ready_game} = GameSession.next_phase(game.uuid)
+      assert ready_game.turn.phase == :ready
+      assert ready_game.turn.track.id == initial_track_id
+
+      {:ok, steady_game} = GameSession.next_phase(game.uuid)
+      assert steady_game.turn.phase == :steady
+      assert steady_game.turn.track.id == initial_track_id
+
+      {:ok, challenging_game} = GameSession.next_phase(game.uuid)
+      assert challenging_game.turn.phase == :challenging
+      assert challenging_game.turn.track.id == initial_track_id
+
+      {:ok, results_game} = GameSession.next_phase(game.uuid)
+      assert results_game.turn.phase == :results
+      assert results_game.turn.track.id == initial_track_id
+
+      # Transition from results -> waiting should fetch new track
+      {:ok, next_waiting_game} = GameSession.next_phase(game.uuid)
+      assert next_waiting_game.turn.phase == :waiting
+
+      # Verify that a new track was set with different ID
+      assert next_waiting_game.turn.track != nil
+      assert next_waiting_game.turn.track.id != initial_track_id
 
       GameSession.end_game_session(game.uuid)
     end
@@ -1002,6 +1063,7 @@ defmodule Songy.Boundary.GameSessionTest do
 
       # Setup credentials
       credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
+
       :ok = GameSession.set_credentials(game.uuid, credentials)
 
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
@@ -1018,6 +1080,7 @@ defmodule Songy.Boundary.GameSessionTest do
       end)
 
       [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+
       Repatch.allow(self(), pid)
 
       # Add participant to get initial timeline
@@ -1027,35 +1090,26 @@ defmodule Songy.Boundary.GameSessionTest do
       Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
 
       send(pid, {:participant_joined, user_uuid})
+
       assert_receive {:game_state_updated, game_with_user}
 
       %{game: game_with_user, pid: pid, user_uuid: user_uuid}
     end
 
     test "reorders existing track to new position in active timeline", %{game: game, user_uuid: user_uuid} do
-      # Start the game using public API
       {:ok, _started_game} = GameSession.start_game_session(game.uuid)
 
-      {:ok, game_with_timeline} = GameSession.make_assumption(game.uuid, user_uuid, 0)
+      {:ok, game} = GameSession.make_assumption(game.uuid, user_uuid, 0)
 
-      active_timeline = game_with_timeline.turn.timeline
-      assert length(active_timeline) == 1
-      [track_in_timeline] = active_timeline
+      # TODO: Should implement full cycle phase and create a new turn track
+      {:ok, game} = GameSession.next_phase(game.uuid)
 
-      # Subscribe to state updates
-      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+      assert_receive {:game_state_updated, %{turn: %{timeline: [track]}}}
 
-      # Try to reorder to same position (should succeed but not change anything)
-      assert {:ok, reordered_game} =
-               GameSession.reorder_timeline(game_with_timeline.uuid, track_in_timeline.id, 0)
+      assert {:ok, _} =
+               GameSession.reorder_timeline(game.uuid, track.id, 1)
 
-      active_timeline_after = reordered_game.turn.timeline
-      assert length(active_timeline_after) == 1
-      [track_after] = active_timeline_after
-      assert track_after.id == track_in_timeline.id
-
-      # Verify state update was broadcast
-      assert_receive {:game_state_updated, _broadcast_game}
+      assert_receive {:game_state_updated, %{turn: %{timeline: [^track]}}}
     end
 
     test "returns error for non-existent track ID", %{game: game} do

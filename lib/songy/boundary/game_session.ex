@@ -237,7 +237,7 @@ defmodule Songy.Boundary.GameSession do
       {:error, :game_session_not_found}
   """
   @spec next_phase(String.t()) :: {:ok, Game.t()} | {:error, atom()}
-  def next_phase(game_uuid) do
+  def next_phase(game_uuid) when is_binary(game_uuid) do
     with {:ok, game} <- lookup_game_session(game_uuid),
          :in_progress <- Game.get_status(game) do
       GenServer.call(via(game_uuid), :next_phase)
@@ -607,6 +607,28 @@ defmodule Songy.Boundary.GameSession do
   def handle_call(:pause_playback, _from, game) do
     updated_game = Game.pause_playback(game)
     {:reply, {:ok, updated_game}, updated_game}
+  end
+
+  @impl GenServer
+  def handle_call(:next_phase, _from, %{turn: %{phase: :results}} = game) do
+    with {:ok, credentials} <- get_credentials(game.uuid),
+         {:ok, spotify_track} <- Spotify.search_random_track(credentials),
+         track <- Trackable.to_track(spotify_track) do
+
+      # First advance to next phase, then set the track
+      updated_game = Game.next_phase(game)
+      {:ok, game_with_track} = Game.set_turn_track(updated_game, track)
+
+      Phoenix.PubSub.local_broadcast(
+        Songy.PubSub,
+        "room:#{game_with_track.uuid}",
+        {:game_state_updated, game_with_track}
+      )
+
+      {:reply, {:ok, game_with_track}, game_with_track}
+    else
+      {:error, reason} -> {:reply, {:error, reason}, game}
+    end
   end
 
   @impl GenServer

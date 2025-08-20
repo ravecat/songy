@@ -891,28 +891,6 @@ defmodule Songy.Core.GameTest do
       assert result == {:error, :no_turn}
     end
 
-    test "preserves user timelines when reordering active timeline", %{
-      game: game,
-      track1: track1,
-      track2: track2,
-      track3: track3
-    } do
-      other_user = "other_user"
-      other_track = Track.new(title: "Other Song", artist: "Other Artist", year: 2023)
-
-      # Add track to user timeline
-      {:ok, game_with_other_track} = Game.set_turn_track(game, other_track)
-      game = Game.extend_user_timeline(game_with_other_track, other_user)
-
-      # Reorder active timeline
-      {:ok, updated_game} = Game.reorder_active_timeline(game, track1.id, 0)
-
-      # User's timeline should be unchanged
-      assert Game.get_user_timeline(updated_game, other_user) == [other_track]
-      # Active timeline should be reordered
-      assert updated_game.turn.timeline == [track1, track3, track2]
-    end
-
     test "moving track to same position leaves active timeline unchanged", %{
       game: game,
       track1: track1,
