@@ -323,7 +323,7 @@ defmodule Songy.Boundary.GameSession do
   def extend_timeline(game_uuid, user_uuid, position \\ 0)
       when is_binary(game_uuid) and is_binary(user_uuid) and is_integer(position) and position >= 0 do
     if game_session_exists?(game_uuid) do
-      GenServer.call(via(game_uuid), {:extend_timeline, user_uuid, position})
+      GenServer.call(via(game_uuid), {:extend_user_timeline, user_uuid, position})
     else
       {:error, :game_session_not_found}
     end
@@ -656,7 +656,7 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @impl GenServer
-  def handle_call({:extend_timeline, user_uuid, position}, _from, game) do
+  def handle_call({:extend_user_timeline, user_uuid, position}, _from, game) do
     track = Game.get_turn_track(game)
     game_with_extended_timeline = Game.extend_user_timeline(game, user_uuid, track, position)
     steady_game = Game.next_phase(game_with_extended_timeline)

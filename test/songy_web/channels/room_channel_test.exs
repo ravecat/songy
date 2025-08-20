@@ -324,7 +324,7 @@ defmodule SongyWeb.RoomChannelTest do
     end
   end
 
-  describe "extend_timeline event" do
+  describe "make_assumption event" do
     test "extends user timeline and broadcasts state update", %{current_user: current_user} do
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
@@ -367,7 +367,7 @@ defmodule SongyWeb.RoomChannelTest do
         turn: %{track: ^track, phase: :ready}
       }
 
-      push(socket, "extend_timeline", %{"position" => 0})
+      push(socket, "make_assumption", %{"position" => 0})
 
       assert_broadcast "state_updated", %Songy.Core.Game{
         status: :in_progress,
@@ -383,7 +383,7 @@ defmodule SongyWeb.RoomChannelTest do
     test "handles error gracefully when game session does not exist", %{current_user: current_user} do
       {:ok, _, socket} = join_room_channel(current_user, "nonexistent")
 
-      push(socket, "extend_timeline", %{"position" => 0})
+      push(socket, "make_assumption", %{"position" => 0})
 
       refute_broadcast "state_updated", _
     end
@@ -433,7 +433,7 @@ defmodule SongyWeb.RoomChannelTest do
         turn: %{track: ^track, phase: :ready}
       }
 
-      push(socket, "extend_timeline", %{"position" => 0})
+      push(socket, "make_assumption", %{"position" => 0})
 
       assert_broadcast "state_updated", %Songy.Core.Game{
         status: :in_progress,

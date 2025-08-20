@@ -187,7 +187,7 @@ defmodule SongyWeb.RoomChannel do
   end
 
   @impl true
-  def handle_in("extend_timeline", %{"position" => position}, socket) do
+  def handle_in("make_assumption", %{"position" => position}, socket) do
     @room_prefix <> room_id = socket.topic
     current_user_uuid = socket.assigns.current_user_uuid
 

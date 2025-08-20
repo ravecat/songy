@@ -52,7 +52,7 @@
         position: newPosition,
       });
     } else {
-      channel.push(PUSH_EVENT.EXTEND_TIMELINE, {
+      channel.push(PUSH_EVENT.MAKE_ASSUMPTION, {
         position: newPosition,
       });
     }
