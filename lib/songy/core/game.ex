@@ -296,36 +296,65 @@ defmodule Songy.Core.Game do
   end
 
   @doc """
-  Extends a user's timeline by adding a track at the specified position.
+  Initializes a user's timeline with a single track.
 
-  This function is used for initializing and managing user timelines outside of active turns.
-  For active turn timeline modifications, use extend_active_timeline/3 instead.
+  This function is specifically for creating initial timelines when users join a game.
+  The track is always placed at position 0. For general timeline management during gameplay,
+  use extend_user_timeline/4 instead.
 
   ## Parameters
     * `game` - The game to update
     * `user_uuid` - UUID of the user
-    * `track` - The track to add
+    * `track` - The initial track to add
+
+  ## Examples
+      iex> provider = Provider.new(:spotify)
+      iex> game = Game.new("owner123", provider: provider)
+      iex> track = Track.new(title: "Initial Song", artist: "Artist", year: 2023)
+      iex> updated_game = Game.init_user_timeline(game, "user456", track)
+      iex> Game.get_user_timeline(updated_game, "user456")
+      [%Track{title: "Initial Song", artist: "Artist", year: 2023}]
+  """
+  @spec init_user_timeline(t(), String.t(), Track.t()) :: t()
+  def init_user_timeline(%__MODULE__{} = game, user_uuid, %Track{} = track)
+      when is_binary(user_uuid) do
+    %{game | timelines: Map.put(game.timelines, user_uuid, [track])}
+  end
+
+  @doc """
+  Extends a user's timeline by adding the current turn track at the specified position.
+
+  This function is used for managing user timelines during gameplay.
+  The track is automatically retrieved from the current turn.
+  For initializing new user timelines, use init_user_timeline/3 instead.
+
+  ## Parameters
+    * `game` - The game to update
+    * `user_uuid` - UUID of the user
     * `position` - Index position where to insert the track (0-based). Defaults to 0 (head).
 
   ## Examples
       iex> provider = Provider.new(:spotify)
       iex> game = Game.new("owner123", provider: provider)
       iex> track = Track.new(title: "Song", artist: "Artist", year: 2023)
+      iex> game_with_track = Game.set_turn_track(game, track)
 
       # Add to head (default behavior)
-      iex> updated_game = Game.extend_user_timeline(game, "user456", track)
+      iex> updated_game = Game.extend_user_timeline(game_with_track, "user456")
       iex> Game.get_user_timeline(updated_game, "user456")
       [%Track{title: "Song", artist: "Artist", year: 2023}]
 
       # Add to specific position
       iex> track2 = Track.new(title: "Song2", artist: "Artist2", year: 2024)
-      iex> updated_game = Game.extend_user_timeline(updated_game, "user456", track2, 1)
+      iex> game_with_track2 = Game.set_turn_track(game_with_track, track2)
+      iex> updated_game = Game.extend_user_timeline(game_with_track2, "user456", 1)
       iex> Game.get_user_timeline(updated_game, "user456")
       [%Track{title: "Song", artist: "Artist", year: 2023}, %Track{title: "Song2", artist: "Artist2", year: 2024}]
   """
-  @spec extend_user_timeline(t(), String.t(), Track.t(), non_neg_integer()) :: t()
-  def extend_user_timeline(%__MODULE__{} = game, user_uuid, %Track{} = track, position \\ 0)
+  @spec extend_user_timeline(t(), String.t(), non_neg_integer()) :: t()
+  def extend_user_timeline(%__MODULE__{} = game, user_uuid, position \\ 0)
       when is_binary(user_uuid) and is_integer(position) and position >= 0 do
+    track = get_turn_track(game)
     current_timeline = Map.get(game.timelines, user_uuid, [])
     updated_timeline = List.insert_at(current_timeline, position, track)
 

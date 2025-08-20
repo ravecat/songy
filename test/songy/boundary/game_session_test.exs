@@ -877,7 +877,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
   end
 
-  describe "extend_timeline/3" do
+  describe "extend_user_timeline/3" do
     setup do
       {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
@@ -918,7 +918,7 @@ defmodule Songy.Boundary.GameSessionTest do
       assert_receive {:game_state_updated, _game_with_participant}
 
       # Extend timeline by adding turn track at position 1
-      assert {:ok, updated_game} = GameSession.extend_timeline(game.uuid, user_uuid, 1)
+      assert {:ok, updated_game} = GameSession.extend_user_timeline(game.uuid, user_uuid, 1)
 
       # Verify turn track was added to timeline
       user_timeline = Game.get_user_timeline(updated_game, user_uuid)
@@ -949,7 +949,7 @@ defmodule Songy.Boundary.GameSessionTest do
       assert_receive {:game_state_updated, _game_with_participant}
 
       # Add turn track at position 0
-      assert {:ok, updated_game} = GameSession.extend_timeline(game.uuid, user_uuid, 0)
+      assert {:ok, updated_game} = GameSession.extend_user_timeline(game.uuid, user_uuid, 0)
 
       user_timeline = Game.get_user_timeline(updated_game, user_uuid)
       assert length(user_timeline) == 2
@@ -970,7 +970,7 @@ defmodule Songy.Boundary.GameSessionTest do
       assert_receive {:game_state_updated, _game_with_participant}
 
       # Add turn track using default position (should be 0)
-      assert {:ok, updated_game} = GameSession.extend_timeline(game.uuid, user_uuid)
+      assert {:ok, updated_game} = GameSession.extend_user_timeline(game.uuid, user_uuid)
 
       user_timeline = Game.get_user_timeline(updated_game, user_uuid)
       assert length(user_timeline) == 2
@@ -981,7 +981,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "returns error for non-existent game session" do
-      assert {:error, :game_session_not_found} = GameSession.extend_timeline("nonexistent", "user123", 0)
+      assert {:error, :game_session_not_found} = GameSession.extend_user_timeline("nonexistent", "user123", 0)
     end
   end
 
@@ -1026,7 +1026,7 @@ defmodule Songy.Boundary.GameSessionTest do
       {:ok, started_game} = GameSession.start_game_session(game.uuid)
 
       # Add turn track to timeline at position 1
-      {:ok, game_with_multiple} = GameSession.extend_timeline(started_game.uuid, user_uuid, 1)
+      {:ok, game_with_multiple} = GameSession.extend_user_timeline(started_game.uuid, user_uuid, 1)
 
       timeline_before = Game.get_user_timeline(game_with_multiple, user_uuid)
       assert length(timeline_before) == 2

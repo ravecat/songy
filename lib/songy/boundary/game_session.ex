@@ -19,8 +19,8 @@ defmodule Songy.Boundary.GameSession do
     * `update_provider/2` - Updates the provider for a game session (owner only)
     * `set_credentials/2` - Stores provider credentials in Registry for session access
     * `get_credentials/1` - Retrieves stored credentials from Registry
-    * `extend_timeline/2` - Adds current turn track to user's timeline at beginning (position 0)
-    * `extend_timeline/3` - Adds current turn track to user's timeline at specified position
+    * `extend_user_timeline/2` - Adds current turn track to user's timeline at beginning (position 0)
+    * `extend_user_timeline/3` - Adds current turn track to user's timeline at specified position
     * `reorder_timeline/4` - Reorders a track in user's timeline to new position
 
   ## Process Management
@@ -310,17 +310,17 @@ defmodule Songy.Boundary.GameSession do
     * `{:error, :no_current_track}` - No track is set for the current turn
 
   ## Examples
-      iex> GameSession.extend_timeline("game123", "user456")
+      iex> GameSession.extend_user_timeline("game123", "user456")
       {:ok, %Game{timelines: %{"user456" => [track_from_turn, existing_track]}}}
 
-      iex> GameSession.extend_timeline("game123", "user456", 1)
+      iex> GameSession.extend_user_timeline("game123", "user456", 1)
       {:ok, %Game{timelines: %{"user456" => [existing_track, track_from_turn]}}}
 
-      iex> GameSession.extend_timeline("nonexistent", "user456", 0)
+      iex> GameSession.extend_user_timeline("nonexistent", "user456", 0)
       {:error, :game_session_not_found}
   """
-  @spec extend_timeline(String.t(), String.t(), non_neg_integer()) :: {:ok, Game.t()} | {:error, atom()}
-  def extend_timeline(game_uuid, user_uuid, position \\ 0)
+  @spec extend_user_timeline(String.t(), String.t(), non_neg_integer()) :: {:ok, Game.t()} | {:error, atom()}
+  def extend_user_timeline(game_uuid, user_uuid, position \\ 0)
       when is_binary(game_uuid) and is_binary(user_uuid) and is_integer(position) and position >= 0 do
     if game_session_exists?(game_uuid) do
       GenServer.call(via(game_uuid), {:extend_user_timeline, user_uuid, position})
@@ -538,7 +538,7 @@ defmodule Songy.Boundary.GameSession do
          {:ok, spotify_track} <- Spotify.search_random_track(credentials),
          track <- Trackable.to_track(spotify_track) do
       Logger.info("Init participant timeline with track '#{track.title}' by '#{track.artist}'")
-      game = Game.extend_user_timeline(game, user_uuid, track)
+      game = Game.init_user_timeline(game, user_uuid, track)
 
       {:noreply, game, {:continue, {:finalize_participant_initialization, user_uuid, :timeline_initialized}}}
     else
@@ -657,19 +657,18 @@ defmodule Songy.Boundary.GameSession do
 
   @impl GenServer
   def handle_call({:extend_user_timeline, user_uuid, position}, _from, game) do
-    track = Game.get_turn_track(game)
-    game_with_extended_timeline = Game.extend_user_timeline(game, user_uuid, track, position)
-    steady_game = Game.next_phase(game_with_extended_timeline)
+    game_with_extended_timeline = Game.extend_user_timeline(game, user_uuid, position)
+    updated_game = Game.next_phase(game_with_extended_timeline)
 
-    Logger.info("Extend timeline for user #{user_uuid} with track '#{inspect(track)}' at position #{position}")
+    Logger.info("Extend timeline for user #{user_uuid} at position #{position}")
 
     Phoenix.PubSub.local_broadcast(
       Songy.PubSub,
-      "room:#{steady_game.uuid}",
-      {:game_state_updated, steady_game}
+      "room:#{updated_game.uuid}",
+      {:game_state_updated, updated_game}
     )
 
-    {:reply, {:ok, steady_game}, steady_game}
+    {:reply, {:ok, updated_game}, updated_game}
   end
 
   @impl GenServer
