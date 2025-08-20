@@ -19,8 +19,8 @@ defmodule Songy.Boundary.GameSession do
     * `update_provider/2` - Updates the provider for a game session (owner only)
     * `set_credentials/2` - Stores provider credentials in Registry for session access
     * `get_credentials/1` - Retrieves stored credentials from Registry
-    * `extend_user_timeline/2` - Adds current turn track to user's timeline at beginning (position 0)
-    * `extend_user_timeline/3` - Adds current turn track to user's timeline at specified position
+    * `make_assumption/2` - Adds current turn track to active timeline at beginning (position 0)
+    * `make_assumption/3` - Adds current turn track to active timeline at specified position
     * `reorder_timeline/4` - Reorders a track in user's timeline to new position
 
   ## Process Management
@@ -294,14 +294,15 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @doc """
-  Extends user timeline by adding the current turn track to specified position.
+  Makes an assumption by adding the current turn track to active timeline at specified position.
 
-  Takes the track from the current turn and adds it to the user's timeline
+  Takes the track from the current turn and adds it to the active timeline (turn.timeline)
   at the specified position. If no position is provided, adds at the beginning (position 0).
+  This represents a user's assumption about what song is currently playing.
 
   ## Parameters
     * `game_uuid` - UUID of the game session
-    * `user_uuid` - UUID of the user whose timeline to extend
+    * `user_uuid` - UUID of the user making the assumption
     * `position` - Position to insert the track (0-based index, defaults to 0)
 
   ## Returns
@@ -310,20 +311,20 @@ defmodule Songy.Boundary.GameSession do
     * `{:error, :no_current_track}` - No track is set for the current turn
 
   ## Examples
-      iex> GameSession.extend_user_timeline("game123", "user456")
-      {:ok, %Game{timelines: %{"user456" => [track_from_turn, existing_track]}}}
+      iex> GameSession.make_assumption("game123", "user456")
+      {:ok, %Game{turn: %{timeline: [track_from_turn, existing_track]}}}
 
-      iex> GameSession.extend_user_timeline("game123", "user456", 1)
-      {:ok, %Game{timelines: %{"user456" => [existing_track, track_from_turn]}}}
+      iex> GameSession.make_assumption("game123", "user456", 1)
+      {:ok, %Game{turn: %{timeline: [existing_track, track_from_turn]}}}
 
-      iex> GameSession.extend_user_timeline("nonexistent", "user456", 0)
+      iex> GameSession.make_assumption("nonexistent", "user456", 0)
       {:error, :game_session_not_found}
   """
-  @spec extend_user_timeline(String.t(), String.t(), non_neg_integer()) :: {:ok, Game.t()} | {:error, atom()}
-  def extend_user_timeline(game_uuid, user_uuid, position \\ 0)
+  @spec make_assumption(String.t(), String.t(), non_neg_integer()) :: {:ok, Game.t()} | {:error, atom()}
+  def make_assumption(game_uuid, user_uuid, position \\ 0)
       when is_binary(game_uuid) and is_binary(user_uuid) and is_integer(position) and position >= 0 do
     if game_session_exists?(game_uuid) do
-      GenServer.call(via(game_uuid), {:extend_user_timeline, user_uuid, position})
+      GenServer.call(via(game_uuid), {:make_assumption, user_uuid, position})
     else
       {:error, :game_session_not_found}
     end
@@ -656,11 +657,11 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @impl GenServer
-  def handle_call({:extend_user_timeline, user_uuid, position}, _from, game) do
-    game_with_extended_timeline = Game.extend_user_timeline(game, user_uuid, position)
+  def handle_call({:make_assumption, user_uuid, position}, _from, game) do
+    game_with_extended_timeline = Game.extend_active_timeline(game, position)
     updated_game = Game.next_phase(game_with_extended_timeline)
 
-    Logger.info("Extend timeline for user #{user_uuid} at position #{position}")
+    Logger.info("Make assumption for user #{user_uuid} at position #{position}")
 
     Phoenix.PubSub.local_broadcast(
       Songy.PubSub,

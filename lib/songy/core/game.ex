@@ -362,35 +362,38 @@ defmodule Songy.Core.Game do
   end
 
   @doc """
-  Extends the active player's timeline by adding a track at the specified position during the current turn.
+  Adds the current turn track to the active timeline at the specified position.
 
-  This function works with the turn's timeline snapshot, not the user's persistent timeline.
-  It modifies the timeline stored in the current turn structure.
+  Retrieves the track from the current turn and inserts it into the turn timeline
+  at the given position. This represents adding the current playing track to the
+  active game timeline during the challenging phase.
 
   ## Parameters
-    * `game` - The game to update
-    * `track` - The track to add
-    * `position` - Index position where to insert the track (0-based). Defaults to 0 (head).
+    * `game` - The current game state
+    * `position` - Position to insert the track (0-based index). Defaults to 0 (head).
 
   ## Examples
       iex> provider = Provider.new(:spotify)
       iex> game = Game.new("owner123", provider: provider)
       iex> track = Track.new(title: "Song", artist: "Artist", year: 2023)
+      iex> game_with_track = Game.set_turn_track(game, track)
 
       # Add to head (default behavior)
-      iex> updated_game = Game.extend_active_timeline(game, track)
+      iex> updated_game = Game.extend_active_timeline(game_with_track)
       iex> updated_game.turn.timeline
       [%Track{title: "Song", artist: "Artist", year: 2023}]
 
       # Add to specific position
       iex> track2 = Track.new(title: "Song2", artist: "Artist2", year: 2024)
-      iex> updated_game = Game.extend_active_timeline(updated_game, track2, 1)
+      iex> game_with_track2 = Game.set_turn_track(game_with_track, track2)
+      iex> updated_game = Game.extend_active_timeline(game_with_track2, 1)
       iex> updated_game.turn.timeline
       [%Track{title: "Song", artist: "Artist", year: 2023}, %Track{title: "Song2", artist: "Artist2", year: 2024}]
   """
-  @spec extend_active_timeline(t(), Track.t(), non_neg_integer()) :: t()
-  def extend_active_timeline(%__MODULE__{turn: turn} = game, %Track{} = track, position \\ 0)
+  @spec extend_active_timeline(t(), non_neg_integer()) :: t()
+  def extend_active_timeline(%__MODULE__{turn: turn} = game, position \\ 0)
       when is_integer(position) and position >= 0 do
+    track = get_turn_track(game)
     %{game | turn: Turn.extend_timeline(turn, track, position)}
   end
 

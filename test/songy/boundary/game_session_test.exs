@@ -877,7 +877,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
   end
 
-  describe "extend_user_timeline/3" do
+  describe "make_assumption/3" do
     setup do
       {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
@@ -906,7 +906,7 @@ defmodule Songy.Boundary.GameSessionTest do
       %{game: started_game, pid: pid}
     end
 
-    test "adds current turn track to user timeline at specified position", %{game: game, pid: pid} do
+    test "adds current turn track to active timeline at specified position", %{game: game, pid: pid} do
       user_uuid = "user123"
 
       # Subscribe to state updates before adding participant
@@ -917,28 +917,29 @@ defmodule Songy.Boundary.GameSessionTest do
 
       assert_receive {:game_state_updated, _game_with_participant}
 
-      # Extend timeline by adding turn track at position 1
-      assert {:ok, updated_game} = GameSession.extend_user_timeline(game.uuid, user_uuid, 1)
+      # First, transition to ready phase to create active timeline snapshot
+      {:ok, ready_game} = GameSession.next_phase(game.uuid)
+      assert ready_game.turn.phase == :ready
+      # Should have snapshot of user's timeline (1 initial track)
+      assert length(ready_game.turn.timeline) == 1
 
-      # Verify turn track was added to timeline
-      user_timeline = Game.get_user_timeline(updated_game, user_uuid)
+      # Make assumption by adding turn track at position 1
+      assert {:ok, updated_game} = GameSession.make_assumption(game.uuid, user_uuid, 1)
+
+      # Verify turn track was added to active timeline (turn.timeline)
+      active_timeline = updated_game.turn.timeline
       # 1 initial + 1 from turn
-      assert length(user_timeline) == 2
+      assert length(active_timeline) == 2
+      # Should be in steady phase after assumption
+      assert updated_game.turn.phase == :steady
 
       # Verify the turn track is at position 1
-      [_initial_track, turn_track] = user_timeline
+      [_initial_track, turn_track] = active_timeline
       assert turn_track.title == "Turn Track"
       assert turn_track.artist == "Turn Artist"
-
-      # Verify state update was broadcast
-      assert_receive {:game_state_updated, broadcast_game}
-
-      timeline = Game.get_user_timeline(broadcast_game, user_uuid)
-
-      assert length(timeline) == 2
     end
 
-    test "adds turn track at position 0 (beginning of timeline)", %{game: game, pid: pid} do
+    test "adds turn track at position 0 (beginning of active timeline)", %{game: game, pid: pid} do
       user_uuid = "user123"
 
       # Subscribe to state updates before adding participant
@@ -948,14 +949,19 @@ defmodule Songy.Boundary.GameSessionTest do
       send(pid, {:participant_joined, user_uuid})
       assert_receive {:game_state_updated, _game_with_participant}
 
-      # Add turn track at position 0
-      assert {:ok, updated_game} = GameSession.extend_user_timeline(game.uuid, user_uuid, 0)
+      # First, transition to ready phase to create active timeline snapshot
+      {:ok, ready_game} = GameSession.next_phase(game.uuid)
+      assert ready_game.turn.phase == :ready
 
-      user_timeline = Game.get_user_timeline(updated_game, user_uuid)
-      assert length(user_timeline) == 2
+      # Add turn track at position 0
+      assert {:ok, updated_game} = GameSession.make_assumption(game.uuid, user_uuid, 0)
+
+      active_timeline = updated_game.turn.timeline
+      assert length(active_timeline) == 2
+      assert updated_game.turn.phase == :steady
 
       # Verify turn track is at the beginning
-      [turn_track, _initial_track] = user_timeline
+      [turn_track, _initial_track] = active_timeline
       assert turn_track.title == "Turn Track"
     end
 
@@ -969,19 +975,24 @@ defmodule Songy.Boundary.GameSessionTest do
       send(pid, {:participant_joined, user_uuid})
       assert_receive {:game_state_updated, _game_with_participant}
 
-      # Add turn track using default position (should be 0)
-      assert {:ok, updated_game} = GameSession.extend_user_timeline(game.uuid, user_uuid)
+      # First, transition to ready phase to create active timeline snapshot
+      {:ok, ready_game} = GameSession.next_phase(game.uuid)
+      assert ready_game.turn.phase == :ready
 
-      user_timeline = Game.get_user_timeline(updated_game, user_uuid)
-      assert length(user_timeline) == 2
+      # Add turn track using default position (should be 0)
+      assert {:ok, updated_game} = GameSession.make_assumption(game.uuid, user_uuid)
+
+      active_timeline = updated_game.turn.timeline
+      assert length(active_timeline) == 2
+      assert updated_game.turn.phase == :steady
 
       # Verify turn track is at the beginning (position 0)
-      [turn_track, _initial_track] = user_timeline
+      [turn_track, _initial_track] = active_timeline
       assert turn_track.title == "Turn Track"
     end
 
     test "returns error for non-existent game session" do
-      assert {:error, :game_session_not_found} = GameSession.extend_user_timeline("nonexistent", "user123", 0)
+      assert {:error, :game_session_not_found} = GameSession.make_assumption("nonexistent", "user123", 0)
     end
   end
 
@@ -1026,31 +1037,30 @@ defmodule Songy.Boundary.GameSessionTest do
       {:ok, started_game} = GameSession.start_game_session(game.uuid)
 
       # Add turn track to timeline at position 1
-      {:ok, game_with_multiple} = GameSession.extend_user_timeline(started_game.uuid, user_uuid, 1)
+      {:ok, game_with_multiple} = GameSession.make_assumption(started_game.uuid, user_uuid, 1)
 
       timeline_before = Game.get_user_timeline(game_with_multiple, user_uuid)
-      assert length(timeline_before) == 2
-      [first_track, second_track] = timeline_before
+      assert length(timeline_before) == 1
+      [first_track] = timeline_before
 
       # Subscribe to state updates
       Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
 
-      # Reorder second track to position 0
+      # Reorder first track to position 0
       assert {:ok, reordered_game} =
-               GameSession.reorder_timeline(game_with_multiple.uuid, user_uuid, second_track.id, 0)
+               GameSession.reorder_timeline(game_with_multiple.uuid, user_uuid, first_track.id, 0)
 
       timeline_after = Game.get_user_timeline(reordered_game, user_uuid)
-      assert length(timeline_after) == 2
+      assert length(timeline_after) == 1
 
       # Verify track order changed
-      [reordered_first, reordered_second] = timeline_after
-      assert reordered_first.id == second_track.id
-      assert reordered_second.id == first_track.id
+      [reordered_first] = timeline_after
+      assert reordered_first.id == first_track.id
 
       # Verify state update was broadcast
       assert_receive {:game_state_updated, broadcast_game}
       broadcast_timeline = Game.get_user_timeline(broadcast_game, user_uuid)
-      assert length(broadcast_timeline) == 2
+      assert length(broadcast_timeline) == 1
     end
 
     test "returns error for non-existent track ID", %{game: game, user_uuid: user_uuid} do

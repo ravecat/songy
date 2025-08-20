@@ -652,13 +652,14 @@ defmodule Songy.Core.GameTest do
     end
   end
 
-  describe "extend_active_timeline/3" do
+  describe "extend_active_timeline/2" do
     test "adds track to turn timeline at head by default" do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
       track = Track.new(title: "Song", artist: "Artist", year: 2023)
+      {:ok, game_with_track} = Game.set_turn_track(game, track)
 
-      updated_game = Game.extend_active_timeline(game, track)
+      updated_game = Game.extend_active_timeline(game_with_track)
 
       assert updated_game.turn.timeline == [track]
     end
@@ -669,8 +670,10 @@ defmodule Songy.Core.GameTest do
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
 
-      game_with_first = Game.extend_active_timeline(game, track1)
-      game_with_both = Game.extend_active_timeline(game_with_first, track2)
+      {:ok, game_with_track1} = Game.set_turn_track(game, track1)
+      game_with_first = Game.extend_active_timeline(game_with_track1)
+      {:ok, game_with_track2} = Game.set_turn_track(game_with_first, track2)
+      game_with_both = Game.extend_active_timeline(game_with_track2)
 
       assert game_with_both.turn.timeline == [track2, track1]
     end
@@ -681,8 +684,10 @@ defmodule Songy.Core.GameTest do
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
 
-      game_with_first = Game.extend_active_timeline(game, track1)
-      game_with_both = Game.extend_active_timeline(game_with_first, track2, 0)
+      {:ok, game_with_track1} = Game.set_turn_track(game, track1)
+      game_with_first = Game.extend_active_timeline(game_with_track1)
+      {:ok, game_with_track2} = Game.set_turn_track(game_with_first, track2)
+      game_with_both = Game.extend_active_timeline(game_with_track2, 0)
 
       assert game_with_both.turn.timeline == [track2, track1]
     end
@@ -694,11 +699,15 @@ defmodule Songy.Core.GameTest do
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
       track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
 
-      game_with_timeline = game
-        |> Game.extend_active_timeline(track1)
-        |> Game.extend_active_timeline(track2)
+      # Build initial timeline with track1 and track2
+      {:ok, game_with_track1} = Game.set_turn_track(game, track1)
+      game_with_first = Game.extend_active_timeline(game_with_track1)
+      {:ok, game_with_track2} = Game.set_turn_track(game_with_first, track2)
+      game_with_timeline = Game.extend_active_timeline(game_with_track2)
 
-      updated_game = Game.extend_active_timeline(game_with_timeline, track3, 1)
+      # Add track3 at position 1
+      {:ok, game_with_track3} = Game.set_turn_track(game_with_timeline, track3)
+      updated_game = Game.extend_active_timeline(game_with_track3, 1)
 
       assert updated_game.turn.timeline == [track2, track3, track1]
     end
@@ -710,11 +719,15 @@ defmodule Songy.Core.GameTest do
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
       track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
 
-      game_with_timeline = game
-        |> Game.extend_active_timeline(track1)
-        |> Game.extend_active_timeline(track2)
+      # Build initial timeline with track1 and track2
+      {:ok, game_with_track1} = Game.set_turn_track(game, track1)
+      game_with_first = Game.extend_active_timeline(game_with_track1)
+      {:ok, game_with_track2} = Game.set_turn_track(game_with_first, track2)
+      game_with_timeline = Game.extend_active_timeline(game_with_track2)
 
-      updated_game = Game.extend_active_timeline(game_with_timeline, track3, 2)
+      # Add track3 at position 2 (end of list)
+      {:ok, game_with_track3} = Game.set_turn_track(game_with_timeline, track3)
+      updated_game = Game.extend_active_timeline(game_with_track3, 2)
 
       assert updated_game.turn.timeline == [track2, track1, track3]
     end
@@ -725,9 +738,11 @@ defmodule Songy.Core.GameTest do
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
 
-      game_with_first = Game.extend_active_timeline(game, track1)
+      {:ok, game_with_track1} = Game.set_turn_track(game, track1)
+      game_with_first = Game.extend_active_timeline(game_with_track1)
 
-      updated_game = Game.extend_active_timeline(game_with_first, track2, 999)
+      {:ok, game_with_track2} = Game.set_turn_track(game_with_first, track2)
+      updated_game = Game.extend_active_timeline(game_with_track2, 999)
 
       assert updated_game.turn.timeline == [track1, track2]
     end
@@ -736,13 +751,14 @@ defmodule Songy.Core.GameTest do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
       track = Track.new(title: "Song", artist: "Artist", year: 2023)
+      {:ok, game_with_track} = Game.set_turn_track(game, track)
 
       assert_raise FunctionClauseError, fn ->
-        Game.extend_active_timeline(game, track, "invalid")
+        Game.extend_active_timeline(game_with_track, "invalid")
       end
 
       assert_raise FunctionClauseError, fn ->
-        Game.extend_active_timeline(game, track, -1)
+        Game.extend_active_timeline(game_with_track, -1)
       end
     end
 
@@ -758,19 +774,24 @@ defmodule Songy.Core.GameTest do
       [track1, track2, track3, track4, track5] = tracks
 
       # Build timeline: [track1]
-      game = Game.extend_active_timeline(game, track1)
+      {:ok, game_with_track1} = Game.set_turn_track(game, track1)
+      game = Game.extend_active_timeline(game_with_track1)
 
       # Insert at position 0: [track2, track1]
-      game = Game.extend_active_timeline(game, track2, 0)
+      {:ok, game_with_track2} = Game.set_turn_track(game, track2)
+      game = Game.extend_active_timeline(game_with_track2, 0)
 
       # Insert at position 2 (end): [track2, track1, track3]
-      game = Game.extend_active_timeline(game, track3, 2)
+      {:ok, game_with_track3} = Game.set_turn_track(game, track3)
+      game = Game.extend_active_timeline(game_with_track3, 2)
 
       # Insert at position 1: [track2, track4, track1, track3]
-      game = Game.extend_active_timeline(game, track4, 1)
+      {:ok, game_with_track4} = Game.set_turn_track(game, track4)
+      game = Game.extend_active_timeline(game_with_track4, 1)
 
       # Insert at position 999 (end): [track2, track4, track1, track3, track5]
-      game = Game.extend_active_timeline(game, track5, 999)
+      {:ok, game_with_track5} = Game.set_turn_track(game, track5)
+      game = Game.extend_active_timeline(game_with_track5, 999)
 
       expected = [track2, track4, track1, track3, track5]
       assert game.turn.timeline == expected

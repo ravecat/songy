@@ -325,7 +325,7 @@ defmodule SongyWeb.RoomChannelTest do
   end
 
   describe "make_assumption event" do
-    test "extends user timeline and broadcasts state update", %{current_user: current_user} do
+    test "makes user assumption and broadcasts state update", %{current_user: current_user} do
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
          %Spotify.Track{
@@ -371,10 +371,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       assert_broadcast "state_updated", %Songy.Core.Game{
         status: :in_progress,
-        turn: %{track: ^track, phase: :steady},
-        timelines: %{
-          ^current_user_uuid => [^track, ^initial_track]
-        }
+        turn: %{track: ^track, phase: :steady, timeline: [^track, ^initial_track]}
       }
 
       GameSession.end_game_session(game.uuid)
@@ -437,10 +434,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       assert_broadcast "state_updated", %Songy.Core.Game{
         status: :in_progress,
-        turn: %{track: ^track, phase: :steady},
-        timelines: %{
-          ^current_user_uuid => [^track, ^initial_track]
-        }
+        turn: %{track: ^track, phase: :steady, timeline: [^track, ^initial_track]}
       }
 
       push(socket, "reorder_timeline", %{"track_id" => initial_track.id, "position" => 0})
@@ -449,7 +443,7 @@ defmodule SongyWeb.RoomChannelTest do
         status: :in_progress,
         turn: %{track: ^track, phase: :steady},
         timelines: %{
-          ^current_user_uuid => [^initial_track, ^track]
+          ^current_user_uuid => [^initial_track]
         }
       }
 

@@ -191,7 +191,7 @@ defmodule SongyWeb.RoomChannel do
     @room_prefix <> room_id = socket.topic
     current_user_uuid = socket.assigns.current_user_uuid
 
-    case GameSession.extend_user_timeline(room_id, current_user_uuid, position) do
+    case GameSession.make_assumption(room_id, current_user_uuid, position) do
       {:ok, game} ->
         broadcast(socket, "state_updated", game)
 
