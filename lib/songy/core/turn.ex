@@ -4,7 +4,6 @@ defmodule Songy.Core.Turn do
 
   A turn contains information about the current game state:
   - which player is active (determined by queue position)
-  - which players are challenging to answer
   - what track is currently being played
   - the queue of players and current player index
   """
@@ -15,12 +14,11 @@ defmodule Songy.Core.Turn do
 
   @typep phase :: :waiting | :ready | :steady | :challenging | :results
 
-  @derive {Jason.Encoder, only: [:queue, :cursor, :challengers, :track, :phase, :timeline, :assumptions]}
+  @derive {Jason.Encoder, only: [:queue, :cursor, :track, :phase, :timeline, :assumptions]}
 
   typedstruct do
     field :queue, list(String.t()), default: []
     field :cursor, non_neg_integer(), default: 0
-    field :challengers, list(String.t()), default: []
     field :track, Track.t()
     field :phase, phase(), default: :waiting
     field :timeline, list(Track.t()), default: []
@@ -32,32 +30,10 @@ defmodule Songy.Core.Turn do
 
   ## Examples
       iex> Turn.new()
-      %Songy.Core.Turn{queue: [], cursor: 0, challengers: [], track: nil, phase: :waiting}
+      %Songy.Core.Turn{queue: [], cursor: 0, track: nil, phase: :waiting}
   """
   @spec new() :: t()
   def new, do: %__MODULE__{}
-
-  @doc """
-  Adds a challenger to the turn.
-
-  ## Parameters
-    * `turn` - The current turn state
-    * `challenger_id` - UUID of the challenger to add
-
-  ## Examples
-      ## Examples
-      iex> turn = Turn.new() |> Turn.add_player_to_queue("player-1")
-      iex> Turn.add_challenger(turn, "challenger-1")
-      %Songy.Core.Turn{queue: ["player-1"], cursor: 0, challengers: ["challenger-1"], track: nil}
-
-      iex> turn = Turn.new() |> Turn.add_player_to_queue("player-1") |> Turn.add_challenger("challenger-1")
-      iex> Turn.add_challenger(turn, "challenger-2")
-      %Songy.Core.Turn{queue: ["player-1"], cursor: 0, challengers: ["challenger-1", "challenger-2"], track: nil}
-  """
-  @spec add_challenger(t(), String.t()) :: t()
-  def add_challenger(%__MODULE__{} = turn, challenger_id) when is_binary(challenger_id) do
-    %{turn | challengers: turn.challengers ++ [challenger_id]}
-  end
 
   @doc """
   Sets the track for the turn.
@@ -70,11 +46,11 @@ defmodule Songy.Core.Turn do
       iex> turn = Turn.with_queue(["player-1"])
       iex> track = Track.new(title: "Song", artist: "Artist", year: 2020)
       iex> Turn.set_track(turn, track)
-      %Songy.Core.Turn{queue: ["player-1"], cursor: 0, challengers: [], track: %Track{...}}
+      %Songy.Core.Turn{queue: ["player-1"], cursor: 0, track: %Track{...}}
 
       iex> turn = Turn.with_queue(["player-1"]) |> Turn.set_track(old_track)
       iex> Turn.set_track(turn, new_track)
-      %Songy.Core.Turn{queue: ["player-1"], cursor: 0, challengers: [], track: %Track{...}}
+      %Songy.Core.Turn{queue: ["player-1"], cursor: 0, track: %Track{...}}
   """
   @spec set_track(t(), Track.t()) :: t()
   def set_track(%__MODULE__{} = turn, %Track{} = track) do
@@ -131,7 +107,7 @@ defmodule Songy.Core.Turn do
   ## Examples
       iex> turn = Turn.new(queue: ["player-1"])
       iex> Turn.add_player_to_queue(turn, "player-2")
-      %Songy.Core.Turn{queue: ["player-1", "player-2"], cursor: 0, challengers: [], track: nil}
+      %Songy.Core.Turn{queue: ["player-1", "player-2"], cursor: 0, track: nil}
   """
   @spec add_player_to_queue(t(), String.t()) :: t()
   def add_player_to_queue(%__MODULE__{} = turn, player_uuid) when is_binary(player_uuid) do
@@ -148,11 +124,11 @@ defmodule Songy.Core.Turn do
   ## Examples
       iex> turn = Turn.new(queue: ["player-1", "player-2", "player-3"], cursor: 1)
       iex> Turn.remove_player_from_queue(turn, "player-2")
-      %Songy.Core.Turn{queue: ["player-1", "player-3"], cursor: 0, challengers: [], track: nil}
+      %Songy.Core.Turn{queue: ["player-1", "player-3"], cursor: 0, track: nil}
 
       iex> turn = Turn.new(queue: ["player-1", "player-2", "player-3"], cursor: 0)
       iex> Turn.remove_player_from_queue(turn, "player-1")
-      %Songy.Core.Turn{queue: ["player-2", "player-3"], cursor: 0, challengers: [], track: nil}
+      %Songy.Core.Turn{queue: ["player-2", "player-3"], cursor: 0, track: nil}
   """
   @spec remove_player_from_queue(t(), String.t()) :: t()
   def remove_player_from_queue(%__MODULE__{queue: queue} = turn, player_uuid) when is_binary(player_uuid) do

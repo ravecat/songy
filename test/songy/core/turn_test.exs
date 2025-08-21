@@ -10,7 +10,6 @@ defmodule Songy.Core.TurnTest do
       assert %Turn{} = turn
       assert turn.queue == []
       assert turn.cursor == 0
-      assert turn.challengers == []
       assert turn.track == nil
       assert turn.phase == :waiting
     end
@@ -287,7 +286,6 @@ defmodule Songy.Core.TurnTest do
         Turn.new()
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
-        |> Turn.add_challenger("challenger-1")
         |> Turn.set_track(track)
         # Go through complete phase cycle
         # waiting -> ready
@@ -305,7 +303,6 @@ defmodule Songy.Core.TurnTest do
       assert updated_turn.cursor == 1
       assert updated_turn.phase == :waiting
       assert updated_turn.queue == ["player-1", "player-2"]
-      assert updated_turn.challengers == []
       assert updated_turn.track == nil
     end
   end
@@ -356,19 +353,16 @@ defmodule Songy.Core.TurnTest do
     end
 
     test "preserves other fields when adding player" do
-      challengers = ["challenger-1"]
       track = Track.new(title: "Test", artist: "Artist", year: 2020)
 
       turn =
         Turn.new()
         |> Turn.add_player_to_queue("player-1")
-        |> Turn.add_challenger("challenger-1")
         |> Turn.set_track(track)
 
       updated_turn = Turn.add_player_to_queue(turn, "player-2")
 
       assert updated_turn.queue == ["player-1", "player-2"]
-      assert updated_turn.challengers == challengers
       assert updated_turn.track == track
     end
   end
@@ -539,77 +533,18 @@ defmodule Songy.Core.TurnTest do
     end
 
     test "preserves other fields when removing player" do
-      challengers = ["challenger-1"]
       track = Track.new(title: "Test", artist: "Artist", year: 2020)
 
       turn =
         Turn.new()
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
-        |> Turn.add_challenger("challenger-1")
         |> Turn.set_track(track)
 
       updated_turn = Turn.remove_player_from_queue(turn, "player-2")
 
       assert updated_turn.queue == ["player-1"]
       assert updated_turn.cursor == 0
-      assert updated_turn.challengers == challengers
-      assert updated_turn.track == track
-    end
-  end
-
-  describe "add_challenger/2" do
-    test "adds a challenger to empty challengers list" do
-      turn =
-        Turn.new()
-        |> Turn.add_player_to_queue("player-1")
-
-      updated_turn = Turn.add_challenger(turn, "challenger-1")
-
-      assert updated_turn.challengers == ["challenger-1"]
-      # Queue unchanged
-      assert updated_turn.queue == ["player-1"]
-    end
-
-    test "adds multiple challengers to the turn" do
-      turn =
-        Turn.new()
-        |> Turn.add_player_to_queue("player-1")
-        |> Turn.add_challenger("first-challenger")
-
-      updated_turn = Turn.add_challenger(turn, "second-challenger")
-
-      assert updated_turn.challengers == ["first-challenger", "second-challenger"]
-    end
-
-    test "adds challenger sequentially" do
-      turn =
-        Turn.new()
-        |> Turn.add_player_to_queue("player-1")
-
-      turn1 = Turn.add_challenger(turn, "challenger-1")
-      turn2 = Turn.add_challenger(turn1, "challenger-2")
-      turn3 = Turn.add_challenger(turn2, "challenger-3")
-
-      assert turn3.challengers == ["challenger-1", "challenger-2", "challenger-3"]
-    end
-
-    test "preserves other fields when adding challenger" do
-      track = Track.new(title: "Test", artist: "Artist", year: 2020)
-
-      turn =
-        Turn.new()
-        |> Turn.add_player_to_queue("player-1")
-        |> Turn.add_player_to_queue("player-2")
-        # Set to player-2
-        |> advance_to_player(1)
-        |> Turn.set_track(track)
-
-      updated_turn = Turn.add_challenger(turn, "challenger-1")
-
-      assert updated_turn.challengers == ["challenger-1"]
-      assert updated_turn.queue == ["player-1", "player-2"]
-      assert updated_turn.cursor == 1
       assert updated_turn.track == track
     end
   end
@@ -644,16 +579,12 @@ defmodule Songy.Core.TurnTest do
     end
 
     test "preserves other fields when setting track" do
-      challengers = ["challenger-1", "challenger-2"]
-
       turn =
         Turn.new()
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
         # Set to player-2
         |> advance_to_player(1)
-        |> Turn.add_challenger("challenger-1")
-        |> Turn.add_challenger("challenger-2")
 
       track = Track.new(title: "Test", artist: "Artist", year: 2020)
       updated_turn = Turn.set_track(turn, track)
@@ -661,7 +592,6 @@ defmodule Songy.Core.TurnTest do
       assert updated_turn.track == track
       assert updated_turn.queue == ["player-1", "player-2"]
       assert updated_turn.cursor == 1
-      assert updated_turn.challengers == challengers
     end
   end
 
@@ -677,11 +607,6 @@ defmodule Songy.Core.TurnTest do
       assert length(turn.queue) == 3
       assert turn.cursor == 0
 
-      # Add challengers
-      turn = Turn.add_challenger(turn, "challenger-1")
-      turn = Turn.add_challenger(turn, "challenger-2")
-      assert length(turn.challengers) == 2
-
       # Set track
       track = Track.new(title: "Test Song", artist: "Test Artist", year: 2020)
       turn = Turn.set_track(turn, track)
@@ -691,11 +616,10 @@ defmodule Songy.Core.TurnTest do
       current_player = Turn.get_active_player(turn)
       assert current_player in ["alice", "bob", "charlie"]
 
-      # Verify all fields are maintained before transition
-      assert length(turn.challengers) == 2
+      # Verify track is maintained before transition
       assert turn.track == track
 
-      # After phase transition, challengers and track are cleared
+      # After phase transition, track is cleared
       turn =
         turn
         # waiting -> ready
@@ -709,7 +633,6 @@ defmodule Songy.Core.TurnTest do
         # results -> waiting (clears data, advances player)
         |> Turn.next_phase()
 
-      assert length(turn.challengers) == 0
       assert turn.track == nil
     end
 
@@ -804,7 +727,6 @@ defmodule Songy.Core.TurnTest do
         Turn.new()
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
-        |> Turn.add_challenger("challenger-1")
         |> Turn.set_track(track)
         # waiting -> ready
         |> Turn.next_phase()
@@ -818,7 +740,6 @@ defmodule Songy.Core.TurnTest do
         |> Turn.next_phase()
 
       assert turn.phase == :waiting
-      assert turn.challengers == []
       assert turn.track == nil
       assert turn.cursor == 1
       assert Turn.get_active_player(turn) == "player-2"
@@ -881,7 +802,6 @@ defmodule Songy.Core.TurnTest do
       turn = Turn.next_phase(turn)
       assert turn.phase == :challenging
 
-      turn = Turn.add_challenger(turn, "challenger-1")
       turn = Turn.next_phase(turn)
       assert turn.phase == :results
 
@@ -890,7 +810,6 @@ defmodule Songy.Core.TurnTest do
       turn = turn |> Turn.next_phase()
 
       assert turn.phase == :waiting
-      assert turn.challengers == []
       assert turn.track == nil
       assert Turn.get_active_player(turn) == "bob"
     end
@@ -916,8 +835,7 @@ defmodule Songy.Core.TurnTest do
         |> Turn.next_phase()
         # steady -> challenging
         |> Turn.next_phase()
-        # Add challenger and challenging -> results
-        |> Turn.add_challenger("challenger-1")
+        # challenging -> results
         |> Turn.next_phase()
         # results -> waiting (clear data and advance player)
         |> Turn.next_phase()
@@ -935,7 +853,7 @@ defmodule Songy.Core.TurnTest do
       turn = Turn.new()
       updated_turn = Turn.add_assumption(turn, 2, "player-1")
 
-      assert updated_turn.assumptions == [{2, "player-1"}]
+      assert updated_turn.assumptions == [%{position: 2, user_id: "player-1"}]
     end
 
     test "preserves previous assumptions from same player (FIFO behavior)" do
@@ -944,7 +862,7 @@ defmodule Songy.Core.TurnTest do
         |> Turn.add_assumption(1, "player-1")
         |> Turn.add_assumption(3, "player-1")
 
-      assert turn.assumptions == [{1, "player-1"}, {3, "player-1"}]
+      assert turn.assumptions == [%{position: 1, user_id: "player-1"}, %{position: 3, user_id: "player-1"}]
     end
 
     test "keeps assumptions from different players in chronological order" do
@@ -955,13 +873,13 @@ defmodule Songy.Core.TurnTest do
         # Preserves all player-1's assumptions
         |> Turn.add_assumption(3, "player-1")
 
-      assert turn.assumptions == [{1, "player-1"}, {2, "player-2"}, {3, "player-1"}]
+      assert turn.assumptions == [%{position: 1, user_id: "player-1"}, %{position: 2, user_id: "player-2"}, %{position: 3, user_id: "player-1"}]
     end
 
     test "handles zero position" do
       turn = Turn.new() |> Turn.add_assumption(0, "player-1")
 
-      assert turn.assumptions == [{0, "player-1"}]
+      assert turn.assumptions == [%{position: 0, user_id: "player-1"}]
     end
 
     test "maintains chronological order for multiple players" do
@@ -974,11 +892,11 @@ defmodule Songy.Core.TurnTest do
         |> Turn.add_assumption(5, "player-2")
 
       expected = [
-        {1, "player-1"},
-        {2, "player-2"},
-        {3, "player-3"},
-        {4, "player-1"},
-        {5, "player-2"}
+        %{position: 1, user_id: "player-1"},
+        %{position: 2, user_id: "player-2"},
+        %{position: 3, user_id: "player-3"},
+        %{position: 4, user_id: "player-1"},
+        %{position: 5, user_id: "player-2"}
       ]
 
       assert turn.assumptions == expected
@@ -1057,7 +975,7 @@ defmodule Songy.Core.TurnTest do
         |> Turn.next_phase()
 
       assert turn.timeline == [track]
-      assert turn.assumptions == [{1, "player-1"}]
+      assert turn.assumptions == [%{position: 1, user_id: "player-1"}]
       assert turn.phase == :ready
     end
   end
