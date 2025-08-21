@@ -15,6 +15,8 @@
   <TurnWaiting />
 {:else if turnPhase === TURN_PHASE.READY}
   <TurnReady />
+{:else if turnPhase === TURN_PHASE.STEADY}
+  <TurnReady />
 {:else if turnPhase === TURN_PHASE.CHALLENGING}
   <TurnChallenging />
 {:else if turnPhase === TURN_PHASE.RESULTS}

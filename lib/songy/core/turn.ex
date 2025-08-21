@@ -24,7 +24,7 @@ defmodule Songy.Core.Turn do
     field :track, Track.t()
     field :phase, phase(), default: :waiting
     field :timeline, list(Track.t()), default: []
-    field :assumptions, list({non_neg_integer(), String.t()}), default: []
+    field :assumptions, list(%{position: non_neg_integer(), user_id: String.t()}), default: []
   end
 
   @doc """
@@ -204,16 +204,16 @@ defmodule Songy.Core.Turn do
   ## Examples
       iex> turn = Turn.new()
       iex> Turn.add_assumption(turn, 2, "player-1")
-      %Songy.Core.Turn{assumptions: [{2, "player-1"}]}
+      %Songy.Core.Turn{assumptions: [%{position: 2, user_id: "player-1"}]}
 
       iex> turn = turn |> Turn.add_assumption(1, "player-1") |> Turn.add_assumption(3, "player-1")
       iex> turn.assumptions
-      [{1, "player-1"}, {3, "player-1"}]
+      [%{position: 1, user_id: "player-1"}, %{position: 3, user_id: "player-1"}]
   """
   @spec add_assumption(t(), non_neg_integer(), String.t()) :: t()
   def add_assumption(%__MODULE__{} = turn, position, player_id)
       when is_integer(position) and position >= 0 and is_binary(player_id) do
-    %{turn | assumptions: turn.assumptions ++ [{position, player_id}]}
+    %{turn | assumptions: turn.assumptions ++ [%{position: position, user_id: player_id}]}
   end
 
   @doc """

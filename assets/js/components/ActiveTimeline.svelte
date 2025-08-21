@@ -10,9 +10,9 @@
   import { PUSH_EVENT } from "~shared/types/channel";
 
   const { state, channel } = $derived.by(getGameContext);
-  const { user } = $derived.by(getScopeContext);
+  const { user: currentPlayer } = $derived.by(getScopeContext);
   const currentTrack = $derived(state?.turn?.track);
-  const zoneId = $derived(`participant-timeline-${user.uuid}`);
+  const zoneId = $derived(`participant-timeline-${currentPlayer.uuid}`);
   const turnPhase = $derived(state?.turn?.phase);
   let timeline = $derived.by(() => {
     const timeline = state?.turn?.timeline || [];
@@ -22,6 +22,16 @@
       track,
       current: track.id === currentTrack?.id,
     }));
+  });
+  const activePlayerUuid = $derived.by(() => {
+    return state?.turn?.queue?.[state?.turn?.cursor];
+  });
+  const activePlayer = $derived.by(() => {
+    return state?.participants?.find(({ uuid }) => uuid === activePlayerUuid);
+  });
+
+  const isActivePlayer = $derived.by(() => {
+    return activePlayer?.uuid == currentPlayer?.uuid;
   });
 
   type TimelineItem = (typeof timeline)[number];
@@ -72,7 +82,7 @@
     <TrackCard
       revealed={!item.current}
       track={item.track}
-      ready={item.current && turnPhase === TURN_PHASE.STEADY}
+      ready={item.current && turnPhase === TURN_PHASE.STEADY && isActivePlayer}
       onsteady={handleSteady}
     />
   {/snippet}

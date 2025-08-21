@@ -15,17 +15,19 @@
     return state?.participants?.find(({ uuid }) => uuid === activePlayerUuid);
   });
 
-  const isChallenger = $derived.by(() => {
-    return activePlayer?.uuid !== currentPlayer?.uuid;
+  const isActivePlayer = $derived.by(() => {
+    return activePlayer?.uuid == currentPlayer?.uuid;
   });
 </script>
 
-{#if isChallenger}
-  <Participants />
-  <ActiveTimeline />
-{:else}
+{#if isActivePlayer}
+  You are the active player!
   <Participants />
   <ActiveTimeline />
   <CurrentTrack />
   <Player />
+{:else}
+  You are not the active player.
+  <Participants />
+  <ActiveTimeline />
 {/if}

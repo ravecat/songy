@@ -362,14 +362,16 @@ defmodule Songy.Core.Game do
   end
 
   @doc """
-  Adds the current turn track to the active timeline at the specified position.
+  Adds the current turn track to the active timeline at the specified position and records user assumption.
 
   Retrieves the track from the current turn and inserts it into the turn timeline
-  at the given position. This represents adding the current playing track to the
-  active game timeline during the challenging phase.
+  at the given position. Also records the user's assumption about track position.
+  This represents adding the current playing track to the active game timeline
+  during the challenging phase while tracking which user made the assumption.
 
   ## Parameters
     * `game` - The current game state
+    * `user_uuid` - UUID of the user making the assumption
     * `position` - Position to insert the track (0-based index). Defaults to 0 (head).
 
   ## Examples
@@ -379,22 +381,33 @@ defmodule Songy.Core.Game do
       iex> game_with_track = Game.set_turn_track(game, track)
 
       # Add to head (default behavior)
-      iex> updated_game = Game.extend_active_timeline(game_with_track)
+      iex> updated_game = Game.extend_active_timeline(game_with_track, "user123")
       iex> updated_game.turn.timeline
       [%Track{title: "Song", artist: "Artist", year: 2023}]
+      iex> updated_game.turn.assumptions
+      [%{position: 0, user_id: "user123"}]
 
       # Add to specific position
       iex> track2 = Track.new(title: "Song2", artist: "Artist2", year: 2024)
       iex> game_with_track2 = Game.set_turn_track(game_with_track, track2)
-      iex> updated_game = Game.extend_active_timeline(game_with_track2, 1)
+      iex> updated_game = Game.extend_active_timeline(game_with_track2, "user456", 1)
       iex> updated_game.turn.timeline
       [%Track{title: "Song", artist: "Artist", year: 2023}, %Track{title: "Song2", artist: "Artist2", year: 2024}]
+      iex> updated_game.turn.assumptions
+      [%{position: 0, user_id: "user123"}, %{position: 1, user_id: "user456"}]
   """
-  @spec extend_active_timeline(t(), non_neg_integer()) :: t()
-  def extend_active_timeline(%__MODULE__{turn: turn} = game, position \\ 0)
-      when is_integer(position) and position >= 0 do
+  @spec extend_active_timeline(t(), String.t(), non_neg_integer()) :: t()
+  def extend_active_timeline(%__MODULE__{turn: turn} = game, user_uuid, position \\ 0)
+      when is_binary(user_uuid) and is_integer(position) and position >= 0 do
     track = get_turn_track(game)
-    %{game | turn: Turn.extend_timeline(turn, track, position)}
+
+    %{
+      game
+      | turn:
+          turn
+          |> Turn.extend_timeline(track, position)
+          |> Turn.add_assumption(position, user_uuid)
+    }
   end
 
   @doc """
