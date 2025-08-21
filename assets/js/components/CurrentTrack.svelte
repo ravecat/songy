@@ -5,29 +5,26 @@
   import Timeline from "~components/Timeline.svelte";
   import { type DndEvent, TRIGGERS } from "svelte-dnd-action";
   import { dragOriginZone } from "~shared/stores/dragOrigin";
+  import { TURN_PHASE } from "~/shared/types/turn";
 
   const { state } = $derived.by(getGameContext);
   const { user } = $derived.by(getScopeContext);
   const currentTrack = $derived(state?.turn?.track);
   const zoneId = $derived(`current-track-${user.uuid}`);
-  const activeTimeline = $derived(state?.turn?.timeline || []);
+  const turnPhase = $derived(state?.turn?.phase);
 
   let timeline = $derived.by(() => {
     if (!currentTrack) return [];
 
-    const isCurrentTrackInProcess = activeTimeline.some(
-      ({ id }) => id === currentTrack.id
-    );
-
-    return isCurrentTrackInProcess
-      ? []
-      : [
+    return turnPhase == TURN_PHASE.READY || turnPhase == TURN_PHASE.CHALLENGING
+      ? [
           {
             id: currentTrack.id,
             track: currentTrack,
             current: true,
           },
-        ];
+        ]
+      : [];
   });
 
   type TimelineItem = (typeof timeline)[number];

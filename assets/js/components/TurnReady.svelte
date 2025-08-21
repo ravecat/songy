@@ -1,10 +1,10 @@
 <script lang="ts">
   import Participants from "~components/Participants.svelte";
   import Player from "~components/Player.svelte";
+  import CurrentTrack from "~components/CurrentTrack.svelte";
   import ActiveTimeline from "~components/ActiveTimeline.svelte";
   import { getGameContext } from "~components/GameContext.svelte";
   import { getScopeContext } from "~components/Scope.svelte";
-  import CurrentTrack from "~components/CurrentTrack.svelte";
 
   const { state } = $derived.by(getGameContext);
   const { user: currentPlayer } = $derived.by(getScopeContext);
@@ -23,9 +23,9 @@
 {#if isChallenger}
   <Participants />
   <ActiveTimeline />
-  <CurrentTrack />
 {:else}
   <Participants />
   <ActiveTimeline />
+  <CurrentTrack />
   <Player />
 {/if}

@@ -49,8 +49,8 @@ describe("TurnChallenging", () => {
     };
   });
 
-  describe("when current user is NOT the active player", () => {
-    test("displays challenge view instead of game components", () => {
+  describe("when current user is NOT the active player (challenger)", () => {
+    test("displays participants and current track components", () => {
       render(TurnChallenging, {
         context: new Map([
           [GAME_CONTEXT_KEY, mockChannelContext],
@@ -58,10 +58,16 @@ describe("TurnChallenging", () => {
         ]),
       });
 
-      expect(screen.getByText("Challenge view")).toBeInTheDocument();
+      // Should show all participants
+      expect(screen.getByText("Alice")).toBeInTheDocument();
+      expect(screen.getByText("Bob")).toBeInTheDocument();
+      expect(screen.getByText("Charlie")).toBeInTheDocument();
+
+      const timelines = screen.getAllByRole("list");
+      expect(timelines.length).toBeGreaterThanOrEqual(1);
     });
 
-    test("shows challenge view when user is third in queue", () => {
+    test("shows participants and timeline when user is third in queue", () => {
       const thirdUserContext = {
         user: {
           uuid: "user-3", // Charlie is current user
@@ -76,11 +82,16 @@ describe("TurnChallenging", () => {
         ]),
       });
 
-      expect(screen.getByText("Challenge view")).toBeInTheDocument();
+      // Should show all participants
+      expect(screen.getByText("Alice")).toBeInTheDocument();
+      expect(screen.getByText("Bob")).toBeInTheDocument();
+      expect(screen.getByText("Charlie")).toBeInTheDocument();
+
+      const timelines = screen.getAllByRole("list");
+      expect(timelines.length).toBeGreaterThanOrEqual(1);
     });
 
-    test("shows challenge view when active player changes to different user", () => {
-      // Change active player to user-3 (Charlie)
+    test("shows participants and timeline when active player changes to different user", () => {
       const differentActivePlayerContext = {
         state: {
           participants: mockParticipants,
@@ -99,12 +110,17 @@ describe("TurnChallenging", () => {
         ]),
       });
 
-      expect(screen.getByText("Challenge view")).toBeInTheDocument();
+      expect(screen.getByText("Alice")).toBeInTheDocument();
+      expect(screen.getByText("Bob")).toBeInTheDocument();
+      expect(screen.getByText("Charlie")).toBeInTheDocument();
+
+      const timelines = screen.getAllByRole("list");
+      expect(timelines.length).toBeGreaterThanOrEqual(1);
     });
   });
 
   describe("when current user IS the active player", () => {
-    test("displays game components when user is active player", () => {
+    test("displays participants and player components when user is active player", () => {
       // Make current user the active player
       const activeUserContext = {
         user: {
@@ -120,16 +136,19 @@ describe("TurnChallenging", () => {
         ]),
       });
 
-      // Should show participants component (Alice name appears)
+      // Should show participants component
       expect(screen.getByText("Alice")).toBeInTheDocument();
       expect(screen.getByText("Bob")).toBeInTheDocument();
       expect(screen.getByText("Charlie")).toBeInTheDocument();
 
-      // Should NOT show challenge view
-      expect(screen.queryByText("Challenge view")).not.toBeInTheDocument();
+      // Should show player controls (play/pause button from Player component)
+      const playerButton = screen.getByRole("button", {
+        name: /play track|pause track/i,
+      });
+      expect(playerButton).toBeInTheDocument();
     });
 
-    test("displays game components when active player index changes to current user", () => {
+    test("displays participants and player when active player index changes to current user", () => {
       // Make Bob the active player
       const bobActiveContext = {
         state: {
@@ -154,8 +173,11 @@ describe("TurnChallenging", () => {
       expect(screen.getByText("Bob")).toBeInTheDocument();
       expect(screen.getByText("Charlie")).toBeInTheDocument();
 
-      // Should NOT show challenge view
-      expect(screen.queryByText("Challenge view")).not.toBeInTheDocument();
+      // Should show player controls (play/pause button from Player component)
+      const playerButton = screen.getByRole("button", {
+        name: /play track|pause track/i,
+      });
+      expect(playerButton).toBeInTheDocument();
     });
   });
 
