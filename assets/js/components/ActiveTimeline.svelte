@@ -8,19 +8,39 @@
   import { get } from "svelte/store";
   import { TURN_PHASE } from "~shared/types/turn";
   import { PUSH_EVENT } from "~shared/types/channel";
+  import type { User } from "~shared/types/user";
 
   const { state, channel } = $derived.by(getGameContext);
   const { user: currentPlayer } = $derived.by(getScopeContext);
   const currentTrack = $derived(state?.turn?.track);
   const zoneId = $derived(`participant-timeline-${currentPlayer.uuid}`);
   const turnPhase = $derived(state?.turn?.phase);
+
+  const assumptions = $derived.by(() => {
+    const assumptions = state?.turn?.assumptions || [];
+    const participants = state?.participants || [];
+
+    const map: Record<number, User | null> = {};
+
+    assumptions.forEach(({ position, user_id }) => {
+      const user = participants.find((p) => p.uuid === user_id);
+
+      if (user) {
+        map[position] = user;
+      }
+    });
+
+    return map;
+  });
+
   let timeline = $derived.by(() => {
     const timeline = state?.turn?.timeline || [];
 
-    return timeline.map((track) => ({
+    return timeline.map((track, index) => ({
       id: track.id,
       track,
       current: track.id === currentTrack?.id,
+      user: assumptions[index],
     }));
   });
   const activePlayerUuid = $derived.by(() => {
@@ -83,6 +103,7 @@
       revealed={!item.current}
       track={item.track}
       ready={item.current && turnPhase === TURN_PHASE.STEADY && isActivePlayer}
+      user={item.user}
       onsteady={handleSteady}
     />
   {/snippet}

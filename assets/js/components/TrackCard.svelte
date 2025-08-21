@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Track } from "~shared/types/track";
+  import type { User } from "~shared/types/user";
 
   interface TrackCardProps {
     /** Track data to display */
@@ -8,6 +9,8 @@
     revealed?: boolean;
     /** Whether the track is in ready state */
     ready?: boolean;
+    /** User who made assumption for this position (only for hidden tracks) */
+    user?: User | null;
     /** Callback function when ready button is clicked */
     onsteady?: () => void;
   }
@@ -16,6 +19,7 @@
     track,
     revealed = true,
     ready = false,
+    user = null,
     onsteady,
   }: TrackCardProps = $props();
 </script>
@@ -75,6 +79,11 @@
 
     {#if !revealed}
       <div class="back" aria-label="Hidden track card">
+        {#if user}
+          <div class="user-avatar">
+            <img src={user.avatar_url} alt={user.name} />
+          </div>
+        {/if}
         <div class="card-content">
           <div class="year-text">?</div>
           {#if ready}
@@ -223,5 +232,24 @@
     to {
       transform: translateX(-50%);
     }
+  }
+
+  .user-avatar {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    overflow: hidden;
+    z-index: 10;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 </style>

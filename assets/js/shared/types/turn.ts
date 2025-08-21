@@ -40,6 +40,6 @@ export interface Turn {
   /** Timeline snapshot for challenging phase */
   timeline?: Track[];
 
-  /** Player position assumptions: [position, player_id] */
-  assumptions?: Array<[number, string]>;
+  /** Player position assumptions: array of {position, user_id} objects */
+  assumptions?: Array<{position: number; user_id: string}>;
 }
