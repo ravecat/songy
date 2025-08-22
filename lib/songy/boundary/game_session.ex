@@ -680,8 +680,7 @@ defmodule Songy.Boundary.GameSession do
 
   @impl GenServer
   def handle_call({:make_assumption, user_uuid, position}, _from, game) do
-    game_with_extended_timeline = Game.extend_active_timeline(game, user_uuid, position)
-    updated_game = Game.next_phase(game_with_extended_timeline)
+    updated_game = Game.extend_active_timeline(game, user_uuid, position)
 
     Logger.info("Make assumption for user #{user_uuid} at position #{position}")
 

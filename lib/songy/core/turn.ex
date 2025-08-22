@@ -273,57 +273,43 @@ defmodule Songy.Core.Turn do
   end
 
   @doc """
-  Updates the turn's timeline by adding or moving a track at the specified position.
+  Adds a track to the timeline at the specified position.
 
-  Automatically determines whether to add new track or move existing one based on track ID.
+  Always adds the track without checking for existing duplicates.
+  Used for player assumptions in challenging phase where multiple
+  players can place the same track at different positions.
 
   ## Parameters
     * `turn` - The turn to update
-    * `track` - The track to add or move
+    * `track` - The track to add
     * `position` - Index position where to place the track (0-based). Defaults to 0 (head).
 
   ## Examples
-      # Adding new track
+      # Adding tracks at different positions (duplicates allowed)
       iex> turn = Turn.new()
       iex> track = Track.new(title: "Song", artist: "Artist", year: 2023)
-      iex> updated_turn = Turn.update_timeline(turn, track)
-      iex> updated_turn.timeline
-      [%Track{title: "Song", artist: "Artist", year: 2023}]
+      iex> turn = Turn.update_timeline(turn, track, 0)
+      iex> turn = Turn.update_timeline(turn, track, 2)  # Same track, different position
+      iex> length(turn.timeline)
+      2
 
       # Adding to specific position
       iex> track2 = Track.new(title: "Song2", artist: "Artist2", year: 2024)
-      iex> updated_turn = Turn.update_timeline(updated_turn, track2, 1)
-      iex> updated_turn.timeline
-      [%Track{title: "Song", artist: "Artist", year: 2023}, %Track{title: "Song2", artist: "Artist2", year: 2024}]
-
-      # Moving existing track
-      iex> updated_turn = Turn.update_timeline(updated_turn, track, 1)
-      iex> updated_turn.timeline
-      [%Track{title: "Song2", artist: "Artist2", year: 2024}, %Track{title: "Song", artist: "Artist", year: 2023}]
+      iex> updated_turn = Turn.update_timeline(turn, track2, 1)
+      iex> length(updated_turn.timeline)
+      3
   """
   @spec update_timeline(t(), Track.t(), non_neg_integer()) :: t()
-  def update_timeline(%__MODULE__{timeline: timeline} = turn, %Track{id: track_id} = track, position \\ 0)
+  def update_timeline(%__MODULE__{timeline: timeline} = turn, %Track{} = track, position \\ 0)
       when is_integer(position) and position >= 0 do
-    case Enum.find_index(timeline, &(&1.id == track_id)) do
-      nil ->
-        # Track not found - add as new
-        %{turn | timeline: List.insert_at(timeline, position, track)}
-
-      old_position ->
-        # Track found - move it
-        %{
-          turn
-          | timeline:
-              timeline
-              |> List.delete_at(old_position)
-              |> List.insert_at(position, track)
-        }
-    end
+    %{turn | timeline: List.insert_at(timeline, position, track)}
   end
 
   @doc """
   Reorders a track in the turn's timeline by moving it to a new position.
   Automatically synchronizes assumptions to maintain position consistency.
+
+  Directly moves the track without using update_timeline to avoid conflicts.
 
   ## Parameters
     * `turn` - The turn to update
@@ -350,16 +336,21 @@ defmodule Songy.Core.Turn do
   @spec reorder_timeline(t(), String.t(), non_neg_integer()) :: {:ok, t()} | {:error, atom()}
   def reorder_timeline(%__MODULE__{timeline: timeline} = turn, track_id, new_position)
       when is_binary(track_id) and is_integer(new_position) and new_position >= 0 do
-    case Enum.find(timeline, &(&1.id == track_id)) do
+    case Enum.find_index(timeline, &(&1.id == track_id)) do
       nil ->
         {:error, :track_not_found}
 
-      track ->
-        old_position = Enum.find_index(timeline, &(&1.id == track_id))
+      old_position ->
+        track = Enum.at(timeline, old_position)
+
+        new_timeline =
+          timeline
+          |> List.delete_at(old_position)
+          |> List.insert_at(new_position, track)
 
         {:ok,
          turn
-         |> update_timeline(track, new_position)
+         |> Map.put(:timeline, new_timeline)
          |> update_assumptions(old_position, new_position)}
     end
   end

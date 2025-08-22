@@ -21,10 +21,12 @@
 </script>
 
 {#if isChallenger}
+  You are not active player!
   <Participants />
   <ActiveTimeline />
   <CurrentTrack />
 {:else}
+  You are active player!
   <Participants />
   <ActiveTimeline />
   <Player />

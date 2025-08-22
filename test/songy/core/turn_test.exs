@@ -1110,7 +1110,7 @@ defmodule Songy.Core.TurnTest do
       assert turn.timeline == expected
     end
 
-    test "moves existing track instead of duplicating" do
+    test "adds duplicate tracks at different positions" do
       turn = Turn.new()
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
@@ -1121,11 +1121,13 @@ defmodule Songy.Core.TurnTest do
         |> Turn.update_timeline(track1)
         |> Turn.update_timeline(track2)
 
-      # Move track1 to position 0: [track1, track2]
+      # Add track1 again at position 0: [track1, track2, track1]
       updated_turn = Turn.update_timeline(turn_with_timeline, track1, 0)
 
-      assert updated_turn.timeline == [track1, track2]
-      assert length(updated_turn.timeline) == 2
+      assert length(updated_turn.timeline) == 3
+      assert Enum.at(updated_turn.timeline, 0).id == track1.id
+      assert Enum.at(updated_turn.timeline, 1).id == track2.id  
+      assert Enum.at(updated_turn.timeline, 2).id == track1.id
     end
   end
 

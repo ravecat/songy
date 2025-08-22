@@ -369,6 +369,9 @@ defmodule Songy.Core.Game do
   This represents adding the current playing track to the active game timeline
   during the challenging phase while tracking which user made the assumption.
 
+  If the user making the assumption is the active player, automatically advances
+  the game to the next phase.
+
   ## Parameters
     * `game` - The current game state
     * `user_uuid` - UUID of the user making the assumption
@@ -380,34 +383,40 @@ defmodule Songy.Core.Game do
       iex> track = Track.new(title: "Song", artist: "Artist", year: 2023)
       iex> game_with_track = Game.set_turn_track(game, track)
 
-      # Add to head (default behavior)
-      iex> updated_game = Game.extend_active_timeline(game_with_track, "user123")
+      # Non-active player makes assumption - no phase change
+      iex> updated_game = Game.extend_active_timeline(game_with_track, "user456")
       iex> updated_game.turn.timeline
       [%Track{title: "Song", artist: "Artist", year: 2023}]
       iex> updated_game.turn.assumptions
-      [%{position: 0, user_id: "user123"}]
+      [%{position: 0, user_id: "user456"}]
+      iex> updated_game.turn.phase
+      :steady  # Phase unchanged
 
-      # Add to specific position
-      iex> track2 = Track.new(title: "Song2", artist: "Artist2", year: 2024)
-      iex> game_with_track2 = Game.set_turn_track(game_with_track, track2)
-      iex> updated_game = Game.extend_active_timeline(game_with_track2, "user456", 1)
-      iex> updated_game.turn.timeline
-      [%Track{title: "Song", artist: "Artist", year: 2023}, %Track{title: "Song2", artist: "Artist2", year: 2024}]
-      iex> updated_game.turn.assumptions
-      [%{position: 0, user_id: "user123"}, %{position: 1, user_id: "user456"}]
+      # Active player makes assumption - phase advances automatically
+      iex> active_player_uuid = Turn.get_active_player(game.turn)
+      iex> updated_game = Game.extend_active_timeline(game_with_track, active_player_uuid)
+      iex> updated_game.turn.phase
+      :challenging  # Phase advanced automatically
   """
   @spec extend_active_timeline(t(), String.t(), non_neg_integer()) :: t()
   def extend_active_timeline(%__MODULE__{turn: turn} = game, user_uuid, position \\ 0)
       when is_binary(user_uuid) and is_integer(position) and position >= 0 do
     track = get_turn_track(game)
+    active_player_uuid = Turn.get_active_player(turn)
 
-    %{
+    updated_game = %{
       game
       | turn:
           turn
           |> Turn.update_timeline(track, position)
           |> Turn.add_assumption(position, user_uuid)
     }
+
+    if user_uuid == active_player_uuid do
+      next_phase(updated_game)
+    else
+      updated_game
+    end
   end
 
   @doc """
