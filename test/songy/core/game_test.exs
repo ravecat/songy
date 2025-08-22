@@ -677,7 +677,10 @@ defmodule Songy.Core.GameTest do
       game_with_both = Game.extend_active_timeline(game_with_track2, "user456")
 
       assert game_with_both.turn.timeline == [track2, track1]
-      assert game_with_both.turn.assumptions == [%{position: 0, user_id: "user123"}, %{position: 0, user_id: "user456"}]
+      assert game_with_both.turn.assumptions == [
+        %{position: 1, user_id: "user123"},
+        %{position: 0, user_id: "user456"}
+      ]
     end
 
     test "adds track to head with position: 0 and records assumption" do
@@ -692,7 +695,10 @@ defmodule Songy.Core.GameTest do
       game_with_both = Game.extend_active_timeline(game_with_track2, "user456", 0)
 
       assert game_with_both.turn.timeline == [track2, track1]
-      assert game_with_both.turn.assumptions == [%{position: 0, user_id: "user123"}, %{position: 0, user_id: "user456"}]
+      assert game_with_both.turn.assumptions == [
+        %{position: 1, user_id: "user123"},
+        %{position: 0, user_id: "user456"}
+      ]
     end
 
     test "adds track to specific position in timeline and records assumption" do
@@ -715,7 +721,7 @@ defmodule Songy.Core.GameTest do
       assert updated_game.turn.timeline == [track2, track3, track1]
 
       assert updated_game.turn.assumptions == [
-               %{position: 0, user_id: "user123"},
+               %{position: 2, user_id: "user123"},
                %{position: 0, user_id: "user456"},
                %{position: 1, user_id: "user789"}
              ]
@@ -741,7 +747,7 @@ defmodule Songy.Core.GameTest do
       assert updated_game.turn.timeline == [track2, track1, track3]
 
       assert updated_game.turn.assumptions == [
-               %{position: 0, user_id: "user123"},
+               %{position: 1, user_id: "user123"},
                %{position: 0, user_id: "user456"},
                %{position: 2, user_id: "user789"}
              ]
@@ -760,7 +766,7 @@ defmodule Songy.Core.GameTest do
       updated_game = Game.extend_active_timeline(game_with_track2, "user456", 999)
 
       assert updated_game.turn.timeline == [track1, track2]
-      assert updated_game.turn.assumptions == [%{position: 0, user_id: "user123"}, %{position: 999, user_id: "user456"}]
+      assert updated_game.turn.assumptions == [%{position: 0, user_id: "user123"}, %{position: 1, user_id: "user456"}]
     end
 
     test "validates position argument types" do
@@ -813,11 +819,11 @@ defmodule Songy.Core.GameTest do
       assert game.turn.timeline == expected
 
       expected_assumptions = [
-        %{position: 0, user_id: "user1"},
+        %{position: 2, user_id: "user1"},
         %{position: 0, user_id: "user2"},
-        %{position: 2, user_id: "user3"},
+        %{position: 3, user_id: "user3"},
         %{position: 1, user_id: "user4"},
-        %{position: 999, user_id: "user5"}
+        %{position: 4, user_id: "user5"}
       ]
 
       assert game.turn.assumptions == expected_assumptions

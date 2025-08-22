@@ -848,64 +848,6 @@ defmodule Songy.Core.TurnTest do
     end
   end
 
-  describe "add_assumption/3" do
-    test "adds assumption for player" do
-      turn = Turn.new()
-      updated_turn = Turn.add_assumption(turn, 2, "player-1")
-
-      assert updated_turn.assumptions == [%{position: 2, user_id: "player-1"}]
-    end
-
-    test "preserves previous assumptions from same player (FIFO behavior)" do
-      turn =
-        Turn.new()
-        |> Turn.add_assumption(1, "player-1")
-        |> Turn.add_assumption(3, "player-1")
-
-      assert turn.assumptions == [%{position: 1, user_id: "player-1"}, %{position: 3, user_id: "player-1"}]
-    end
-
-    test "keeps assumptions from different players in chronological order" do
-      turn =
-        Turn.new()
-        |> Turn.add_assumption(1, "player-1")
-        |> Turn.add_assumption(2, "player-2")
-        |> Turn.add_assumption(3, "player-1")
-
-      assert turn.assumptions == [
-               %{position: 1, user_id: "player-1"},
-               %{position: 2, user_id: "player-2"},
-               %{position: 3, user_id: "player-1"}
-             ]
-    end
-
-    test "handles zero position" do
-      turn = Turn.new() |> Turn.add_assumption(0, "player-1")
-
-      assert turn.assumptions == [%{position: 0, user_id: "player-1"}]
-    end
-
-    test "maintains chronological order for multiple players" do
-      turn =
-        Turn.new()
-        |> Turn.add_assumption(1, "player-1")
-        |> Turn.add_assumption(2, "player-2")
-        |> Turn.add_assumption(3, "player-3")
-        |> Turn.add_assumption(4, "player-1")
-        |> Turn.add_assumption(5, "player-2")
-
-      expected = [
-        %{position: 1, user_id: "player-1"},
-        %{position: 2, user_id: "player-2"},
-        %{position: 3, user_id: "player-3"},
-        %{position: 4, user_id: "player-1"},
-        %{position: 5, user_id: "player-2"}
-      ]
-
-      assert turn.assumptions == expected
-    end
-  end
-
   describe "set_timeline_snapshot/2" do
     test "sets timeline snapshot" do
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
@@ -947,8 +889,8 @@ defmodule Songy.Core.TurnTest do
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
         |> Turn.set_timeline_snapshot([track1, track2])
-        |> Turn.add_assumption(1, "player-1")
-        |> Turn.add_assumption(2, "player-2")
+        |> Turn.update_timeline(track1, "player-1", 1)
+        |> Turn.update_timeline(track2, "player-2", 2)
         # Move to results phase
         # waiting -> ready
         |> Turn.next_phase()
@@ -973,11 +915,12 @@ defmodule Songy.Core.TurnTest do
         Turn.new()
         |> Turn.add_player_to_queue("player-1")
         |> Turn.set_timeline_snapshot([track])
-        |> Turn.add_assumption(1, "player-1")
+        |> Turn.update_timeline(track, "player-1", 1)
         # waiting -> ready
         |> Turn.next_phase()
 
-      assert turn.timeline == [track]
+      # timeline snapshot + added track
+      assert turn.timeline == [track, track]
       assert turn.assumptions == [%{position: 1, user_id: "player-1"}]
       assert turn.phase == :ready
     end
@@ -992,324 +935,179 @@ defmodule Songy.Core.TurnTest do
     end
   end
 
-  describe "update_timeline/3" do
-    test "adds track to turn timeline at head by default" do
+  describe "update_timeline/4" do
+    test "first player places track on empty timeline" do
       turn = Turn.new()
-      track = Track.new(title: "Song", artist: "Artist", year: 2023)
+      track_a = Track.new(title: "Track A", artist: "Artist", year: 2020)
 
-      updated_turn = Turn.update_timeline(turn, track)
+      updated_turn = Turn.update_timeline(turn, track_a, "user1", 0)
 
-      assert updated_turn.timeline == [track]
+      assert updated_turn.timeline == [track_a]
+      assert updated_turn.assumptions == [%{position: 0, user_id: "user1"}]
     end
 
-    test "adds multiple tracks to timeline" do
-      turn = Turn.new()
-      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
-      track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
+    test "player adds second track to end of timeline" do
+      track_a = Track.new(title: "Track A", artist: "Artist", year: 2020)
+      track_b = Track.new(title: "Track B", artist: "Artist", year: 2021)
 
-      turn_with_first = Turn.update_timeline(turn, track1)
-      turn_with_both = Turn.update_timeline(turn_with_first, track2)
+      turn =
+        Turn.new()
+        |> Turn.update_timeline(track_a, "user1", 0)
 
-      assert turn_with_both.timeline == [track2, track1]
+      updated_turn = Turn.update_timeline(turn, track_b, "user1", 1)
+
+      assert updated_turn.timeline == [track_a, track_b]
+      assert updated_turn.assumptions == [%{position: 1, user_id: "user1"}]
     end
 
-    test "adds track to head with position: 0" do
-      turn = Turn.new()
-      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
-      track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
+    test "opponent challenges by placing track at beginning, shifting others" do
+      track_a = Track.new(title: "Track A", artist: "Artist", year: 2020)
+      track_b = Track.new(title: "Track B", artist: "Artist", year: 2021)
+      track_c = Track.new(title: "Track C", artist: "Artist", year: 2022)
 
-      turn_with_first = Turn.update_timeline(turn, track1)
-      turn_with_both = Turn.update_timeline(turn_with_first, track2, 0)
+      turn =
+        Turn.new()
+        |> Turn.update_timeline(track_a, "user1", 0)
+        |> Turn.update_timeline(track_b, "user1", 1)
 
-      assert turn_with_both.timeline == [track2, track1]
+      updated_turn = Turn.update_timeline(turn, track_c, "user2", 0)
+
+      assert updated_turn.timeline == [track_c, track_a, track_b]
+
+      assert updated_turn.assumptions == [
+               %{position: 2, user_id: "user1"},
+               %{position: 0, user_id: "user2"}
+             ]
     end
 
-    test "adds track to specific position in timeline" do
-      turn = Turn.new()
-      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
-      track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
-      track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
+    test "inserting track in middle only affects positions at or after insertion point" do
+      track_a = Track.new(title: "Track A", artist: "Artist", year: 2020)
+      track_b = Track.new(title: "Track B", artist: "Artist", year: 2021)
+      track_c = Track.new(title: "Track C", artist: "Artist", year: 2022)
+      track_d = Track.new(title: "Track D", artist: "Artist", year: 2023)
 
-      turn_with_timeline =
-        turn
-        |> Turn.update_timeline(track1)
-        |> Turn.update_timeline(track2)
+      turn =
+        Turn.new()
+        |> Turn.update_timeline(track_a, "user1", 0)
+        |> Turn.update_timeline(track_b, "user2", 1)
+        |> Turn.update_timeline(track_c, "user3", 2)
 
-      updated_turn = Turn.update_timeline(turn_with_timeline, track3, 1)
+      updated_turn = Turn.update_timeline(turn, track_d, "user4", 1)
 
-      assert updated_turn.timeline == [track2, track3, track1]
-    end
+      assert updated_turn.timeline == [track_a, track_d, track_b, track_c]
 
-    test "adds track at end when position equals list length" do
-      turn = Turn.new()
-      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
-      track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
-      track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
-
-      turn_with_timeline =
-        turn
-        |> Turn.update_timeline(track1)
-        |> Turn.update_timeline(track2)
-
-      updated_turn = Turn.update_timeline(turn_with_timeline, track3, 2)
-
-      assert updated_turn.timeline == [track2, track1, track3]
-    end
-
-    test "adds track at end when position is greater than list length" do
-      turn = Turn.new()
-      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
-      track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
-
-      turn_with_first = Turn.update_timeline(turn, track1)
-
-      updated_turn = Turn.update_timeline(turn_with_first, track2, 999)
-
-      assert updated_turn.timeline == [track1, track2]
-    end
-
-    test "validates position argument types" do
-      turn = Turn.new()
-      track = Track.new(title: "Song", artist: "Artist", year: 2023)
-
-      assert_raise FunctionClauseError, fn ->
-        Turn.update_timeline(turn, track, "invalid")
-      end
-
-      assert_raise FunctionClauseError, fn ->
-        Turn.update_timeline(turn, track, -1)
-      end
-    end
-
-    test "supports multiple position options scenarios" do
-      turn = Turn.new()
-
-      tracks =
-        for i <- 1..5 do
-          Track.new(title: "Song #{i}", artist: "Artist #{i}", year: 2020 + i)
-        end
-
-      [track1, track2, track3, track4, track5] = tracks
-
-      # Build timeline: [track1]
-      turn = Turn.update_timeline(turn, track1)
-
-      # Insert at position 0: [track2, track1]
-      turn = Turn.update_timeline(turn, track2, 0)
-
-      # Insert at position 2 (end): [track2, track1, track3]
-      turn = Turn.update_timeline(turn, track3, 2)
-
-      # Insert at position 1: [track2, track4, track1, track3]
-      turn = Turn.update_timeline(turn, track4, 1)
-
-      # Insert at position 999 (end): [track2, track4, track1, track3, track5]
-      turn = Turn.update_timeline(turn, track5, 999)
-
-      expected = [track2, track4, track1, track3, track5]
-      assert turn.timeline == expected
-    end
-
-    test "adds duplicate tracks at different positions" do
-      turn = Turn.new()
-      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
-      track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
-
-      # Add two tracks: [track2, track1]
-      turn_with_timeline =
-        turn
-        |> Turn.update_timeline(track1)
-        |> Turn.update_timeline(track2)
-
-      # Add track1 again at position 0: [track1, track2, track1]
-      updated_turn = Turn.update_timeline(turn_with_timeline, track1, 0)
-
-      assert length(updated_turn.timeline) == 3
-      assert Enum.at(updated_turn.timeline, 0).id == track1.id
-      assert Enum.at(updated_turn.timeline, 1).id == track2.id  
-      assert Enum.at(updated_turn.timeline, 2).id == track1.id
+      assert updated_turn.assumptions == [
+               %{position: 0, user_id: "user1"},
+               %{position: 2, user_id: "user2"},
+               %{position: 3, user_id: "user3"},
+               %{position: 1, user_id: "user4"}
+             ]
     end
   end
 
   describe "reorder_timeline/3" do
-    setup do
+    test "successfully reorders track and updates assumptions" do
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
       track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
 
       turn =
         Turn.new()
-        |> Turn.update_timeline(track1)
-        |> Turn.update_timeline(track2)
-        |> Turn.update_timeline(track3)
+        |> Turn.update_timeline(track1, "user1", 0)
+        |> Turn.update_timeline(track2, "user2", 0)
+        |> Turn.update_timeline(track3, "user3", 0)
 
-      %{turn: turn, track1: track1, track2: track2, track3: track3}
-    end
-
-    test "moves track to beginning of timeline", %{
-      turn: turn,
-      track1: track1,
-      track2: track2,
-      track3: track3
-    } do
-      # Move track1 to position 0: [track1, track3, track2]
       {:ok, updated_turn} = Turn.reorder_timeline(turn, track1.id, 0)
 
       assert updated_turn.timeline == [track1, track3, track2]
+      assert length(updated_turn.assumptions) == 3
+
+      sorted_assumptions = Enum.sort_by(updated_turn.assumptions, & &1.position)
+
+      expected_assumptions = [
+        %{position: 0, user_id: "user1"},
+        %{position: 1, user_id: "user3"},
+        %{position: 2, user_id: "user2"}
+      ]
+
+      assert sorted_assumptions == expected_assumptions
     end
 
-    test "moves track to middle of timeline", %{
-      turn: turn,
-      track1: track1,
-      track2: track2,
-      track3: track3
-    } do
-      # Move track1 to position 1: [track3, track1, track2]
-      {:ok, updated_turn} = Turn.reorder_timeline(turn, track1.id, 1)
+    test "moves track from left to right and updates assumptions correctly" do
+      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
+      track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
+      track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
+
+      turn =
+        Turn.new()
+        |> Turn.update_timeline(track1, "user1", 0)
+        |> Turn.update_timeline(track2, "user2", 1)
+        |> Turn.update_timeline(track3, "user3", 2)
+
+      {:ok, updated_turn} = Turn.reorder_timeline(turn, track1.id, 2)
+
+      assert updated_turn.timeline == [track2, track3, track1]
+
+      sorted_assumptions = Enum.sort_by(updated_turn.assumptions, & &1.position)
+
+      expected_assumptions = [
+        %{position: 0, user_id: "user2"},
+        %{position: 1, user_id: "user3"},
+        %{position: 2, user_id: "user1"}
+      ]
+
+      assert sorted_assumptions == expected_assumptions
+    end
+
+    test "moves track from right to left and updates assumptions correctly" do
+      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
+      track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
+      track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
+
+      turn =
+        Turn.new()
+        |> Turn.update_timeline(track1, "user1", 0)
+        |> Turn.update_timeline(track2, "user2", 1)
+        |> Turn.update_timeline(track3, "user3", 2)
+
+      {:ok, updated_turn} = Turn.reorder_timeline(turn, track3.id, 0)
 
       assert updated_turn.timeline == [track3, track1, track2]
+
+      sorted_assumptions = Enum.sort_by(updated_turn.assumptions, & &1.position)
+
+      expected_assumptions = [
+        %{position: 0, user_id: "user3"},
+        %{position: 1, user_id: "user1"},
+        %{position: 2, user_id: "user2"}
+      ]
+
+      assert sorted_assumptions == expected_assumptions
     end
 
-    test "moves track to end of timeline", %{
-      turn: turn,
-      track1: track1,
-      track2: track2,
-      track3: track3
-    } do
-      # Move track3 to position 2: [track2, track1, track3]
-      {:ok, updated_turn} = Turn.reorder_timeline(turn, track3.id, 2)
+    test "returns error for non-existent track" do
+      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
 
-      assert updated_turn.timeline == [track2, track1, track3]
-    end
+      turn = Turn.new() |> Turn.update_timeline(track1, "user1", 0)
 
-    test "handles position beyond timeline length", %{
-      turn: turn,
-      track1: track1,
-      track2: track2,
-      track3: track3
-    } do
-      {:ok, updated_turn} = Turn.reorder_timeline(turn, track1.id, 10)
-
-      assert updated_turn.timeline == [track3, track2, track1]
-    end
-
-    test "returns error for non-existent track", %{turn: turn} do
-      non_existent_id = "non_existent_track_id"
-
-      result = Turn.reorder_timeline(turn, non_existent_id, 0)
+      result = Turn.reorder_timeline(turn, "non_existent_id", 0)
 
       assert result == {:error, :track_not_found}
     end
 
-    test "moving track to same position leaves timeline unchanged", %{
-      turn: turn,
-      track1: track1,
-      track2: track2,
-      track3: track3
-    } do
-      # Move track2 to its current position (index 1)
+    test "handles moving track to same position" do
+      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
+      track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
+
+      turn =
+        Turn.new()
+        |> Turn.update_timeline(track1, "user1", 0)
+        |> Turn.update_timeline(track2, "user2", 1)
+
       {:ok, updated_turn} = Turn.reorder_timeline(turn, track2.id, 1)
 
-      assert updated_turn.timeline == [track3, track2, track1]
-    end
-
-    test "works with empty timeline" do
-      turn = Turn.new()
-
-      result = Turn.reorder_timeline(turn, "any_id", 0)
-
-      assert result == {:error, :track_not_found}
-    end
-
-    test "works with single track timeline" do
-      track = Track.new(title: "Song", artist: "Artist", year: 2020)
-      turn = Turn.update_timeline(Turn.new(), track)
-
-      {:ok, updated_turn} = Turn.reorder_timeline(turn, track.id, 0)
-
-      assert updated_turn.timeline == [track]
-    end
-
-    test "synchronizes assumptions when track moves left", %{
-      turn: turn,
-      track1: track1,
-      track2: _track2,
-      track3: _track3
-    } do
-      # Setup assumptions: player1 on track1(pos 2), player2 on track2(pos 1), player3 on track3(pos 0)
-      turn =
-        turn
-        # track1 at position 2
-        |> Turn.add_assumption(2, "player1")
-        # track2 at position 1
-        |> Turn.add_assumption(1, "player2")
-        # track3 at position 0
-        |> Turn.add_assumption(0, "player3")
-
-      # Move track1 from position 2 to position 0 (left): [track1, track3, track2]
-      {:ok, updated_turn} = Turn.reorder_timeline(turn, track1.id, 0)
-
-      # Expected: track1(pos 2->0), track3(pos 0->1), track2(pos 1->2)
-      # Assumptions update independently in original chronological order:
-      # - player1 (was on pos 2): follows track1 to new position 0
-      # - player2 (was on pos 1): track2 shifts from pos 1 to pos 2
-      # - player3 (was on pos 0): track3 shifts from pos 0 to pos 1
-      expected_assumptions = [
-        # player1: track1 moved from pos 2 to pos 0
-        %{position: 0, user_id: "player1"},
-        # player2: track2 moved from pos 1 to pos 2
-        %{position: 2, user_id: "player2"},
-        # player3: track3 moved from pos 0 to pos 1
-        %{position: 1, user_id: "player3"}
-      ]
-
-      assert updated_turn.assumptions == expected_assumptions
-    end
-
-    test "synchronizes assumptions when track moves right", %{
-      turn: turn,
-      track1: _track1,
-      track2: _track2,
-      track3: track3
-    } do
-      # Setup assumptions
-      turn =
-        turn
-        # track1 at position 2
-        |> Turn.add_assumption(2, "player1")
-        # track2 at position 1
-        |> Turn.add_assumption(1, "player2")
-        # track3 at position 0
-        |> Turn.add_assumption(0, "player3")
-
-      # Move track3 from position 0 to position 2 (right): [track2, track1, track3]
-      {:ok, updated_turn} = Turn.reorder_timeline(turn, track3.id, 2)
-
-      # Expected: track3(pos 0->2), track2(pos 1->0), track1(pos 2->1)
-      # Assumptions should be: player1(2->1), player2(1->0), player3(0->2, moved to end)
-      expected_assumptions = [
-        # track1 moved from pos 2 to pos 1
-        %{position: 1, user_id: "player1"},
-        # track2 moved from pos 1 to pos 0
-        %{position: 0, user_id: "player2"},
-        # track3 moved from pos 0 to pos 2 (at end of array)
-        %{position: 2, user_id: "player3"}
-      ]
-
-      assert updated_turn.assumptions == expected_assumptions
-    end
-
-    test "handles empty assumptions during reorder", %{
-      turn: turn,
-      track1: track1,
-      track2: track2,
-      track3: track3
-    } do
-      # No assumptions, just reorder
-      {:ok, updated_turn} = Turn.reorder_timeline(turn, track1.id, 0)
-
-      assert updated_turn.assumptions == []
-      assert updated_turn.timeline == [track1, track3, track2]
+      assert updated_turn.timeline == [track1, track2]
+      assert updated_turn.assumptions == turn.assumptions
     end
   end
 end

@@ -167,32 +167,6 @@ defmodule Songy.Core.Turn do
   end
 
   @doc """
-  Adds a position assumption for a player in the challenging phase.
-
-  Uses FIFO (First In, First Out) behavior - all assumptions are preserved
-  in chronological order, allowing multiple attempts from the same player.
-
-  ## Parameters
-    * `turn` - The current turn state
-    * `position` - Position where player thinks track should go (0-based)
-    * `player_id` - UUID of the player making the assumption
-
-  ## Examples
-      iex> turn = Turn.new()
-      iex> Turn.add_assumption(turn, 2, "player-1")
-      %Songy.Core.Turn{assumptions: [%{position: 2, user_id: "player-1"}]}
-
-      iex> turn = turn |> Turn.add_assumption(1, "player-1") |> Turn.add_assumption(3, "player-1")
-      iex> turn.assumptions
-      [%{position: 1, user_id: "player-1"}, %{position: 3, user_id: "player-1"}]
-  """
-  @spec add_assumption(t(), non_neg_integer(), String.t()) :: t()
-  def add_assumption(%__MODULE__{} = turn, position, player_id)
-      when is_integer(position) and position >= 0 and is_binary(player_id) do
-    %{turn | assumptions: turn.assumptions ++ [%{position: position, user_id: player_id}]}
-  end
-
-  @doc """
   Sets the timeline snapshot for the challenging phase.
 
   ## Parameters
@@ -273,36 +247,66 @@ defmodule Songy.Core.Turn do
   end
 
   @doc """
-  Adds a track to the timeline at the specified position.
+  Adds a track to the timeline at the specified position and synchronizes assumption positions.
 
-  Always adds the track without checking for existing duplicates.
+  This function handles both timeline modification and assumption synchronization
+  in a single atomic operation. Always adds the track without checking for existing duplicates.
   Used for player assumptions in challenging phase where multiple
   players can place the same track at different positions.
+
+  Removes any existing assumptions from the same user before adding the new one,
+  as each player can only have one active assumption at a time.
+
+  Automatically updates all remaining assumptions to account for position shifts
+  caused by the insertion - assumptions at or after the insertion position
+  are incremented by 1.
 
   ## Parameters
     * `turn` - The turn to update
     * `track` - The track to add
+    * `user_uuid` - UUID of the user making this assumption
     * `position` - Index position where to place the track (0-based). Defaults to 0 (head).
 
   ## Examples
       # Adding tracks at different positions (duplicates allowed)
       iex> turn = Turn.new()
       iex> track = Track.new(title: "Song", artist: "Artist", year: 2023)
-      iex> turn = Turn.update_timeline(turn, track, 0)
-      iex> turn = Turn.update_timeline(turn, track, 2)  # Same track, different position
+      iex> turn = Turn.update_timeline(turn, track, "user1", 0)
+      iex> turn = Turn.update_timeline(turn, track, "user2", 2)  # Same track, different position
       iex> length(turn.timeline)
       2
 
-      # Adding to specific position
+      # User's new assumption replaces their previous one
+      iex> turn = Turn.new()
+      iex> track1 = Track.new(title: "Song1", artist: "Artist1", year: 2023)
+      iex> turn = Turn.update_timeline(turn, track1, "user1", 1)
       iex> track2 = Track.new(title: "Song2", artist: "Artist2", year: 2024)
-      iex> updated_turn = Turn.update_timeline(turn, track2, 1)
-      iex> length(updated_turn.timeline)
-      3
+      iex> updated_turn = Turn.update_timeline(turn, track2, "user1", 0)
+      iex> # user1's old assumption is removed, only new assumption at position 0 remains
+      iex> updated_turn.assumptions
+      [%{position: 0, user_id: "user1"}]
   """
-  @spec update_timeline(t(), Track.t(), non_neg_integer()) :: t()
-  def update_timeline(%__MODULE__{timeline: timeline} = turn, %Track{} = track, position \\ 0)
-      when is_integer(position) and position >= 0 do
-    %{turn | timeline: List.insert_at(timeline, position, track)}
+  @spec update_timeline(t(), Track.t(), String.t(), non_neg_integer()) :: t()
+  def update_timeline(
+        %__MODULE__{timeline: timeline, assumptions: assumptions} = turn,
+        %Track{} = track,
+        user_uuid,
+        position \\ 0
+      )
+      when is_binary(user_uuid) and is_integer(position) and position >= 0 do
+    effective_position = min(position, length(timeline))
+
+    timeline = List.insert_at(timeline, effective_position, track)
+
+    assumptions =
+      Enum.reject(assumptions, &(&1.user_id == user_uuid))
+      |> Enum.map(fn %{position: pos} = assumption ->
+        new_pos = if pos >= effective_position, do: pos + 1, else: pos
+
+        %{assumption | position: new_pos}
+      end)
+
+    %{turn | timeline: timeline, assumptions: assumptions ++ [%{position: effective_position, user_id: user_uuid}]}
   end
 
   @doc """
@@ -324,14 +328,13 @@ defmodule Songy.Core.Turn do
       iex> track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       iex> track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
       iex> turn = Turn.new()
-      iex> turn = Turn.update_timeline(turn, track1)
-      iex> turn = Turn.update_timeline(turn, track2)
-      iex> turn = Turn.add_assumption(turn, 0, "player-1")
+      iex> turn = Turn.update_timeline(turn, track1, "player-1", 0)
+      iex> turn = Turn.update_timeline(turn, track2, "player-2", 0)
       iex> {:ok, updated_turn} = Turn.reorder_timeline(turn, track1.id, 1)
       iex> updated_turn.timeline
       [%Track{title: "Song 2"}, %Track{title: "Song 1"}]
       iex> updated_turn.assumptions
-      [%{position: 1, user_id: "player-1"}]
+      [%{position: 1, user_id: "player-1"}, %{position: 0, user_id: "player-2"}]
   """
   @spec reorder_timeline(t(), String.t(), non_neg_integer()) :: {:ok, t()} | {:error, atom()}
   def reorder_timeline(%__MODULE__{timeline: timeline} = turn, track_id, new_position)
@@ -351,13 +354,13 @@ defmodule Songy.Core.Turn do
         {:ok,
          turn
          |> Map.put(:timeline, new_timeline)
-         |> update_assumptions(old_position, new_position)}
+         |> update_assumptions_for_reorder(old_position, new_position)}
     end
   end
 
   # Updates assumption positions after track reordering
   # Each assumption is updated independently based on its current position
-  defp update_assumptions(%__MODULE__{assumptions: assumptions} = turn, old_position, new_position) do
+  defp update_assumptions_for_reorder(%__MODULE__{assumptions: assumptions} = turn, old_position, new_position) do
     assumptions =
       Enum.map(assumptions, fn %{position: pos} = assumption ->
         new_pos =

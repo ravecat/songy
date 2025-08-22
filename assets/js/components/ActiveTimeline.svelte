@@ -43,6 +43,7 @@
       user: assumptions[index],
     }));
   });
+
   const activePlayerUuid = $derived.by(() => {
     return state?.turn?.queue?.[state?.turn?.cursor];
   });

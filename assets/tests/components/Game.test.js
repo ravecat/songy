@@ -28,7 +28,7 @@ describe("Game", () => {
           },
         ],
         turn: {
-          phase: TURN_PHASE.PLAYING,
+          phase: TURN_PHASE.STEADY,
           queue: ["user-1"],
           cursor: 0,
         },
@@ -37,7 +37,7 @@ describe("Game", () => {
   });
 
   test("displays game interface on ready phase", () => {
-    mockChannelContext.state.turn.phase = TURN_PHASE.PLAYING;
+    mockChannelContext.state.turn.phase = TURN_PHASE.STEADY;
 
     render(Game, {
       context: new Map([
@@ -46,7 +46,7 @@ describe("Game", () => {
       ]),
     });
 
-    // Check that participants component is rendered (part of TurnPlaying)
+    // Check that participants component is rendered (part of TurnSteady)
     expect(screen.getByText("Alice")).toBeInTheDocument();
   });
 
@@ -78,7 +78,7 @@ describe("Game", () => {
     expect(screen.getByText("results")).toBeInTheDocument();
   });
 
-  test("defaults to game interface when turn phase is undefined", () => {
+  test("renders nothing when turn phase is undefined", () => {
     mockChannelContext.state.turn = undefined;
 
     render(Game, {
@@ -88,11 +88,11 @@ describe("Game", () => {
       ]),
     });
 
-    // Should display game interface as fallback
-    expect(screen.getByText("Alice")).toBeInTheDocument();
+    // Should render nothing for undefined phase
+    expect(screen.queryByText("Alice")).not.toBeInTheDocument();
   });
 
-  test("defaults to game interface when state is undefined", () => {
+  test("renders nothing when state is undefined", () => {
     // Empty state that still has structure for components
     mockChannelContext.state = {
       participants: [],
@@ -106,12 +106,12 @@ describe("Game", () => {
       ]),
     });
 
-    // Should display game interface as fallback - we can't check for specific text
-    // since participants array is empty, but component should render without error
+    // Should render nothing for undefined turn
     expect(screen.queryByText("waiting")).not.toBeInTheDocument();
+    expect(screen.queryByText("Alice")).not.toBeInTheDocument();
   });
 
-  test("defaults to game interface when turn phase is null", () => {
+  test("renders nothing when turn phase is null", () => {
     mockChannelContext.state.turn.phase = null;
 
     render(Game, {
@@ -121,8 +121,8 @@ describe("Game", () => {
       ]),
     });
 
-    // Should display game interface as fallback
-    expect(screen.getByText("Alice")).toBeInTheDocument();
+    // Should render nothing for null phase
+    expect(screen.queryByText("Alice")).not.toBeInTheDocument();
   });
 
   test("throws error when gameContext is missing", () => {
@@ -134,7 +134,7 @@ describe("Game", () => {
   });
 
   test.each(["turn_countdown", "", "unknown_phase", 123, {}, []])(
-    "defaults to game interface for invalid phase: %s",
+    "renders nothing for invalid phase: %s",
     (phase) => {
       mockChannelContext.state.turn.phase = phase;
 
@@ -145,8 +145,8 @@ describe("Game", () => {
         ]),
       });
 
-      // Should display game interface as fallback - check for participants
-      expect(screen.getByText("Alice")).toBeInTheDocument();
+      // Should render nothing for invalid phases
+      expect(screen.queryByText("Alice")).not.toBeInTheDocument();
     }
   );
 });

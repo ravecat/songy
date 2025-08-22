@@ -11,12 +11,9 @@
   const { user } = $derived.by(getScopeContext);
   const currentTrack = $derived(state?.turn?.track);
   const zoneId = $derived(`current-track-${user.uuid}`);
-  const turnPhase = $derived(state?.turn?.phase);
 
   let timeline = $derived.by(() => {
-    if (!currentTrack) return [];
-
-    return turnPhase == TURN_PHASE.READY || turnPhase == TURN_PHASE.CHALLENGING
+    return currentTrack
       ? [
           {
             id: currentTrack.id,

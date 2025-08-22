@@ -403,19 +403,12 @@ defmodule Songy.Core.Game do
       when is_binary(user_uuid) and is_integer(position) and position >= 0 do
     track = get_turn_track(game)
     active_player_uuid = Turn.get_active_player(turn)
-
-    updated_game = %{
-      game
-      | turn:
-          turn
-          |> Turn.update_timeline(track, position)
-          |> Turn.add_assumption(position, user_uuid)
-    }
+    game = %{game | turn: Turn.update_timeline(turn, track, user_uuid, position)}
 
     if user_uuid == active_player_uuid do
-      next_phase(updated_game)
+      next_phase(game)
     else
-      updated_game
+      game
     end
   end
 
