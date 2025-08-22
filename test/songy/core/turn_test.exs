@@ -992,12 +992,12 @@ defmodule Songy.Core.TurnTest do
     end
   end
 
-  describe "extend_timeline/3" do
+  describe "update_timeline/3" do
     test "adds track to turn timeline at head by default" do
       turn = Turn.new()
       track = Track.new(title: "Song", artist: "Artist", year: 2023)
 
-      updated_turn = Turn.extend_timeline(turn, track)
+      updated_turn = Turn.update_timeline(turn, track)
 
       assert updated_turn.timeline == [track]
     end
@@ -1007,8 +1007,8 @@ defmodule Songy.Core.TurnTest do
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
 
-      turn_with_first = Turn.extend_timeline(turn, track1)
-      turn_with_both = Turn.extend_timeline(turn_with_first, track2)
+      turn_with_first = Turn.update_timeline(turn, track1)
+      turn_with_both = Turn.update_timeline(turn_with_first, track2)
 
       assert turn_with_both.timeline == [track2, track1]
     end
@@ -1018,8 +1018,8 @@ defmodule Songy.Core.TurnTest do
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
 
-      turn_with_first = Turn.extend_timeline(turn, track1)
-      turn_with_both = Turn.extend_timeline(turn_with_first, track2, 0)
+      turn_with_first = Turn.update_timeline(turn, track1)
+      turn_with_both = Turn.update_timeline(turn_with_first, track2, 0)
 
       assert turn_with_both.timeline == [track2, track1]
     end
@@ -1032,10 +1032,10 @@ defmodule Songy.Core.TurnTest do
 
       turn_with_timeline =
         turn
-        |> Turn.extend_timeline(track1)
-        |> Turn.extend_timeline(track2)
+        |> Turn.update_timeline(track1)
+        |> Turn.update_timeline(track2)
 
-      updated_turn = Turn.extend_timeline(turn_with_timeline, track3, 1)
+      updated_turn = Turn.update_timeline(turn_with_timeline, track3, 1)
 
       assert updated_turn.timeline == [track2, track3, track1]
     end
@@ -1048,10 +1048,10 @@ defmodule Songy.Core.TurnTest do
 
       turn_with_timeline =
         turn
-        |> Turn.extend_timeline(track1)
-        |> Turn.extend_timeline(track2)
+        |> Turn.update_timeline(track1)
+        |> Turn.update_timeline(track2)
 
-      updated_turn = Turn.extend_timeline(turn_with_timeline, track3, 2)
+      updated_turn = Turn.update_timeline(turn_with_timeline, track3, 2)
 
       assert updated_turn.timeline == [track2, track1, track3]
     end
@@ -1061,9 +1061,9 @@ defmodule Songy.Core.TurnTest do
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
 
-      turn_with_first = Turn.extend_timeline(turn, track1)
+      turn_with_first = Turn.update_timeline(turn, track1)
 
-      updated_turn = Turn.extend_timeline(turn_with_first, track2, 999)
+      updated_turn = Turn.update_timeline(turn_with_first, track2, 999)
 
       assert updated_turn.timeline == [track1, track2]
     end
@@ -1073,11 +1073,11 @@ defmodule Songy.Core.TurnTest do
       track = Track.new(title: "Song", artist: "Artist", year: 2023)
 
       assert_raise FunctionClauseError, fn ->
-        Turn.extend_timeline(turn, track, "invalid")
+        Turn.update_timeline(turn, track, "invalid")
       end
 
       assert_raise FunctionClauseError, fn ->
-        Turn.extend_timeline(turn, track, -1)
+        Turn.update_timeline(turn, track, -1)
       end
     end
 
@@ -1092,22 +1092,40 @@ defmodule Songy.Core.TurnTest do
       [track1, track2, track3, track4, track5] = tracks
 
       # Build timeline: [track1]
-      turn = Turn.extend_timeline(turn, track1)
+      turn = Turn.update_timeline(turn, track1)
 
       # Insert at position 0: [track2, track1]
-      turn = Turn.extend_timeline(turn, track2, 0)
+      turn = Turn.update_timeline(turn, track2, 0)
 
       # Insert at position 2 (end): [track2, track1, track3]
-      turn = Turn.extend_timeline(turn, track3, 2)
+      turn = Turn.update_timeline(turn, track3, 2)
 
       # Insert at position 1: [track2, track4, track1, track3]
-      turn = Turn.extend_timeline(turn, track4, 1)
+      turn = Turn.update_timeline(turn, track4, 1)
 
       # Insert at position 999 (end): [track2, track4, track1, track3, track5]
-      turn = Turn.extend_timeline(turn, track5, 999)
+      turn = Turn.update_timeline(turn, track5, 999)
 
       expected = [track2, track4, track1, track3, track5]
       assert turn.timeline == expected
+    end
+
+    test "moves existing track instead of duplicating" do
+      turn = Turn.new()
+      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
+      track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
+
+      # Add two tracks: [track2, track1]
+      turn_with_timeline =
+        turn
+        |> Turn.update_timeline(track1)
+        |> Turn.update_timeline(track2)
+
+      # Move track1 to position 0: [track1, track2]
+      updated_turn = Turn.update_timeline(turn_with_timeline, track1, 0)
+
+      assert updated_turn.timeline == [track1, track2]
+      assert length(updated_turn.timeline) == 2
     end
   end
 
@@ -1119,9 +1137,9 @@ defmodule Songy.Core.TurnTest do
 
       turn =
         Turn.new()
-        |> Turn.extend_timeline(track1)
-        |> Turn.extend_timeline(track2)
-        |> Turn.extend_timeline(track3)
+        |> Turn.update_timeline(track1)
+        |> Turn.update_timeline(track2)
+        |> Turn.update_timeline(track3)
 
       %{turn: turn, track1: track1, track2: track2, track3: track3}
     end
@@ -1203,7 +1221,7 @@ defmodule Songy.Core.TurnTest do
 
     test "works with single track timeline" do
       track = Track.new(title: "Song", artist: "Artist", year: 2020)
-      turn = Turn.extend_timeline(Turn.new(), track)
+      turn = Turn.update_timeline(Turn.new(), track)
 
       {:ok, updated_turn} = Turn.reorder_timeline(turn, track.id, 0)
 

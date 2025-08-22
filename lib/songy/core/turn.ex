@@ -273,32 +273,52 @@ defmodule Songy.Core.Turn do
   end
 
   @doc """
-  Extends the turn's timeline by adding a track at the specified position.
+  Updates the turn's timeline by adding or moving a track at the specified position.
+
+  Automatically determines whether to add new track or move existing one based on track ID.
 
   ## Parameters
     * `turn` - The turn to update
-    * `track` - The track to add
-    * `position` - Index position where to insert the track (0-based). Defaults to 0 (head).
+    * `track` - The track to add or move
+    * `position` - Index position where to place the track (0-based). Defaults to 0 (head).
 
   ## Examples
+      # Adding new track
       iex> turn = Turn.new()
       iex> track = Track.new(title: "Song", artist: "Artist", year: 2023)
-
-      # Add to head (default behavior)
-      iex> updated_turn = Turn.extend_timeline(turn, track)
+      iex> updated_turn = Turn.update_timeline(turn, track)
       iex> updated_turn.timeline
       [%Track{title: "Song", artist: "Artist", year: 2023}]
 
-      # Add to specific position
+      # Adding to specific position
       iex> track2 = Track.new(title: "Song2", artist: "Artist2", year: 2024)
-      iex> updated_turn = Turn.extend_timeline(updated_turn, track2, 1)
+      iex> updated_turn = Turn.update_timeline(updated_turn, track2, 1)
       iex> updated_turn.timeline
       [%Track{title: "Song", artist: "Artist", year: 2023}, %Track{title: "Song2", artist: "Artist2", year: 2024}]
+
+      # Moving existing track
+      iex> updated_turn = Turn.update_timeline(updated_turn, track, 1)
+      iex> updated_turn.timeline
+      [%Track{title: "Song2", artist: "Artist2", year: 2024}, %Track{title: "Song", artist: "Artist", year: 2023}]
   """
-  @spec extend_timeline(t(), Track.t(), non_neg_integer()) :: t()
-  def extend_timeline(%__MODULE__{timeline: timeline} = turn, %Track{} = track, position \\ 0)
+  @spec update_timeline(t(), Track.t(), non_neg_integer()) :: t()
+  def update_timeline(%__MODULE__{timeline: timeline} = turn, %Track{id: track_id} = track, position \\ 0)
       when is_integer(position) and position >= 0 do
-    %{turn | timeline: List.insert_at(timeline, position, track)}
+    case Enum.find_index(timeline, &(&1.id == track_id)) do
+      nil ->
+        # Track not found - add as new
+        %{turn | timeline: List.insert_at(timeline, position, track)}
+
+      old_position ->
+        # Track found - move it
+        %{
+          turn
+          | timeline:
+              timeline
+              |> List.delete_at(old_position)
+              |> List.insert_at(position, track)
+        }
+    end
   end
 
   @doc """
@@ -318,8 +338,8 @@ defmodule Songy.Core.Turn do
       iex> track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       iex> track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
       iex> turn = Turn.new()
-      iex> turn = Turn.extend_timeline(turn, track1)
-      iex> turn = Turn.extend_timeline(turn, track2)
+      iex> turn = Turn.update_timeline(turn, track1)
+      iex> turn = Turn.update_timeline(turn, track2)
       iex> turn = Turn.add_assumption(turn, 0, "player-1")
       iex> {:ok, updated_turn} = Turn.reorder_timeline(turn, track1.id, 1)
       iex> updated_turn.timeline
@@ -330,29 +350,18 @@ defmodule Songy.Core.Turn do
   @spec reorder_timeline(t(), String.t(), non_neg_integer()) :: {:ok, t()} | {:error, atom()}
   def reorder_timeline(%__MODULE__{timeline: timeline} = turn, track_id, new_position)
       when is_binary(track_id) and is_integer(new_position) and new_position >= 0 do
-    case Enum.find_index(timeline, &(&1.id == track_id)) do
+    case Enum.find(timeline, &(&1.id == track_id)) do
       nil ->
         {:error, :track_not_found}
 
-      old_position ->
+      track ->
+        old_position = Enum.find_index(timeline, &(&1.id == track_id))
+
         {:ok,
          turn
-         |> update_timeline(old_position, new_position)
+         |> update_timeline(track, new_position)
          |> update_assumptions(old_position, new_position)}
     end
-  end
-
-  # Moves track from old_position to new_position in timeline
-  defp update_timeline(%__MODULE__{timeline: timeline} = turn, old_position, new_position) do
-    track = Enum.at(timeline, old_position)
-
-    %{
-      turn
-      | timeline:
-          timeline
-          |> List.delete_at(old_position)
-          |> List.insert_at(new_position, track)
-    }
   end
 
   # Updates assumption positions after track reordering

@@ -405,7 +405,7 @@ defmodule Songy.Core.Game do
       game
       | turn:
           turn
-          |> Turn.extend_timeline(track, position)
+          |> Turn.update_timeline(track, position)
           |> Turn.add_assumption(position, user_uuid)
     }
   end
