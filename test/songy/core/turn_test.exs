@@ -870,10 +870,13 @@ defmodule Songy.Core.TurnTest do
         Turn.new()
         |> Turn.add_assumption(1, "player-1")
         |> Turn.add_assumption(2, "player-2")
-        # Preserves all player-1's assumptions
         |> Turn.add_assumption(3, "player-1")
 
-      assert turn.assumptions == [%{position: 1, user_id: "player-1"}, %{position: 2, user_id: "player-2"}, %{position: 3, user_id: "player-1"}]
+      assert turn.assumptions == [
+               %{position: 1, user_id: "player-1"},
+               %{position: 2, user_id: "player-2"},
+               %{position: 3, user_id: "player-1"}
+             ]
     end
 
     test "handles zero position" do
@@ -1205,6 +1208,88 @@ defmodule Songy.Core.TurnTest do
       {:ok, updated_turn} = Turn.reorder_timeline(turn, track.id, 0)
 
       assert updated_turn.timeline == [track]
+    end
+
+    test "synchronizes assumptions when track moves left", %{
+      turn: turn,
+      track1: track1,
+      track2: _track2,
+      track3: _track3
+    } do
+      # Setup assumptions: player1 on track1(pos 2), player2 on track2(pos 1), player3 on track3(pos 0)
+      turn =
+        turn
+        # track1 at position 2
+        |> Turn.add_assumption(2, "player1")
+        # track2 at position 1
+        |> Turn.add_assumption(1, "player2")
+        # track3 at position 0
+        |> Turn.add_assumption(0, "player3")
+
+      # Move track1 from position 2 to position 0 (left): [track1, track3, track2]
+      {:ok, updated_turn} = Turn.reorder_timeline(turn, track1.id, 0)
+
+      # Expected: track1(pos 2->0), track3(pos 0->1), track2(pos 1->2)
+      # Assumptions update independently in original chronological order:
+      # - player1 (was on pos 2): follows track1 to new position 0
+      # - player2 (was on pos 1): track2 shifts from pos 1 to pos 2
+      # - player3 (was on pos 0): track3 shifts from pos 0 to pos 1
+      expected_assumptions = [
+        # player1: track1 moved from pos 2 to pos 0
+        %{position: 0, user_id: "player1"},
+        # player2: track2 moved from pos 1 to pos 2
+        %{position: 2, user_id: "player2"},
+        # player3: track3 moved from pos 0 to pos 1
+        %{position: 1, user_id: "player3"}
+      ]
+
+      assert updated_turn.assumptions == expected_assumptions
+    end
+
+    test "synchronizes assumptions when track moves right", %{
+      turn: turn,
+      track1: _track1,
+      track2: _track2,
+      track3: track3
+    } do
+      # Setup assumptions
+      turn =
+        turn
+        # track1 at position 2
+        |> Turn.add_assumption(2, "player1")
+        # track2 at position 1
+        |> Turn.add_assumption(1, "player2")
+        # track3 at position 0
+        |> Turn.add_assumption(0, "player3")
+
+      # Move track3 from position 0 to position 2 (right): [track2, track1, track3]
+      {:ok, updated_turn} = Turn.reorder_timeline(turn, track3.id, 2)
+
+      # Expected: track3(pos 0->2), track2(pos 1->0), track1(pos 2->1)
+      # Assumptions should be: player1(2->1), player2(1->0), player3(0->2, moved to end)
+      expected_assumptions = [
+        # track1 moved from pos 2 to pos 1
+        %{position: 1, user_id: "player1"},
+        # track2 moved from pos 1 to pos 0
+        %{position: 0, user_id: "player2"},
+        # track3 moved from pos 0 to pos 2 (at end of array)
+        %{position: 2, user_id: "player3"}
+      ]
+
+      assert updated_turn.assumptions == expected_assumptions
+    end
+
+    test "handles empty assumptions during reorder", %{
+      turn: turn,
+      track1: track1,
+      track2: track2,
+      track3: track3
+    } do
+      # No assumptions, just reorder
+      {:ok, updated_turn} = Turn.reorder_timeline(turn, track1.id, 0)
+
+      assert updated_turn.assumptions == []
+      assert updated_turn.timeline == [track1, track3, track2]
     end
   end
 end
