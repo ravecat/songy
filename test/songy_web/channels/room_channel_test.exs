@@ -437,7 +437,7 @@ defmodule SongyWeb.RoomChannelTest do
         turn: %{track: ^track, phase: :steady, timeline: [^track, ^initial_track]}
       }
 
-      push(socket, "reorder_timeline", %{"track_id" => initial_track.id, "position" => 0})
+      push(socket, "reorder_timeline", %{"position" => 0})
 
       assert_broadcast "state_updated", %Songy.Core.Game{
         status: :in_progress,
@@ -453,7 +453,7 @@ defmodule SongyWeb.RoomChannelTest do
     test "handles error gracefully when game session does not exist", %{current_user: current_user} do
       {:ok, _, socket} = join_room_channel(current_user, "nonexistent")
 
-      push(socket, "reorder_timeline", %{"track_id" => "track123", "position" => 0})
+      push(socket, "reorder_timeline", %{"position" => 0})
 
       refute_broadcast "state_updated", _
     end

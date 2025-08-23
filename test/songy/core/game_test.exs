@@ -677,10 +677,11 @@ defmodule Songy.Core.GameTest do
       game_with_both = Game.extend_active_timeline(game_with_track2, "user456")
 
       assert game_with_both.turn.timeline == [track2, track1]
+
       assert game_with_both.turn.assumptions == [
-        %{position: 1, user_id: "user123"},
-        %{position: 0, user_id: "user456"}
-      ]
+               %{position: 1, user_id: "user123"},
+               %{position: 0, user_id: "user456"}
+             ]
     end
 
     test "adds track to head with position: 0 and records assumption" do
@@ -695,10 +696,11 @@ defmodule Songy.Core.GameTest do
       game_with_both = Game.extend_active_timeline(game_with_track2, "user456", 0)
 
       assert game_with_both.turn.timeline == [track2, track1]
+
       assert game_with_both.turn.assumptions == [
-        %{position: 1, user_id: "user123"},
-        %{position: 0, user_id: "user456"}
-      ]
+               %{position: 1, user_id: "user123"},
+               %{position: 0, user_id: "user456"}
+             ]
     end
 
     test "adds track to specific position in timeline and records assumption" do
@@ -858,8 +860,8 @@ defmodule Songy.Core.GameTest do
       track2: track2,
       track3: track3
     } do
-      # Move track1 to position 0: [track1, track3, track2]
-      {:ok, updated_game} = Game.reorder_active_timeline(game, track1.id, 0)
+      # Move setup_user1's track (track1) to position 0: [track1, track3, track2]
+      {:ok, updated_game} = Game.reorder_active_timeline(game, "setup_user1", 0)
       timeline = updated_game.turn.timeline
 
       assert timeline == [track1, track3, track2]
@@ -871,8 +873,8 @@ defmodule Songy.Core.GameTest do
       track2: track2,
       track3: track3
     } do
-      # Move track1 to position 1: [track3, track1, track2]
-      {:ok, updated_game} = Game.reorder_active_timeline(game, track1.id, 1)
+      # Move setup_user1's track (track1) to position 1: [track3, track1, track2]
+      {:ok, updated_game} = Game.reorder_active_timeline(game, "setup_user1", 1)
       timeline = updated_game.turn.timeline
 
       assert timeline == [track3, track1, track2]
@@ -884,8 +886,8 @@ defmodule Songy.Core.GameTest do
       track2: track2,
       track3: track3
     } do
-      # Move track3 to position 2: [track2, track1, track3]
-      {:ok, updated_game} = Game.reorder_active_timeline(game, track3.id, 2)
+      # Move setup_user3's track (track3) to position 2: [track2, track1, track3]
+      {:ok, updated_game} = Game.reorder_active_timeline(game, "setup_user3", 2)
       timeline = updated_game.turn.timeline
 
       assert timeline == [track2, track1, track3]
@@ -897,28 +899,28 @@ defmodule Songy.Core.GameTest do
       track2: track2,
       track3: track3
     } do
-      # Move track1 to position 10 (beyond end) - should move to end
-      {:ok, updated_game} = Game.reorder_active_timeline(game, track1.id, 10)
+      # Move setup_user1's track (track1) to position 10 (beyond end) - should move to end
+      {:ok, updated_game} = Game.reorder_active_timeline(game, "setup_user1", 10)
       timeline = updated_game.turn.timeline
 
       assert timeline == [track3, track2, track1]
     end
 
-    test "returns error for non-existent track", %{game: game} do
-      non_existent_id = "non_existent_track_id"
+    test "returns error for non-existent user", %{game: game} do
+      non_existent_user = "non_existent_user_uuid"
 
-      result = Game.reorder_active_timeline(game, non_existent_id, 0)
+      result = Game.reorder_active_timeline(game, non_existent_user, 0)
 
-      assert result == {:error, :track_not_found}
+      assert result == {:error, :user_assumption_not_found}
     end
 
-    test "returns error when game has no turn", %{track1: track1} do
+    test "returns error when game has no turn" do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
       # Clear the turn to simulate no active turn
       game_without_turn = %{game | turn: nil}
 
-      result = Game.reorder_active_timeline(game_without_turn, track1.id, 0)
+      result = Game.reorder_active_timeline(game_without_turn, "setup_user1", 0)
 
       assert result == {:error, :no_turn}
     end
@@ -929,11 +931,61 @@ defmodule Songy.Core.GameTest do
       track2: track2,
       track3: track3
     } do
-      # Move track2 to its current position (index 1)
-      {:ok, updated_game} = Game.reorder_active_timeline(game, track2.id, 1)
+      # Move setup_user2's track (track2) to its current position (index 1)
+      {:ok, updated_game} = Game.reorder_active_timeline(game, "setup_user2", 1)
       timeline = updated_game.turn.timeline
 
       assert timeline == [track3, track2, track1]
+    end
+
+    test "properly synchronizes assumptions when reordering tracks", %{
+      game: game,
+      track1: track1,
+      track2: track2,
+      track3: track3
+    } do
+      # Move setup_user1's track (track1) from position 2 to position 0: [track1, track3, track2]
+      {:ok, updated_game} = Game.reorder_active_timeline(game, "setup_user1", 0)
+      timeline = updated_game.turn.timeline
+      assumptions = updated_game.turn.assumptions
+
+      assert timeline == [track1, track3, track2]
+
+      expected_assumptions = [
+        %{position: 0, user_id: "setup_user1"},
+        %{position: 1, user_id: "setup_user3"},
+        %{position: 2, user_id: "setup_user2"}
+      ]
+
+      sorted_assumptions = Enum.sort_by(assumptions, & &1.position)
+      sorted_expected = Enum.sort_by(expected_assumptions, & &1.position)
+
+      assert sorted_assumptions == sorted_expected
+    end
+
+    test "properly synchronizes assumptions when moving track right", %{
+      game: game,
+      track1: track1,
+      track2: track2,
+      track3: track3
+    } do
+      # Move setup_user3's track (track3) from position 0 to position 2: [track2, track1, track3]
+      {:ok, updated_game} = Game.reorder_active_timeline(game, "setup_user3", 2)
+      timeline = updated_game.turn.timeline
+      assumptions = updated_game.turn.assumptions
+
+      assert timeline == [track2, track1, track3]
+
+      expected_assumptions = [
+        %{position: 0, user_id: "setup_user2"},
+        %{position: 1, user_id: "setup_user1"},
+        %{position: 2, user_id: "setup_user3"}
+      ]
+
+      sorted_assumptions = Enum.sort_by(assumptions, & &1.position)
+      sorted_expected = Enum.sort_by(expected_assumptions, & &1.position)
+
+      assert sorted_assumptions == sorted_expected
     end
   end
 

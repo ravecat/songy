@@ -433,41 +433,31 @@ defmodule Songy.Core.Game do
     Map.get(game.timelines, user_uuid, [])
   end
 
-  @doc """
+    @doc """
   Reorders a track in the active timeline by moving it to a new position.
+  Uses the user's assumption to find and move their track.
 
   ## Parameters
     * `game` - The game to update
-    * `track_id` - ID of the track to reorder
+    * `user_uuid` - UUID of the user whose track to reorder
     * `new_position` - New position for the track (0-based)
 
   ## Returns
-    * `{:ok, updated_game}` - Success with updated timeline
-    * `{:error, :track_not_found}` - If track not in timeline
+    * `{:ok, updated_game}` - Success with updated timeline and synchronized assumptions
+    * `{:error, :user_assumption_not_found}` - If user has no assumption in timeline
     * `{:error, :no_turn}` - If game has no active turn
 
   ## Examples
-      iex> track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
-      iex> track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
-      iex> track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
-
-      # Build active timeline: [track3, track2, track1]
-      iex> game = game
-      ...> |> Game.extend_active_timeline(track1)
-      ...> |> Game.extend_active_timeline(track2)
-      ...> |> Game.extend_active_timeline(track3)
-
-      # Move track1 to position 0: [track1, track3, track2]
-      iex> {:ok, updated_game} = Game.reorder_active_timeline(game, track1.id, 0)
+      iex> {:ok, updated_game} = Game.reorder_active_timeline(game, "user1", 0)
   """
   @spec reorder_active_timeline(t(), String.t(), non_neg_integer()) :: {:ok, t()} | {:error, atom()}
-  def reorder_active_timeline(%__MODULE__{turn: nil} = _game, _track_id, _new_position) do
+  def reorder_active_timeline(%__MODULE__{turn: nil} = _game, _user_uuid, _new_position) do
     {:error, :no_turn}
   end
 
-  def reorder_active_timeline(%__MODULE__{turn: turn} = game, track_id, new_position)
-      when is_binary(track_id) and is_integer(new_position) and new_position >= 0 do
-    case Turn.reorder_timeline(turn, track_id, new_position) do
+  def reorder_active_timeline(%__MODULE__{turn: turn} = game, user_uuid, new_position)
+      when is_binary(user_uuid) and is_integer(new_position) and new_position >= 0 do
+    case Turn.reorder_timeline(turn, user_uuid, new_position) do
       {:ok, updated_turn} ->
         {:ok, %{game | turn: updated_turn}}
 

@@ -5,7 +5,6 @@
   import Timeline from "~components/Timeline.svelte";
   import { type DndEvent, TRIGGERS } from "svelte-dnd-action";
   import { dragOriginZone } from "~shared/stores/dragOrigin";
-  import { TURN_PHASE } from "~/shared/types/turn";
 
   const { state } = $derived.by(getGameContext);
   const { user } = $derived.by(getScopeContext);

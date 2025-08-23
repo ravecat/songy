@@ -1107,30 +1107,30 @@ defmodule Songy.Boundary.GameSessionTest do
       assert_receive {:game_state_updated, %{turn: %{timeline: [track]}}}
 
       assert {:ok, _} =
-               GameSession.reorder_timeline(game.uuid, track.id, 1)
+               GameSession.reorder_timeline(game.uuid, user_uuid, 1)
 
       assert_receive {:game_state_updated, %{turn: %{timeline: [^track]}}}
     end
 
-    test "returns error for non-existent track ID", %{game: game} do
-      assert {:error, :track_not_found} = GameSession.reorder_timeline(game.uuid, "nonexistent_track", 0)
+    test "returns error for non-existent user", %{game: game} do
+      assert {:error, :user_assumption_not_found} = GameSession.reorder_timeline(game.uuid, "nonexistent_user", 0)
     end
 
     test "returns error for non-existent game session" do
-      assert {:error, :game_session_not_found} = GameSession.reorder_timeline("nonexistent", "track123", 0)
+      assert {:error, :game_session_not_found} = GameSession.reorder_timeline("nonexistent", "user123", 0)
     end
 
-    test "returns error when active timeline is empty", %{game: game} do
-      # Game has turn but empty timeline, should return track not found
-      assert {:error, :track_not_found} = GameSession.reorder_timeline(game.uuid, "any_track", 0)
+    test "returns error when user has no assumption", %{game: game} do
+      # Game has turn but user has no assumption, should return user not found
+      assert {:error, :user_assumption_not_found} = GameSession.reorder_timeline(game.uuid, "any_user", 0)
     end
 
     test "broadcasts state update even when reordering fails", %{game: game} do
       # Subscribe to state updates
       Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
 
-      # Try to reorder non-existent track
-      assert {:error, :track_not_found} = GameSession.reorder_timeline(game.uuid, "nonexistent", 0)
+      # Try to reorder for non-existent user
+      assert {:error, :user_assumption_not_found} = GameSession.reorder_timeline(game.uuid, "nonexistent", 0)
 
       # Should not receive any broadcast for failed operation
       refute_receive {:game_state_updated, _}, 100

@@ -37,7 +37,7 @@
     const timeline = state?.turn?.timeline || [];
 
     return timeline.map((track, index) => ({
-      id: track.id,
+      id: `${track.id}-${index}`,
       track,
       current: track.id === currentTrack?.id,
       user: assumptions[index],
@@ -74,12 +74,10 @@
 
     timeline = items;
 
-    const draggedId = info.id;
-    const newPosition = items.findIndex(({ id }) => id === draggedId);
+    const newPosition = items.findIndex((item) => item.id === info.id);
 
     if (originZone === zoneId) {
       channel.push(PUSH_EVENT.REORDER_TIMELINE, {
-        track_id: draggedId,
         position: newPosition,
       });
     } else {

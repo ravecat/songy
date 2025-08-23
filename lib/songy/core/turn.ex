@@ -305,24 +305,27 @@ defmodule Songy.Core.Turn do
 
         %{assumption | position: new_pos}
       end)
+      |> then(&(&1 ++ [%{position: effective_position, user_id: user_uuid}]))
 
-    %{turn | timeline: timeline, assumptions: assumptions ++ [%{position: effective_position, user_id: user_uuid}]}
+    %{turn | timeline: timeline, assumptions: assumptions}
   end
 
   @doc """
   Reorders a track in the turn's timeline by moving it to a new position.
-  Automatically synchronizes assumptions to maintain position consistency.
+  Uses the user's assumption to find the current track position and moves it to the new position.
 
-  Directly moves the track without using update_timeline to avoid conflicts.
+  This function finds the track through the user's assumption, removes the old assumption,
+  moves the track in the timeline, and updates all assumption positions using the same
+  simple logic as update_timeline.
 
   ## Parameters
     * `turn` - The turn to update
-    * `track_id` - ID of the track to reorder
+    * `user_uuid` - UUID of the user whose track to reorder
     * `new_position` - New position for the track (0-based)
 
   ## Returns
     * `{:ok, updated_turn}` - Success with updated timeline and synchronized assumptions
-    * `{:error, :track_not_found}` - If track not in timeline
+    * `{:error, :user_assumption_not_found}` - If user has no assumption in timeline
 
   ## Examples
       iex> track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
@@ -330,61 +333,49 @@ defmodule Songy.Core.Turn do
       iex> turn = Turn.new()
       iex> turn = Turn.update_timeline(turn, track1, "player-1", 0)
       iex> turn = Turn.update_timeline(turn, track2, "player-2", 0)
-      iex> {:ok, updated_turn} = Turn.reorder_timeline(turn, track1.id, 1)
+      iex> {:ok, updated_turn} = Turn.reorder_timeline(turn, "player-1", 1)
       iex> updated_turn.timeline
       [%Track{title: "Song 2"}, %Track{title: "Song 1"}]
       iex> updated_turn.assumptions
-      [%{position: 1, user_id: "player-1"}, %{position: 0, user_id: "player-2"}]
+      [%{position: 0, user_id: "player-2"}, %{position: 1, user_id: "player-1"}]
   """
   @spec reorder_timeline(t(), String.t(), non_neg_integer()) :: {:ok, t()} | {:error, atom()}
-  def reorder_timeline(%__MODULE__{timeline: timeline} = turn, track_id, new_position)
-      when is_binary(track_id) and is_integer(new_position) and new_position >= 0 do
-    case Enum.find_index(timeline, &(&1.id == track_id)) do
+  def reorder_timeline(%__MODULE__{timeline: timeline, assumptions: assumptions} = turn, user_uuid, new_position)
+      when is_binary(user_uuid) and is_integer(new_position) and new_position >= 0 do
+    case Enum.find(assumptions, &(&1.user_id == user_uuid)) do
       nil ->
-        {:error, :track_not_found}
+        {:error, :user_assumption_not_found}
 
-      old_position ->
-        track = Enum.at(timeline, old_position)
+      %{position: prev_pos} ->
+        track = Enum.at(timeline, prev_pos)
 
-        new_timeline =
+        timeline =
           timeline
-          |> List.delete_at(old_position)
+          |> List.delete_at(prev_pos)
           |> List.insert_at(new_position, track)
 
-        {:ok,
-         turn
-         |> Map.put(:timeline, new_timeline)
-         |> update_assumptions_for_reorder(old_position, new_position)}
+        assumptions =
+          Enum.reject(assumptions, &(&1.user_id == user_uuid))
+          |> Enum.map(fn %{position: pos} = assumption ->
+            new_pos =
+              cond do
+                # Track moved right: positions between old and new shift left
+                prev_pos < new_position and pos > prev_pos and pos <= new_position ->
+                  pos - 1
+
+                # Track moved left: positions between new and old shift right
+                prev_pos > new_position and pos >= new_position and pos < prev_pos ->
+                  pos + 1
+
+                true ->
+                  pos
+              end
+
+            %{assumption | position: new_pos}
+          end)
+          |> then(&(&1 ++ [%{position: new_position, user_id: user_uuid}]))
+
+        {:ok, %{turn | timeline: timeline, assumptions: assumptions}}
     end
-  end
-
-  # Updates assumption positions after track reordering
-  # Each assumption is updated independently based on its current position
-  defp update_assumptions_for_reorder(%__MODULE__{assumptions: assumptions} = turn, old_position, new_position) do
-    assumptions =
-      Enum.map(assumptions, fn %{position: pos} = assumption ->
-        new_pos =
-          cond do
-            # Assumption on moved track: update to new position
-            pos == old_position ->
-              new_position
-
-            # Track moved right: positions between old and new shift left
-            old_position < new_position and pos > old_position and pos <= new_position ->
-              pos - 1
-
-            # Track moved left: positions between new and old shift right
-            old_position > new_position and pos >= new_position and pos < old_position ->
-              pos + 1
-
-            # Other assumptions stay the same
-            true ->
-              pos
-          end
-
-        %{assumption | position: new_pos}
-      end)
-
-    %{turn | assumptions: assumptions}
   end
 end

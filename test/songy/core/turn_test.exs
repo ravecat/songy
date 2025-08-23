@@ -1006,7 +1006,7 @@ defmodule Songy.Core.TurnTest do
   end
 
   describe "reorder_timeline/3" do
-    test "successfully reorders track and updates assumptions" do
+    test "reorders user's track to new position and updates assumptions" do
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
       track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
@@ -1017,11 +1017,15 @@ defmodule Songy.Core.TurnTest do
         |> Turn.update_timeline(track2, "user2", 0)
         |> Turn.update_timeline(track3, "user3", 0)
 
-      {:ok, updated_turn} = Turn.reorder_timeline(turn, track1.id, 0)
+      # Timeline: [track3, track2, track1]
+      # Assumptions: [user3:0, user2:1, user1:2]
+
+      # Move user1's track (position 2) to position 0
+      {:ok, updated_turn} = Turn.reorder_timeline(turn, "user1", 0)
 
       assert updated_turn.timeline == [track1, track3, track2]
-      assert length(updated_turn.assumptions) == 3
 
+      # Sort assumptions by position for consistent comparison
       sorted_assumptions = Enum.sort_by(updated_turn.assumptions, & &1.position)
 
       expected_assumptions = [
@@ -1033,7 +1037,7 @@ defmodule Songy.Core.TurnTest do
       assert sorted_assumptions == expected_assumptions
     end
 
-    test "moves track from left to right and updates assumptions correctly" do
+    test "reorders user's track to middle position" do
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
       track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
@@ -1041,13 +1045,16 @@ defmodule Songy.Core.TurnTest do
       turn =
         Turn.new()
         |> Turn.update_timeline(track1, "user1", 0)
-        |> Turn.update_timeline(track2, "user2", 1)
-        |> Turn.update_timeline(track3, "user3", 2)
+        |> Turn.update_timeline(track2, "user2", 0)
+        |> Turn.update_timeline(track3, "user3", 0)
 
-      {:ok, updated_turn} = Turn.reorder_timeline(turn, track1.id, 2)
+      # Timeline: [track3, track2, track1]
+      # Move user3's track (position 0) to position 1
+      {:ok, updated_turn} = Turn.reorder_timeline(turn, "user3", 1)
 
       assert updated_turn.timeline == [track2, track3, track1]
 
+      # Sort assumptions by position for consistent comparison
       sorted_assumptions = Enum.sort_by(updated_turn.assumptions, & &1.position)
 
       expected_assumptions = [
@@ -1059,7 +1066,7 @@ defmodule Songy.Core.TurnTest do
       assert sorted_assumptions == expected_assumptions
     end
 
-    test "moves track from right to left and updates assumptions correctly" do
+    test "reorders user's track to end position" do
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
       track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
@@ -1067,47 +1074,59 @@ defmodule Songy.Core.TurnTest do
       turn =
         Turn.new()
         |> Turn.update_timeline(track1, "user1", 0)
-        |> Turn.update_timeline(track2, "user2", 1)
-        |> Turn.update_timeline(track3, "user3", 2)
+        |> Turn.update_timeline(track2, "user2", 0)
+        |> Turn.update_timeline(track3, "user3", 0)
 
-      {:ok, updated_turn} = Turn.reorder_timeline(turn, track3.id, 0)
+      # Timeline: [track3, track2, track1]
+      # Move user3's track (position 0) to position 2 (end)
+      {:ok, updated_turn} = Turn.reorder_timeline(turn, "user3", 2)
 
-      assert updated_turn.timeline == [track3, track1, track2]
+      assert updated_turn.timeline == [track2, track1, track3]
 
+      # Sort assumptions by position for consistent comparison
       sorted_assumptions = Enum.sort_by(updated_turn.assumptions, & &1.position)
 
       expected_assumptions = [
-        %{position: 0, user_id: "user3"},
+        %{position: 0, user_id: "user2"},
         %{position: 1, user_id: "user1"},
-        %{position: 2, user_id: "user2"}
+        %{position: 2, user_id: "user3"}
       ]
 
       assert sorted_assumptions == expected_assumptions
     end
 
-    test "returns error for non-existent track" do
+    test "returns error when user has no assumption" do
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
-
-      turn = Turn.new() |> Turn.update_timeline(track1, "user1", 0)
-
-      result = Turn.reorder_timeline(turn, "non_existent_id", 0)
-
-      assert result == {:error, :track_not_found}
-    end
-
-    test "handles moving track to same position" do
-      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
-      track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
 
       turn =
         Turn.new()
         |> Turn.update_timeline(track1, "user1", 0)
-        |> Turn.update_timeline(track2, "user2", 1)
 
-      {:ok, updated_turn} = Turn.reorder_timeline(turn, track2.id, 1)
+      result = Turn.reorder_timeline(turn, "nonexistent_user", 0)
 
-      assert updated_turn.timeline == [track1, track2]
-      assert updated_turn.assumptions == turn.assumptions
+      assert result == {:error, :user_assumption_not_found}
+    end
+
+    test "handles single track timeline" do
+      track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
+
+      turn =
+        Turn.new()
+        |> Turn.update_timeline(track1, "user1", 0)
+
+      # Move to same position should work
+      {:ok, updated_turn} = Turn.reorder_timeline(turn, "user1", 0)
+
+      assert updated_turn.timeline == [track1]
+      assert updated_turn.assumptions == [%{position: 0, user_id: "user1"}]
+    end
+
+    test "handles empty timeline" do
+      turn = Turn.new()
+
+      result = Turn.reorder_timeline(turn, "user1", 0)
+
+      assert result == {:error, :user_assumption_not_found}
     end
   end
 end
