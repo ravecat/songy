@@ -67,8 +67,7 @@ defmodule Songy.MixProject do
       {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false},
       {:faker, "~> 0.19.0-alpha.1"},
       {:polymorphic_embed, git: "https://github.com/mathieuprog/polymorphic_embed.git", tag: "v5.0.3"},
-      # Temporary dependency until `spotify_ex` is resolved by https://github.com/jsncmgs1/spotify_ex/pull/59
-      {:spotify_ex, git: "https://github.com/ravecat/spotify_ex.git"}
+      {:spotify_ex, "~> 2.3.0"}
     ]
   end
 
