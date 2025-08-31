@@ -15,7 +15,7 @@
     return currentTrack
       ? [
           {
-            id: currentTrack.id,
+            id: `${currentTrack.id}-${user.uuid}`,
             track: currentTrack,
             current: true,
           },

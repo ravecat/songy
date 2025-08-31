@@ -43,7 +43,7 @@
   onconsider={handleConsider}
   onfinalize={handleFinalize}
 >
-  {#each items as item, index (`${item.id}-${index}`)}
+  {#each items as item (item.id)}
     <div animate:flip={{ duration: flipDurationMs }}>
       {@render children?.(item)}
     </div>

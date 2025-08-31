@@ -37,7 +37,7 @@
     const timeline = state?.turn?.timeline || [];
 
     return timeline.map((track, index) => ({
-      id: `${track.id}-${index}`,
+      id: `${track.id}-${assumptions[index]?.uuid}`,
       track,
       current: track.id === currentTrack?.id,
       user: assumptions[index],
