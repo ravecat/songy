@@ -8,10 +8,16 @@
 
   const { state } = $derived.by(getGameContext);
   const { user } = $derived.by(getScopeContext);
-  const currentTrack = $derived(state?.turn?.track);
   const zoneId = $derived(`current-track-${user.uuid}`);
 
+  const userHasAssumption = $derived.by(() => {
+    const assumptions = state?.turn?.assumptions || [];
+    return assumptions.some((assumption) => assumption.user_id === user.uuid);
+  });
+
   let timeline = $derived.by(() => {
+    const currentTrack = state?.turn?.track;
+
     return currentTrack
       ? [
           {
@@ -48,13 +54,15 @@
   }
 </script>
 
-<Timeline
-  items={timeline}
-  onconsider={handleConsider}
-  onfinalize={handleFinalize}
-  dropFromOthersDisabled={true}
->
-  {#snippet children(item)}
-    <TrackCard revealed={false} track={item.track} />
-  {/snippet}
-</Timeline>
+{#if !userHasAssumption}
+  <Timeline
+    items={timeline}
+    onconsider={handleConsider}
+    onfinalize={handleFinalize}
+    dropFromOthersDisabled={true}
+  >
+    {#snippet children(item)}
+      <TrackCard revealed={false} track={item.track} />
+    {/snippet}
+  </Timeline>
+{/if}
