@@ -75,7 +75,7 @@ describe("Game", () => {
       ]),
     });
 
-    expect(screen.getByText("results")).toBeInTheDocument();
+    expect(screen.getByText("Alice")).toBeInTheDocument();
   });
 
   test("renders nothing when turn phase is undefined", () => {
@@ -145,7 +145,6 @@ describe("Game", () => {
         ]),
       });
 
-      // Should render nothing for invalid phases
       expect(screen.queryByText("Alice")).not.toBeInTheDocument();
     }
   );

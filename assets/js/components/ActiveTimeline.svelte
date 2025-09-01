@@ -99,7 +99,7 @@
 >
   {#snippet children(item)}
     <TrackCard
-      revealed={!item.current}
+      revealed={!item.current || turnPhase === TURN_PHASE.RESULTS}
       track={item.track}
       ready={item.current && turnPhase === TURN_PHASE.STEADY && isActivePlayer}
       user={item.user}

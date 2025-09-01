@@ -532,6 +532,21 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @impl GenServer
+  def handle_info(:next_phase, %{turn: %{phase: :challenging}} = game) do
+    Logger.info("Challenging phase timeout reached for game #{game.uuid}, advancing to results")
+
+    updated_game = Game.next_phase(game)
+
+    Phoenix.PubSub.local_broadcast(
+      Songy.PubSub,
+      "room:#{updated_game.uuid}",
+      {:game_state_updated, updated_game}
+    )
+
+    {:noreply, updated_game}
+  end
+
+  @impl GenServer
   def handle_continue({:init_participant_timeline, user_uuid}, game) do
     with [] <- Game.get_user_timeline(game, user_uuid),
          {:ok, credentials} <- get_credentials(game.uuid),
@@ -577,6 +592,15 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @impl GenServer
+  def handle_continue(:schedule_challenging_timeout, game) do
+    timeout = Application.fetch_env!(:songy, :challenging_phase_timeout)
+
+    Process.send_after(self(), :next_phase, timeout)
+
+    {:noreply, game}
+  end
+
+  @impl GenServer
   def handle_call(:lookup_game_session, _from, game) do
     {:reply, {:ok, game}, game}
   end
@@ -613,8 +637,6 @@ defmodule Songy.Boundary.GameSession do
     with {:ok, credentials} <- get_credentials(game.uuid),
          {:ok, spotify_track} <- Spotify.search_random_track(credentials),
          track <- Trackable.to_track(spotify_track) do
-
-      # First advance to next phase, then set the track
       updated_game = Game.next_phase(game)
       {:ok, game_with_track} = Game.set_turn_track(updated_game, track)
 
@@ -628,6 +650,19 @@ defmodule Songy.Boundary.GameSession do
     else
       {:error, reason} -> {:reply, {:error, reason}, game}
     end
+  end
+
+  @impl GenServer
+  def handle_call(:next_phase, _from, %{turn: %{phase: :steady}} = game) do
+    updated_game = Game.next_phase(game)
+
+    Phoenix.PubSub.local_broadcast(
+      Songy.PubSub,
+      "room:#{updated_game.uuid}",
+      {:game_state_updated, updated_game}
+    )
+
+    {:reply, {:ok, updated_game}, updated_game, {:continue, :schedule_challenging_timeout}}
   end
 
   @impl GenServer

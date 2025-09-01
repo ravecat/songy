@@ -585,6 +585,50 @@ defmodule Songy.Boundary.GameSessionTest do
 
       GameSession.end_game_session(game.uuid)
     end
+
+    test "automatically transitions from challenging to results after timeout" do
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
+
+      credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
+
+      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+        {:ok,
+         %Spotify.Track{
+           name: "Random Song",
+           artists: [%{"name" => "Random Artist"}],
+           album: %{
+             "release_date" => "2023-01-01",
+             "images" => [%{"url" => "https://example.com/cover.jpg"}]
+           }
+         }}
+      end)
+
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+
+      Repatch.allow(self(), pid)
+
+      :ok = GameSession.set_credentials(game.uuid, credentials)
+      {:ok, _started_game} = GameSession.start_game_session(game.uuid)
+
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+
+      send(pid, {:participant_joined, "user1"})
+      assert_receive {:game_state_updated, _updated_game_1}
+
+      send(pid, {:participant_joined, "user2"})
+      assert_receive {:game_state_updated, _updated_game_2}
+
+      # Move to challenging phase: waiting -> ready -> steady -> challenging
+      {:ok, _ready_game} = GameSession.next_phase(game.uuid)
+      {:ok, _steady_game} = GameSession.next_phase(game.uuid)
+      {:ok, challenging_game} = GameSession.next_phase(game.uuid)
+
+      assert challenging_game.turn.phase == :challenging
+
+      assert_receive {:game_state_updated, %{turn: %{phase: :results}}}
+
+      GameSession.end_game_session(game.uuid)
+    end
   end
 
   describe ":participant_joined event" do
