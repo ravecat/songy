@@ -13,6 +13,7 @@
 
   const shouldShow = $derived.by(() => {
     const phase = state?.turn?.phase;
+    const currentTrack = state?.turn?.track;
     const assumptions = state?.turn?.assumptions || [];
     const userHasAssumption = assumptions.some(
       (assumption) => assumption.user_id === user.uuid
@@ -20,6 +21,8 @@
 
     const activePlayerUuid = state?.turn?.queue?.[state?.turn?.cursor];
     const isActivePlayer = activePlayerUuid === user.uuid;
+
+    if (!currentTrack) return false;
 
     switch (phase) {
       case TURN_PHASE.READY:
