@@ -5,14 +5,30 @@
   import Timeline from "~components/Timeline.svelte";
   import { type DndEvent, TRIGGERS } from "svelte-dnd-action";
   import { dragOriginZone } from "~shared/stores/dragOrigin";
+  import { TURN_PHASE } from "~shared/types/turn";
 
   const { state } = $derived.by(getGameContext);
   const { user } = $derived.by(getScopeContext);
   const zoneId = $derived(`current-track-${user.uuid}`);
 
-  const userHasAssumption = $derived.by(() => {
+  const shouldShow = $derived.by(() => {
+    const phase = state?.turn?.phase;
     const assumptions = state?.turn?.assumptions || [];
-    return assumptions.some((assumption) => assumption.user_id === user.uuid);
+    const userHasAssumption = assumptions.some(
+      (assumption) => assumption.user_id === user.uuid
+    );
+
+    const activePlayerUuid = state?.turn?.queue?.[state?.turn?.cursor];
+    const isActivePlayer = activePlayerUuid === user.uuid;
+
+    switch (phase) {
+      case TURN_PHASE.READY:
+        return isActivePlayer && !userHasAssumption;
+      case TURN_PHASE.CHALLENGING:
+        return !isActivePlayer && !userHasAssumption;
+      default:
+        return false;
+    }
   });
 
   let timeline = $derived.by(() => {
@@ -54,7 +70,7 @@
   }
 </script>
 
-{#if !userHasAssumption}
+{#if shouldShow}
   <Timeline
     items={timeline}
     onconsider={handleConsider}
