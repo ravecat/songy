@@ -177,7 +177,8 @@ defmodule Songy.Boundary.GameSession do
       {:error, :game_session_not_found} -> {:error, :game_session_not_found}
       {:error, :no_credentials} -> {:error, :no_credentials}
       {:error, reason} -> {:error, reason}
-      %Track{meta: meta} when not is_map_key(meta, :uri) -> {:error, :no_track_uri}
+      nil -> {:error, :no_current_track}
+      %Track{meta: meta} when not is_map_key(meta, :uri) -> {:error, :no_current_track}
       _status -> {:error, :game_not_in_progress}
     end
   end
@@ -636,17 +637,18 @@ defmodule Songy.Boundary.GameSession do
   def handle_call(:next_phase, _from, %{turn: %{phase: :results}} = game) do
     with {:ok, credentials} <- get_credentials(game.uuid),
          {:ok, spotify_track} <- Spotify.search_random_track(credentials),
-         track <- Trackable.to_track(spotify_track) do
-      updated_game = Game.next_phase(game)
-      {:ok, game_with_track} = Game.set_turn_track(updated_game, track)
-
+         %Track{} = track <- Trackable.to_track(spotify_track),
+         {:ok, :playback_paused} <- Spotify.pause_playback(credentials),
+         game <- Game.pause_playback(game),
+         game <- Game.next_phase(game),
+         {:ok, game} <- Game.set_turn_track(game, track) do
       Phoenix.PubSub.local_broadcast(
         Songy.PubSub,
-        "room:#{game_with_track.uuid}",
-        {:game_state_updated, game_with_track}
+        "room:#{game.uuid}",
+        {:game_state_updated, game}
       )
 
-      {:reply, {:ok, game_with_track}, game_with_track}
+      {:reply, {:ok, game}, game}
     else
       {:error, reason} -> {:reply, {:error, reason}, game}
     end

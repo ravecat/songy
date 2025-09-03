@@ -461,10 +461,8 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "returns error for game not in progress" do
-      provider_id = :spotify
-      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
-      # Game is still in waiting status, not started
       assert {:error, :game_not_in_progress} = GameSession.next_phase(game.uuid)
 
       GameSession.end_game_session(game.uuid)
@@ -485,6 +483,10 @@ defmodule Songy.Boundary.GameSessionTest do
              "images" => [%{"url" => "https://example.com/cover.jpg"}]
            }
          }}
+      end)
+
+      Repatch.patch(Songy.Boundary.Spotify, :pause_playback, [mode: :shared], fn _credentials ->
+        {:ok, :playback_paused}
       end)
 
       assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
@@ -537,6 +539,10 @@ defmodule Songy.Boundary.GameSessionTest do
              "images" => [%{"url" => "https://example.com/cover.jpg"}]
            }
          }}
+      end)
+
+      Repatch.patch(Songy.Boundary.Spotify, :pause_playback, [mode: :shared], fn _credentials ->
+        {:ok, :playback_paused}
       end)
 
       assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)

@@ -5,15 +5,20 @@
   const { state, channel } = $derived(getGameContext());
 
   let isPlayback = $derived(state?.player?.is_playback ?? false);
+
+  const togglePlayback = () => {
+    channel.push(
+      isPlayback ? PUSH_EVENT.PAUSE_PLAYBACK : PUSH_EVENT.START_PLAYBACK,
+      {}
+    );
+  };
 </script>
 
 <div class="player">
   <button
     class="play"
     aria-label={isPlayback ? "Pause track" : "Play track"}
-    onclick={() => {
-      channel.push(isPlayback ? PUSH_EVENT.PAUSE_PLAYBACK : PUSH_EVENT.START_PLAYBACK, {});
-    }}
+    onclick={togglePlayback}
   >
     {#if isPlayback}
       <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
