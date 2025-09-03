@@ -19,6 +19,7 @@ export default defineConfig({
       '~types': path.resolve(__dirname, 'js/shared/types'),
       '~mocks': path.resolve(__dirname, '__mocks__'),
       '~components': path.resolve(__dirname, 'js/components'),
+      '~icons': path.resolve(__dirname, 'icons'),
     },
   },
   build: {
