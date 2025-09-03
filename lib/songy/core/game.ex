@@ -527,6 +527,32 @@ defmodule Songy.Core.Game do
 
   def valid_timeline?([%Track{}, %Track{} | _rest]), do: false
 
+  defp score_turn_results(%__MODULE__{turn: %{assumptions: assumptions, timeline: timeline}} = game) do
+    case Enum.find(assumptions, &valid_assumption?(timeline, &1.position)) do
+      %{user_id: user_uuid} ->
+        add_player_score(game, user_uuid)
+
+      nil ->
+        game
+    end
+  end
+
+  defp valid_assumption?(timeline, position) do
+    case Enum.at(timeline, position) do
+      nil ->
+        false
+
+      %Track{year: year} ->
+        left_neighbor = if position > 0, do: Enum.at(timeline, position - 1), else: nil
+        right_neighbor = Enum.at(timeline, position + 1)
+
+        left_valid = is_nil(left_neighbor) or left_neighbor.year <= year
+        right_valid = is_nil(right_neighbor) or year <= right_neighbor.year
+
+        left_valid and right_valid
+    end
+  end
+
   @doc """
   Moves to the next phase in the game.
 
@@ -540,10 +566,17 @@ defmodule Songy.Core.Game do
   def next_phase(%__MODULE__{turn: %Turn{phase: :waiting} = turn} = game) do
     # Create snapshot of active player's timeline when starting their turn
     new_turn = Turn.next_phase(turn)
-    new_active_player_uuid = Turn.get_active_player(new_turn)
-    new_active_player_timeline = get_user_timeline(game, new_active_player_uuid)
-    updated_turn = Turn.set_timeline_snapshot(new_turn, new_active_player_timeline)
+    active_player_uuid = Turn.get_active_player(new_turn)
+    active_player_timeline = get_user_timeline(game, active_player_uuid)
+    updated_turn = Turn.set_timeline_snapshot(new_turn, active_player_timeline)
+
     %{game | turn: updated_turn}
+  end
+
+  def next_phase(%__MODULE__{turn: %Turn{phase: :challenging} = turn} = game) do
+    game_with_scores = score_turn_results(game)
+
+    %{game_with_scores | turn: Turn.next_phase(turn)}
   end
 
   def next_phase(%__MODULE__{turn: turn} = game) do
@@ -640,7 +673,8 @@ defmodule Songy.Core.Game do
         game
 
       current_score ->
-        %{game | scores: Map.put(game.scores, user_uuid, current_score + points)}
+        new_score = current_score + points
+        %{game | scores: Map.put(game.scores, user_uuid, new_score)}
     end
   end
 

@@ -171,15 +171,12 @@ defmodule Songy.Core.GameTest do
       {:ok, game} = Game.add_participant(game, user1)
       {:ok, game} = Game.add_participant(game, user2)
 
-      # Both users should be in queue
       assert length(game.turn.queue) == 2
       assert user1.uuid in game.turn.queue
       assert user2.uuid in game.turn.queue
 
-      # Remove one user
       assert {:ok, updated_game} = Game.remove_participant(game, user1.uuid)
 
-      # Only one user should remain in queue
       assert length(updated_game.turn.queue) == 1
       assert user2.uuid in updated_game.turn.queue
       assert user1.uuid not in updated_game.turn.queue
@@ -274,15 +271,12 @@ defmodule Songy.Core.GameTest do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
 
-      # waiting -> in_progress
       assert {:ok, in_progress_game} = Game.update_status(game)
       assert in_progress_game.status == :in_progress
 
-      # in_progress -> finished
       assert {:ok, finished_game} = Game.update_status(in_progress_game)
       assert finished_game.status == :finished
 
-      # finished -> error
       assert {:error, :game_already_finished} = Game.update_status(finished_game)
     end
   end
@@ -445,7 +439,6 @@ defmodule Songy.Core.GameTest do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
 
-      # First, add some tracks to a timeline using old extend style for setup
       existing_track1 = Track.new(title: "Existing 1", artist: "Artist", year: 2020)
       existing_track2 = Track.new(title: "Existing 2", artist: "Artist", year: 2021)
 
@@ -455,7 +448,6 @@ defmodule Songy.Core.GameTest do
       {:ok, game_with_track2} = Game.set_turn_track(game_step1, existing_track2)
       game_with_tracks = Game.extend_user_timeline(game_with_track2, "user456")
 
-      # Now initialize with a new track - should replace the entire timeline
       init_track = Track.new(title: "New Initial", artist: "New Artist", year: 2023)
       updated_game = Game.init_user_timeline(game_with_tracks, "user456", init_track)
 
@@ -488,7 +480,6 @@ defmodule Songy.Core.GameTest do
       updated_game = Game.extend_user_timeline(game_with_track, "user456")
 
       assert Game.get_user_timeline(updated_game, "user456") == [track]
-      # other fields preserved
       assert updated_game.uuid == game.uuid
     end
 
@@ -504,7 +495,6 @@ defmodule Songy.Core.GameTest do
       {:ok, game_with_track2} = Game.set_turn_track(game_with_first, track2)
       game_with_both = Game.extend_user_timeline(game_with_track2, "user456")
 
-      # tracks are added to front of list
       assert Game.get_user_timeline(game_with_both, "user456") == [track2, track1]
     end
 
@@ -546,14 +536,12 @@ defmodule Songy.Core.GameTest do
       track2 = Track.new(title: "Song 2", artist: "Artist 2", year: 2024)
       track3 = Track.new(title: "Song 3", artist: "Artist 3", year: 2025)
 
-      # Build initial timeline
       {:ok, game_with_track1} = Game.set_turn_track(game, track1)
       game_step1 = Game.extend_user_timeline(game_with_track1, "user456")
 
       {:ok, game_with_track2} = Game.set_turn_track(game_step1, track2)
       game_with_timeline = Game.extend_user_timeline(game_with_track2, "user456")
 
-      # Insert track3 at position 1 (between track2 and track1)
       {:ok, game_with_track3} = Game.set_turn_track(game_with_timeline, track3)
       updated_game = Game.extend_user_timeline(game_with_track3, "user456", 1)
 
@@ -567,14 +555,12 @@ defmodule Songy.Core.GameTest do
       track2 = Track.new(title: "Song 2", artist: "Artist 2", year: 2024)
       track3 = Track.new(title: "Song 3", artist: "Artist 3", year: 2025)
 
-      # Build initial timeline
       {:ok, game_with_track1} = Game.set_turn_track(game, track1)
       game_step1 = Game.extend_user_timeline(game_with_track1, "user456")
 
       {:ok, game_with_track2} = Game.set_turn_track(game_step1, track2)
       game_with_timeline = Game.extend_user_timeline(game_with_track2, "user456")
 
-      # Insert at position 2 (at the end of 2-element list)
       {:ok, game_with_track3} = Game.set_turn_track(game_with_timeline, track3)
       updated_game = Game.extend_user_timeline(game_with_track3, "user456", 2)
 
@@ -587,11 +573,9 @@ defmodule Songy.Core.GameTest do
       track1 = Track.new(title: "Song 1", artist: "Artist 1", year: 2023)
       track2 = Track.new(title: "Song 2", artist: "Artist 2", year: 2024)
 
-      # Build initial timeline
       {:ok, game_with_track1} = Game.set_turn_track(game, track1)
       game_with_first = Game.extend_user_timeline(game_with_track1, "user456")
 
-      # Insert at position 999 (much greater than list length of 1)
       {:ok, game_with_track2} = Game.set_turn_track(game_with_first, track2)
       updated_game = Game.extend_user_timeline(game_with_track2, "user456", 999)
 
@@ -603,10 +587,8 @@ defmodule Songy.Core.GameTest do
       game = Game.new("owner123", provider: provider)
       track = Track.new(title: "Test Song", artist: "Test Artist", year: 2023)
 
-      # Set up the game with track for testing
       {:ok, game_with_track} = Game.set_turn_track(game, track)
 
-      # Invalid position type should raise FunctionClauseError (guard failure)
       assert_raise FunctionClauseError, fn ->
         Game.extend_user_timeline(game_with_track, "user456", "invalid")
       end
@@ -627,23 +609,18 @@ defmodule Songy.Core.GameTest do
 
       [track1, track2, track3, track4, track5] = tracks
 
-      # Build timeline: [track1]
       {:ok, game_with_track1} = Game.set_turn_track(game, track1)
       game = Game.extend_user_timeline(game_with_track1, "user456")
 
-      # Insert at position 0: [track2, track1]
       {:ok, game_with_track2} = Game.set_turn_track(game, track2)
       game = Game.extend_user_timeline(game_with_track2, "user456", 0)
 
-      # Insert at position 2 (end): [track2, track1, track3]
       {:ok, game_with_track3} = Game.set_turn_track(game, track3)
       game = Game.extend_user_timeline(game_with_track3, "user456", 2)
 
-      # Insert at position 1: [track2, track4, track1, track3]
       {:ok, game_with_track4} = Game.set_turn_track(game, track4)
       game = Game.extend_user_timeline(game_with_track4, "user456", 1)
 
-      # Insert at position 999 (end): [track2, track4, track1, track3, track5]
       {:ok, game_with_track5} = Game.set_turn_track(game, track5)
       game = Game.extend_user_timeline(game_with_track5, "user456", 999)
 
@@ -710,13 +687,11 @@ defmodule Songy.Core.GameTest do
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
       track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
 
-      # Build initial timeline with track1 and track2
       {:ok, game_with_track1} = Game.set_turn_track(game, track1)
       game_with_first = Game.extend_active_timeline(game_with_track1, "user123")
       {:ok, game_with_track2} = Game.set_turn_track(game_with_first, track2)
       game_with_timeline = Game.extend_active_timeline(game_with_track2, "user456")
 
-      # Add track3 at position 1
       {:ok, game_with_track3} = Game.set_turn_track(game_with_timeline, track3)
       updated_game = Game.extend_active_timeline(game_with_track3, "user789", 1)
 
@@ -736,13 +711,11 @@ defmodule Songy.Core.GameTest do
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
       track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
 
-      # Build initial timeline with track1 and track2
       {:ok, game_with_track1} = Game.set_turn_track(game, track1)
       game_with_first = Game.extend_active_timeline(game_with_track1, "user123")
       {:ok, game_with_track2} = Game.set_turn_track(game_with_first, track2)
       game_with_timeline = Game.extend_active_timeline(game_with_track2, "user456")
 
-      # Add track3 at position 2 (end of list)
       {:ok, game_with_track3} = Game.set_turn_track(game_with_timeline, track3)
       updated_game = Game.extend_active_timeline(game_with_track3, "user789", 2)
 
@@ -797,23 +770,18 @@ defmodule Songy.Core.GameTest do
 
       [track1, track2, track3, track4, track5] = tracks
 
-      # Build timeline: [track1]
       {:ok, game_with_track1} = Game.set_turn_track(game, track1)
       game = Game.extend_active_timeline(game_with_track1, "user1")
 
-      # Insert at position 0: [track2, track1]
       {:ok, game_with_track2} = Game.set_turn_track(game, track2)
       game = Game.extend_active_timeline(game_with_track2, "user2", 0)
 
-      # Insert at position 2 (end): [track2, track1, track3]
       {:ok, game_with_track3} = Game.set_turn_track(game, track3)
       game = Game.extend_active_timeline(game_with_track3, "user3", 2)
 
-      # Insert at position 1: [track2, track4, track1, track3]
       {:ok, game_with_track4} = Game.set_turn_track(game, track4)
       game = Game.extend_active_timeline(game_with_track4, "user4", 1)
 
-      # Insert at position 999 (end): [track2, track4, track1, track3, track5]
       {:ok, game_with_track5} = Game.set_turn_track(game, track5)
       game = Game.extend_active_timeline(game_with_track5, "user5", 999)
 
@@ -841,7 +809,6 @@ defmodule Songy.Core.GameTest do
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
       track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
 
-      # Build initial active timeline: [track3, track2, track1] (newest first)
       {:ok, game_with_track1} = Game.set_turn_track(game, track1)
       game_step1 = Game.extend_active_timeline(game_with_track1, "setup_user1")
 
@@ -860,7 +827,6 @@ defmodule Songy.Core.GameTest do
       track2: track2,
       track3: track3
     } do
-      # Move setup_user1's track (track1) to position 0: [track1, track3, track2]
       {:ok, updated_game} = Game.reorder_active_timeline(game, "setup_user1", 0)
       timeline = updated_game.turn.timeline
 
@@ -873,7 +839,6 @@ defmodule Songy.Core.GameTest do
       track2: track2,
       track3: track3
     } do
-      # Move setup_user1's track (track1) to position 1: [track3, track1, track2]
       {:ok, updated_game} = Game.reorder_active_timeline(game, "setup_user1", 1)
       timeline = updated_game.turn.timeline
 
@@ -886,7 +851,6 @@ defmodule Songy.Core.GameTest do
       track2: track2,
       track3: track3
     } do
-      # Move setup_user3's track (track3) to position 2: [track2, track1, track3]
       {:ok, updated_game} = Game.reorder_active_timeline(game, "setup_user3", 2)
       timeline = updated_game.turn.timeline
 
@@ -899,7 +863,6 @@ defmodule Songy.Core.GameTest do
       track2: track2,
       track3: track3
     } do
-      # Move setup_user1's track (track1) to position 10 (beyond end) - should move to end
       {:ok, updated_game} = Game.reorder_active_timeline(game, "setup_user1", 10)
       timeline = updated_game.turn.timeline
 
@@ -917,7 +880,6 @@ defmodule Songy.Core.GameTest do
     test "returns error when game has no turn" do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
-      # Clear the turn to simulate no active turn
       game_without_turn = %{game | turn: nil}
 
       result = Game.reorder_active_timeline(game_without_turn, "setup_user1", 0)
@@ -931,7 +893,6 @@ defmodule Songy.Core.GameTest do
       track2: track2,
       track3: track3
     } do
-      # Move setup_user2's track (track2) to its current position (index 1)
       {:ok, updated_game} = Game.reorder_active_timeline(game, "setup_user2", 1)
       timeline = updated_game.turn.timeline
 
@@ -944,7 +905,6 @@ defmodule Songy.Core.GameTest do
       track2: track2,
       track3: track3
     } do
-      # Move setup_user1's track (track1) from position 2 to position 0: [track1, track3, track2]
       {:ok, updated_game} = Game.reorder_active_timeline(game, "setup_user1", 0)
       timeline = updated_game.turn.timeline
       assumptions = updated_game.turn.assumptions
@@ -969,7 +929,6 @@ defmodule Songy.Core.GameTest do
       track2: track2,
       track3: track3
     } do
-      # Move setup_user3's track (track3) from position 0 to position 2: [track2, track1, track3]
       {:ok, updated_game} = Game.reorder_active_timeline(game, "setup_user3", 2)
       timeline = updated_game.turn.timeline
       assumptions = updated_game.turn.assumptions
@@ -1060,7 +1019,6 @@ defmodule Songy.Core.GameTest do
       tracks = [
         Track.new(title: "Song 1", artist: "Artist", year: 1990),
         Track.new(title: "Song 2", artist: "Artist", year: 2000),
-        # violation here
         Track.new(title: "Song 3", artist: "Artist", year: 1995),
         Track.new(title: "Song 4", artist: "Artist", year: 2020)
       ]
@@ -1069,20 +1027,16 @@ defmodule Songy.Core.GameTest do
     end
 
     test "handles mixed valid and invalid sequences" do
-      # Valid start, then invalid
       tracks1 = [
         Track.new(title: "Song 1", artist: "Artist", year: 1990),
         Track.new(title: "Song 2", artist: "Artist", year: 2000),
-        # invalid
         Track.new(title: "Song 3", artist: "Artist", year: 1980)
       ]
 
       assert Game.valid_timeline?(tracks1) == false
 
-      # Invalid start
       tracks2 = [
         Track.new(title: "Song 1", artist: "Artist", year: 2000),
-        # invalid immediately
         Track.new(title: "Song 2", artist: "Artist", year: 1990)
       ]
 
@@ -1090,7 +1044,6 @@ defmodule Songy.Core.GameTest do
     end
 
     test "works with large timeline" do
-      # Create 100 tracks in chronological order
       tracks =
         for year <- 1920..2020 do
           Track.new(title: "Song #{year}", artist: "Artist", year: year)
@@ -1098,19 +1051,16 @@ defmodule Songy.Core.GameTest do
 
       assert Game.valid_timeline?(tracks) == true
 
-      # Same tracks but with one out of order
       invalid_tracks = List.replace_at(tracks, 50, Track.new(title: "Wrong", artist: "Artist", year: 1900))
       assert Game.valid_timeline?(invalid_tracks) == false
     end
   end
 
   describe "next_phase/1" do
-    test "moves the turn to the next phase" do
-      owner_uuid = "owner123"
+    setup do
       provider = Provider.new(:spotify)
-      game = Game.new(owner_uuid, provider: provider)
+      game = Game.new("owner123", provider: provider)
 
-      # Set up game with turn
       user1 = User.new()
       user2 = User.new()
       user3 = User.new()
@@ -1118,30 +1068,22 @@ defmodule Songy.Core.GameTest do
       {:ok, game} = Game.add_participant(game, user2)
       {:ok, game} = Game.add_participant(game, user3)
 
+      %{game: game, user1: user1, user2: user2, user3: user3}
+    end
+
+    test "moves the turn to the next phase", %{game: game} do
       updated_game = Game.next_phase(game)
 
       refute updated_game.turn.phase == game.turn.phase
     end
 
-    test "creates timeline snapshot when transitioning from waiting to ready (start of turn)" do
-      owner_uuid = "owner123"
-      provider = Provider.new(:spotify)
-      game = Game.new(owner_uuid, provider: provider)
+    test "creates timeline snapshot when transitioning from waiting to ready (start of turn)", %{game: game} do
+      first_player_uuid = Turn.get_active_player(game.turn)
 
-      # Add participants
-      user1 = User.new()
-      user2 = User.new()
-      {:ok, game} = Game.add_participant(game, user1)
-      {:ok, game} = Game.add_participant(game, user2)
-
-      # Add tracks to first player's timeline
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
       track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
 
-      first_player_uuid = Turn.get_active_player(game.turn)
-
-      # Build timeline using separate set_turn_track and extend_user_timeline calls
       {:ok, game_with_track1} = Game.set_turn_track(game, track1)
       game_step1 = Game.extend_user_timeline(game_with_track1, first_player_uuid)
 
@@ -1151,101 +1093,50 @@ defmodule Songy.Core.GameTest do
       {:ok, game_with_track3} = Game.set_turn_track(game_step2, track3)
       game = Game.extend_user_timeline(game_with_track3, first_player_uuid)
 
-      # Move through complete first player's turn
       game =
         game
-        # waiting -> ready
         |> Game.next_phase()
-        # ready -> steady
         |> Game.next_phase()
-        # steady -> challenging
         |> Game.next_phase()
-        # challenging -> results
         |> Game.next_phase()
 
       assert game.turn.phase == :results
-      # Snapshot of first player's timeline
       assert game.turn.timeline == [track3, track2, track1]
 
-      # Transition to waiting should create snapshot for NEW player
-      # results -> waiting (next player)
       updated_game = Game.next_phase(game)
 
       assert updated_game.turn.phase == :waiting
-      # Should drop before new player's turn
       assert updated_game.turn.timeline == []
 
-      # Current player should be second player now
       second_player_uuid = Turn.get_active_player(updated_game.turn)
       assert second_player_uuid != first_player_uuid
     end
 
-    test "does not create snapshot without :waiting -> :ready phase transitions" do
-      owner_uuid = "owner123"
-      provider = Provider.new(:spotify)
-      game = Game.new(owner_uuid, provider: provider)
-
-      # Add participants
-      user1 = User.new()
-      user2 = User.new()
-      {:ok, game} = Game.add_participant(game, user1)
-      {:ok, game} = Game.add_participant(game, user2)
-
-      # Move to ready phase (creates snapshot)
-      # waiting -> ready
+    test "does not create snapshot without :waiting -> :ready phase transitions", %{game: game} do
       game = Game.next_phase(game)
       assert game.turn.phase == :ready
       original_timeline = game.turn.timeline
 
-      # Move through other phases - no new snapshots should be created
       game =
         game
-        # ready -> steady
         |> Game.next_phase()
-        # steady -> challenging
         |> Game.next_phase()
 
       assert game.turn.phase == :challenging
-      # Snapshot unchanged
       assert game.turn.timeline == original_timeline
     end
 
-    test "handles empty timeline when creating snapshot" do
-      owner_uuid = "owner123"
-      provider = Provider.new(:spotify)
-      game = Game.new(owner_uuid, provider: provider)
-
-      # Add participants
-      user1 = User.new()
-      user2 = User.new()
-      {:ok, game} = Game.add_participant(game, user1)
-      {:ok, game} = Game.add_participant(game, user2)
-
-      # First player has no timeline tracks
+    test "handles empty timeline when creating snapshot", %{game: game} do
       assert game.turn.phase == :waiting
       assert game.turn.timeline == []
 
-      # Transition to ready should create empty snapshot
-      # waiting -> ready
       updated_game = Game.next_phase(game)
 
       assert updated_game.turn.phase == :ready
-      # Empty timeline snapshot
       assert updated_game.turn.timeline == []
     end
 
-    test "snapshot reflects active player's timeline at start of their turn" do
-      owner_uuid = "owner123"
-      provider = Provider.new(:spotify)
-      game = Game.new(owner_uuid, provider: provider)
-
-      # Add participants
-      user1 = User.new()
-      user2 = User.new()
-      {:ok, game} = Game.add_participant(game, user1)
-      {:ok, game} = Game.add_participant(game, user2)
-
-      # Add tracks to first player's timeline
+    test "reflects active player's timeline at start of their turn", %{game: game} do
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
       track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
@@ -1253,7 +1144,6 @@ defmodule Songy.Core.GameTest do
 
       first_player_uuid = Turn.get_active_player(game.turn)
 
-      # Build timeline using separate set_turn_track and extend_user_timeline calls
       {:ok, game_with_track1} = Game.set_turn_track(game, track1)
       game_step1 = Game.extend_user_timeline(game_with_track1, first_player_uuid)
 
@@ -1266,35 +1156,20 @@ defmodule Songy.Core.GameTest do
       {:ok, game_with_extra} = Game.set_turn_track(game_step3, extra_track)
       game = Game.extend_user_timeline(game_with_extra, first_player_uuid)
 
-      # Transition to ready should create snapshot of first player's timeline
-      # waiting -> ready
       updated_game = Game.next_phase(game)
 
-      # Snapshot should include all 4 tracks from first player
       assert length(updated_game.turn.timeline) == 4
       assert List.first(updated_game.turn.timeline).title == "Extra Song"
       assert Turn.get_active_player(updated_game.turn) == first_player_uuid
     end
 
-    test "adding tracks after snapshot creation does not affect snapshot" do
-      owner_uuid = "owner123"
-      provider = Provider.new(:spotify)
-      game = Game.new(owner_uuid, provider: provider)
-
-      # Add participants
-      user1 = User.new()
-      user2 = User.new()
-      {:ok, game} = Game.add_participant(game, user1)
-      {:ok, game} = Game.add_participant(game, user2)
-
-      # Add tracks to first player's timeline
+    test "adds tracks after snapshot creation does not affect snapshot", %{game: game} do
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
       track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
 
       first_player_uuid = Turn.get_active_player(game.turn)
 
-      # Build timeline using separate set_turn_track and extend_user_timeline calls
       {:ok, game_with_track1} = Game.set_turn_track(game, track1)
       game_step1 = Game.extend_user_timeline(game_with_track1, first_player_uuid)
 
@@ -1306,76 +1181,213 @@ defmodule Songy.Core.GameTest do
 
       original_timeline = [track3, track2, track1]
 
-      # Create snapshot by transitioning to ready
-      # waiting -> ready (creates snapshot)
       game = Game.next_phase(game)
 
       assert game.turn.timeline == original_timeline
 
-      # Add track to first player after snapshot creation
       new_track = Track.new(title: "New Song", artist: "Artist", year: 2024)
       {:ok, game_with_new_track} = Game.set_turn_track(game, new_track)
       updated_game = Game.extend_user_timeline(game_with_new_track, first_player_uuid)
 
-      # Snapshot should remain unchanged
       assert updated_game.turn.timeline == original_timeline
-      # But user's actual timeline should be updated
       assert length(Game.get_user_timeline(updated_game, first_player_uuid)) == 4
     end
 
-    test "new player gets snapshot created when their turn starts" do
-      owner_uuid = "owner123"
-      provider = Provider.new(:spotify)
-      game = Game.new(owner_uuid, provider: provider)
-
-      # Add participants
-      user1 = User.new()
-      user2 = User.new()
-      {:ok, game} = Game.add_participant(game, user1)
-      {:ok, game} = Game.add_participant(game, user2)
-
-      # Add tracks to second player before first player's turn
+    test "new player gets snapshot created when their turn starts", %{game: game, user2: user2} do
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
 
-      second_player_uuid = game.turn.queue |> Enum.at(1)
+      second_player_uuid = user2.uuid
 
-      # Build timeline for second player
       {:ok, game_with_track1} = Game.set_turn_track(game, track1)
       game_step1 = Game.extend_user_timeline(game_with_track1, second_player_uuid)
 
       {:ok, game_with_track2} = Game.set_turn_track(game_step1, track2)
       game = Game.extend_user_timeline(game_with_track2, second_player_uuid)
 
-      # Complete first player's turn
       game =
         game
-        # waiting -> ready (first player snapshot created)
         |> Game.next_phase()
-        # ready -> steady
         |> Game.next_phase()
-        # steady -> challenging
         |> Game.next_phase()
-        # challenging -> results
         |> Game.next_phase()
 
-      # Transition to second player
-      # results -> waiting (second player)
       game = Game.next_phase(game)
 
       assert game.turn.phase == :waiting
       assert Turn.get_active_player(game.turn) == second_player_uuid
-      # No snapshot yet for new player
       assert game.turn.timeline == []
 
-      # When second player's turn starts, snapshot should be created
-      # waiting -> ready (second player snapshot)
       updated_game = Game.next_phase(game)
 
       assert updated_game.turn.phase == :ready
-      # Snapshot of second player's timeline
       assert length(updated_game.turn.timeline) == 2
       assert Turn.get_active_player(updated_game.turn) == second_player_uuid
+    end
+
+    test "awards points to first valid assumption during phase transition", %{game: game, user1: user1, user2: user2, user3: user3} do
+      active_track = Track.new(title: "Mid Song", artist: "Artist", year: 2000)
+
+      timeline = [
+        Track.new(title: "Earlier Song", artist: "Artist", year: 1995),
+        active_track,
+        Track.new(title: "Later Song", artist: "Artist", year: 2005),
+        Track.new(title: "Even Later Song", artist: "Artist", year: 2010),
+        active_track,
+        Track.new(title: "Newest Song", artist: "Artist", year: 2015),
+        active_track
+      ]
+
+      turn = %Turn{
+        phase: :challenging,
+        timeline: timeline,
+        track: active_track,
+        assumptions: [
+          %{position: 1, user_id: user1.uuid},
+          %{position: 4, user_id: user2.uuid},
+          %{position: 6, user_id: user3.uuid}
+        ]
+      }
+
+      game = %{game | turn: turn}
+
+      assert Game.get_player_score(game, user1.uuid) == 0
+      assert Game.get_player_score(game, user2.uuid) == 0
+      assert Game.get_player_score(game, user3.uuid) == 0
+
+      updated_game = Game.next_phase(game)
+
+      assert updated_game.turn.phase == :results
+
+      assert Game.get_player_score(updated_game, user1.uuid) == 1
+      assert Game.get_player_score(updated_game, user2.uuid) == 0
+      assert Game.get_player_score(updated_game, user3.uuid) == 0
+    end
+
+    test "awards no points when all assumptions are invalid", %{game: game, user1: user1, user2: user2} do
+      active_track = Track.new(title: "Mid Song", artist: "Artist", year: 2000)
+
+      timeline = [
+        Track.new(title: "New Song", artist: "Artist", year: 2030),
+        active_track,
+        Track.new(title: "Old Song", artist: "Artist", year: 1970)
+      ]
+
+      turn = %Turn{
+        phase: :challenging,
+        timeline: timeline,
+        track: active_track,
+        assumptions: [
+          %{position: 1, user_id: user1.uuid},
+          %{position: 1, user_id: user2.uuid}
+        ]
+      }
+
+      game = %{game | turn: turn}
+
+      updated_game = Game.next_phase(game)
+
+      assert Game.get_player_score(updated_game, user1.uuid) == 0
+      assert Game.get_player_score(updated_game, user2.uuid) == 0
+    end
+
+    test "awards points to first valid assumption when multiple assumptions are valid", %{game: game, user1: user1, user2: user2, user3: user3} do
+      active_track = Track.new(title: "Mid", artist: "Artist", year: 2000)
+
+      timeline = [
+        Track.new(title: "Old", artist: "Artist", year: 1980),
+        active_track,
+        active_track,
+        active_track,
+        Track.new(title: "New", artist: "Artist", year: 2020)
+      ]
+
+      turn = %Turn{
+        phase: :challenging,
+        timeline: timeline,
+        track: active_track,
+        assumptions: [
+          %{position: 1, user_id: user3.uuid},
+          %{position: 2, user_id: user1.uuid},
+          %{position: 3, user_id: user2.uuid}
+        ]
+      }
+
+      game = %{game | turn: turn}
+
+      updated_game = Game.next_phase(game)
+
+      assert Game.get_player_score(updated_game, user3.uuid) == 1
+      assert Game.get_player_score(updated_game, user1.uuid) == 0
+      assert Game.get_player_score(updated_game, user2.uuid) == 0
+    end
+
+    test "handles edge cases with empty timeline and boundary positions", %{game: game, user1: user1, user2: user2} do
+      active_track = Track.new(title: "Current", artist: "Artist", year: 1995)
+
+      timeline = [active_track]
+
+      turn = %Turn{
+        phase: :challenging,
+        timeline: timeline,
+        track: active_track,
+        assumptions: [
+          %{position: 0, user_id: user1.uuid},
+          %{position: 1, user_id: user2.uuid}
+        ]
+      }
+
+      game = %{game | turn: turn}
+
+      updated_game = Game.next_phase(game)
+
+      assert Game.get_player_score(updated_game, user1.uuid) == 1
+      assert Game.get_player_score(updated_game, user2.uuid) == 0
+    end
+
+    test "handles assumptions beyond timeline length", %{game: game, user1: user1, user2: user2} do
+      active_track = Track.new(title: "Current", artist: "Artist", year: 1995)
+
+      timeline = [
+        active_track,
+        Track.new(title: "Second", artist: "Artist", year: 2000)
+      ]
+
+      turn = %Turn{
+        phase: :challenging,
+        timeline: timeline,
+        track: active_track,
+        assumptions: [
+          %{position: 0, user_id: user1.uuid},
+          %{position: 1, user_id: user2.uuid},
+          %{position: 2, user_id: user1.uuid}
+        ]
+      }
+
+      game = %{game | turn: turn}
+
+      updated_game = Game.next_phase(game)
+
+      assert Game.get_player_score(updated_game, user1.uuid) == 1
+      assert Game.get_player_score(updated_game, user2.uuid) == 0
+    end
+
+    test "does not award points for non-challenging phase transitions", %{game: game, user1: user1} do
+      turn = %Turn{
+        phase: :ready,
+        timeline: [],
+        track: Track.new(title: "Song", artist: "Artist", year: 2000),
+        assumptions: [
+          %{position: 0, user_id: user1.uuid}
+        ]
+      }
+
+      game = %{game | turn: turn}
+
+      updated_game = Game.next_phase(game)
+
+      assert updated_game.turn.phase == :steady
+      assert Game.get_player_score(updated_game, user1.uuid) == 0
     end
   end
 
