@@ -1402,8 +1402,107 @@ defmodule Songy.Core.GameTest do
       provider = Provider.new(:spotify)
       game = Game.new(owner_uuid, provider: provider)
 
-      # Turn is already initialized with empty queue in Game.new()
       assert Game.get_active_player(game) == nil
+    end
+  end
+
+  describe "scores management" do
+    test "new game has empty scores" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+
+      assert game.scores == %{}
+      assert Game.get_all_scores(game) == %{}
+    end
+
+    test "add_participant initializes player score to 0" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      user = User.new()
+
+      {:ok, updated_game} = Game.add_participant(game, user)
+
+      assert Game.get_player_score(updated_game, user.uuid) == 0
+      assert Map.has_key?(updated_game.scores, user.uuid)
+    end
+
+    test "remove_participant preserves scores for reconnection" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      user = User.new()
+
+      {:ok, game_with_user} = Game.add_participant(game, user)
+      game_with_score = Game.add_player_score(game_with_user, user.uuid, 50)
+      {:ok, game_after_removal} = Game.remove_participant(game_with_score, user.uuid)
+
+      assert Game.get_player_score(game_after_removal, user.uuid) == 50
+      assert Map.has_key?(game_after_removal.scores, user.uuid)
+    end
+
+    test "add_player_score defaults to 1 point" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      user = User.new()
+
+      {:ok, game_with_user} = Game.add_participant(game, user)
+      updated_game = Game.add_player_score(game_with_user, user.uuid)
+
+      assert Game.get_player_score(updated_game, user.uuid) == 1
+    end
+
+    test "add_player_score accumulates points correctly" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      user = User.new()
+
+      {:ok, game_with_user} = Game.add_participant(game, user)
+      game_step1 = Game.add_player_score(game_with_user, user.uuid, 30)
+      game_step2 = Game.add_player_score(game_step1, user.uuid, 20)
+
+      assert Game.get_player_score(game_step2, user.uuid) == 50
+    end
+
+    test "add_player_score returns unchanged game for non-existent player" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+
+      unchanged_game = Game.add_player_score(game, "non_existent_uuid", 10)
+
+      assert unchanged_game == game
+      assert Game.get_player_score(unchanged_game, "non_existent_uuid") == 0
+    end
+
+    test "add_player_score works with default 1 point for multiple calls" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      user = User.new()
+
+      {:ok, game_with_user} = Game.add_participant(game, user)
+
+      final_game =
+        game_with_user
+        |> Game.add_player_score(user.uuid)
+        |> Game.add_player_score(user.uuid)
+        |> Game.add_player_score(user.uuid)
+
+      assert Game.get_player_score(final_game, user.uuid) == 3
+    end
+
+    test "get_all_scores returns all player scores" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      user1 = User.new()
+      user2 = User.new()
+
+      {:ok, game} = Game.add_participant(game, user1)
+      {:ok, game} = Game.add_participant(game, user2)
+      game = Game.add_player_score(game, user1.uuid, 100)
+      game = Game.add_player_score(game, user2.uuid, 75)
+
+      scores = Game.get_all_scores(game)
+      assert Map.get(scores, user1.uuid) == 100
+      assert Map.get(scores, user2.uuid) == 75
+      assert map_size(scores) == 2
     end
   end
 end

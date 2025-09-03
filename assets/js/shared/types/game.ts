@@ -53,4 +53,7 @@ export interface Game {
 
   /** Player timelines mapping UUID to track arrays */
   timelines: Record<string, Track[]>;
+
+  /** Player scores mapping UUID to scores */
+  scores: Record<string, number>;
 }

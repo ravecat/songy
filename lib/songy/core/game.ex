@@ -9,7 +9,18 @@ defmodule Songy.Core.Game do
   use TypedStruct
 
   @derive {Jason.Encoder,
-           only: [:uuid, :participants, :max_participants, :status, :owner_uuid, :provider, :player, :turn, :timelines]}
+           only: [
+             :uuid,
+             :participants,
+             :max_participants,
+             :status,
+             :owner_uuid,
+             :provider,
+             :player,
+             :turn,
+             :timelines,
+             :scores
+           ]}
 
   alias Songy.Core.{User, Provider, Player, Turn, Track}
 
@@ -29,6 +40,7 @@ defmodule Songy.Core.Game do
     field :player, Player.t(), enforce: true
     field :turn, Turn.t()
     field :timelines, %{String.t() => list(Track.t())}, default: %{}
+    field :scores, %{String.t() => integer()}, default: %{}
   end
 
   # Options for game creation based on NimbleOptions format
@@ -80,6 +92,7 @@ defmodule Songy.Core.Game do
           participants: [],
           player: Player.new(),
           timelines: %{},
+          scores: %{},
           turn: Turn.new()
         ],
         opts
@@ -109,9 +122,13 @@ defmodule Songy.Core.Game do
         {:error, :user_already_joined}
 
       true ->
-        updated_participants = [user | game.participants]
-        updated_turn = Turn.add_player_to_queue(game.turn, user.uuid)
-        {:ok, %{game | participants: updated_participants, turn: updated_turn}}
+        {:ok,
+         %{
+           game
+           | participants: [user | game.participants],
+             turn: Turn.add_player_to_queue(game.turn, user.uuid),
+             scores: Map.put_new(game.scores, user.uuid, 0)
+         }}
     end
   end
 
@@ -127,17 +144,19 @@ defmodule Songy.Core.Game do
     * `{:error, :user_not_found}` - If user is not in the game
   """
   @spec remove_participant(t(), String.t()) :: {:ok, t()} | {:error, atom()}
-  def remove_participant(%__MODULE__{} = game, user_uuid) when is_binary(user_uuid) do
-    original_participants = game.participants
-    updated_participants = Enum.reject(game.participants, &(&1.uuid == user_uuid))
-
-    case updated_participants do
-      ^original_participants ->
+  def remove_participant(%__MODULE__{participants: participants} = game, user_uuid)
+      when is_binary(user_uuid) do
+    case Enum.reject(participants, &(&1.uuid == user_uuid)) do
+      ^participants ->
         {:error, :user_not_found}
 
-      _ ->
-        updated_turn = Turn.remove_player_from_queue(game.turn, user_uuid)
-        {:ok, %{game | participants: updated_participants, turn: updated_turn}}
+      updated_participants ->
+        {:ok,
+         %{
+           game
+           | participants: updated_participants,
+             turn: Turn.remove_player_from_queue(game.turn, user_uuid)
+         }}
     end
   end
 
@@ -433,7 +452,7 @@ defmodule Songy.Core.Game do
     Map.get(game.timelines, user_uuid, [])
   end
 
-    @doc """
+  @doc """
   Reorders a track in the active timeline by moving it to a new position.
   Uses the user's assumption to find and move their track.
 
@@ -593,6 +612,85 @@ defmodule Songy.Core.Game do
   """
   @spec get_provider(t()) :: Provider.t()
   def get_provider(%__MODULE__{provider: provider}), do: provider
+
+  @doc """
+  Adds points to a player's score. Defaults to 1 point if not specified.
+
+  If player key doesn't exist in scores, returns the game unchanged.
+
+  ## Parameters
+    * `game` - The game to update
+    * `user_uuid` - UUID of the player
+    * `points` - Points to add (defaults to 1)
+
+  ## Examples
+      iex> provider = Provider.new(:spotify)
+      iex> game = Game.new("owner123", provider: provider)
+      iex> user = User.new()
+      iex> {:ok, game_with_user} = Game.add_participant(game, user)
+      iex> updated_game = Game.add_player_score(game_with_user, user.uuid)
+      iex> Game.get_player_score(updated_game, user.uuid)
+      1
+  """
+  @spec add_player_score(t(), String.t(), integer()) :: t()
+  def add_player_score(%__MODULE__{} = game, user_uuid, points \\ 1)
+      when is_binary(user_uuid) and is_integer(points) do
+    case Map.get(game.scores, user_uuid) do
+      nil ->
+        game
+
+      current_score ->
+        %{game | scores: Map.put(game.scores, user_uuid, current_score + points)}
+    end
+  end
+
+  @doc """
+  Gets the current score for a specific player.
+
+  ## Parameters
+    * `game` - The game to query
+    * `user_uuid` - UUID of the player
+
+  ## Returns
+    * Score as integer, or 0 if player not found
+
+  ## Examples
+      iex> provider = Provider.new(:spotify)
+      iex> game = Game.new("owner123", provider: provider)
+      iex> user = User.new()
+      iex> {:ok, game_with_user} = Game.add_participant(game, user)
+      iex> Game.get_player_score(game_with_user, user.uuid)
+      0
+  """
+  @spec get_player_score(t(), String.t()) :: integer()
+  def get_player_score(%__MODULE__{} = game, user_uuid) when is_binary(user_uuid) do
+    Map.get(game.scores, user_uuid, 0)
+  end
+
+  @doc """
+  Gets all player scores as a map.
+
+  ## Parameters
+    * `game` - The game to query
+
+  ## Returns
+    * Map with user UUIDs as keys and scores as values
+
+  ## Examples
+      iex> provider = Provider.new(:spotify)
+      iex> game = Game.new("owner123", provider: provider)
+      iex> user1 = User.new()
+      iex> user2 = User.new()
+      iex> {:ok, game} = Game.add_participant(game, user1)
+      iex> {:ok, game} = Game.add_participant(game, user2)
+      iex> game = Game.add_player_score(game, user1.uuid, 100)
+      iex> game = Game.add_player_score(game, user2.uuid, 75)
+      iex> scores = Game.get_all_scores(game)
+      iex> Map.get(scores, user1.uuid)
+      100
+  """
+  @spec get_all_scores(t()) :: %{String.t() => integer()}
+  def get_all_scores(%__MODULE__{scores: scores}), do: scores
 
   defp user_already_joined?(%__MODULE__{participants: participants}, %User{uuid: uuid}) do
     Enum.any?(participants, &(&1.uuid == uuid))
