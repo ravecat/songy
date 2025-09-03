@@ -848,13 +848,13 @@ defmodule Songy.Core.TurnTest do
     end
   end
 
-  describe "set_timeline_snapshot/2" do
-    test "sets timeline snapshot" do
+  describe "snapshot_user_timeline/2" do
+    test "creates timeline snapshot" do
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
       timeline = [track1, track2]
 
-      turn = Turn.new() |> Turn.set_timeline_snapshot(timeline)
+      turn = Turn.new() |> Turn.snapshot_user_timeline(timeline)
 
       assert turn.timeline == timeline
     end
@@ -866,14 +866,14 @@ defmodule Songy.Core.TurnTest do
 
       turn =
         Turn.new()
-        |> Turn.set_timeline_snapshot([track1])
-        |> Turn.set_timeline_snapshot([track2, track3])
+        |> Turn.snapshot_user_timeline([track1])
+        |> Turn.snapshot_user_timeline([track2, track3])
 
       assert turn.timeline == [track2, track3]
     end
 
     test "handles empty timeline" do
-      turn = Turn.new() |> Turn.set_timeline_snapshot([])
+      turn = Turn.new() |> Turn.snapshot_user_timeline([])
 
       assert turn.timeline == []
     end
@@ -888,7 +888,7 @@ defmodule Songy.Core.TurnTest do
         Turn.new()
         |> Turn.add_player_to_queue("player-1")
         |> Turn.add_player_to_queue("player-2")
-        |> Turn.set_timeline_snapshot([track1, track2])
+        |> Turn.snapshot_user_timeline([track1, track2])
         |> Turn.update_timeline(track1, "player-1", 1)
         |> Turn.update_timeline(track2, "player-2", 2)
         # Move to results phase
@@ -914,7 +914,7 @@ defmodule Songy.Core.TurnTest do
       turn =
         Turn.new()
         |> Turn.add_player_to_queue("player-1")
-        |> Turn.set_timeline_snapshot([track])
+        |> Turn.snapshot_user_timeline([track])
         |> Turn.update_timeline(track, "player-1", 1)
         # waiting -> ready
         |> Turn.next_phase()

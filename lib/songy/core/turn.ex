@@ -167,7 +167,7 @@ defmodule Songy.Core.Turn do
   end
 
   @doc """
-  Sets the timeline snapshot for the challenging phase.
+  Creates a snapshot of the user's timeline for the challenging phase.
 
   ## Parameters
     * `turn` - The current turn state
@@ -177,12 +177,12 @@ defmodule Songy.Core.Turn do
       iex> track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       iex> track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
       iex> timeline = [track1, track2]
-      iex> turn = Turn.new() |> Turn.set_timeline_snapshot(timeline)
+      iex> turn = Turn.new() |> Turn.snapshot_user_timeline(timeline)
       iex> turn.timeline
       [%Track{title: "Song 1", year: 2020}, %Track{title: "Song 2", year: 2021}]
   """
-  @spec set_timeline_snapshot(t(), list(Track.t())) :: t()
-  def set_timeline_snapshot(%__MODULE__{} = turn, timeline) when is_list(timeline) do
+  @spec snapshot_user_timeline(t(), list(Track.t())) :: t()
+  def snapshot_user_timeline(%__MODULE__{} = turn, timeline) when is_list(timeline) do
     %{turn | timeline: timeline}
   end
 

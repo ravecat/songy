@@ -526,7 +526,7 @@ defmodule Songy.Core.Game do
     new_turn = Turn.next_phase(turn)
     active_player_uuid = Turn.get_active_player(new_turn)
     active_player_timeline = get_user_timeline(game, active_player_uuid)
-    updated_turn = Turn.set_timeline_snapshot(new_turn, active_player_timeline)
+    updated_turn = Turn.snapshot_user_timeline(new_turn, active_player_timeline)
 
     %{game | turn: updated_turn}
   end
