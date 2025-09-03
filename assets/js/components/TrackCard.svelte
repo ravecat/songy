@@ -25,13 +25,7 @@
 </script>
 
 <div class="wrapper">
-  <div
-    class="track-card"
-    style:transform={revealed ? "rotateY(0)" : ""}
-    aria-label={revealed
-      ? `Track: ${track.artist} - ${track.title} (${track.year})`
-      : "Hidden track card"}
-  >
+  <div class="track-card" style:transform={revealed ? "rotateY(0)" : ""}>
     {#if revealed}
       <div
         class="front"
