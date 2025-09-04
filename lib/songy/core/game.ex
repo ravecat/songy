@@ -319,7 +319,7 @@ defmodule Songy.Core.Game do
 
   This function is specifically for creating initial timelines when users join a game.
   The track is always placed at position 0. For general timeline management during gameplay,
-  use extend_user_timeline/4 instead.
+  use extend_user_timeline/2 instead.
 
   ## Parameters
     * `game` - The game to update
@@ -341,40 +341,44 @@ defmodule Songy.Core.Game do
   end
 
   @doc """
-  Extends a user's timeline by adding the current turn track at the specified position.
+  Extends a user's timeline by adding the current turn track at the chronologically correct position.
 
-  This function is used for managing user timelines during gameplay.
-  The track is automatically retrieved from the current turn.
+  This function automatically places the track in chronological order based on the track's year.
+  The track is automatically retrieved from the current turn and placed at the appropriate position
+  to maintain chronological ordering by year.
+
   For initializing new user timelines, use init_user_timeline/3 instead.
 
   ## Parameters
     * `game` - The game to update
     * `user_uuid` - UUID of the user
-    * `position` - Index position where to insert the track (0-based). Defaults to 0 (head).
 
   ## Examples
       iex> provider = Provider.new(:spotify)
       iex> game = Game.new("owner123", provider: provider)
-      iex> track = Track.new(title: "Song", artist: "Artist", year: 2023)
-      iex> game_with_track = Game.set_turn_track(game, track)
+      iex> track1 = Track.new(title: "Old Song", artist: "Artist", year: 2020)
+      iex> track2 = Track.new(title: "New Song", artist: "Artist", year: 2023)
 
-      # Add to head (default behavior)
-      iex> updated_game = Game.extend_user_timeline(game_with_track, "user456")
-      iex> Game.get_user_timeline(updated_game, "user456")
-      [%Track{title: "Song", artist: "Artist", year: 2023}]
+      # Add first track
+      iex> {:ok, game_with_track1} = Game.set_turn_track(game, track1)
+      iex> game = Game.extend_user_timeline(game_with_track1, "user456")
+      iex> Game.get_user_timeline(game, "user456")
+      [%Track{title: "Old Song", year: 2020}]
 
-      # Add to specific position
-      iex> track2 = Track.new(title: "Song2", artist: "Artist2", year: 2024)
-      iex> game_with_track2 = Game.set_turn_track(game_with_track, track2)
-      iex> updated_game = Game.extend_user_timeline(game_with_track2, "user456", 1)
+      # Add newer track - automatically positioned after older track
+      iex> {:ok, game_with_track2} = Game.set_turn_track(game, track2)
+      iex> updated_game = Game.extend_user_timeline(game_with_track2, "user456")
       iex> Game.get_user_timeline(updated_game, "user456")
-      [%Track{title: "Song", artist: "Artist", year: 2023}, %Track{title: "Song2", artist: "Artist2", year: 2024}]
+      [%Track{title: "Old Song", year: 2020}, %Track{title: "New Song", year: 2023}]
   """
-  @spec extend_user_timeline(t(), String.t(), non_neg_integer()) :: t()
-  def extend_user_timeline(%__MODULE__{} = game, user_uuid, position \\ 0)
-      when is_binary(user_uuid) and is_integer(position) and position >= 0 do
+  @spec extend_user_timeline(t(), String.t()) :: t()
+  def extend_user_timeline(%__MODULE__{} = game, user_uuid) when is_binary(user_uuid) do
     track = get_turn_track(game)
-    current_timeline = Map.get(game.timelines, user_uuid, [])
+    current_timeline = get_user_timeline(game, user_uuid)
+
+    position =
+      Enum.find_index(current_timeline, &(&1.year > track.year)) || length(current_timeline)
+
     updated_timeline = List.insert_at(current_timeline, position, track)
 
     %{game | timelines: Map.put(game.timelines, user_uuid, updated_timeline)}
@@ -485,16 +489,6 @@ defmodule Songy.Core.Game do
     end
   end
 
-  defp score_turn_results(%__MODULE__{turn: %{assumptions: assumptions, timeline: timeline}} = game) do
-    case Enum.find(assumptions, &valid_assumption?(timeline, &1.position)) do
-      %{user_id: user_uuid} ->
-        add_player_score(game, user_uuid)
-
-      nil ->
-        game
-    end
-  end
-
   defp valid_assumption?(timeline, position) do
     case Enum.at(timeline, position) do
       nil ->
@@ -531,10 +525,21 @@ defmodule Songy.Core.Game do
     %{game | turn: updated_turn}
   end
 
-  def next_phase(%__MODULE__{turn: %Turn{phase: :challenging} = turn} = game) do
-    game_with_scores = score_turn_results(game)
+  def next_phase(
+        %__MODULE__{turn: %Turn{phase: :challenging, assumptions: assumptions, timeline: timeline} = turn} = game
+      ) do
+    updated_game =
+      case Enum.find(assumptions, &valid_assumption?(timeline, &1.position)) do
+        %{user_id: user_uuid} ->
+          game
+          |> increment_user_score(user_uuid)
+          |> extend_user_timeline(user_uuid)
 
-    %{game_with_scores | turn: Turn.next_phase(turn)}
+        nil ->
+          game
+      end
+
+    %{updated_game | turn: Turn.next_phase(turn)}
   end
 
   def next_phase(%__MODULE__{turn: turn} = game) do
@@ -619,12 +624,12 @@ defmodule Songy.Core.Game do
       iex> game = Game.new("owner123", provider: provider)
       iex> user = User.new()
       iex> {:ok, game_with_user} = Game.add_participant(game, user)
-      iex> updated_game = Game.add_player_score(game_with_user, user.uuid)
+      iex> updated_game = Game.increment_user_score(game_with_user, user.uuid)
       iex> Game.get_player_score(updated_game, user.uuid)
       1
   """
-  @spec add_player_score(t(), String.t(), integer()) :: t()
-  def add_player_score(%__MODULE__{} = game, user_uuid, points \\ 1)
+  @spec increment_user_score(t(), String.t(), integer()) :: t()
+  def increment_user_score(%__MODULE__{} = game, user_uuid, points \\ 1)
       when is_binary(user_uuid) and is_integer(points) do
     case Map.get(game.scores, user_uuid) do
       nil ->
@@ -675,8 +680,8 @@ defmodule Songy.Core.Game do
       iex> user2 = User.new()
       iex> {:ok, game} = Game.add_participant(game, user1)
       iex> {:ok, game} = Game.add_participant(game, user2)
-      iex> game = Game.add_player_score(game, user1.uuid, 100)
-      iex> game = Game.add_player_score(game, user2.uuid, 75)
+      iex> game = Game.increment_user_score(game, user1.uuid, 100)
+      iex> game = Game.increment_user_score(game, user2.uuid, 75)
       iex> scores = Game.get_all_scores(game)
       iex> Map.get(scores, user1.uuid)
       100

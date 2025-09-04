@@ -470,8 +470,8 @@ defmodule Songy.Core.GameTest do
     end
   end
 
-  describe "extend_user_timeline/4" do
-    test "adds track to user timeline" do
+  describe "extend_user_timeline/2" do
+    test "adds track to user timeline in chronological order" do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
       track = Track.new(title: "Test Song", artist: "Test Artist", year: 2023)
@@ -483,149 +483,49 @@ defmodule Songy.Core.GameTest do
       assert updated_game.uuid == game.uuid
     end
 
-    test "adds multiple tracks to user timeline" do
+    test "maintains chronological order when adding multiple tracks" do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
-      track1 = Track.new(title: "Song 1", artist: "Artist 1", year: 2023)
-      track2 = Track.new(title: "Song 2", artist: "Artist 2", year: 2024)
 
-      {:ok, game_with_track1} = Game.set_turn_track(game, track1)
-      game_with_first = Game.extend_user_timeline(game_with_track1, "user456")
+      # Add tracks in non-chronological order to test automatic positioning
+      track_2023 = Track.new(title: "Song 2023", artist: "Artist", year: 2023)
+      track_2020 = Track.new(title: "Song 2020", artist: "Artist", year: 2020)
+      track_2025 = Track.new(title: "Song 2025", artist: "Artist", year: 2025)
 
-      {:ok, game_with_track2} = Game.set_turn_track(game_with_first, track2)
-      game_with_both = Game.extend_user_timeline(game_with_track2, "user456")
+      # Add 2023 track first
+      {:ok, game_with_track1} = Game.set_turn_track(game, track_2023)
+      game_step1 = Game.extend_user_timeline(game_with_track1, "user456")
 
-      assert Game.get_user_timeline(game_with_both, "user456") == [track2, track1]
+      # Add 2020 track - should be positioned before 2023
+      {:ok, game_with_track2} = Game.set_turn_track(game_step1, track_2020)
+      game_step2 = Game.extend_user_timeline(game_with_track2, "user456")
+
+      # Add 2025 track - should be positioned after 2023
+      {:ok, game_with_track3} = Game.set_turn_track(game_step2, track_2025)
+      final_game = Game.extend_user_timeline(game_with_track3, "user456")
+
+      # Should be in chronological order: 2020, 2023, 2025
+      timeline = Game.get_user_timeline(final_game, "user456")
+      assert timeline == [track_2020, track_2023, track_2025]
     end
 
-    test "manages tracks for different users separately" do
+    test "maintains stable sort for tracks with same year" do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
-      track1 = Track.new(title: "Song 1", artist: "Artist 1", year: 2023)
-      track2 = Track.new(title: "Song 2", artist: "Artist 2", year: 2024)
 
-      {:ok, game_with_track1} = Game.set_turn_track(game, track1)
-      game_with_user1 = Game.extend_user_timeline(game_with_track1, "user1")
+      track1 = Track.new(title: "Song A", artist: "Artist A", year: 2023)
+      track2 = Track.new(title: "Song B", artist: "Artist B", year: 2023)
 
-      {:ok, game_with_track2} = Game.set_turn_track(game_with_user1, track2)
-      game_updated = Game.extend_user_timeline(game_with_track2, "user2")
-
-      assert Game.get_user_timeline(game_updated, "user1") == [track1]
-      assert Game.get_user_timeline(game_updated, "user2") == [track2]
-    end
-
-    test "adds track to head with position: 0" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-      track1 = Track.new(title: "Song 1", artist: "Artist 1", year: 2023)
-      track2 = Track.new(title: "Song 2", artist: "Artist 2", year: 2024)
-
-      {:ok, game_with_track1} = Game.set_turn_track(game, track1)
-      game_with_first = Game.extend_user_timeline(game_with_track1, "user456")
-
-      {:ok, game_with_track2} = Game.set_turn_track(game_with_first, track2)
-      game_with_both = Game.extend_user_timeline(game_with_track2, "user456", 0)
-
-      assert Game.get_user_timeline(game_with_both, "user456") == [track2, track1]
-    end
-
-    test "adds track to specific position in timeline" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-      track1 = Track.new(title: "Song 1", artist: "Artist 1", year: 2023)
-      track2 = Track.new(title: "Song 2", artist: "Artist 2", year: 2024)
-      track3 = Track.new(title: "Song 3", artist: "Artist 3", year: 2025)
-
+      # Add both tracks with same year
       {:ok, game_with_track1} = Game.set_turn_track(game, track1)
       game_step1 = Game.extend_user_timeline(game_with_track1, "user456")
 
       {:ok, game_with_track2} = Game.set_turn_track(game_step1, track2)
-      game_with_timeline = Game.extend_user_timeline(game_with_track2, "user456")
+      game_step2 = Game.extend_user_timeline(game_with_track2, "user456")
 
-      {:ok, game_with_track3} = Game.set_turn_track(game_with_timeline, track3)
-      updated_game = Game.extend_user_timeline(game_with_track3, "user456", 1)
-
-      assert Game.get_user_timeline(updated_game, "user456") == [track2, track3, track1]
-    end
-
-    test "adds track at end when position equals list length" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-      track1 = Track.new(title: "Song 1", artist: "Artist 1", year: 2023)
-      track2 = Track.new(title: "Song 2", artist: "Artist 2", year: 2024)
-      track3 = Track.new(title: "Song 3", artist: "Artist 3", year: 2025)
-
-      {:ok, game_with_track1} = Game.set_turn_track(game, track1)
-      game_step1 = Game.extend_user_timeline(game_with_track1, "user456")
-
-      {:ok, game_with_track2} = Game.set_turn_track(game_step1, track2)
-      game_with_timeline = Game.extend_user_timeline(game_with_track2, "user456")
-
-      {:ok, game_with_track3} = Game.set_turn_track(game_with_timeline, track3)
-      updated_game = Game.extend_user_timeline(game_with_track3, "user456", 2)
-
-      assert Game.get_user_timeline(updated_game, "user456") == [track2, track1, track3]
-    end
-
-    test "adds track at end when position is greater than list length" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-      track1 = Track.new(title: "Song 1", artist: "Artist 1", year: 2023)
-      track2 = Track.new(title: "Song 2", artist: "Artist 2", year: 2024)
-
-      {:ok, game_with_track1} = Game.set_turn_track(game, track1)
-      game_with_first = Game.extend_user_timeline(game_with_track1, "user456")
-
-      {:ok, game_with_track2} = Game.set_turn_track(game_with_first, track2)
-      updated_game = Game.extend_user_timeline(game_with_track2, "user456", 999)
-
-      assert Game.get_user_timeline(updated_game, "user456") == [track1, track2]
-    end
-
-    test "validates position argument types" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-      track = Track.new(title: "Test Song", artist: "Test Artist", year: 2023)
-
-      {:ok, game_with_track} = Game.set_turn_track(game, track)
-
-      assert_raise FunctionClauseError, fn ->
-        Game.extend_user_timeline(game_with_track, "user456", "invalid")
-      end
-
-      assert_raise FunctionClauseError, fn ->
-        Game.extend_user_timeline(game_with_track, "user456", -1)
-      end
-    end
-
-    test "supports multiple position options scenarios" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-
-      tracks =
-        for i <- 1..5 do
-          Track.new(title: "Song #{i}", artist: "Artist #{i}", year: 2020 + i)
-        end
-
-      [track1, track2, track3, track4, track5] = tracks
-
-      {:ok, game_with_track1} = Game.set_turn_track(game, track1)
-      game = Game.extend_user_timeline(game_with_track1, "user456")
-
-      {:ok, game_with_track2} = Game.set_turn_track(game, track2)
-      game = Game.extend_user_timeline(game_with_track2, "user456", 0)
-
-      {:ok, game_with_track3} = Game.set_turn_track(game, track3)
-      game = Game.extend_user_timeline(game_with_track3, "user456", 2)
-
-      {:ok, game_with_track4} = Game.set_turn_track(game, track4)
-      game = Game.extend_user_timeline(game_with_track4, "user456", 1)
-
-      {:ok, game_with_track5} = Game.set_turn_track(game, track5)
-      game = Game.extend_user_timeline(game_with_track5, "user456", 999)
-
-      expected = [track2, track4, track1, track3, track5]
-      assert Game.get_user_timeline(game, "user456") == expected
+      timeline = Game.get_user_timeline(game_step2, "user456")
+      # First added track should remain first for same year (stable sort)
+      assert timeline == [track1, track2]
     end
   end
 
@@ -1009,7 +909,7 @@ defmodule Songy.Core.GameTest do
         |> Game.next_phase()
 
       assert game.turn.phase == :results
-      assert game.turn.timeline == [track3, track2, track1]
+      assert game.turn.timeline == [track1, track2, track3]
 
       updated_game = Game.next_phase(game)
 
@@ -1067,7 +967,7 @@ defmodule Songy.Core.GameTest do
       updated_game = Game.next_phase(game)
 
       assert length(updated_game.turn.timeline) == 4
-      assert List.first(updated_game.turn.timeline).title == "Extra Song"
+      assert List.last(updated_game.turn.timeline).title == "Extra Song"
       assert Turn.get_active_player(updated_game.turn) == first_player_uuid
     end
 
@@ -1087,7 +987,7 @@ defmodule Songy.Core.GameTest do
       {:ok, game_with_track3} = Game.set_turn_track(game_step2, track3)
       game = Game.extend_user_timeline(game_with_track3, first_player_uuid)
 
-      original_timeline = [track3, track2, track1]
+      original_timeline = [track1, track2, track3]
 
       game = Game.next_phase(game)
 
@@ -1133,7 +1033,12 @@ defmodule Songy.Core.GameTest do
       assert Turn.get_active_player(updated_game.turn) == second_player_uuid
     end
 
-    test "awards points to first valid assumption during phase transition", %{game: game, user1: user1, user2: user2, user3: user3} do
+    test "awards points to first valid assumption during phase transition", %{
+      game: game,
+      user1: user1,
+      user2: user2,
+      user3: user3
+    } do
       active_track = Track.new(title: "Mid Song", artist: "Artist", year: 2000)
 
       timeline = [
@@ -1172,6 +1077,58 @@ defmodule Songy.Core.GameTest do
       assert Game.get_player_score(updated_game, user3.uuid) == 0
     end
 
+    test "adds track to winner's timeline during phase transition", %{
+      game: game,
+      user1: user1,
+      user2: user2
+    } do
+      active_track = Track.new(title: "Mid Song", artist: "Artist", year: 2000)
+
+      timeline = [
+        Track.new(title: "Earlier Song", artist: "Artist", year: 1995),
+        active_track,
+        Track.new(title: "Later Song", artist: "Artist", year: 2005)
+      ]
+
+      turn = %Turn{
+        phase: :challenging,
+        timeline: timeline,
+        track: active_track,
+        assumptions: [
+          %{position: 1, user_id: user1.uuid},
+          %{position: 4, user_id: user2.uuid}
+        ]
+      }
+
+      game = %{game | turn: turn}
+
+      existing_track1 = Track.new(title: "Old Track", artist: "Artist", year: 1990)
+      existing_track2 = Track.new(title: "New Track", artist: "Artist", year: 2010)
+
+      game = Game.init_user_timeline(game, user1.uuid, existing_track1)
+      game = Game.extend_user_timeline(game, user1.uuid)
+
+      turn = %{turn | track: Track.new(title: "Test Track", artist: "Artist", year: 2005)}
+      game = %{game | turn: turn}
+
+      game = %{game | timelines: Map.put(game.timelines, user1.uuid, [existing_track1, existing_track2])}
+
+      assert length(Game.get_user_timeline(game, user1.uuid)) == 2
+      assert Game.get_user_timeline(game, user2.uuid) == []
+
+      updated_game = Game.next_phase(game)
+
+      user1_timeline = Game.get_user_timeline(updated_game, user1.uuid)
+      assert length(user1_timeline) == 3
+
+      assert Enum.at(user1_timeline, 0).year == 1990
+      assert Enum.at(user1_timeline, 1).year == 2005
+      assert Enum.at(user1_timeline, 1).title == "Test Track"
+      assert Enum.at(user1_timeline, 2).year == 2010
+
+      assert Game.get_user_timeline(updated_game, user2.uuid) == []
+    end
+
     test "awards no points when all assumptions are invalid", %{game: game, user1: user1, user2: user2} do
       active_track = Track.new(title: "Mid Song", artist: "Artist", year: 2000)
 
@@ -1199,7 +1156,12 @@ defmodule Songy.Core.GameTest do
       assert Game.get_player_score(updated_game, user2.uuid) == 0
     end
 
-    test "awards points to first valid assumption when multiple assumptions are valid", %{game: game, user1: user1, user2: user2, user3: user3} do
+    test "awards points to first valid assumption when multiple assumptions are valid", %{
+      game: game,
+      user1: user1,
+      user2: user2,
+      user3: user3
+    } do
       active_track = Track.new(title: "Mid", artist: "Artist", year: 2000)
 
       timeline = [
@@ -1352,47 +1314,47 @@ defmodule Songy.Core.GameTest do
       user = User.new()
 
       {:ok, game_with_user} = Game.add_participant(game, user)
-      game_with_score = Game.add_player_score(game_with_user, user.uuid, 50)
+      game_with_score = Game.increment_user_score(game_with_user, user.uuid, 50)
       {:ok, game_after_removal} = Game.remove_participant(game_with_score, user.uuid)
 
       assert Game.get_player_score(game_after_removal, user.uuid) == 50
       assert Map.has_key?(game_after_removal.scores, user.uuid)
     end
 
-    test "add_player_score defaults to 1 point" do
+    test "increment_user_score defaults to 1 point" do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
       user = User.new()
 
       {:ok, game_with_user} = Game.add_participant(game, user)
-      updated_game = Game.add_player_score(game_with_user, user.uuid)
+      updated_game = Game.increment_user_score(game_with_user, user.uuid)
 
       assert Game.get_player_score(updated_game, user.uuid) == 1
     end
 
-    test "add_player_score accumulates points correctly" do
+    test "increment_user_score accumulates points correctly" do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
       user = User.new()
 
       {:ok, game_with_user} = Game.add_participant(game, user)
-      game_step1 = Game.add_player_score(game_with_user, user.uuid, 30)
-      game_step2 = Game.add_player_score(game_step1, user.uuid, 20)
+      game_step1 = Game.increment_user_score(game_with_user, user.uuid, 30)
+      game_step2 = Game.increment_user_score(game_step1, user.uuid, 20)
 
       assert Game.get_player_score(game_step2, user.uuid) == 50
     end
 
-    test "add_player_score returns unchanged game for non-existent player" do
+    test "increment_user_score returns unchanged game for non-existent player" do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
 
-      unchanged_game = Game.add_player_score(game, "non_existent_uuid", 10)
+      unchanged_game = Game.increment_user_score(game, "non_existent_uuid", 10)
 
       assert unchanged_game == game
       assert Game.get_player_score(unchanged_game, "non_existent_uuid") == 0
     end
 
-    test "add_player_score works with default 1 point for multiple calls" do
+    test "increment_user_score works with default 1 point for multiple calls" do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
       user = User.new()
@@ -1401,9 +1363,9 @@ defmodule Songy.Core.GameTest do
 
       final_game =
         game_with_user
-        |> Game.add_player_score(user.uuid)
-        |> Game.add_player_score(user.uuid)
-        |> Game.add_player_score(user.uuid)
+        |> Game.increment_user_score(user.uuid)
+        |> Game.increment_user_score(user.uuid)
+        |> Game.increment_user_score(user.uuid)
 
       assert Game.get_player_score(final_game, user.uuid) == 3
     end
@@ -1416,8 +1378,8 @@ defmodule Songy.Core.GameTest do
 
       {:ok, game} = Game.add_participant(game, user1)
       {:ok, game} = Game.add_participant(game, user2)
-      game = Game.add_player_score(game, user1.uuid, 100)
-      game = Game.add_player_score(game, user2.uuid, 75)
+      game = Game.increment_user_score(game, user1.uuid, 100)
+      game = Game.increment_user_score(game, user2.uuid, 75)
 
       scores = Game.get_all_scores(game)
       assert Map.get(scores, user1.uuid) == 100
