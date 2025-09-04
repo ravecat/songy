@@ -14,13 +14,14 @@ defmodule SongyWeb.RoomChannelTest do
 
   setup do
     current_user = User.get_user("test-uuid")
+    owner = User.get_user("owner123")
 
-    %{current_user: current_user}
+    %{current_user: current_user, owner: owner}
   end
 
   describe "channel join" do
-    test "handles join succeeds", %{current_user: current_user} do
-      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
+    test "handles join succeeds", %{current_user: current_user, owner: owner} do
+      {:ok, game} = GameSession.create_game_session(owner.uuid, :spotify)
 
       {:ok, reply, _socket} = join_room_channel(current_user, game.uuid)
       assert reply == %{}
@@ -41,9 +42,9 @@ defmodule SongyWeb.RoomChannelTest do
       GameSession.end_game_session(game.uuid)
     end
 
-    test "does not store credentials when non-owner joins", %{current_user: current_user} do
+    test "does not store credentials when non-owner joins", %{current_user: current_user, owner: owner} do
       provider = Provider.new(:spotify, %{access_token: "test_token"})
-      {:ok, game} = GameSession.create_game_session("other_owner", :spotify)
+      {:ok, game} = GameSession.create_game_session(owner.uuid, :spotify)
 
       # Join channel as non-owner with provider
       {:ok, _, _socket} = join_room_channel(current_user, game.uuid, %{provider: provider})
@@ -72,7 +73,15 @@ defmodule SongyWeb.RoomChannelTest do
   end
 
   describe "start_game event" do
-    test "changes game status and broadcasts update", %{current_user: current_user} do
+    setup %{owner: owner} do
+      {:ok, game} = GameSession.create_game_session(owner.uuid, :spotify)
+
+      on_exit(fn -> GameSession.end_game_session(game.uuid) end)
+
+      %{game: game}
+    end
+
+    test "changes game status and broadcasts update", %{current_user: current_user, game: game} do
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
          %Spotify.Track{
@@ -84,8 +93,6 @@ defmodule SongyWeb.RoomChannelTest do
            }
          }}
       end)
-
-      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
       credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
       :ok = GameSession.set_credentials(game.uuid, credentials)
@@ -102,8 +109,6 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, updated_game} = GameSession.lookup_game_session(game.uuid)
       assert updated_game.status == :in_progress
-
-      GameSession.end_game_session(game.uuid)
     end
 
     test "fails when game session does not exist", %{current_user: current_user} do
@@ -117,8 +122,8 @@ defmodule SongyWeb.RoomChannelTest do
   end
 
   describe "update_provider event" do
-    test "refuses access to provider for non-owner user", %{current_user: current_user} do
-      {:ok, game} = GameSession.create_game_session("other_owner", :spotify)
+    test "refuses access to provider for non-owner user", %{current_user: current_user, owner: owner} do
+      {:ok, game} = GameSession.create_game_session(owner.uuid, :spotify)
 
       # Check provider state before update attempt
       {:ok, game_before} = GameSession.lookup_game_session(game.uuid)
@@ -189,88 +194,81 @@ defmodule SongyWeb.RoomChannelTest do
   end
 
   describe "get_spotify_token event" do
-    test "returns access token when provider is available", %{current_user: current_user} do
+    setup %{owner: owner} do
+      {:ok, game} = GameSession.create_game_session(owner.uuid, :spotify)
+
+      on_exit(fn -> GameSession.end_game_session(game.uuid) end)
+
+      %{game: game}
+    end
+
+    test "returns access token when provider is available", %{current_user: current_user, game: game} do
       provider = Provider.new(:spotify, %{access_token: "spotify_access_token_123"})
-      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
       {:ok, _, socket} = join_room_channel(current_user, game.uuid, %{provider: provider})
 
       ref = push(socket, "get_spotify_token", %{})
 
       assert_reply ref, :ok, %{token: "spotify_access_token_123"}
-
-      GameSession.end_game_session(game.uuid)
     end
 
-    test "returns error when provider has no access_token", %{current_user: current_user} do
+    test "returns error when provider has no access_token", %{current_user: current_user, game: game} do
       provider = Provider.new(:spotify, %{refresh_token: "refresh_token_123"})
 
-      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
-
       {:ok, _, socket} = join_room_channel(current_user, game.uuid, %{provider: provider})
 
       ref = push(socket, "get_spotify_token", %{})
 
       assert_reply ref, :error, %{reason: "invalid_credentials"}
-
-      GameSession.end_game_session(game.uuid)
     end
 
-    test "returns error with missing access_token", %{current_user: current_user} do
+    test "returns error with missing access_token", %{current_user: current_user, game: game} do
       provider = Provider.new(:spotify, %{access_token: nil})
 
-      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
-
       {:ok, _, socket} = join_room_channel(current_user, game.uuid, %{provider: provider})
 
       ref = push(socket, "get_spotify_token", %{})
 
       assert_reply ref, :error, %{reason: "invalid_credentials"}
-
-      GameSession.end_game_session(game.uuid)
     end
 
-    test "returns error when provider is nil", %{current_user: current_user} do
-      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
-
+    test "returns error when provider is nil", %{current_user: current_user, game: game} do
       {:ok, _, socket} = join_room_channel(current_user, game.uuid, %{provider: nil})
 
       ref = push(socket, "get_spotify_token", %{})
 
       assert_reply ref, :error, %{reason: "invalid_credentials"}
-
-      GameSession.end_game_session(game.uuid)
     end
 
-    test "returns error when provider is unknown", %{current_user: current_user} do
+    test "returns error when provider is unknown", %{current_user: current_user, game: game} do
       provider = Provider.new(:youtube, %{access_token: "youtube_token_123"})
-
-      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
       {:ok, _, socket} = join_room_channel(current_user, game.uuid, %{provider: provider})
 
       ref = push(socket, "get_spotify_token", %{})
 
       assert_reply ref, :error, %{reason: "invalid_credentials"}
-
-      GameSession.end_game_session(game.uuid)
     end
 
-    test "returns error with missing provider", %{current_user: current_user} do
-      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
-
+    test "returns error with missing provider", %{current_user: current_user, game: game} do
       {:ok, _, socket} = join_room_channel(current_user, game.uuid)
 
       ref = push(socket, "get_spotify_token", %{})
 
       assert_reply ref, :error, %{reason: "invalid_credentials"}
-
-      GameSession.end_game_session(game.uuid)
     end
   end
 
   describe "next_phase event" do
-    test "advances game phase and broadcasts state update", %{current_user: current_user} do
+    setup %{owner: owner} do
+      {:ok, game} = GameSession.create_game_session(owner.uuid, :spotify)
+
+      on_exit(fn -> GameSession.end_game_session(game.uuid) end)
+
+      %{game: game}
+    end
+
+    test "advances game phase and broadcasts state update", %{current_user: current_user, game: game} do
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
          %Spotify.Track{
@@ -284,8 +282,6 @@ defmodule SongyWeb.RoomChannelTest do
       end)
 
       credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
-
-      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
       :ok = GameSession.set_credentials(game.uuid, credentials)
 
       [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
@@ -303,8 +299,6 @@ defmodule SongyWeb.RoomChannelTest do
 
       assert_reply ref, :ok
       assert_broadcast "state_updated", %{turn: %{phase: :ready}}
-
-      GameSession.end_game_session(game.uuid)
     end
 
     test "fails when game session does not exist", %{current_user: current_user} do
@@ -315,21 +309,25 @@ defmodule SongyWeb.RoomChannelTest do
       refute_reply ref, :ok
     end
 
-    test "fails when game is not in progress", %{current_user: current_user} do
-      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
-
+    test "fails when game is not in progress", %{current_user: current_user, game: game} do
       {:ok, _, socket} = join_room_channel(current_user, game.uuid)
 
       ref = push(socket, "next_phase", %{})
 
       refute_reply ref, :ok
-
-      GameSession.end_game_session(game.uuid)
     end
   end
 
   describe "make_assumption event" do
-    test "makes user assumption and broadcasts state update", %{current_user: current_user} do
+    setup %{owner: owner} do
+      {:ok, game} = GameSession.create_game_session(owner.uuid, :spotify)
+
+      on_exit(fn -> GameSession.end_game_session(game.uuid) end)
+
+      %{game: game}
+    end
+
+    test "makes user assumption and broadcasts state update", %{current_user: current_user, game: game} do
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
          %Spotify.Track{
@@ -341,8 +339,6 @@ defmodule SongyWeb.RoomChannelTest do
            }
          }}
       end)
-
-      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
       credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
       :ok = GameSession.set_credentials(game.uuid, credentials)
@@ -377,8 +373,6 @@ defmodule SongyWeb.RoomChannelTest do
         status: :in_progress,
         turn: %{track: ^track, phase: :steady, timeline: [^track, ^initial_track]}
       }
-
-      GameSession.end_game_session(game.uuid)
     end
 
     test "handles error gracefully when game session does not exist", %{current_user: current_user} do
@@ -391,7 +385,15 @@ defmodule SongyWeb.RoomChannelTest do
   end
 
   describe "reorder_timeline event" do
-    test "reorders user timeline and broadcasts state update", %{current_user: current_user} do
+    setup %{owner: owner} do
+      {:ok, game} = GameSession.create_game_session(owner.uuid, :spotify)
+
+      on_exit(fn -> GameSession.end_game_session(game.uuid) end)
+
+      %{game: game}
+    end
+
+    test "reorders user timeline and broadcasts state update", %{current_user: current_user, game: game} do
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
          %Spotify.Track{
@@ -403,8 +405,6 @@ defmodule SongyWeb.RoomChannelTest do
            }
          }}
       end)
-
-      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
       credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
       :ok = GameSession.set_credentials(game.uuid, credentials)
@@ -450,8 +450,6 @@ defmodule SongyWeb.RoomChannelTest do
           ^current_user_uuid => [^initial_track]
         }
       }
-
-      GameSession.end_game_session(game.uuid)
     end
 
     test "handles error gracefully when game session does not exist", %{current_user: current_user} do

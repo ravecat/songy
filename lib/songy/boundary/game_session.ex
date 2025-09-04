@@ -426,10 +426,8 @@ defmodule Songy.Boundary.GameSession do
     end
   end
 
-  # Retrieves stored credentials from Registry for internal use
   @spec get_credentials(String.t()) :: {:ok, map()} | {:error, :no_credentials | :game_session_not_found}
   defp get_credentials(game_uuid) do
-    # First check if game session exists
     if game_session_exists?(game_uuid) do
       case Registry.lookup(Songy.Registry, {:credentials, game_uuid}) do
         [{_pid, credentials}] when not is_nil(credentials) -> {:ok, credentials}
