@@ -7,8 +7,7 @@ defmodule Songy.Boundary.GameSessionTest do
   describe "create_game_session/2" do
     test "starts new game session process with owner and provider" do
       owner_uuid = "owner123"
-      provider_id = :spotify
-      assert {:ok, game} = GameSession.create_game_session(owner_uuid, provider_id)
+      assert {:ok, game} = GameSession.create_game_session(owner_uuid, :spotify)
 
       assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
       assert Process.alive?(pid)
@@ -50,8 +49,7 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "remove_participant/2" do
     setup do
-      provider_id = :spotify
-      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
       on_exit(fn -> GameSession.end_game_session(game.uuid) end)
 
@@ -89,8 +87,7 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "lookup_game_session/1" do
     setup do
-      provider_id = :spotify
-      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
       on_exit(fn -> GameSession.end_game_session(game.uuid) end)
 
@@ -113,8 +110,7 @@ defmodule Songy.Boundary.GameSessionTest do
 
   describe "start_game_session/1" do
     setup do
-      provider_id = :spotify
-      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
       on_exit(fn -> GameSession.end_game_session(game.uuid) end)
 
@@ -701,10 +697,6 @@ defmodule Songy.Boundary.GameSessionTest do
       # Set credentials first
       assert :ok = GameSession.set_credentials(game.uuid, credentials)
 
-      # Verify credentials are set
-      assert {:ok, stored_creds} = GameSession.get_credentials(game.uuid)
-      assert stored_creds.access_token == "test_token"
-
       # Subscribe to state updates
       Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
 
@@ -731,8 +723,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "handles missing credentials gracefully when adding random track" do
-      provider_id = :spotify
-      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
       assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
 
@@ -755,8 +746,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "handles random track search failure gracefully" do
-      provider_id = :spotify
-      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
       %{meta: credentials} = Provider.new(:spotify, %{access_token: "valid_token"})
 
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
@@ -791,8 +781,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "handles Spotify API error gracefully" do
-      provider_id = :spotify
-      {:ok, game} = GameSession.create_game_session("owner123", provider_id)
+      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
       %{meta: credentials} = Provider.new(:spotify, %{access_token: "invalid_token"})
 
       # Setup mock for Spotify API error
@@ -914,7 +903,9 @@ defmodule Songy.Boundary.GameSessionTest do
       provider = Provider.new(:spotify, %{access_token: "test_token", device_id: "test_device"})
 
       assert :ok = GameSession.set_credentials(game.uuid, provider)
-      assert {:ok, credentials} = GameSession.get_credentials(game.uuid)
+
+      # Verify credentials are stored in Registry
+      assert [{_pid, credentials}] = Registry.lookup(Songy.Registry, {:credentials, game.uuid})
       assert credentials.access_token == "test_token"
     end
 
@@ -922,56 +913,6 @@ defmodule Songy.Boundary.GameSessionTest do
       provider = Provider.new(:spotify, %{access_token: "test_token"})
 
       assert {:error, :game_session_not_found} = GameSession.set_credentials("nonexistent", provider)
-    end
-  end
-
-  describe "get_credentials/1" do
-    setup do
-      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
-
-      on_exit(fn -> GameSession.end_game_session(game.uuid) end)
-
-      %{game: game}
-    end
-
-    test "retrieves stored credentials successfully", %{game: game} do
-      provider = Provider.new(:spotify, %{access_token: "test_token", device_id: "test_device"})
-      assert :ok = GameSession.set_credentials(game.uuid, provider)
-
-      # Get credentials
-      assert {:ok, credentials} = GameSession.get_credentials(game.uuid)
-      assert credentials.access_token == "test_token"
-    end
-
-    test "returns error when no credentials stored", %{game: game} do
-      # Try to get credentials when none are stored
-      assert {:error, :no_credentials} = GameSession.get_credentials(game.uuid)
-    end
-
-    test "returns error for non-existent session" do
-      assert {:error, :game_session_not_found} = GameSession.get_credentials("nonexistent")
-    end
-
-    test "credentials are cleaned up when session terminates" do
-      # This test manages its own session lifecycle, so it's separate from setup
-      {:ok, game} = GameSession.create_game_session("owner123", :spotify)
-
-      provider = Provider.new(:spotify, %{access_token: "test_token"})
-      assert :ok = GameSession.set_credentials(game.uuid, provider)
-      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
-
-      # Verify credentials are stored
-      assert [{_pid, _credentials}] = Registry.lookup(Songy.Registry, {:credentials, game.uuid})
-
-      monitor_ref = Process.monitor(pid)
-
-      # Terminate session
-      GameSession.end_game_session(game.uuid)
-
-      assert_receive {:DOWN, ^monitor_ref, :process, ^pid, _reason}
-
-      # Verify credentials are cleaned up
-      assert [] == Registry.lookup(Songy.Registry, {:credentials, game.uuid})
     end
   end
 

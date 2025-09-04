@@ -18,7 +18,6 @@ defmodule Songy.Boundary.GameSession do
     * `owner?/2` - Checks if a user is the owner of a game session
     * `update_provider/2` - Updates the provider for a game session (owner only)
     * `set_credentials/2` - Stores provider credentials in Registry for session access
-    * `get_credentials/1` - Retrieves stored credentials from Registry
     * `make_assumption/2` - Adds current turn track to active timeline at beginning (position 0)
     * `make_assumption/3` - Adds current turn track to active timeline at specified position
     * `reorder_timeline/4` - Reorders a track in user's timeline to new position
@@ -427,24 +426,9 @@ defmodule Songy.Boundary.GameSession do
     end
   end
 
-  @doc """
-  Retrieves stored credentials from Registry.
-
-  ## Parameters
-    * `game_uuid` - UUID of the game session
-
-  ## Examples
-      iex> GameSession.get_credentials("game123")
-      {:ok, %{access_token: "token123", device_id: "device456"}}
-
-      iex> GameSession.get_credentials("nonexistent")
-      {:error, :game_session_not_found}
-
-      iex> GameSession.get_credentials("game_without_credentials")
-      {:error, :no_credentials}
-  """
+  # Retrieves stored credentials from Registry for internal use
   @spec get_credentials(String.t()) :: {:ok, map()} | {:error, :no_credentials | :game_session_not_found}
-  def get_credentials(game_uuid) do
+  defp get_credentials(game_uuid) do
     # First check if game session exists
     if game_session_exists?(game_uuid) do
       case Registry.lookup(Songy.Registry, {:credentials, game_uuid}) do
@@ -545,6 +529,12 @@ defmodule Songy.Boundary.GameSession do
     )
 
     {:noreply, updated_game}
+  end
+
+  @impl GenServer
+  def handle_info(event, game) do
+    Logger.warning("Received unexpected message #{inspect(event)} for game #{game.uuid}")
+    {:noreply, game}
   end
 
   @impl GenServer

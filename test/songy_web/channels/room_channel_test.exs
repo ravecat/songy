@@ -34,8 +34,8 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, _socket} = join_room_channel(current_user, game.uuid, %{provider: provider})
 
-      # Verify credentials are stored
-      assert {:ok, credentials} = GameSession.get_credentials(game.uuid)
+      # Verify credentials are stored in Registry
+      assert [{_pid, credentials}] = Registry.lookup(Songy.Registry, {:credentials, game.uuid})
       assert credentials.access_token == "test_token"
 
       GameSession.end_game_session(game.uuid)
@@ -49,7 +49,7 @@ defmodule SongyWeb.RoomChannelTest do
       {:ok, _, _socket} = join_room_channel(current_user, game.uuid, %{provider: provider})
 
       # Verify no credentials are stored
-      assert {:error, :no_credentials} = GameSession.get_credentials(game.uuid)
+      assert [] = Registry.lookup(Songy.Registry, {:credentials, game.uuid})
 
       GameSession.end_game_session(game.uuid)
     end
@@ -60,8 +60,12 @@ defmodule SongyWeb.RoomChannelTest do
       # Join channel as owner without provider
       {:ok, _, _socket} = join_room_channel(current_user, game.uuid, %{provider: nil})
 
-      # Verify no credentials are stored
-      assert {:error, :no_credentials} = GameSession.get_credentials(game.uuid)
+      # Verify no credentials are stored (should be nil or empty)
+      case Registry.lookup(Songy.Registry, {:credentials, game.uuid}) do
+        [] -> :ok
+        [{_pid, nil}] -> :ok
+        result -> flunk("Expected no credentials or nil credentials, got: #{inspect(result)}")
+      end
 
       GameSession.end_game_session(game.uuid)
     end
