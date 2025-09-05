@@ -4,7 +4,8 @@
   import { PUSH_EVENT } from "~shared/types/channel";
   import { getGameContext } from "~components/GameContext.svelte";
 
-  const { channel } = $derived.by(getGameContext);
+  const { channel, state } = $derived.by(getGameContext);
+  const status = $derived(state?.status);
 
   const handleNextTurn = () => {
     channel.push(PUSH_EVENT.NEXT_PHASE, {});
@@ -13,4 +14,9 @@
 
 <Participants />
 <ActiveTimeline />
-<button class="btn" onclick={handleNextTurn}>Next Turn</button>
+{#if status === "finished"}
+  <p>Game Over</p>
+{/if}
+{#if status !== "finished"}
+  <button class="btn" onclick={handleNextTurn}>Next Turn</button>
+{/if}

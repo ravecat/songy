@@ -500,22 +500,6 @@ defmodule Songy.Core.Game do
     end
   end
 
-  defp valid_assumption?(timeline, position) do
-    case Enum.at(timeline, position) do
-      nil ->
-        false
-
-      %Track{year: year} ->
-        left_neighbor = if position > 0, do: Enum.at(timeline, position - 1), else: nil
-        right_neighbor = Enum.at(timeline, position + 1)
-
-        left_valid = is_nil(left_neighbor) or left_neighbor.year <= year
-        right_valid = is_nil(right_neighbor) or year <= right_neighbor.year
-
-        left_valid and right_valid
-    end
-  end
-
   @doc """
   Moves to the next phase in the game.
 
@@ -539,18 +523,17 @@ defmodule Songy.Core.Game do
   def next_phase(
         %__MODULE__{turn: %Turn{phase: :challenging, assumptions: assumptions, timeline: timeline} = turn} = game
       ) do
-    updated_game =
-      case Enum.find(assumptions, &valid_assumption?(timeline, &1.position)) do
-        %{user_id: user_uuid} ->
-          game
-          |> increment_user_score(user_uuid)
-          |> extend_user_timeline(user_uuid)
+    case Enum.find(assumptions, &valid_assumption?(timeline, &1.position)) do
+      %{user_id: user_uuid} ->
+        game
+        |> increment_user_score(user_uuid)
+        |> extend_user_timeline(user_uuid)
 
-        nil ->
-          game
-      end
-
-    %{updated_game | turn: Turn.next_phase(turn)}
+      nil ->
+        game
+    end
+    |> maybe_finish_game()
+    |> then(fn game -> %{game | turn: Turn.next_phase(turn)} end)
   end
 
   def next_phase(%__MODULE__{turn: turn} = game) do
@@ -636,7 +619,7 @@ defmodule Songy.Core.Game do
       iex> user = User.new()
       iex> {:ok, game_with_user} = Game.add_participant(game, user)
       iex> updated_game = Game.increment_user_score(game_with_user, user.uuid)
-      iex> Game.get_player_score(updated_game, user.uuid)
+      iex> Map.get(updated_game.scores, user.uuid)
       1
   """
   @spec increment_user_score(t(), String.t(), integer()) :: t()
@@ -653,55 +636,78 @@ defmodule Songy.Core.Game do
   end
 
   @doc """
-  Gets the current score for a specific player.
+  Advances the game to the next status.
+
+  Transitions through game states:
+  - :waiting -> :in_progress
+  - :in_progress -> :finished
 
   ## Parameters
-    * `game` - The game to query
-    * `user_uuid` - UUID of the player
+    * `game` - The game to update
 
   ## Returns
-    * Score as integer, or 0 if player not found
+    * Updated game with next status
 
   ## Examples
       iex> provider = Provider.new(:spotify)
       iex> game = Game.new("owner123", provider: provider)
-      iex> user = User.new()
-      iex> {:ok, game_with_user} = Game.add_participant(game, user)
-      iex> Game.get_player_score(game_with_user, user.uuid)
-      0
+      iex> updated_game = Game.next_status(game)
+      iex> updated_game.status
+      :in_progress
+
+      iex> provider = Provider.new(:spotify)
+      iex> game = Game.new("owner123", provider: provider)
+      iex> game = %{game | status: :in_progress}
+      iex> updated_game = Game.next_status(game)
+      iex> updated_game.status
+      :finished
   """
-  @spec get_player_score(t(), String.t()) :: integer()
-  def get_player_score(%__MODULE__{} = game, user_uuid) when is_binary(user_uuid) do
-    Map.get(game.scores, user_uuid, 0)
+  @spec next_status(t()) :: t()
+  def next_status(%__MODULE__{status: :waiting} = game) do
+    %{game | status: :in_progress}
   end
 
-  @doc """
-  Gets all player scores as a map.
+  def next_status(%__MODULE__{status: :in_progress} = game) do
+    %{game | status: :finished}
+  end
 
-  ## Parameters
-    * `game` - The game to query
+  def next_status(%__MODULE__{status: :finished} = game) do
+    game
+  end
 
-  ## Returns
-    * Map with user UUIDs as keys and scores as values
+  defp valid_assumption?(timeline, position) do
+    case Enum.at(timeline, position) do
+      nil ->
+        false
 
-  ## Examples
-      iex> provider = Provider.new(:spotify)
-      iex> game = Game.new("owner123", provider: provider)
-      iex> user1 = User.new()
-      iex> user2 = User.new()
-      iex> {:ok, game} = Game.add_participant(game, user1)
-      iex> {:ok, game} = Game.add_participant(game, user2)
-      iex> game = Game.increment_user_score(game, user1.uuid, 100)
-      iex> game = Game.increment_user_score(game, user2.uuid, 75)
-      iex> scores = Game.get_all_scores(game)
-      iex> Map.get(scores, user1.uuid)
-      100
-  """
-  @spec get_all_scores(t()) :: %{String.t() => integer()}
-  def get_all_scores(%__MODULE__{scores: scores}), do: scores
+      %Track{year: year} ->
+        left_neighbor = if position > 0, do: Enum.at(timeline, position - 1), else: nil
+        right_neighbor = Enum.at(timeline, position + 1)
 
+        left_valid = is_nil(left_neighbor) or left_neighbor.year <= year
+        right_valid = is_nil(right_neighbor) or year <= right_neighbor.year
+
+        left_valid and right_valid
+    end
+  end
+
+  @spec finished?(t()) :: boolean()
+  defp finished?(%__MODULE__{scores: scores, max_score: max_score}) do
+    Enum.any?(scores, fn {_, score} -> score >= max_score end)
+  end
+
+  @spec user_already_joined?(t(), User.t()) :: boolean()
   defp user_already_joined?(%__MODULE__{participants: participants}, %User{uuid: uuid}) do
     Enum.any?(participants, &(&1.uuid == uuid))
+  end
+
+  @spec maybe_finish_game(t()) :: t()
+  defp maybe_finish_game(%__MODULE__{} = game) do
+    if finished?(game) do
+      next_status(game)
+    else
+      game
+    end
   end
 
   defp generate_id do

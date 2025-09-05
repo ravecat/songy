@@ -45,15 +45,16 @@ defmodule Songy.Core.GameTest do
     end
 
     test "creates game with empty options list" do
-      owner_uuid = "owner000"
       provider = Provider.new(:spotify)
-      game = Game.new(owner_uuid, provider: provider)
+      game = Game.new("owner000", provider: provider)
 
-      assert game.max_participants == 8
-      assert game.owner_uuid == owner_uuid
-      assert game.participants == []
-      assert game.status == :waiting
-      assert %Provider{id: :spotify} = game.provider
+      assert %Game{
+               max_participants: 8,
+               owner_uuid: "owner000",
+               participants: [],
+               status: :waiting,
+               provider: %Provider{id: :spotify}
+             } = game
     end
 
     test "raises error without provider" do
@@ -66,6 +67,13 @@ defmodule Songy.Core.GameTest do
       assert_raise NimbleOptions.ValidationError, fn ->
         Game.new("owner123", provider: "invalid")
       end
+    end
+
+    test "new game has empty scores" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+
+      assert game.scores == %{}
     end
 
     test "raises error with nil provider" do
@@ -178,6 +186,17 @@ defmodule Songy.Core.GameTest do
       {:ok, game_with_user} = Game.add_participant(game, user)
       assert {:error, :user_already_joined} = Game.add_participant(game_with_user, user)
     end
+
+    test "add_participant initializes player score to 0" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      user = User.new()
+
+      {:ok, updated_game} = Game.add_participant(game, user)
+
+      assert Map.get(updated_game.scores, user.uuid, 0) == 0
+      assert Map.has_key?(updated_game.scores, user.uuid)
+    end
   end
 
   describe "remove_participant/2" do
@@ -218,6 +237,19 @@ defmodule Songy.Core.GameTest do
 
       assert {:error, :user_not_found} = Game.remove_participant(game, "non_existent_uuid")
     end
+
+    test "remove_participant preserves scores for reconnection" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      user = User.new()
+
+      {:ok, game_with_user} = Game.add_participant(game, user)
+      game_with_score = Game.increment_user_score(game_with_user, user.uuid, 50)
+      {:ok, game_after_removal} = Game.remove_participant(game_with_score, user.uuid)
+
+      assert Map.get(game_after_removal.scores, user.uuid, 0) == 50
+      assert Map.has_key?(game_after_removal.scores, user.uuid)
+    end
   end
 
   describe "participant_count/1" do
@@ -239,6 +271,57 @@ defmodule Songy.Core.GameTest do
 
       {:ok, game_with_two} = Game.add_participant(game_with_one, user2)
       assert Game.participant_count(game_with_two) == 2
+    end
+  end
+
+  describe "increment_user_score/2 and increment_user_score/3" do
+    test "increment_user_score defaults to 1 point" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      user = User.new()
+
+      {:ok, game_with_user} = Game.add_participant(game, user)
+      updated_game = Game.increment_user_score(game_with_user, user.uuid)
+
+      assert Map.get(updated_game.scores, user.uuid, 0) == 1
+    end
+
+    test "increment_user_score accumulates points correctly" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      user = User.new()
+
+      {:ok, game_with_user} = Game.add_participant(game, user)
+      game_step1 = Game.increment_user_score(game_with_user, user.uuid, 30)
+      game_step2 = Game.increment_user_score(game_step1, user.uuid, 20)
+
+      assert Map.get(game_step2.scores, user.uuid, 0) == 50
+    end
+
+    test "increment_user_score returns unchanged game for non-existent player" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+
+      unchanged_game = Game.increment_user_score(game, "non_existent_uuid", 10)
+
+      assert unchanged_game == game
+      assert Map.get(unchanged_game.scores, "non_existent_uuid", 0) == 0
+    end
+
+    test "increment_user_score works with default 1 point for multiple calls" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      user = User.new()
+
+      {:ok, game_with_user} = Game.add_participant(game, user)
+
+      final_game =
+        game_with_user
+        |> Game.increment_user_score(user.uuid)
+        |> Game.increment_user_score(user.uuid)
+        |> Game.increment_user_score(user.uuid)
+
+      assert Map.get(final_game.scores, user.uuid, 0) == 3
     end
   end
 
@@ -1094,17 +1177,17 @@ defmodule Songy.Core.GameTest do
 
       game = %{game | turn: turn}
 
-      assert Game.get_player_score(game, user1.uuid) == 0
-      assert Game.get_player_score(game, user2.uuid) == 0
-      assert Game.get_player_score(game, user3.uuid) == 0
+      assert Map.get(game.scores, user1.uuid, 0) == 0
+      assert Map.get(game.scores, user2.uuid, 0) == 0
+      assert Map.get(game.scores, user3.uuid, 0) == 0
 
       updated_game = Game.next_phase(game)
 
       assert updated_game.turn.phase == :results
 
-      assert Game.get_player_score(updated_game, user1.uuid) == 1
-      assert Game.get_player_score(updated_game, user2.uuid) == 0
-      assert Game.get_player_score(updated_game, user3.uuid) == 0
+      assert Map.get(updated_game.scores, user1.uuid, 0) == 1
+      assert Map.get(updated_game.scores, user2.uuid, 0) == 0
+      assert Map.get(updated_game.scores, user3.uuid, 0) == 0
     end
 
     test "adds track to winner's timeline during phase transition", %{
@@ -1182,8 +1265,8 @@ defmodule Songy.Core.GameTest do
 
       updated_game = Game.next_phase(game)
 
-      assert Game.get_player_score(updated_game, user1.uuid) == 0
-      assert Game.get_player_score(updated_game, user2.uuid) == 0
+      assert Map.get(updated_game.scores, user1.uuid, 0) == 0
+      assert Map.get(updated_game.scores, user2.uuid, 0) == 0
     end
 
     test "awards points to first valid assumption when multiple assumptions are valid", %{
@@ -1217,9 +1300,9 @@ defmodule Songy.Core.GameTest do
 
       updated_game = Game.next_phase(game)
 
-      assert Game.get_player_score(updated_game, user3.uuid) == 1
-      assert Game.get_player_score(updated_game, user1.uuid) == 0
-      assert Game.get_player_score(updated_game, user2.uuid) == 0
+      assert Map.get(updated_game.scores, user3.uuid, 0) == 1
+      assert Map.get(updated_game.scores, user1.uuid, 0) == 0
+      assert Map.get(updated_game.scores, user2.uuid, 0) == 0
     end
 
     test "handles edge cases with empty timeline and boundary positions", %{game: game, user1: user1, user2: user2} do
@@ -1241,8 +1324,8 @@ defmodule Songy.Core.GameTest do
 
       updated_game = Game.next_phase(game)
 
-      assert Game.get_player_score(updated_game, user1.uuid) == 1
-      assert Game.get_player_score(updated_game, user2.uuid) == 0
+      assert Map.get(updated_game.scores, user1.uuid, 0) == 1
+      assert Map.get(updated_game.scores, user2.uuid, 0) == 0
     end
 
     test "handles assumptions beyond timeline length", %{game: game, user1: user1, user2: user2} do
@@ -1268,8 +1351,8 @@ defmodule Songy.Core.GameTest do
 
       updated_game = Game.next_phase(game)
 
-      assert Game.get_player_score(updated_game, user1.uuid) == 1
-      assert Game.get_player_score(updated_game, user2.uuid) == 0
+      assert Map.get(updated_game.scores, user1.uuid, 0) == 1
+      assert Map.get(updated_game.scores, user2.uuid, 0) == 0
     end
 
     test "does not award points for non-challenging phase transitions", %{game: game, user1: user1} do
@@ -1287,7 +1370,7 @@ defmodule Songy.Core.GameTest do
       updated_game = Game.next_phase(game)
 
       assert updated_game.turn.phase == :steady
-      assert Game.get_player_score(updated_game, user1.uuid) == 0
+      assert Map.get(updated_game.scores, user1.uuid, 0) == 0
     end
   end
 
@@ -1315,106 +1398,6 @@ defmodule Songy.Core.GameTest do
       game = Game.new(owner_uuid, provider: provider)
 
       assert Game.get_active_player(game) == nil
-    end
-  end
-
-  describe "scores management" do
-    test "new game has empty scores" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-
-      assert game.scores == %{}
-      assert Game.get_all_scores(game) == %{}
-    end
-
-    test "add_participant initializes player score to 0" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-      user = User.new()
-
-      {:ok, updated_game} = Game.add_participant(game, user)
-
-      assert Game.get_player_score(updated_game, user.uuid) == 0
-      assert Map.has_key?(updated_game.scores, user.uuid)
-    end
-
-    test "remove_participant preserves scores for reconnection" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-      user = User.new()
-
-      {:ok, game_with_user} = Game.add_participant(game, user)
-      game_with_score = Game.increment_user_score(game_with_user, user.uuid, 50)
-      {:ok, game_after_removal} = Game.remove_participant(game_with_score, user.uuid)
-
-      assert Game.get_player_score(game_after_removal, user.uuid) == 50
-      assert Map.has_key?(game_after_removal.scores, user.uuid)
-    end
-
-    test "increment_user_score defaults to 1 point" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-      user = User.new()
-
-      {:ok, game_with_user} = Game.add_participant(game, user)
-      updated_game = Game.increment_user_score(game_with_user, user.uuid)
-
-      assert Game.get_player_score(updated_game, user.uuid) == 1
-    end
-
-    test "increment_user_score accumulates points correctly" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-      user = User.new()
-
-      {:ok, game_with_user} = Game.add_participant(game, user)
-      game_step1 = Game.increment_user_score(game_with_user, user.uuid, 30)
-      game_step2 = Game.increment_user_score(game_step1, user.uuid, 20)
-
-      assert Game.get_player_score(game_step2, user.uuid) == 50
-    end
-
-    test "increment_user_score returns unchanged game for non-existent player" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-
-      unchanged_game = Game.increment_user_score(game, "non_existent_uuid", 10)
-
-      assert unchanged_game == game
-      assert Game.get_player_score(unchanged_game, "non_existent_uuid") == 0
-    end
-
-    test "increment_user_score works with default 1 point for multiple calls" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-      user = User.new()
-
-      {:ok, game_with_user} = Game.add_participant(game, user)
-
-      final_game =
-        game_with_user
-        |> Game.increment_user_score(user.uuid)
-        |> Game.increment_user_score(user.uuid)
-        |> Game.increment_user_score(user.uuid)
-
-      assert Game.get_player_score(final_game, user.uuid) == 3
-    end
-
-    test "get_all_scores returns all player scores" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-      user1 = User.new()
-      user2 = User.new()
-
-      {:ok, game} = Game.add_participant(game, user1)
-      {:ok, game} = Game.add_participant(game, user2)
-      game = Game.increment_user_score(game, user1.uuid, 100)
-      game = Game.increment_user_score(game, user2.uuid, 75)
-
-      scores = Game.get_all_scores(game)
-      assert Map.get(scores, user1.uuid) == 100
-      assert Map.get(scores, user2.uuid) == 75
-      assert map_size(scores) == 2
     end
   end
 end

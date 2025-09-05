@@ -622,6 +622,19 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @impl GenServer
+  def handle_call(:next_phase, _from, %{turn: %{phase: :steady}} = game) do
+    updated_game = Game.next_phase(game)
+
+    Phoenix.PubSub.local_broadcast(
+      Songy.PubSub,
+      "room:#{updated_game.id}",
+      {:game_state_updated, updated_game}
+    )
+
+    {:reply, {:ok, updated_game}, updated_game, {:continue, :schedule_challenging_timeout}}
+  end
+
+  @impl GenServer
   def handle_call(:next_phase, _from, %{turn: %{phase: :results}} = game) do
     with {:ok, credentials} <- get_credentials(game.id),
          {:ok, spotify_track} <- Spotify.search_random_track(credentials),
@@ -640,19 +653,6 @@ defmodule Songy.Boundary.GameSession do
     else
       {:error, reason} -> {:reply, {:error, reason}, game}
     end
-  end
-
-  @impl GenServer
-  def handle_call(:next_phase, _from, %{turn: %{phase: :steady}} = game) do
-    updated_game = Game.next_phase(game)
-
-    Phoenix.PubSub.local_broadcast(
-      Songy.PubSub,
-      "room:#{updated_game.id}",
-      {:game_state_updated, updated_game}
-    )
-
-    {:reply, {:ok, updated_game}, updated_game, {:continue, :schedule_challenging_timeout}}
   end
 
   @impl GenServer
