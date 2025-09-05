@@ -105,6 +105,36 @@ defmodule Songy.Core.GameTest do
         Game.new("owner123", provider: provider, unknown_field: "test")
       end
     end
+
+    test "creates game with default max_score" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+
+      assert game.max_score == 10
+    end
+
+    test "creates game with custom max_score" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider, max_score: 5)
+
+      assert game.max_score == 5
+    end
+
+    test "validates max_score is positive integer" do
+      provider = Provider.new(:spotify)
+
+      assert_raise NimbleOptions.ValidationError, fn ->
+        Game.new("owner123", provider: provider, max_score: 0)
+      end
+
+      assert_raise NimbleOptions.ValidationError, fn ->
+        Game.new("owner123", provider: provider, max_score: -1)
+      end
+
+      assert_raise NimbleOptions.ValidationError, fn ->
+        Game.new("owner123", provider: provider, max_score: "invalid")
+      end
+    end
   end
 
   describe "add_participant/2" do

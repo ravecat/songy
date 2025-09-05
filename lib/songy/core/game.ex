@@ -26,13 +26,14 @@ defmodule Songy.Core.Game do
 
   @id_size 2
   @type status :: :waiting | :in_progress | :finished
-  @type option :: {:max_participants, pos_integer()}
+  @type option :: {:max_participants, pos_integer()} | {:max_score, pos_integer()}
   @type options :: [option()]
 
   typedstruct do
     field :id, String.t(), enforce: true
     field :participants, list(User.t()), enforce: true
     field :max_participants, pos_integer(), enforce: true
+    field :max_score, pos_integer(), enforce: true
     field :created_at, DateTime.t(), enforce: true
     field :status, status(), enforce: true
     field :owner_uuid, String.t(), enforce: true
@@ -49,6 +50,10 @@ defmodule Songy.Core.Game do
       type: :pos_integer,
       doc: "Maximum number of players allowed in the game"
     ],
+    max_score: [
+      type: :pos_integer,
+      doc: "Maximum score to win the game"
+    ],
     provider: [
       type: {:struct, Provider},
       required: true,
@@ -62,19 +67,24 @@ defmodule Songy.Core.Game do
   ## Options
     * `:provider` - Provider instance (required, e.g., Provider.new(:spotify))
     * `:max_participants` - Maximum number of players allowed (default: 8)
+    * `:max_score` - Maximum score to win the game (default: 10)
 
   ## Examples
       iex> provider = Provider.new(:spotify)
       iex> Game.new("user123", provider: provider)
-      %Game{id: "a1b2c3d4", participants: [], max_participants: 8, status: :waiting, owner_uuid: "user123", provider: %Provider{id: :spotify}}
+      %Game{id: "a1b2c3d4", participants: [], max_participants: 8, max_score: 10, status: :waiting, owner_uuid: "user123", provider: %Provider{id: :spotify}}
 
       iex> provider = Provider.new(:spotify)
       iex> Game.new("user123", provider: provider, max_participants: 4)
-      %Game{id: "a1b2c3d4", participants: [], max_participants: 4, status: :waiting, owner_uuid: "user123", provider: %Provider{id: :spotify}}
+      %Game{id: "a1b2c3d4", participants: [], max_participants: 4, max_score: 10, status: :waiting, owner_uuid: "user123", provider: %Provider{id: :spotify}}
 
       iex> provider = Provider.new(:spotify)
-      iex> Game.new("user123", provider: provider, max_participants: 12)
-      %Game{id: "a1b2c3d4", participants: [], max_participants: 12, status: :waiting, owner_uuid: "user123", provider: %Provider{id: :spotify}}
+      iex> Game.new("user123", provider: provider, max_score: 5)
+      %Game{id: "a1b2c3d4", participants: [], max_participants: 8, max_score: 5, status: :waiting, owner_uuid: "user123", provider: %Provider{id: :spotify}}
+
+      iex> provider = Provider.new(:spotify)
+      iex> Game.new("user123", provider: provider, max_participants: 12, max_score: 15)
+      %Game{id: "a1b2c3d4", participants: [], max_participants: 12, max_score: 15, status: :waiting, owner_uuid: "user123", provider: %Provider{id: :spotify}}
   """
   @spec new(String.t(), keyword()) :: t()
   def new(owner_uuid, opts \\ []) when is_binary(owner_uuid) and is_list(opts) do
@@ -85,6 +95,7 @@ defmodule Songy.Core.Game do
       Keyword.merge(
         [
           max_participants: 8,
+          max_score: 10,
           id: generate_id(),
           owner_uuid: owner_uuid,
           created_at: DateTime.utc_now(),
