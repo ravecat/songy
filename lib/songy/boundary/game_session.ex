@@ -155,9 +155,9 @@ defmodule Songy.Boundary.GameSession do
 
   ## Examples
       iex> {:ok, game} = GameSession.create_game_session("owner123", :spotify)
-      iex> {:ok, _} = GameSession.start_game_session(game.uuid)
-      iex> :ok = GameSession.set_credentials(game.uuid, credentials)
-      iex> {:ok, updated_game} = GameSession.start_playback(game.uuid, :spotify)
+      iex> {:ok, _} = GameSession.start_game_session(game.id)
+      iex> :ok = GameSession.set_credentials(game.id, credentials)
+      iex> {:ok, updated_game} = GameSession.start_playback(game.id, :spotify)
       iex> updated_game.player.is_playback
       true
 
@@ -196,7 +196,7 @@ defmodule Songy.Boundary.GameSession do
     * `{:error, :no_credentials}` - No credentials available for session
 
   ## Examples
-      iex> {:ok, updated_game} = GameSession.pause_playback(game.uuid, :spotify)
+      iex> {:ok, updated_game} = GameSession.pause_playback(game.id, :spotify)
       iex> updated_game.player.is_playback
       false
 
@@ -441,7 +441,7 @@ defmodule Songy.Boundary.GameSession do
 
   def child_spec(game) do
     %{
-      id: {__MODULE__, game.uuid},
+      id: {__MODULE__, game.id},
       start: {__MODULE__, :start_link, [game]},
       restart: :temporary
     }
@@ -451,15 +451,15 @@ defmodule Songy.Boundary.GameSession do
     GenServer.start_link(
       __MODULE__,
       game,
-      name: via(game.uuid)
+      name: via(game.id)
     )
   end
 
   @impl GenServer
   def init(%Game{} = game) do
-    Logger.info("Starting game session for game #{game.uuid}")
+    Logger.info("Starting game session for game #{game.id}")
 
-    SongyWeb.Presence.subscribe(game.uuid)
+    SongyWeb.Presence.subscribe(game.id)
 
     {:ok, game}
   end
@@ -469,7 +469,7 @@ defmodule Songy.Boundary.GameSession do
     user = User.get_user(user_uuid)
 
     if Game.empty?(game) do
-      cancel_termination_timer(game.uuid)
+      cancel_termination_timer(game.id)
     end
 
     case Game.add_participant(game, user) do
@@ -488,12 +488,12 @@ defmodule Songy.Boundary.GameSession do
       {:ok, updated_game} ->
         Phoenix.PubSub.local_broadcast(
           Songy.PubSub,
-          "room:#{updated_game.uuid}",
+          "room:#{updated_game.id}",
           {:game_state_updated, updated_game}
         )
 
         if Game.empty?(updated_game) do
-          schedule_termination(game.uuid)
+          schedule_termination(game.id)
         end
 
         {:noreply, updated_game}
@@ -516,13 +516,13 @@ defmodule Songy.Boundary.GameSession do
 
   @impl GenServer
   def handle_info(:next_phase, %{turn: %{phase: :challenging}} = game) do
-    Logger.info("Challenging phase timeout reached for game #{game.uuid}, advancing to results")
+    Logger.info("Challenging phase timeout reached for game #{game.id}, advancing to results")
 
     updated_game = Game.next_phase(game)
 
     Phoenix.PubSub.local_broadcast(
       Songy.PubSub,
-      "room:#{updated_game.uuid}",
+      "room:#{updated_game.id}",
       {:game_state_updated, updated_game}
     )
 
@@ -531,14 +531,14 @@ defmodule Songy.Boundary.GameSession do
 
   @impl GenServer
   def handle_info(event, game) do
-    Logger.warning("Received unexpected message #{inspect(event)} for game #{game.uuid}")
+    Logger.warning("Received unexpected message #{inspect(event)} for game #{game.id}")
     {:noreply, game}
   end
 
   @impl GenServer
   def handle_continue({:init_participant_timeline, user_uuid}, game) do
     with [] <- Game.get_user_timeline(game, user_uuid),
-         {:ok, credentials} <- get_credentials(game.uuid),
+         {:ok, credentials} <- get_credentials(game.id),
          {:ok, spotify_track} <- Spotify.search_random_track(credentials),
          track <- Trackable.to_track(spotify_track) do
       Logger.info("Init participant timeline with track '#{track.title}' by '#{track.artist}'")
@@ -573,7 +573,7 @@ defmodule Songy.Boundary.GameSession do
 
     Phoenix.PubSub.local_broadcast(
       Songy.PubSub,
-      "room:#{game.uuid}",
+      "room:#{game.id}",
       {:game_state_updated, game}
     )
 
@@ -623,7 +623,7 @@ defmodule Songy.Boundary.GameSession do
 
   @impl GenServer
   def handle_call(:next_phase, _from, %{turn: %{phase: :results}} = game) do
-    with {:ok, credentials} <- get_credentials(game.uuid),
+    with {:ok, credentials} <- get_credentials(game.id),
          {:ok, spotify_track} <- Spotify.search_random_track(credentials),
          %Track{} = track <- Trackable.to_track(spotify_track),
          {:ok, :playback_paused} <- Spotify.pause_playback(credentials),
@@ -632,7 +632,7 @@ defmodule Songy.Boundary.GameSession do
          {:ok, game} <- Game.set_turn_track(game, track) do
       Phoenix.PubSub.local_broadcast(
         Songy.PubSub,
-        "room:#{game.uuid}",
+        "room:#{game.id}",
         {:game_state_updated, game}
       )
 
@@ -648,7 +648,7 @@ defmodule Songy.Boundary.GameSession do
 
     Phoenix.PubSub.local_broadcast(
       Songy.PubSub,
-      "room:#{updated_game.uuid}",
+      "room:#{updated_game.id}",
       {:game_state_updated, updated_game}
     )
 
@@ -661,7 +661,7 @@ defmodule Songy.Boundary.GameSession do
 
     Phoenix.PubSub.local_broadcast(
       Songy.PubSub,
-      "room:#{updated_game.uuid}",
+      "room:#{updated_game.id}",
       {:game_state_updated, updated_game}
     )
 
@@ -681,7 +681,7 @@ defmodule Songy.Boundary.GameSession do
       {:ok, updated_game} ->
         Phoenix.PubSub.local_broadcast(
           Songy.PubSub,
-          "room:#{updated_game.uuid}",
+          "room:#{updated_game.id}",
           {:game_state_updated, updated_game}
         )
 
@@ -696,8 +696,8 @@ defmodule Songy.Boundary.GameSession do
   def handle_call({:set_credentials, credentials}, _from, game) do
     credential_data = Credentials.fetch(credentials)
 
-    Registry.unregister(Songy.Registry, {:credentials, game.uuid})
-    Registry.register(Songy.Registry, {:credentials, game.uuid}, credential_data)
+    Registry.unregister(Songy.Registry, {:credentials, game.id})
+    Registry.register(Songy.Registry, {:credentials, game.id}, credential_data)
 
     {:reply, :ok, game}
   end
@@ -710,7 +710,7 @@ defmodule Songy.Boundary.GameSession do
 
     Phoenix.PubSub.local_broadcast(
       Songy.PubSub,
-      "room:#{updated_game.uuid}",
+      "room:#{updated_game.id}",
       {:game_state_updated, updated_game}
     )
 
@@ -725,7 +725,7 @@ defmodule Songy.Boundary.GameSession do
 
         Phoenix.PubSub.local_broadcast(
           Songy.PubSub,
-          "room:#{updated_game.uuid}",
+          "room:#{updated_game.id}",
           {:game_state_updated, updated_game}
         )
 
@@ -738,11 +738,11 @@ defmodule Songy.Boundary.GameSession do
 
   @impl GenServer
   def terminate(reason, game) do
-    Logger.info("Game session #{game.uuid} terminated: #{inspect(reason)}")
-    Registry.unregister(Songy.Registry, {:termination_timer, game.uuid})
+    Logger.info("Game session #{game.id} terminated: #{inspect(reason)}")
+    Registry.unregister(Songy.Registry, {:termination_timer, game.id})
 
     # Clean up stored credentials
-    Registry.unregister(Songy.Registry, {:credentials, game.uuid})
+    Registry.unregister(Songy.Registry, {:credentials, game.id})
 
     :ok
   end

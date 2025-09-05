@@ -57,11 +57,11 @@ defmodule SongyWeb.PageControllerTest do
     test "allows access to existing game session", %{conn: conn} do
       {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
-      conn = get(conn, ~p"/#{game.uuid}")
+      conn = get(conn, ~p"/#{game.id}")
 
       assert inertia_component(conn) == "Room"
 
-      GameSession.end_game_session(game.uuid)
+      GameSession.end_game_session(game.id)
     end
   end
 end

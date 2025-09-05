@@ -10,7 +10,7 @@ defmodule Songy.Core.Game do
 
   @derive {Jason.Encoder,
            only: [
-             :uuid,
+             :id,
              :participants,
              :max_participants,
              :status,
@@ -24,13 +24,13 @@ defmodule Songy.Core.Game do
 
   alias Songy.Core.{User, Provider, Player, Turn, Track}
 
-  @uuid_size 6
+  @id_size 2
   @type status :: :waiting | :in_progress | :finished
   @type option :: {:max_participants, pos_integer()}
   @type options :: [option()]
 
   typedstruct do
-    field :uuid, String.t(), enforce: true
+    field :id, String.t(), enforce: true
     field :participants, list(User.t()), enforce: true
     field :max_participants, pos_integer(), enforce: true
     field :created_at, DateTime.t(), enforce: true
@@ -66,15 +66,15 @@ defmodule Songy.Core.Game do
   ## Examples
       iex> provider = Provider.new(:spotify)
       iex> Game.new("user123", provider: provider)
-      %Game{uuid: "a1b2c3d4", participants: [], max_participants: 8, status: :waiting, owner_uuid: "user123", provider: %Provider{id: :spotify}}
+      %Game{id: "a1b2c3d4", participants: [], max_participants: 8, status: :waiting, owner_uuid: "user123", provider: %Provider{id: :spotify}}
 
       iex> provider = Provider.new(:spotify)
       iex> Game.new("user123", provider: provider, max_participants: 4)
-      %Game{uuid: "a1b2c3d4", participants: [], max_participants: 4, status: :waiting, owner_uuid: "user123", provider: %Provider{id: :spotify}}
+      %Game{id: "a1b2c3d4", participants: [], max_participants: 4, status: :waiting, owner_uuid: "user123", provider: %Provider{id: :spotify}}
 
       iex> provider = Provider.new(:spotify)
       iex> Game.new("user123", provider: provider, max_participants: 12)
-      %Game{uuid: "a1b2c3d4", participants: [], max_participants: 12, status: :waiting, owner_uuid: "user123", provider: %Provider{id: :spotify}}
+      %Game{id: "a1b2c3d4", participants: [], max_participants: 12, status: :waiting, owner_uuid: "user123", provider: %Provider{id: :spotify}}
   """
   @spec new(String.t(), keyword()) :: t()
   def new(owner_uuid, opts \\ []) when is_binary(owner_uuid) and is_list(opts) do
@@ -85,7 +85,7 @@ defmodule Songy.Core.Game do
       Keyword.merge(
         [
           max_participants: 8,
-          uuid: generate_uuid(),
+          id: generate_id(),
           owner_uuid: owner_uuid,
           created_at: DateTime.utc_now(),
           status: :waiting,
@@ -693,9 +693,7 @@ defmodule Songy.Core.Game do
     Enum.any?(participants, &(&1.uuid == uuid))
   end
 
-  defp generate_uuid do
-    @uuid_size
-    |> :crypto.strong_rand_bytes()
-    |> Base.url_encode64(padding: false)
+  defp generate_id do
+    @id_size |> :crypto.strong_rand_bytes() |> Base.encode32(padding: false)
   end
 end

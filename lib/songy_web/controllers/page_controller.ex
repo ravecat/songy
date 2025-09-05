@@ -16,7 +16,7 @@ defmodule SongyWeb.PageController do
 
     case GameSession.create_game_session(owner_uuid, provider_id) do
       {:ok, game} ->
-        redirect(conn, to: ~p"/#{game.uuid}")
+        redirect(conn, to: ~p"/#{game.id}")
 
       {:error, reason} ->
         conn
@@ -29,7 +29,7 @@ defmodule SongyWeb.PageController do
     case GameSession.lookup_game_session(room_id) do
       {:ok, game} ->
         conn
-        |> assign_prop(:room_id, game.uuid)
+        |> assign_prop(:room_id, game.id)
         |> render_inertia("Room")
 
       {:error, :game_session_not_found} ->

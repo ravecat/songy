@@ -16,7 +16,7 @@ defmodule Songy.Core.GameTest do
       assert game.owner_uuid == owner_uuid
       assert %Provider{id: :spotify} = game.provider
       assert %Player{is_playback: false} = game.player
-      assert String.length(game.uuid) == 8
+      assert String.length(game.id) == 4
       assert %DateTime{} = game.created_at
     end
 
@@ -307,7 +307,7 @@ defmodule Songy.Core.GameTest do
       updated_game = Game.update_provider(game, new_provider)
 
       assert updated_game.provider == new_provider
-      assert updated_game.uuid == game.uuid
+      assert updated_game.id == game.id
     end
   end
 
@@ -431,7 +431,7 @@ defmodule Songy.Core.GameTest do
       updated_game = Game.init_user_timeline(game, "user456", track)
 
       assert Game.get_user_timeline(updated_game, "user456") == [track]
-      assert updated_game.uuid == game.uuid
+      assert updated_game.id == game.id
       assert updated_game.timelines == %{"user456" => [track]}
     end
 
@@ -480,7 +480,7 @@ defmodule Songy.Core.GameTest do
       updated_game = Game.extend_user_timeline(game_with_track, "user456")
 
       assert Game.get_user_timeline(updated_game, "user456") == [track]
-      assert updated_game.uuid == game.uuid
+      assert updated_game.id == game.id
     end
 
     test "maintains chronological order when adding multiple tracks" do

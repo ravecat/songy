@@ -9,9 +9,9 @@ defmodule Songy.Boundary.GameSessionTest do
       owner_uuid = "owner123"
       assert {:ok, game} = GameSession.create_game_session(owner_uuid, :spotify)
 
-      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
       assert Process.alive?(pid)
-      assert game.uuid != nil
+      assert game.id != nil
       assert game.participants == []
       assert game.owner_uuid == owner_uuid
       assert %Provider{id: :spotify} = game.provider
@@ -21,13 +21,13 @@ defmodule Songy.Boundary.GameSessionTest do
       assert {:ok, game1} = GameSession.create_game_session("owner1", :spotify)
       assert {:ok, game2} = GameSession.create_game_session("owner2", :spotify)
 
-      assert [{pid1, _}] = Registry.lookup(Songy.Registry, game1.uuid)
-      assert [{pid2, _}] = Registry.lookup(Songy.Registry, game2.uuid)
+      assert [{pid1, _}] = Registry.lookup(Songy.Registry, game1.id)
+      assert [{pid2, _}] = Registry.lookup(Songy.Registry, game2.id)
 
       assert Process.alive?(pid1)
       assert Process.alive?(pid2)
       assert pid1 != pid2
-      assert game1.uuid != game2.uuid
+      assert game1.id != game2.id
       assert game1.owner_uuid == "owner1"
       assert game2.owner_uuid == "owner2"
       assert %Provider{id: :spotify} = game1.provider
@@ -39,7 +39,7 @@ defmodule Songy.Boundary.GameSessionTest do
     test "terminates game session process" do
       {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
-      assert :ok = GameSession.end_game_session(game.uuid)
+      assert :ok = GameSession.end_game_session(game.id)
     end
 
     test "handles termination of non-existent session" do
@@ -51,9 +51,9 @@ defmodule Songy.Boundary.GameSessionTest do
     setup do
       {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
-      on_exit(fn -> GameSession.end_game_session(game.uuid) end)
+      on_exit(fn -> GameSession.end_game_session(game.id) end)
 
-      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
 
       %{game: game, pid: pid}
     end
@@ -61,7 +61,7 @@ defmodule Songy.Boundary.GameSessionTest do
     test "removes participant from game session", %{game: game, pid: pid} do
       participant_uuid = "user123"
 
-      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
 
       # Simulate participant joining via Presence (direct GenServer message)
       send(pid, {:participant_joined, participant_uuid})
@@ -72,12 +72,12 @@ defmodule Songy.Boundary.GameSessionTest do
       assert length(game_with_participant.participants) == 1
 
       # Remove participant via API
-      assert {:ok, updated_game} = GameSession.remove_participant(game.uuid, participant_uuid)
+      assert {:ok, updated_game} = GameSession.remove_participant(game.id, participant_uuid)
       assert length(updated_game.participants) == 0
     end
 
     test "returns error when removing non-existent participant", %{game: game} do
-      assert {:error, :user_not_found} = GameSession.remove_participant(game.uuid, "nonexistent")
+      assert {:error, :user_not_found} = GameSession.remove_participant(game.id, "nonexistent")
     end
 
     test "returns error for non-existent session" do
@@ -89,16 +89,16 @@ defmodule Songy.Boundary.GameSessionTest do
     setup do
       {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
-      on_exit(fn -> GameSession.end_game_session(game.uuid) end)
+      on_exit(fn -> GameSession.end_game_session(game.id) end)
 
-      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
 
       %{game: game, pid: pid}
     end
 
     test "returns current game state", %{game: game} do
-      assert {:ok, returned_game} = GameSession.lookup_game_session(game.uuid)
-      assert returned_game.uuid == game.uuid
+      assert {:ok, returned_game} = GameSession.lookup_game_session(game.id)
+      assert returned_game.id == game.id
       assert returned_game.participants == []
       assert returned_game.status == :waiting
     end
@@ -112,16 +112,16 @@ defmodule Songy.Boundary.GameSessionTest do
     setup do
       {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
-      on_exit(fn -> GameSession.end_game_session(game.uuid) end)
+      on_exit(fn -> GameSession.end_game_session(game.id) end)
 
-      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
 
       %{game: game, pid: pid}
     end
 
     test "starts the game by changing status to in_progress", %{game: game} do
       credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
-      :ok = GameSession.set_credentials(game.uuid, credentials)
+      :ok = GameSession.set_credentials(game.id, credentials)
 
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
@@ -136,21 +136,21 @@ defmodule Songy.Boundary.GameSessionTest do
          }}
       end)
 
-      [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
       Repatch.allow(self(), pid)
 
       # Verify initial status is :waiting
-      assert {:ok, initial_game} = GameSession.lookup_game_session(game.uuid)
+      assert {:ok, initial_game} = GameSession.lookup_game_session(game.id)
       assert initial_game.status == :waiting
 
       # Start the game
-      assert {:ok, updated_game} = GameSession.start_game_session(game.uuid)
+      assert {:ok, updated_game} = GameSession.start_game_session(game.id)
       assert updated_game.status == :in_progress
       assert updated_game.turn.track != nil
       assert updated_game.turn.track.title == "Random Song"
 
       # Verify the game state was persisted
-      assert {:ok, persisted_game} = GameSession.lookup_game_session(game.uuid)
+      assert {:ok, persisted_game} = GameSession.lookup_game_session(game.id)
       assert persisted_game.status == :in_progress
       assert persisted_game.turn.track != nil
     end
@@ -158,7 +158,7 @@ defmodule Songy.Boundary.GameSessionTest do
     test "returns error when game is already started", %{game: game} do
       # Setup credentials and mock for successful track search
       credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
-      :ok = GameSession.set_credentials(game.uuid, credentials)
+      :ok = GameSession.set_credentials(game.id, credentials)
 
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
@@ -173,14 +173,14 @@ defmodule Songy.Boundary.GameSessionTest do
          }}
       end)
 
-      [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
       Repatch.allow(self(), pid)
 
       # Start the game first
-      assert {:ok, _} = GameSession.start_game_session(game.uuid)
+      assert {:ok, _} = GameSession.start_game_session(game.id)
 
       # Try to start again
-      assert {:error, :game_already_started} = GameSession.start_game_session(game.uuid)
+      assert {:error, :game_already_started} = GameSession.start_game_session(game.id)
     end
 
     test "returns error for non-existent session" do
@@ -192,17 +192,17 @@ defmodule Songy.Boundary.GameSessionTest do
     setup do
       {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
-      on_exit(fn -> GameSession.end_game_session(game.uuid) end)
+      on_exit(fn -> GameSession.end_game_session(game.id) end)
 
       %{game: game}
     end
 
     test "returns true when user is owner", %{game: game} do
-      assert GameSession.owner?(game.uuid, "owner123") == true
+      assert GameSession.owner?(game.id, "owner123") == true
     end
 
     test "returns false when user is not owner", %{game: game} do
-      assert GameSession.owner?(game.uuid, "other456") == false
+      assert GameSession.owner?(game.id, "other456") == false
     end
 
     test "returns false for non-existent session" do
@@ -214,7 +214,7 @@ defmodule Songy.Boundary.GameSessionTest do
     setup do
       {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
-      on_exit(fn -> GameSession.end_game_session(game.uuid) end)
+      on_exit(fn -> GameSession.end_game_session(game.id) end)
 
       %{game: game}
     end
@@ -222,7 +222,7 @@ defmodule Songy.Boundary.GameSessionTest do
     test "updates provider successfully", %{game: game} do
       provider_data = %{device_id: "test-device-123"}
 
-      assert {:ok, updated_game} = GameSession.update_provider(game.uuid, provider_data)
+      assert {:ok, updated_game} = GameSession.update_provider(game.id, provider_data)
       assert updated_game.provider.meta.device_id == "test-device-123"
     end
 
@@ -237,7 +237,7 @@ defmodule Songy.Boundary.GameSessionTest do
     setup do
       {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
-      on_exit(fn -> GameSession.end_game_session(game.uuid) end)
+      on_exit(fn -> GameSession.end_game_session(game.id) end)
 
       %{game: game}
     end
@@ -245,7 +245,7 @@ defmodule Songy.Boundary.GameSessionTest do
     test "starts playback when game in progress", %{game: game} do
       # Setup credentials and mock for successful track search
       credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
-      :ok = GameSession.set_credentials(game.uuid, credentials)
+      :ok = GameSession.set_credentials(game.id, credentials)
 
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
@@ -264,24 +264,24 @@ defmodule Songy.Boundary.GameSessionTest do
         {:ok, :playback_started}
       end)
 
-      [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
 
       Repatch.allow(self(), pid)
 
-      {:ok, _} = GameSession.start_game_session(game.uuid)
+      {:ok, _} = GameSession.start_game_session(game.id)
 
       # Verify initial playback state
-      {:ok, initial_game} = GameSession.lookup_game_session(game.uuid)
+      {:ok, initial_game} = GameSession.lookup_game_session(game.id)
       assert initial_game.player.is_playback == false
 
       credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
-      :ok = GameSession.set_credentials(game.uuid, credentials)
+      :ok = GameSession.set_credentials(game.id, credentials)
 
-      assert {:ok, updated_game} = GameSession.start_playback(game.uuid, :spotify)
+      assert {:ok, updated_game} = GameSession.start_playback(game.id, :spotify)
       assert updated_game.player.is_playback == true
 
       # Verify state persisted
-      {:ok, persisted_game} = GameSession.lookup_game_session(game.uuid)
+      {:ok, persisted_game} = GameSession.lookup_game_session(game.id)
       assert persisted_game.player.is_playback == true
     end
 
@@ -289,8 +289,8 @@ defmodule Songy.Boundary.GameSessionTest do
       credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
 
       # Don't start the game, leave it in :waiting status
-      :ok = GameSession.set_credentials(game.uuid, credentials)
-      assert {:error, :game_not_in_progress} = GameSession.start_playback(game.uuid, :spotify)
+      :ok = GameSession.set_credentials(game.id, credentials)
+      assert {:error, :game_not_in_progress} = GameSession.start_playback(game.id, :spotify)
     end
 
     test "returns error for non-existent session" do
@@ -303,7 +303,7 @@ defmodule Songy.Boundary.GameSessionTest do
       end)
 
       credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
-      :ok = GameSession.set_credentials(game.uuid, credentials)
+      :ok = GameSession.set_credentials(game.id, credentials)
 
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
@@ -318,15 +318,15 @@ defmodule Songy.Boundary.GameSessionTest do
          }}
       end)
 
-      [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
       Repatch.allow(self(), pid)
 
-      {:ok, _} = GameSession.start_game_session(game.uuid)
+      {:ok, _} = GameSession.start_game_session(game.id)
 
       # Start playback twice
-      :ok = GameSession.set_credentials(game.uuid, credentials)
-      assert {:ok, first_result} = GameSession.start_playback(game.uuid, :spotify)
-      assert {:ok, second_result} = GameSession.start_playback(game.uuid, :spotify)
+      :ok = GameSession.set_credentials(game.id, credentials)
+      assert {:ok, first_result} = GameSession.start_playback(game.id, :spotify)
+      assert {:ok, second_result} = GameSession.start_playback(game.id, :spotify)
 
       # Both should show playback as true
       assert first_result.player.is_playback == true
@@ -338,7 +338,7 @@ defmodule Songy.Boundary.GameSessionTest do
     setup do
       {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
-      on_exit(fn -> GameSession.end_game_session(game.uuid) end)
+      on_exit(fn -> GameSession.end_game_session(game.id) end)
 
       %{game: game}
     end
@@ -365,26 +365,26 @@ defmodule Songy.Boundary.GameSessionTest do
 
       credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
 
-      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
 
       Repatch.allow(self(), pid)
 
-      :ok = GameSession.set_credentials(game.uuid, credentials)
+      :ok = GameSession.set_credentials(game.id, credentials)
 
-      {:ok, _} = GameSession.start_game_session(game.uuid)
+      {:ok, _} = GameSession.start_game_session(game.id)
 
-      {:ok, _} = GameSession.start_playback(game.uuid, :spotify)
+      {:ok, _} = GameSession.start_playback(game.id, :spotify)
 
       # Verify playback is started
-      {:ok, playing_game} = GameSession.lookup_game_session(game.uuid)
+      {:ok, playing_game} = GameSession.lookup_game_session(game.id)
       assert playing_game.player.is_playback == true
 
       # Pause playback
-      assert {:ok, updated_game} = GameSession.pause_playback(game.uuid, :spotify)
+      assert {:ok, updated_game} = GameSession.pause_playback(game.id, :spotify)
       assert updated_game.player.is_playback == false
 
       # Verify state persisted
-      {:ok, persisted_game} = GameSession.lookup_game_session(game.uuid)
+      {:ok, persisted_game} = GameSession.lookup_game_session(game.id)
       assert persisted_game.player.is_playback == false
     end
 
@@ -395,12 +395,12 @@ defmodule Songy.Boundary.GameSessionTest do
 
       credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
 
-      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
       Repatch.allow(self(), pid)
 
       # Don't start the game, leave it in :waiting status
-      :ok = GameSession.set_credentials(game.uuid, credentials)
-      assert {:error, :game_not_in_progress} = GameSession.pause_playback(game.uuid, :spotify)
+      :ok = GameSession.set_credentials(game.id, credentials)
+      assert {:error, :game_not_in_progress} = GameSession.pause_playback(game.id, :spotify)
     end
 
     test "returns error for non-existent session" do
@@ -424,21 +424,21 @@ defmodule Songy.Boundary.GameSessionTest do
       end)
 
       credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
-      :ok = GameSession.set_credentials(game.uuid, credentials)
+      :ok = GameSession.set_credentials(game.id, credentials)
 
-      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
 
       Repatch.allow(self(), pid)
 
-      {:ok, _} = GameSession.start_game_session(game.uuid)
+      {:ok, _} = GameSession.start_game_session(game.id)
 
       # Verify playback is initially stopped
-      {:ok, initial_game} = GameSession.lookup_game_session(game.uuid)
+      {:ok, initial_game} = GameSession.lookup_game_session(game.id)
       assert initial_game.player.is_playback == false
 
       # Pause playback (should be idempotent)
-      assert {:ok, first_result} = GameSession.pause_playback(game.uuid, :spotify)
-      assert {:ok, second_result} = GameSession.pause_playback(game.uuid, :spotify)
+      assert {:ok, first_result} = GameSession.pause_playback(game.id, :spotify)
+      assert {:ok, second_result} = GameSession.pause_playback(game.id, :spotify)
 
       # Both should show playback as false
       assert first_result.player.is_playback == false
@@ -450,7 +450,7 @@ defmodule Songy.Boundary.GameSessionTest do
     setup do
       {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
-      on_exit(fn -> GameSession.end_game_session(game.uuid) end)
+      on_exit(fn -> GameSession.end_game_session(game.id) end)
 
       %{game: game}
     end
@@ -460,7 +460,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "returns error for game not in progress", %{game: game} do
-      assert {:error, :game_not_in_progress} = GameSession.next_phase(game.uuid)
+      assert {:error, :game_not_in_progress} = GameSession.next_phase(game.id)
     end
 
     test "cycles through all phases correctly", %{game: game} do
@@ -482,13 +482,13 @@ defmodule Songy.Boundary.GameSessionTest do
         {:ok, :playback_paused}
       end)
 
-      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
       Repatch.allow(self(), pid)
 
-      :ok = GameSession.set_credentials(game.uuid, credentials)
-      {:ok, started_game} = GameSession.start_game_session(game.uuid)
+      :ok = GameSession.set_credentials(game.id, credentials)
+      {:ok, started_game} = GameSession.start_game_session(game.id)
 
-      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
 
       send(pid, {:participant_joined, "user1"})
       assert_receive {:game_state_updated, _updated_game_1}
@@ -499,19 +499,19 @@ defmodule Songy.Boundary.GameSessionTest do
       # Cycle through phases: waiting -> ready -> steady -> challenging -> results -> waiting
       assert started_game.turn.phase == :waiting
 
-      {:ok, ready_game} = GameSession.next_phase(game.uuid)
+      {:ok, ready_game} = GameSession.next_phase(game.id)
       assert ready_game.turn.phase == :ready
 
-      {:ok, steady_game} = GameSession.next_phase(game.uuid)
+      {:ok, steady_game} = GameSession.next_phase(game.id)
       assert steady_game.turn.phase == :steady
 
-      {:ok, challenging_game} = GameSession.next_phase(game.uuid)
+      {:ok, challenging_game} = GameSession.next_phase(game.id)
       assert challenging_game.turn.phase == :challenging
 
-      {:ok, results_game} = GameSession.next_phase(game.uuid)
+      {:ok, results_game} = GameSession.next_phase(game.id)
       assert results_game.turn.phase == :results
 
-      {:ok, next_waiting_game} = GameSession.next_phase(game.uuid)
+      {:ok, next_waiting_game} = GameSession.next_phase(game.id)
       assert next_waiting_game.turn.phase == :waiting
     end
 
@@ -534,14 +534,14 @@ defmodule Songy.Boundary.GameSessionTest do
         {:ok, :playback_paused}
       end)
 
-      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
       Repatch.allow(self(), pid)
 
-      :ok = GameSession.set_credentials(game.uuid, credentials)
-      {:ok, started_game} = GameSession.start_game_session(game.uuid)
+      :ok = GameSession.set_credentials(game.id, credentials)
+      {:ok, started_game} = GameSession.start_game_session(game.id)
 
       # Subscribe to game events to wait for participant initialization
-      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
 
       # Add participants for proper turn management
       send(pid, {:participant_joined, "user1"})
@@ -554,24 +554,24 @@ defmodule Songy.Boundary.GameSessionTest do
 
       # Cycle through phases: waiting -> ready -> steady -> challenging -> results
       # These transitions should NOT trigger track fetching
-      {:ok, ready_game} = GameSession.next_phase(game.uuid)
+      {:ok, ready_game} = GameSession.next_phase(game.id)
       assert ready_game.turn.phase == :ready
       assert ready_game.turn.track.id == initial_track_id
 
-      {:ok, steady_game} = GameSession.next_phase(game.uuid)
+      {:ok, steady_game} = GameSession.next_phase(game.id)
       assert steady_game.turn.phase == :steady
       assert steady_game.turn.track.id == initial_track_id
 
-      {:ok, challenging_game} = GameSession.next_phase(game.uuid)
+      {:ok, challenging_game} = GameSession.next_phase(game.id)
       assert challenging_game.turn.phase == :challenging
       assert challenging_game.turn.track.id == initial_track_id
 
-      {:ok, results_game} = GameSession.next_phase(game.uuid)
+      {:ok, results_game} = GameSession.next_phase(game.id)
       assert results_game.turn.phase == :results
       assert results_game.turn.track.id == initial_track_id
 
       # Transition from results -> waiting should fetch new track
-      {:ok, next_waiting_game} = GameSession.next_phase(game.uuid)
+      {:ok, next_waiting_game} = GameSession.next_phase(game.id)
       assert next_waiting_game.turn.phase == :waiting
 
       # Verify that a new track was set with different ID
@@ -594,14 +594,14 @@ defmodule Songy.Boundary.GameSessionTest do
          }}
       end)
 
-      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
 
       Repatch.allow(self(), pid)
 
-      :ok = GameSession.set_credentials(game.uuid, credentials)
-      {:ok, _started_game} = GameSession.start_game_session(game.uuid)
+      :ok = GameSession.set_credentials(game.id, credentials)
+      {:ok, _started_game} = GameSession.start_game_session(game.id)
 
-      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
 
       send(pid, {:participant_joined, "user1"})
       assert_receive {:game_state_updated, _updated_game_1}
@@ -610,9 +610,9 @@ defmodule Songy.Boundary.GameSessionTest do
       assert_receive {:game_state_updated, _updated_game_2}
 
       # Move to challenging phase: waiting -> ready -> steady -> challenging
-      {:ok, _ready_game} = GameSession.next_phase(game.uuid)
-      {:ok, _steady_game} = GameSession.next_phase(game.uuid)
-      {:ok, challenging_game} = GameSession.next_phase(game.uuid)
+      {:ok, _ready_game} = GameSession.next_phase(game.id)
+      {:ok, _steady_game} = GameSession.next_phase(game.id)
+      {:ok, challenging_game} = GameSession.next_phase(game.id)
 
       assert challenging_game.turn.phase == :challenging
 
@@ -624,9 +624,9 @@ defmodule Songy.Boundary.GameSessionTest do
     test "broadcasts event state update" do
       {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
-      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
 
-      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
 
       send(pid, {:participant_joined, "user456"})
 
@@ -635,7 +635,7 @@ defmodule Songy.Boundary.GameSessionTest do
       assert length(updated_game.participants) == 1
       assert hd(updated_game.participants).uuid == "user456"
 
-      GameSession.end_game_session(game.uuid)
+      GameSession.end_game_session(game.id)
     end
 
     test "updates game state with new participant" do
@@ -652,22 +652,22 @@ defmodule Songy.Boundary.GameSessionTest do
 
       {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
-      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
       credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
-      :ok = GameSession.set_credentials(game.uuid, credentials)
+      :ok = GameSession.set_credentials(game.id, credentials)
 
       Repatch.allow(self(), pid)
 
-      assert {:ok, game} = GameSession.start_game_session(game.uuid)
+      assert {:ok, game} = GameSession.start_game_session(game.id)
       assert length(game.participants) == 0
 
-      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
 
       send(pid, {:participant_joined, "owner123"})
 
       assert_receive {:game_state_updated, _updated_game}
 
-      assert {:ok, updated_game} = GameSession.lookup_game_session(game.uuid)
+      assert {:ok, updated_game} = GameSession.lookup_game_session(game.id)
 
       assert length(updated_game.participants) == 1
       assert hd(updated_game.participants).uuid == "owner123"
@@ -691,14 +691,14 @@ defmodule Songy.Boundary.GameSessionTest do
          }}
       end)
 
-      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
       Repatch.allow(self(), pid)
 
       # Set credentials first
-      assert :ok = GameSession.set_credentials(game.uuid, credentials)
+      assert :ok = GameSession.set_credentials(game.id, credentials)
 
       # Subscribe to state updates
-      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
 
       # Send participant joined event
       send(pid, {:participant_joined, "user456"})
@@ -719,16 +719,16 @@ defmodule Songy.Boundary.GameSessionTest do
       # Verify Spotify.search_random_track was called
       assert Repatch.called?(Songy.Boundary.Spotify, :search_random_track, 1, by: pid)
 
-      GameSession.end_game_session(game.uuid)
+      GameSession.end_game_session(game.id)
     end
 
     test "handles missing credentials gracefully when adding random track" do
       {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
-      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
 
       # Subscribe to state updates
-      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
 
       # Send participant joined event without setting credentials
       send(pid, {:participant_joined, "user456"})
@@ -742,7 +742,7 @@ defmodule Songy.Boundary.GameSessionTest do
       user_timeline = Game.get_user_timeline(updated_game, "user456")
       assert length(user_timeline) == 0
 
-      GameSession.end_game_session(game.uuid)
+      GameSession.end_game_session(game.id)
     end
 
     test "handles random track search failure gracefully" do
@@ -753,14 +753,14 @@ defmodule Songy.Boundary.GameSessionTest do
         {:error, :no_tracks_found}
       end)
 
-      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
       Repatch.allow(self(), pid)
 
       # Set credentials first
-      :ok = GameSession.set_credentials(game.uuid, credentials)
+      :ok = GameSession.set_credentials(game.id, credentials)
 
       # Subscribe to state updates
-      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
 
       # Send participant joined event
       send(pid, {:participant_joined, "user456"})
@@ -777,7 +777,7 @@ defmodule Songy.Boundary.GameSessionTest do
       # Verify Spotify.search_random_track was called but failed
       assert Repatch.called?(Songy.Boundary.Spotify, :search_random_track, 1, by: pid)
 
-      GameSession.end_game_session(game.uuid)
+      GameSession.end_game_session(game.id)
     end
 
     test "handles Spotify API error gracefully" do
@@ -789,14 +789,14 @@ defmodule Songy.Boundary.GameSessionTest do
         {:error, :search_failed}
       end)
 
-      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
       Repatch.allow(self(), pid)
 
       # Set credentials first
-      :ok = GameSession.set_credentials(game.uuid, credentials)
+      :ok = GameSession.set_credentials(game.id, credentials)
 
       # Subscribe to state updates
-      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
 
       # Send participant joined event
       send(pid, {:participant_joined, "user456"})
@@ -813,7 +813,7 @@ defmodule Songy.Boundary.GameSessionTest do
       # Verify Spotify.search_random_track was called but failed
       assert Repatch.called?(Songy.Boundary.Spotify, :search_random_track, 1, by: pid)
 
-      GameSession.end_game_session(game.uuid)
+      GameSession.end_game_session(game.id)
     end
 
     test "does not add duplicate track when user with existing timeline rejoins" do
@@ -834,14 +834,14 @@ defmodule Songy.Boundary.GameSessionTest do
          }}
       end)
 
-      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      assert [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
       Repatch.allow(self(), pid)
 
       # Set credentials first
-      assert :ok = GameSession.set_credentials(game.uuid, credentials)
+      assert :ok = GameSession.set_credentials(game.id, credentials)
 
       # Subscribe to state updates
-      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
 
       # First join - should add initial track
       send(pid, {:participant_joined, "user456"})
@@ -886,7 +886,7 @@ defmodule Songy.Boundary.GameSessionTest do
       # Verify search_random_track was still called only once (not called on rejoin)
       assert Repatch.called?(Songy.Boundary.Spotify, :search_random_track, 1, by: pid)
 
-      GameSession.end_game_session(game.uuid)
+      GameSession.end_game_session(game.id)
     end
   end
 
@@ -894,7 +894,7 @@ defmodule Songy.Boundary.GameSessionTest do
     setup do
       {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
-      on_exit(fn -> GameSession.end_game_session(game.uuid) end)
+      on_exit(fn -> GameSession.end_game_session(game.id) end)
 
       %{game: game}
     end
@@ -902,10 +902,10 @@ defmodule Songy.Boundary.GameSessionTest do
     test "stores provider credentials successfully", %{game: game} do
       provider = Provider.new(:spotify, %{access_token: "test_token", device_id: "test_device"})
 
-      assert :ok = GameSession.set_credentials(game.uuid, provider)
+      assert :ok = GameSession.set_credentials(game.id, provider)
 
       # Verify credentials are stored in Registry
-      assert [{_pid, credentials}] = Registry.lookup(Songy.Registry, {:credentials, game.uuid})
+      assert [{_pid, credentials}] = Registry.lookup(Songy.Registry, {:credentials, game.id})
       assert credentials.access_token == "test_token"
     end
 
@@ -920,10 +920,10 @@ defmodule Songy.Boundary.GameSessionTest do
     setup do
       {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
-      on_exit(fn -> GameSession.end_game_session(game.uuid) end)
+      on_exit(fn -> GameSession.end_game_session(game.id) end)
 
       credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
-      :ok = GameSession.set_credentials(game.uuid, credentials)
+      :ok = GameSession.set_credentials(game.id, credentials)
 
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
@@ -938,11 +938,11 @@ defmodule Songy.Boundary.GameSessionTest do
          }}
       end)
 
-      [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
       Repatch.allow(self(), pid)
 
       # Start game to set turn track
-      {:ok, started_game} = GameSession.start_game_session(game.uuid)
+      {:ok, started_game} = GameSession.start_game_session(game.id)
 
       %{game: started_game, pid: pid}
     end
@@ -951,7 +951,7 @@ defmodule Songy.Boundary.GameSessionTest do
       user_uuid = "user123"
 
       # Subscribe to state updates before adding participant
-      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
 
       # Add participant and wait for initialization to complete
       send(pid, {:participant_joined, user_uuid})
@@ -959,13 +959,13 @@ defmodule Songy.Boundary.GameSessionTest do
       assert_receive {:game_state_updated, _game_with_participant}
 
       # First, transition to ready phase to create active timeline snapshot
-      {:ok, ready_game} = GameSession.next_phase(game.uuid)
+      {:ok, ready_game} = GameSession.next_phase(game.id)
       assert ready_game.turn.phase == :ready
       # Should have snapshot of user's timeline (1 initial track)
       assert length(ready_game.turn.timeline) == 1
 
       # Make assumption by adding turn track at position 1
-      assert {:ok, updated_game} = GameSession.make_assumption(game.uuid, user_uuid, 1)
+      assert {:ok, updated_game} = GameSession.make_assumption(game.id, user_uuid, 1)
 
       # Verify turn track was added to active timeline (turn.timeline)
       active_timeline = updated_game.turn.timeline
@@ -984,18 +984,18 @@ defmodule Songy.Boundary.GameSessionTest do
       user_uuid = "user123"
 
       # Subscribe to state updates before adding participant
-      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
 
       # Add participant and wait for initialization to complete
       send(pid, {:participant_joined, user_uuid})
       assert_receive {:game_state_updated, _game_with_participant}
 
       # First, transition to ready phase to create active timeline snapshot
-      {:ok, ready_game} = GameSession.next_phase(game.uuid)
+      {:ok, ready_game} = GameSession.next_phase(game.id)
       assert ready_game.turn.phase == :ready
 
       # Add turn track at position 0
-      assert {:ok, updated_game} = GameSession.make_assumption(game.uuid, user_uuid, 0)
+      assert {:ok, updated_game} = GameSession.make_assumption(game.id, user_uuid, 0)
 
       active_timeline = updated_game.turn.timeline
       assert length(active_timeline) == 2
@@ -1010,18 +1010,18 @@ defmodule Songy.Boundary.GameSessionTest do
       user_uuid = "user123"
 
       # Subscribe to state updates before adding participant
-      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
 
       # Add participant and wait for initialization to complete
       send(pid, {:participant_joined, user_uuid})
       assert_receive {:game_state_updated, _game_with_participant}
 
       # First, transition to ready phase to create active timeline snapshot
-      {:ok, ready_game} = GameSession.next_phase(game.uuid)
+      {:ok, ready_game} = GameSession.next_phase(game.id)
       assert ready_game.turn.phase == :ready
 
       # Add turn track using default position (should be 0)
-      assert {:ok, updated_game} = GameSession.make_assumption(game.uuid, user_uuid)
+      assert {:ok, updated_game} = GameSession.make_assumption(game.id, user_uuid)
 
       active_timeline = updated_game.turn.timeline
       assert length(active_timeline) == 2
@@ -1041,12 +1041,12 @@ defmodule Songy.Boundary.GameSessionTest do
     setup do
       {:ok, game} = GameSession.create_game_session("owner123", :spotify)
 
-      on_exit(fn -> GameSession.end_game_session(game.uuid) end)
+      on_exit(fn -> GameSession.end_game_session(game.id) end)
 
       # Setup credentials
       credentials = %Songy.Core.Provider.Spotify{access_token: "test-token"}
 
-      :ok = GameSession.set_credentials(game.uuid, credentials)
+      :ok = GameSession.set_credentials(game.id, credentials)
 
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
@@ -1061,7 +1061,7 @@ defmodule Songy.Boundary.GameSessionTest do
          }}
       end)
 
-      [{pid, _}] = Registry.lookup(Songy.Registry, game.uuid)
+      [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
 
       Repatch.allow(self(), pid)
 
@@ -1069,7 +1069,7 @@ defmodule Songy.Boundary.GameSessionTest do
       user_uuid = "user123"
 
       # Subscribe to state updates before adding participant
-      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
 
       send(pid, {:participant_joined, user_uuid})
 
@@ -1079,23 +1079,23 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "reorders existing track to new position in active timeline", %{game: game, user_uuid: user_uuid} do
-      {:ok, _started_game} = GameSession.start_game_session(game.uuid)
+      {:ok, _started_game} = GameSession.start_game_session(game.id)
 
-      {:ok, game} = GameSession.make_assumption(game.uuid, user_uuid, 0)
+      {:ok, game} = GameSession.make_assumption(game.id, user_uuid, 0)
 
       # TODO: Should implement full cycle phase and create a new turn track
-      {:ok, game} = GameSession.next_phase(game.uuid)
+      {:ok, game} = GameSession.next_phase(game.id)
 
       assert_receive {:game_state_updated, %{turn: %{timeline: [track]}}}
 
       assert {:ok, _} =
-               GameSession.reorder_timeline(game.uuid, user_uuid, 1)
+               GameSession.reorder_timeline(game.id, user_uuid, 1)
 
       assert_receive {:game_state_updated, %{turn: %{timeline: [^track]}}}
     end
 
     test "returns error for non-existent user", %{game: game} do
-      assert {:error, :user_assumption_not_found} = GameSession.reorder_timeline(game.uuid, "nonexistent_user", 0)
+      assert {:error, :user_assumption_not_found} = GameSession.reorder_timeline(game.id, "nonexistent_user", 0)
     end
 
     test "returns error for non-existent game session" do
@@ -1104,15 +1104,15 @@ defmodule Songy.Boundary.GameSessionTest do
 
     test "returns error when user has no assumption", %{game: game} do
       # Game has turn but user has no assumption, should return user not found
-      assert {:error, :user_assumption_not_found} = GameSession.reorder_timeline(game.uuid, "any_user", 0)
+      assert {:error, :user_assumption_not_found} = GameSession.reorder_timeline(game.id, "any_user", 0)
     end
 
     test "broadcasts state update even when reordering fails", %{game: game} do
       # Subscribe to state updates
-      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.uuid}")
+      Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
 
       # Try to reorder for non-existent user
-      assert {:error, :user_assumption_not_found} = GameSession.reorder_timeline(game.uuid, "nonexistent", 0)
+      assert {:error, :user_assumption_not_found} = GameSession.reorder_timeline(game.id, "nonexistent", 0)
 
       # Should not receive any broadcast for failed operation
       refute_receive {:game_state_updated, _}, 100
