@@ -9,13 +9,15 @@ defmodule Songy.Core.GameTest do
       provider = Provider.new(:spotify)
       game = Game.new(owner_uuid, provider: provider)
 
-      assert %Game{} = game
-      assert game.max_participants == 8
-      assert game.participants == []
-      assert game.status == :waiting
-      assert game.owner_uuid == owner_uuid
-      assert %Provider{id: :spotify} = game.provider
-      assert %Player{is_playback: false} = game.player
+      assert %Game{
+               max_participants: 8,
+               participants: [],
+               status: :waiting,
+               owner_uuid: ^owner_uuid,
+               provider: %Provider{id: :spotify},
+               player: %Player{is_playback: false}
+             } = game
+
       assert String.length(game.id) == 4
       assert %DateTime{} = game.created_at
     end
@@ -25,11 +27,13 @@ defmodule Songy.Core.GameTest do
       provider = Provider.new(:spotify)
       game = Game.new(owner_uuid, provider: provider, max_participants: 4)
 
-      assert game.max_participants == 4
-      assert game.owner_uuid == owner_uuid
-      assert game.participants == []
-      assert game.status == :waiting
-      assert %Provider{id: :spotify} = game.provider
+      assert %Game{
+               max_participants: 4,
+               owner_uuid: ^owner_uuid,
+               participants: [],
+               status: :waiting,
+               provider: %Provider{id: :spotify}
+             } = game
     end
 
     test "creates game with multiple options" do
@@ -37,11 +41,13 @@ defmodule Songy.Core.GameTest do
       provider = Provider.new(:spotify)
       game = Game.new(owner_uuid, provider: provider, max_participants: 12)
 
-      assert game.max_participants == 12
-      assert game.owner_uuid == owner_uuid
-      assert game.participants == []
-      assert game.status == :waiting
-      assert %Provider{id: :spotify} = game.provider
+      assert %Game{
+               max_participants: 12,
+               owner_uuid: ^owner_uuid,
+               participants: [],
+               status: :waiting,
+               provider: %Provider{id: :spotify}
+             } = game
     end
 
     test "creates game with empty options list" do
@@ -73,7 +79,7 @@ defmodule Songy.Core.GameTest do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
 
-      assert game.scores == %{}
+      assert %Game{scores: %{}} = game
     end
 
     test "raises error with nil provider" do
@@ -118,14 +124,14 @@ defmodule Songy.Core.GameTest do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
 
-      assert game.max_score == 10
+      assert %Game{max_score: 10} = game
     end
 
     test "creates game with custom max_score" do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider, max_score: 5)
 
-      assert game.max_score == 5
+      assert %Game{max_score: 5} = game
     end
 
     test "validates max_score is positive integer" do
@@ -274,8 +280,8 @@ defmodule Songy.Core.GameTest do
     end
   end
 
-  describe "increment_user_score/2 and increment_user_score/3" do
-    test "increment_user_score defaults to 1 point" do
+  describe "increment_user_score/2" do
+    test "defaults to 1 point" do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
       user = User.new()
@@ -286,29 +292,7 @@ defmodule Songy.Core.GameTest do
       assert Map.get(updated_game.scores, user.uuid, 0) == 1
     end
 
-    test "increment_user_score accumulates points correctly" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-      user = User.new()
-
-      {:ok, game_with_user} = Game.add_participant(game, user)
-      game_step1 = Game.increment_user_score(game_with_user, user.uuid, 30)
-      game_step2 = Game.increment_user_score(game_step1, user.uuid, 20)
-
-      assert Map.get(game_step2.scores, user.uuid, 0) == 50
-    end
-
-    test "increment_user_score returns unchanged game for non-existent player" do
-      provider = Provider.new(:spotify)
-      game = Game.new("owner123", provider: provider)
-
-      unchanged_game = Game.increment_user_score(game, "non_existent_uuid", 10)
-
-      assert unchanged_game == game
-      assert Map.get(unchanged_game.scores, "non_existent_uuid", 0) == 0
-    end
-
-    test "increment_user_score works with default 1 point for multiple calls" do
+    test "works with default 1 point for multiple calls" do
       provider = Provider.new(:spotify)
       game = Game.new("owner123", provider: provider)
       user = User.new()
@@ -322,6 +306,40 @@ defmodule Songy.Core.GameTest do
         |> Game.increment_user_score(user.uuid)
 
       assert Map.get(final_game.scores, user.uuid, 0) == 3
+    end
+
+    test "returns unchanged game for non-existent player" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+
+      unchanged_game = Game.increment_user_score(game, "non_existent_uuid")
+
+      assert unchanged_game == game
+      assert Map.get(unchanged_game.scores, "non_existent_uuid", 0) == 0
+    end
+  end
+
+  describe "increment_user_score/3" do
+    test "accumulates points correctly with custom amount" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+      user = User.new()
+
+      {:ok, game_with_user} = Game.add_participant(game, user)
+      game_step1 = Game.increment_user_score(game_with_user, user.uuid, 30)
+      game_step2 = Game.increment_user_score(game_step1, user.uuid, 20)
+
+      assert Map.get(game_step2.scores, user.uuid, 0) == 50
+    end
+
+    test "returns unchanged game for non-existent player" do
+      provider = Provider.new(:spotify)
+      game = Game.new("owner123", provider: provider)
+
+      unchanged_game = Game.increment_user_score(game, "non_existent_uuid", 10)
+
+      assert unchanged_game == game
+      assert Map.get(unchanged_game.scores, "non_existent_uuid", 0) == 0
     end
   end
 
