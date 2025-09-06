@@ -16,39 +16,36 @@
   const zoneId = $derived(`participant-timeline-${currentPlayer.uuid}`);
   const turnPhase = $derived(state?.turn?.phase);
 
+  const participants = $derived(
+    new Map(state?.participants?.map((user) => [user.uuid, user]) ?? [])
+  );
+
   const assumptions = $derived.by(() => {
     const assumptions = state?.turn?.assumptions || [];
-    const participants = state?.participants || [];
 
-    const map: Record<number, User | null> = {};
+    return assumptions.reduce((acc, { position, user_id }) => {
+      acc.set(position, participants.get(user_id));
 
-    assumptions.forEach(({ position, user_id }) => {
-      const user = participants.find((p) => p.uuid === user_id);
-
-      if (user) {
-        map[position] = user;
-      }
-    });
-
-    return map;
+      return acc;
+    }, new Map<number, User | undefined>());
   });
 
   let timeline = $derived.by(() => {
     const timeline = state?.turn?.timeline || [];
 
     return timeline.map((track, index) => ({
-      id: `${track.id}-${assumptions[index]?.uuid}`,
+      id: `${track.id}-${assumptions.get(index)?.uuid}`,
       track,
       current: track.id === currentTrack?.id,
-      user: assumptions[index],
+      user: assumptions.get(index),
     }));
   });
 
-  const activePlayerUuid = $derived.by(() => {
+  const activePlayerId = $derived.by(() => {
     return state?.turn?.queue?.[state?.turn?.cursor];
   });
   const activePlayer = $derived.by(() => {
-    return state?.participants?.find(({ uuid }) => uuid === activePlayerUuid);
+    return state?.participants?.find(({ uuid }) => uuid === activePlayerId);
   });
 
   const isActivePlayer = $derived.by(() => {
