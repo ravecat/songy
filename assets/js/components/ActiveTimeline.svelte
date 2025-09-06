@@ -3,6 +3,7 @@
   import { getGameContext } from "~components/GameContext.svelte";
   import TrackCard from "~components/TrackCard.svelte";
   import Timeline from "~components/Timeline.svelte";
+  import Draggable from "~components/Draggable.svelte";
   import { type DndEvent, TRIGGERS } from "svelte-dnd-action";
   import { dragOriginZone } from "~shared/stores/dragOrigin";
   import { get } from "svelte/store";
@@ -41,18 +42,15 @@
     }));
   });
 
+  type TimelineItem = (typeof timeline)[number];
+
   const activePlayerId = $derived.by(() => {
     return state?.turn?.queue?.[state?.turn?.cursor];
   });
-  const activePlayer = $derived.by(() => {
-    return state?.participants?.find(({ uuid }) => uuid === activePlayerId);
-  });
 
-  const isActivePlayer = $derived.by(() => {
-    return activePlayer?.uuid == currentPlayer?.uuid;
-  });
-
-  type TimelineItem = (typeof timeline)[number];
+  const canUserDragItem = (item: TimelineItem): boolean => {
+    return item.user?.uuid === currentPlayer?.uuid;
+  };
 
   function handleConsider({
     detail: { items, info },
@@ -95,12 +93,16 @@
   onfinalize={handleFinalize}
 >
   {#snippet children(item)}
-    <TrackCard
-      revealed={!item.current || turnPhase === TURN_PHASE.RESULTS}
-      track={item.track}
-      ready={item.current && turnPhase === TURN_PHASE.STEADY && isActivePlayer}
-      user={item.user}
-      onsteady={handleSteady}
-    />
+    <Draggable draggable={canUserDragItem(item)}>
+      <TrackCard
+        revealed={!item.current || turnPhase === TURN_PHASE.RESULTS}
+        track={item.track}
+        ready={item.current &&
+          turnPhase === TURN_PHASE.STEADY &&
+          activePlayerId === currentPlayer?.uuid}
+        user={item.user}
+        onsteady={handleSteady}
+      />
+    </Draggable>
   {/snippet}
 </Timeline>

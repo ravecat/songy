@@ -3,6 +3,7 @@
   import { getScopeContext } from "~components/Scope.svelte";
   import TrackCard from "~components/TrackCard.svelte";
   import Timeline from "~components/Timeline.svelte";
+  import Draggable from "~components/Draggable.svelte";
   import { type DndEvent, TRIGGERS } from "svelte-dnd-action";
   import { dragOriginZone } from "~shared/stores/dragOrigin";
   import { TURN_PHASE } from "~shared/types/turn";
@@ -81,7 +82,9 @@
     dropFromOthersDisabled={true}
   >
     {#snippet children(item)}
-      <TrackCard revealed={false} track={item.track} />
+      <Draggable draggable={true}>
+        <TrackCard revealed={false} track={item.track} />
+      </Draggable>
     {/snippet}
   </Timeline>
 {/if}

@@ -1,5 +1,5 @@
 <script lang="ts" generics="TimelineItem extends { id: any }">
-  import { dndzone } from "svelte-dnd-action";
+  import { dragHandleZone } from "svelte-dnd-action";
   import type { DndEvent, Options, DndZoneAttributes } from "svelte-dnd-action";
   import { flip } from "svelte/animate";
   import type { Snippet } from "svelte";
@@ -34,7 +34,7 @@
 
 <div
   class="timeline"
-  use:dndzone={{
+  use:dragHandleZone={{
     items,
     flipDurationMs,
     type,
