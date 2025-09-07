@@ -63,7 +63,7 @@ describe("Game", () => {
       ]),
     });
 
-    expect(screen.getByText("Alice turn")).toBeInTheDocument();
+    expect(screen.getByText("It's your turn")).toBeInTheDocument();
     expect(screen.getByText("Ready?")).toBeInTheDocument();
   });
 

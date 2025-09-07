@@ -30,7 +30,9 @@
         <img src={activePlayer.avatar_url} alt={activePlayer.name} />
       </div>
     </div>
-    <h2 class="mb-0">{activePlayer.name} turn</h2>
+    <h2 class="mb-0">
+      {isCurrentPlayerActive ? "It's your turn" : `${activePlayer.name} turn`}
+    </h2>
     {#if isCurrentPlayerActive}
       <button class="btn btn-primary w-full" onclick={handleReady}>Ready?</button>
     {/if}

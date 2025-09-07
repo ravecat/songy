@@ -45,7 +45,7 @@ describe("Turn waiting view", () => {
     };
   });
 
-  test("displays current player's name and avatar", () => {
+  test("displays personalized message when current user is active player", () => {
     render(TurnWaiting, {
       context: new Map([
         [GAME_CONTEXT_KEY, mockChannelContext],
@@ -53,7 +53,7 @@ describe("Turn waiting view", () => {
       ]),
     });
 
-    expect(screen.getByText("Alice turn")).toBeInTheDocument();
+    expect(screen.getByText("It's your turn")).toBeInTheDocument();
     expect(screen.getByAltText("Alice")).toBeInTheDocument();
     expect(screen.getByAltText("Alice")).toHaveAttribute(
       "src",
@@ -107,7 +107,7 @@ describe("Turn waiting view", () => {
       ]),
     });
 
-    expect(screen.getByText("Bob turn")).toBeInTheDocument();
+    expect(screen.getByText("It's your turn")).toBeInTheDocument();
     expect(screen.getByAltText("Bob")).toBeInTheDocument();
     expect(screen.getByText("Ready?")).toBeInTheDocument();
   });
