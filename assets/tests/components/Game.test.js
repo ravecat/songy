@@ -46,12 +46,15 @@ describe("Game", () => {
       ]),
     });
 
-    // Check that participants component is rendered (part of TurnSteady)
     expect(screen.getByText("Alice")).toBeInTheDocument();
   });
 
   test("displays waiting view on waiting phase", () => {
     mockChannelContext.state.turn.phase = TURN_PHASE.WAITING;
+    mockScopeContext.user = {
+      uuid: "user-1",
+      name: "Alice",
+    };
 
     render(Game, {
       context: new Map([
@@ -60,7 +63,6 @@ describe("Game", () => {
       ]),
     });
 
-    // Check that the current player's turn is displayed
     expect(screen.getByText("Alice turn")).toBeInTheDocument();
     expect(screen.getByText("Ready?")).toBeInTheDocument();
   });

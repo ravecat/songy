@@ -1,14 +1,19 @@
 <script lang="ts">
   import { getGameContext } from "~components/GameContext.svelte";
+  import { getScopeContext } from "~components/Scope.svelte";
   import { PUSH_EVENT } from "~shared/types/channel";
 
   const { state, channel } = $derived.by(getGameContext);
+  const { user: currentPlayer } = $derived.by(getScopeContext);
 
   const activePlayer = $derived.by(() => {
-    const activePlayerUuid =
-      state?.turn?.queue?.[state?.turn?.cursor];
+    const activePlayerUuid = state?.turn?.queue?.[state?.turn?.cursor];
 
     return state?.participants?.find(({ uuid }) => uuid === activePlayerUuid)!;
+  });
+
+  const isCurrentPlayerActive = $derived.by(() => {
+    return currentPlayer?.uuid === activePlayer?.uuid;
   });
 
   const handleReady = () => {
@@ -18,14 +23,18 @@
 
 <div class="turn-waiting-screen">
   <div class="player-info">
-    <img
-      src={activePlayer.avatar_url}
-      alt={activePlayer.name}
-      class="player-avatar"
-    />
-    <h2>{activePlayer.name} turn</h2>
+    <div class="avatar">
+      <div
+        class="ring-primary ring-offset-base-100 w-16 rounded-full ring-2 ring-offset-2"
+      >
+        <img src={activePlayer.avatar_url} alt={activePlayer.name} />
+      </div>
+    </div>
+    <h2 class="mb-0">{activePlayer.name} turn</h2>
+    {#if isCurrentPlayerActive}
+      <button class="btn btn-primary w-full" onclick={handleReady}>Ready?</button>
+    {/if}
   </div>
-  <button class="btn btn-primary w-full" onclick={handleReady}>Ready?</button>
 </div>
 
 <style>
@@ -44,25 +53,10 @@
     flex-direction: column;
     align-items: center;
     gap: 1rem;
-    margin-bottom: 2rem;
-  }
-
-  .player-avatar {
-    width: 4rem;
-    height: 4rem;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 3px solid #3b82f6;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   }
 
   h2 {
-    margin: 0;
     color: #333;
     font-size: 1.5rem;
-  }
-
-  .btn {
-    max-width: 400px;
   }
 </style>
