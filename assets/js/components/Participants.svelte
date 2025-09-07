@@ -117,25 +117,20 @@
 
   .star-indicator {
     position: absolute;
-    top: -0.8rem;
-    right: -0.8rem;
-    width: 2.4rem;
-    height: 2.4rem;
+    top: -0.75rem;
+    right: -0.75rem;
+    width: 2rem;
+    height: 2rem;
     z-index: 10;
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
     pointer-events: none;
     transform: rotate(15deg);
   }
 
-  .star-indicator :global(.star-icon) {
-    width: 100%;
-    height: 100%;
-  }
-
   .score-indicator {
     position: absolute;
-    bottom: 1rem;
-    right: -0.5rem;
+    bottom: 1.25rem;
+    right: -0.75rem;
     width: 2rem;
     height: 2rem;
     background: linear-gradient(135deg, #3b82f6, #1d4ed8);

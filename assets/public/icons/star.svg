@@ -8,7 +8,6 @@
   stroke-width="2"
   stroke-linecap="round"
   stroke-linejoin="round"
-  class="star-icon"
 >
   <defs>
     <linearGradient id="starGradient" x1="0%" y1="0%" x2="100%" y2="100%">
