@@ -3,6 +3,8 @@
   import { getScopeContext } from "~components/Scope.svelte";
   import { PUSH_EVENT } from "~shared/types/channel";
   import { TURN_PHASE } from "~shared/types/turn";
+  import playIcon from "~icons/play.svg?raw";
+  import pauseIcon from "~icons/pause.svg?raw";
 
   const { state, channel } = $derived(getGameContext());
   const { user: currentPlayer } = $derived.by(getScopeContext);
@@ -37,15 +39,7 @@
     aria-label={isPlayback ? "Pause track" : "Play track"}
     onclick={togglePlayback}
   >
-    {#if isPlayback}
-      <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-      </svg>
-    {:else}
-      <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M8 5v14l11-7z" />
-      </svg>
-    {/if}
+    {@html isPlayback ? pauseIcon : playIcon}
   </button>
 
   {#if showReady}
@@ -69,10 +63,5 @@
     display: flex;
     align-items: center;
     gap: 1rem;
-  }
-
-  .icon {
-    width: 1.5rem;
-    height: 1.5rem;
   }
 </style>
