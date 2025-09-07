@@ -7,105 +7,75 @@
     track: Track;
     /** Whether the track card is revealed (shows content) */
     revealed?: boolean;
-    /** Whether the track is in ready state */
-    ready?: boolean;
     /** User who made assumption for this position (only for hidden tracks) */
     user?: User | null;
-    /** Callback function when ready button is clicked */
-    onsteady?: () => void;
   }
 
-  let {
-    track,
-    revealed = true,
-    ready = false,
-    user = null,
-    onsteady,
-  }: TrackCardProps = $props();
+  let { track, revealed = true, user = null }: TrackCardProps = $props();
 </script>
 
 <div class="wrapper">
-  <div class="track-card" style:transform={revealed ? "rotateY(0)" : ""}>
-    {#if revealed}
-      <div
-        class="front"
-        aria-label={`Track: ${track.artist} - ${track.title} (${track.year})`}
-      >
-        <div class="card-content">
-          <div class="artist-text">
-            {#if track.artist && track.artist.length > 12}
-              <div
-                class="marquee"
-                style="--speed: {Math.max(6, track.artist.length * 0.2)}s"
-              >
-                <div class="marquee-track">
-                  <span>{track.artist}</span>
-                  <span aria-hidden="true">{track.artist}</span>
-                </div>
-              </div>
-            {:else}
-              <div class="text-overflow-container">{track.artist || ""}</div>
-            {/if}
-          </div>
-          <div class="year-container">
-            <span class="year-text">
-              {track.year || ""}
-            </span>
-          </div>
-          <div class="title-text">
-            {#if track.title && track.title.length > 12}
-              <div
-                class="marquee"
-                style="--speed: {Math.max(6, track.title.length * 0.2)}s"
-              >
-                <div class="marquee-track">
-                  <span>{track.title}</span>
-                  <span aria-hidden="true">{track.title}</span>
-                </div>
-              </div>
-            {:else}
-              <div class="text-overflow-container">{track.title || ""}</div>
-            {/if}
-          </div>
-        </div>
-      </div>
-    {/if}
-
-    {#if !revealed}
-      <div class="back" aria-label="Hidden track card">
-        {#if user}
-          <div class="user-avatar">
-            <img src={user.avatar_url} alt={user.name} />
-          </div>
-        {/if}
-        <div class="card-content">
-          <div class="year-text">?</div>
-          {#if ready}
-            <button
-              class="btn"
-              aria-label="Mark as ready to submit guess"
-              type="button"
-              onclick={onsteady}
+  <div class={["card", { revealed }]}>
+    <div class="front" aria-hidden={!revealed}>
+      {#if revealed}
+        <div class="artist-text">
+          {#if track?.artist?.length > 12}
+            <div
+              class="marquee"
+              style="--speed: {Math.max(6, track.artist.length * 0.2)}s"
             >
-              Ready
-            </button>
+              <div class="marquee-track">
+                <span>{track.artist}</span>
+                <span aria-hidden="true">{track.artist}</span>
+              </div>
+            </div>
+          {:else}
+            {track?.artist ?? ""}
           {/if}
         </div>
-      </div>
-    {/if}
+        <div class="year-text">
+          {track?.year ?? ""}
+        </div>
+        <div class="title-text">
+          {#if track?.title?.length > 12}
+            <div
+              class="marquee"
+              style="--speed: {Math.max(6, track.title.length * 0.2)}s"
+            >
+              <div class="marquee-track">
+                <span>{track.title}</span>
+                <span aria-hidden="true">{track.title}</span>
+              </div>
+            </div>
+          {:else}
+            {track.title || ""}
+          {/if}
+        </div>
+      {/if}
+    </div>
+
+    <div class="back" aria-hidden={revealed} aria-label="Hidden track card">
+      {#if !revealed}
+        {#if user?.avatar_url}
+          <img
+            src={user.avatar_url}
+            alt={user.name}
+            class="avatar ring-primary ring-offset-base-100 w-16 rounded-full ring-2 ring-offset-2"
+          />
+        {:else}
+          <div class="year-text">?</div>
+        {/if}
+      {/if}
+    </div>
   </div>
 </div>
 
 <style>
   .wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
     perspective: 1000px;
   }
 
-  .track-card {
+  .card {
     position: relative;
     width: 8rem;
     height: 8rem;
@@ -114,11 +84,14 @@
     transform: rotateY(180deg);
     transition: transform 0.4s;
     transform-style: preserve-3d;
-    padding: 0;
     user-select: none;
     box-shadow:
       0 10px 15px -3px rgba(0, 0, 0, 0.1),
       0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  .card.revealed {
+    transform: rotateY(0deg);
   }
 
   .front,
@@ -133,21 +106,7 @@
     left: 0;
     top: 0;
     backface-visibility: hidden;
-    border-radius: 0.5rem;
-    box-sizing: border-box;
-  }
-
-  .back {
-    transform: rotateY(180deg);
-  }
-
-  .card-content {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    gap: 0.5rem;
     mask-image: linear-gradient(
       to right,
       transparent,
@@ -157,48 +116,31 @@
     );
   }
 
-  .artist-text {
-    color: #1f2937;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    font-size: 0.875rem;
+  .front[aria-hidden="true"],
+  .back[aria-hidden="true"] {
+    visibility: hidden;
+    pointer-events: none;
   }
 
-  .year-container {
-    margin-bottom: 0.5rem;
+  .back {
+    transform: rotateY(180deg);
+  }
+
+  .artist-text {
+    font-weight: 600;
+    font-size: 0.875rem;
   }
 
   .year-text {
     font-size: 2.25rem;
     font-weight: 700;
-    color: #000000;
     line-height: 1;
     letter-spacing: 0.025em;
-    display: inline-block;
   }
 
   .title-text {
     font-size: 0.875rem;
     font-style: italic;
-    color: #1f2937;
-  }
-
-  @keyframes scaleIn {
-    0% {
-      transform: scale(0);
-      opacity: 0;
-    }
-    100% {
-      transform: scale(1);
-      opacity: 1;
-    }
-  }
-
-  .text-overflow-container {
-    white-space: nowrap;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   .marquee {
@@ -226,24 +168,5 @@
     to {
       transform: translateX(-50%);
     }
-  }
-
-  .user-avatar {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    overflow: hidden;
-    z-index: 10;
-    border: 2px solid rgba(255, 255, 255, 0.8);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .user-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
   }
 </style>

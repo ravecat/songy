@@ -82,9 +82,6 @@
     }
   }
 
-  const handleSteady = () => {
-    channel.push(PUSH_EVENT.NEXT_PHASE, {});
-  };
 </script>
 
 <Timeline
@@ -97,11 +94,7 @@
       <TrackCard
         revealed={!item.current || turnPhase === TURN_PHASE.RESULTS}
         track={item.track}
-        ready={item.current &&
-          turnPhase === TURN_PHASE.STEADY &&
-          activePlayerId === currentPlayer?.uuid}
         user={item.user}
-        onsteady={handleSteady}
       />
     </Draggable>
   {/snippet}

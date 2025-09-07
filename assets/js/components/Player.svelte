@@ -1,10 +1,23 @@
 <script>
   import { getGameContext } from "~components/GameContext.svelte";
+  import { getScopeContext } from "~components/Scope.svelte";
   import { PUSH_EVENT } from "~shared/types/channel";
+  import { TURN_PHASE } from "~shared/types/turn";
 
   const { state, channel } = $derived(getGameContext());
+  const { user: currentPlayer } = $derived.by(getScopeContext);
 
   let isPlayback = $derived(state?.player?.is_playback ?? false);
+  const turnPhase = $derived(state?.turn?.phase);
+  const activePlayerId = $derived.by(() => {
+    return state?.turn?.queue?.[state?.turn?.cursor];
+  });
+
+  const showReady = $derived.by(() => {
+    return (
+      turnPhase === TURN_PHASE.STEADY && activePlayerId === currentPlayer?.uuid
+    );
+  });
 
   const togglePlayback = () => {
     channel.push(
@@ -12,11 +25,15 @@
       {}
     );
   };
+
+  const handleReady = () => {
+    channel.push(PUSH_EVENT.NEXT_PHASE, {});
+  };
 </script>
 
-<div class="player">
+<div class="panel">
   <button
-    class="play"
+    class="btn"
     aria-label={isPlayback ? "Pause track" : "Play track"}
     onclick={togglePlayback}
   >
@@ -30,42 +47,28 @@
       </svg>
     {/if}
   </button>
+
+  {#if showReady}
+    <button
+      class="btn"
+      aria-label="Mark as ready to submit guess"
+      onclick={handleReady}
+    >
+      Ready
+    </button>
+  {/if}
 </div>
 
 <style>
-  .player {
+  .panel {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(0.5rem);
-    border-top: 1px solid rgba(255, 255, 255, 0.3);
     padding: 1rem;
     display: flex;
     align-items: center;
     gap: 1rem;
-  }
-
-  .play {
-    width: 3rem;
-    height: 3rem;
-    background: white;
-    color: #6b46c1;
-    border-radius: 0.5rem;
-    font-weight: bold;
-    border: none;
-    cursor: pointer;
-    box-shadow: 0 0.625rem 0.9375rem -0.1875rem rgba(0, 0, 0, 0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
-  }
-
-  .play:hover {
-    background: rgba(255, 255, 255, 0.9);
-    transform: scale(1.05);
   }
 
   .icon {
