@@ -22,13 +22,16 @@ Music application with Spotify integration built with Phoenix Framework.
    - Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
    - Create a new app
    - Copy `.env.example` to `.env` and fill in your credentials:
+
      ```bash
      cp .env.example .env
      ```
+
    - Edit `.env` with your Spotify app credentials
    - Add `http://localhost:4000/auth/spotify/callback` to your Spotify app's redirect URIs
 
 5. Start the server:
+
    ```bash
    mix phx.server
    ```
@@ -50,25 +53,17 @@ Create a `.env` file with the following variables:
 - `SPOTIFY_SECRET_KEY` - Your Spotify app client secret
 - `SPOTIFY_USER_ID` - Your Spotify user ID (optional)
 
-## Learn more
+## Licensing
 
-- Official website: https://www.phoenixframework.org/
-- Guides: https://hexdocs.pm/phoenix/overview.html
-- Docs: https://hexdocs.pm/phoenix
-- Forum: https://elixirforum.com/c/phoenix-forum
-- Source: https://github.com/phoenixframework/phoenixyour Phoenix server:
+This project is dual-licensed:
 
-* Run `mix setup` to install and setup dependencies
-* Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
+1. **GNU AGPL v3** - for open-source and non-commercial use.
+2. **Commercial License** - for proprietary use without AGPL restrictions.
 
-Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+The commercial license allows you to:
 
-Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
+- Use the software in proprietary products.
+- Modify the code without being obligated to share changes.
+- Receive priority support.
 
-## Learn more
-
-* Official website: https://www.phoenixframework.org/
-* Guides: https://hexdocs.pm/phoenix/overview.html
-* Docs: https://hexdocs.pm/phoenix
-* Forum: https://elixirforum.com/c/phoenix-forum
-* Source: https://github.com/phoenixframework/phoenix
+For details on the commercial license, please contact me.
