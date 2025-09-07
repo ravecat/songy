@@ -16,7 +16,9 @@ defmodule SongyWeb.PageController do
 
     case GameSession.create_game_session(owner_uuid, provider_id) do
       {:ok, game} ->
-        redirect(conn, to: ~p"/#{game.id}")
+        conn
+        |> force_inertia_redirect
+        |> redirect(to: ~p"/#{game.id}")
 
       {:error, reason} ->
         conn
