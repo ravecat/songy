@@ -1,6 +1,7 @@
 <script>
   import { slide, fly } from "svelte/transition";
   import { getGameContext } from "~components/GameContext.svelte";
+  import { PUSH_EVENT } from "~/shared/types/channel";
 
   const { channel } = $derived(getGameContext());
   let isLoading = $state(false);
@@ -9,7 +10,7 @@
     isLoading = true;
 
     channel
-      .push("start_game", {})
+      .push(PUSH_EVENT.START_GAME, {})
       .receive("ok", () => {
         isLoading = false;
       })
@@ -28,9 +29,7 @@
 >
   {#if isLoading}
     <div class="flex items-center justify-center space-x-2">
-      <div
-        class="w-5 h-5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"
-      ></div>
+      <span class="loading loading-spinner"></span>
       <span>Starting...</span>
     </div>
   {:else}
