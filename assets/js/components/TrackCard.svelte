@@ -57,11 +57,13 @@
     <div class="back" aria-hidden={revealed} aria-label="Hidden track card">
       {#if !revealed}
         {#if user?.avatar_url}
-          <img
-            src={user.avatar_url}
-            alt={user.name}
-            class="avatar ring-primary ring-offset-base-100 w-16 rounded-full ring-2 ring-offset-2"
-          />
+          <div class="avatar">
+            <div
+              class="ring-primary ring-offset-base-100 w-16 rounded-full ring-2 ring-offset-2"
+            >
+              <img src={user.avatar_url} alt={user.name} />
+            </div>
+          </div>
         {:else}
           <div class="year-text">?</div>
         {/if}
