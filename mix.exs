@@ -38,8 +38,8 @@ defmodule Songy.MixProject do
     [
       {:bcrypt_elixir, "~> 3.0"},
       {:dotenvy, "~> 1.0.0"},
-      {:phoenix_vite, "~> 0.2.0"},
-      {:igniter, "~> 0.6", only: [:dev, :test]},
+      {:phoenix_vite, "~> 0.3.3"},
+      {:igniter, "~> 0.6"},
       {:phoenix, "~> 1.8.0-rc.3", override: true},
       {:phoenix_ecto, "~> 4.5"},
       {:ecto_sql, "~> 3.10"},
@@ -92,7 +92,13 @@ defmodule Songy.MixProject do
       "assets.test.ui": ["bun assets run test:ui"],
       "assets.test.coverage": ["bun assets run test:coverage"],
       "assets.deploy": [
-        "assets.build"
+        "assets.build",
+        "phx.digest"
+      ],
+      deploy: [
+        "deps.get --only prod",
+        "compile",
+        "assets.deploy"
       ]
     ]
   end

@@ -30,23 +30,34 @@ if System.get_env("PHX_SERVER") do
   config :songy, SongyWeb.Endpoint, server: true
 end
 
+config :spotify_ex,
+  client_id: env!("SPOTIFY_CLIENT_ID", :string?, ""),
+  secret_key: env!("SPOTIFY_SECRET_KEY", :string?, ""),
+  scopes: [
+    "user-read-playback-state",
+    "user-modify-playback-state",
+    "user-read-currently-playing",
+    "streaming"
+  ],
+  callback_url: "http://127.0.0.1:4000/auth/spotify/callback"
+
 if config_env() == :prod do
-  database_url =
-    System.get_env("DATABASE_URL") ||
-      raise """
-      environment variable DATABASE_URL is missing.
-      For example: ecto://USER:PASS@HOST/DATABASE
-      """
+  # Database connection disabled - uncomment if needed
+  #
+  # database_url =
+  #   System.get_env("DATABASE_URL") ||
+  #     raise """
+  #     environment variable DATABASE_URL is missing.
+  #     For example: ecto://USER:PASS@HOST/DATABASE
+  #     """
 
-  maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
+  # maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
 
-  config :songy, Songy.Repo,
-    # ssl: true,
-    url: database_url,
-    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
-    # For machines with several cores, consider starting multiple pools of `pool_size`
-    # pool_count: 4,
-    socket_options: maybe_ipv6
+  # config :songy, Songy.Repo,
+  #   # ssl: true,
+  #   url: database_url,
+  #   pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
+  #   socket_options: maybe_ipv6
 
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you
@@ -60,7 +71,7 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
-  host = System.get_env("PHX_HOST") || "example.com"
+  host = System.get_env("PHX_HOST") || "localhost"
   port = String.to_integer(System.get_env("PORT") || "4000")
 
   config :songy, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
@@ -127,15 +138,7 @@ if config_env() == :prod do
   #     config :swoosh, :api_client, Swoosh.ApiClient.Hackney
   #
   # See https://hexdocs.pm/swoosh/Swoosh.html#module-installation for details.
-end
 
-config :spotify_ex,
-  client_id: env!("SPOTIFY_CLIENT_ID", :string?, ""),
-  secret_key: env!("SPOTIFY_SECRET_KEY", :string?, ""),
-  scopes: [
-    "user-read-playback-state",
-    "user-modify-playback-state",
-    "user-read-currently-playing",
-    "streaming"
-  ],
-  callback_url: "http://127.0.0.1:4000/auth/spotify/callback"
+  config :spotify_ex,
+    callback_url: "https://#{host}/auth/spotify/callback"
+end

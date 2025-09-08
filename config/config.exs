@@ -22,7 +22,7 @@ config :songy,
 
 # Configures the endpoint
 config :songy, SongyWeb.Endpoint,
-  url: [host: "127.0.0.1"],
+  url: [host: "localhost"],
   adapter: Bandit.PhoenixAdapter,
   render_errors: [
     formats: [html: SongyWeb.ErrorHTML, json: SongyWeb.ErrorJSON],
