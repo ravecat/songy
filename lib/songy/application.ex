@@ -9,7 +9,8 @@ defmodule Songy.Application do
   def start(_type, _args) do
     children = [
       SongyWeb.Telemetry,
-      Songy.Repo,
+      # Database connection disabled - uncomment if needed
+      # Songy.Repo,
       {DNSCluster, query: Application.get_env(:songy, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Songy.PubSub},
       # Start a worker by calling: Songy.Worker.start_link(arg)

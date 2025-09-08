@@ -1,14 +1,14 @@
 import Config
 
-# Configure your database
-config :songy, Songy.Repo,
-  username: "postgres",
-  password: "postgres",
-  hostname: "localhost",
-  database: "songy_dev",
-  stacktrace: true,
-  show_sensitive_data_on_connection_error: true,
-  pool_size: 10
+# Database connection disabled - uncomment if needed
+# config :songy, Songy.Repo,
+#   username: "postgres",
+#   password: "postgres",
+#   hostname: "localhost",
+#   database: "songy_dev",
+#   stacktrace: true,
+#   show_sensitive_data_on_connection_error: true,
+#   pool_size: 10
 
 # For development, we disable any cache and enable
 # debugging and code reloading.

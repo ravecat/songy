@@ -27,8 +27,9 @@ defmodule SongyWeb.ChannelCase do
     end
   end
 
-  setup tags do
-    Songy.DataCase.setup_sandbox(tags)
-    :ok
-  end
+  # Database connection disabled - uncomment if needed
+  # setup tags do
+  #   Songy.DataCase.setup_sandbox(tags)
+  #   :ok
+  # end
 end

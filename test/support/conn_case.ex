@@ -32,8 +32,9 @@ defmodule SongyWeb.ConnCase do
     end
   end
 
-  setup tags do
-    Songy.DataCase.setup_sandbox(tags)
+  setup _tags do
+    # Database connection disabled - uncomment if needed:
+    # Songy.DataCase.setup_sandbox(tags)
 
     conn =
       Phoenix.ConnTest.build_conn()

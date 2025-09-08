@@ -13,7 +13,9 @@ config :bun,
   vite: [args: ~w(x vite), cd: Path.expand("../assets", __DIR__)]
 
 config :songy,
-  ecto_repos: [Songy.Repo],
+  # Database connection disabled - uncomment if needed
+  # ecto_repos: [Songy.Repo],
+  ecto_repos: [],
   generators: [timestamp_type: :utc_datetime],
   game_session_termination_timeout: :timer.minutes(3),
   challenging_phase_timeout: :timer.seconds(1)

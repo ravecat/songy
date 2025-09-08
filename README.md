@@ -1,6 +1,6 @@
 # Songy
 
-Music application with Spotify integration built with Phoenix Framework.
+Music quiz application with Spotify integration built with Phoenix Framework.
 
 ## Setup
 
@@ -11,13 +11,7 @@ Music application with Spotify integration built with Phoenix Framework.
    mix deps.get
    ```
 
-3. Setup database:
-
-   ```bash
-   mix ecto.setup
-   ```
-
-4. Configure Spotify API:
+3. Configure Spotify API:
 
    - Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
    - Create a new app
@@ -30,7 +24,7 @@ Music application with Spotify integration built with Phoenix Framework.
    - Edit `.env` with your Spotify app credentials
    - Add `http://localhost:4000/auth/spotify/callback` to your Spotify app's redirect URIs
 
-5. Start the server:
+4. Start the server:
 
    ```bash
    mix phx.server

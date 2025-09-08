@@ -39,7 +39,8 @@ defmodule SongyWeb.Endpoint do
     socket "/phoenix/live_reload/socket", Phoenix.LiveReloader.Socket
     plug Phoenix.LiveReloader
     plug Phoenix.CodeReloader
-    plug Phoenix.Ecto.CheckRepoStatus, otp_app: :songy
+    # Database connection disabled - uncomment if needed
+    # plug Phoenix.Ecto.CheckRepoStatus, otp_app: :songy
   end
 
   plug Phoenix.LiveDashboard.RequestLogger,
