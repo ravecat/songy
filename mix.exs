@@ -23,9 +23,12 @@ defmodule Songy.MixProject do
   def application do
     [
       mod: {Songy.Application, []},
-      extra_applications: [:logger, :runtime_tools, :wx, :observer]
+      extra_applications: [:logger, :runtime_tools] ++ extra_applications(Mix.env())
     ]
   end
+
+  defp extra_applications(:dev), do: [:wx, :observer]
+  defp extra_applications(_), do: []
 
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
@@ -98,6 +101,7 @@ defmodule Songy.MixProject do
       deploy: [
         "deps.get --only prod",
         "compile",
+        "assets.setup",
         "assets.deploy"
       ]
     ]

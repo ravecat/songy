@@ -51,8 +51,10 @@ createInertiaApp({
   },
   setup({ App, el, props }) {
     if (el.dataset.serverRendered === "true") {
+      console.log("Hydrating app...");
       hydrate(App, { target: el, props: props });
     } else {
+      console.log("Mounting app...");
       mount(App, { target: el, props: props });
     }
   },
