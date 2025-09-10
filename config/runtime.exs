@@ -72,7 +72,7 @@ if config_env() == :prod do
       """
 
   host = System.get_env("PHX_HOST") || "localhost"
-  port = String.to_integer(System.get_env("PORT") || "4000")
+  port = String.to_integer(System.get_env("PORT") || "8080")
 
   url_scheme = System.get_env("PHX_URL_SCHEME") || "https"
   url_port = String.to_integer(System.get_env("PHX_URL_PORT") || "443")
@@ -82,11 +82,9 @@ if config_env() == :prod do
   config :songy, SongyWeb.Endpoint,
     url: [host: host, port: url_port, scheme: url_scheme],
     http: [
-      # Enable IPv6 and bind on all interfaces.
-      # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
-      # See the documentation on https://hexdocs.pm/bandit/Bandit.html#t:options/0
-      # for details about using IPv6 vs IPv4 and loopback vs public addresses.
-      ip: {0, 0, 0, 0, 0, 0, 0, 0},
+      # Bind on all IPv4 interfaces for Fly.io deployment
+      # Use {0, 0, 0, 0} for IPv4 instead of IPv6
+      ip: {0, 0, 0, 0},
       port: port
     ],
     secret_key_base: secret_key_base,

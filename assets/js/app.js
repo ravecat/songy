@@ -1,6 +1,6 @@
 import "vite/modulepreload-polyfill";
 // Enable Phoenix channels
-import "./socket"
+import "./socket";
 
 // You can include dependencies in two ways.
 //
@@ -19,46 +19,9 @@ import "./socket"
 
 // Include phoenix_html to handle method=PUT/DELETE in forms and buttons.
 import "phoenix_html";
-// Establish Phoenix Socket and LiveView configuration.
 import { Socket } from "phoenix";
 import { LiveSocket } from "phoenix_live_view";
 import topbar from "topbar";
-
-/*
- * --------------------------------------------------------------------
- * Intitialize client-side Inertia app
- * --------------------------------------------------------------------
- *
- * `axios` is used for CSRF protection. More information can be found
- * in the Inertia.js Phoenix Adapter README.
- *
- * [Setting up the client-side](https://hexdocs.pm/inertia/readme.html#setting-up-the-client-side)
- *
- */
-
-import axios from "axios";
-import { createInertiaApp } from "@inertiajs/svelte";
-import { hydrate, mount } from "svelte";
-
-axios.defaults.xsrfHeaderName = "x-csrf-token";
-
-createInertiaApp({
-  id: "app",
-  resolve: async (name) => {
-    return name
-      ? await import(`./pages/${name}.svelte`)
-      : { default: () => ({}) };
-  },
-  setup({ App, el, props }) {
-    if (el.dataset.serverRendered === "true") {
-      console.log("Hydrating app...");
-      hydrate(App, { target: el, props: props });
-    } else {
-      console.log("Mounting app...");
-      mount(App, { target: el, props: props });
-    }
-  },
-});
 
 const csrfToken = document
   .querySelector("meta[name='csrf-token']")
@@ -123,3 +86,32 @@ if (process.env.NODE_ENV === "development") {
     }
   );
 }
+
+/*
+ * --------------------------------------------------------------------
+ * Intitialize client-side Inertia app
+ * --------------------------------------------------------------------
+ *
+ * `axios` is used for CSRF protection. More information can be found
+ * in the Inertia.js Phoenix Adapter README.
+ *
+ * [Setting up the client-side](https://hexdocs.pm/inertia/readme.html#setting-up-the-client-side)
+ *
+ */
+import { createInertiaApp } from "@inertiajs/svelte";
+import { mount } from "svelte";
+import axios from "axios";
+
+axios.defaults.xsrfHeaderName = "x-csrf-token";
+
+createInertiaApp({
+  resolve: async (name) => {
+    const pages = await import.meta.glob("./pages/**/*.svelte", {
+      eager: true,
+    });
+    return pages[`./pages/${name}.svelte`];
+  },
+  setup({ el, App, props }) {
+    mount(App, { target: el, props });
+  },
+});
