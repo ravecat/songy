@@ -32,13 +32,6 @@ Music quiz application with Spotify integration built with Phoenix Framework.
 
 Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 
-## Features
-
-- Spotify OAuth authentication
-- View user profile
-- Access user playlists
-- Modern UI with DaisyUI and TailwindCSS
-
 ## Environment Variables
 
 Create a `.env` file with the following variables:
