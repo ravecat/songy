@@ -37,6 +37,7 @@ config :spotify_ex,
     "user-read-playback-state",
     "user-modify-playback-state",
     "user-read-currently-playing",
+    "user-read-playback-position",
     "streaming"
   ],
   callback_url: "http://127.0.0.1:4000/auth/spotify/callback"
