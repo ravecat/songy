@@ -102,10 +102,18 @@ defmodule Songy.Boundary.Spotify do
           {:ok, map()} | {:error, :invalid_credentials | :search_failed}
   def search(credentials, params \\ []) do
     with {:ok, credentials} <- ensure_credentials(credentials),
-         response <- Spotify.Search.query(credentials, params),
-         {:ok, result} <- handle_api_response(response) do
-      Logger.info("Successfully performed search with params: #{inspect(params)}")
-      {:ok, result}
+         response <- Spotify.Search.query(credentials, params) do
+      Logger.info("Spotify API response: #{inspect(response)}")
+
+      case handle_api_response(response) do
+        {:ok, result} ->
+          Logger.info("Successfully performed search with params: #{inspect(params)}")
+          {:ok, result}
+
+        {:error, reason} = error ->
+          Logger.error("Spotify search failed: #{inspect(reason)}")
+          error
+      end
     else
       {:error, :invalid_credentials} ->
         {:error, :invalid_credentials}
