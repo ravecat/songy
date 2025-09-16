@@ -10,14 +10,14 @@ defmodule SongyWeb.PageController do
     |> render_inertia("Home")
   end
 
-  def create(conn, _params) do
+  def create conn, _params do
     owner_uuid = conn.assigns.current_user.uuid
     provider_id = conn.assigns.provider.id
 
     case GameSession.create_game_session(owner_uuid, provider_id) do
       {:ok, game} ->
         conn
-        |> force_inertia_redirect
+        |> force_inertia_redirect()
         |> redirect(to: ~p"/#{game.id}")
 
       {:error, reason} ->

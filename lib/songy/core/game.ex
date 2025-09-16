@@ -22,7 +22,11 @@ defmodule Songy.Core.Game do
              :scores
            ]}
 
-  alias Songy.Core.{User, Provider, Player, Turn, Track}
+  alias Songy.Core.Player
+  alias Songy.Core.Provider
+  alias Songy.Core.Track
+  alias Songy.Core.Turn
+  alias Songy.Core.User
 
   @id_size 2
   @type status :: :waiting | :in_progress | :finished

@@ -1,7 +1,8 @@
 defmodule Songy.Core.TurnTest do
   use ExUnit.Case, async: true
 
-  alias Songy.Core.{Turn, Track}
+  alias Songy.Core.Track
+  alias Songy.Core.Turn
 
   describe "new/0" do
     test "creates turn with default values" do
@@ -310,8 +311,7 @@ defmodule Songy.Core.TurnTest do
   describe "add_player_to_queue/2" do
     test "adds a player to the end of the queue" do
       turn =
-        Turn.new()
-        |> Turn.add_player_to_queue("player-1")
+        Turn.add_player_to_queue(Turn.new(), "player-1")
 
       updated_turn = Turn.add_player_to_queue(turn, "player-2")
 
@@ -469,8 +469,7 @@ defmodule Songy.Core.TurnTest do
 
     test "handles removing only player in queue" do
       turn =
-        Turn.new()
-        |> Turn.add_player_to_queue("player-1")
+        Turn.add_player_to_queue(Turn.new(), "player-1")
 
       updated_turn = Turn.remove_player_from_queue(turn, "player-1")
 
@@ -552,8 +551,7 @@ defmodule Songy.Core.TurnTest do
   describe "set_track/2" do
     test "sets the track for the turn" do
       turn =
-        Turn.new()
-        |> Turn.add_player_to_queue("player-1")
+        Turn.add_player_to_queue(Turn.new(), "player-1")
 
       track = Track.new(title: "Song", artist: "Artist", year: 2020)
       updated_turn = Turn.set_track(turn, track)
@@ -638,8 +636,7 @@ defmodule Songy.Core.TurnTest do
 
     test "handles single player scenarios" do
       turn =
-        Turn.new()
-        |> Turn.add_player_to_queue("only-player")
+        Turn.add_player_to_queue(Turn.new(), "only-player")
 
       # Current player operations
       assert Turn.get_active_player(turn) == "only-player"
@@ -703,7 +700,7 @@ defmodule Songy.Core.TurnTest do
     end
 
     test "transitions from ready to steady" do
-      turn = Turn.new() |> Turn.next_phase()
+      turn = Turn.next_phase(Turn.new())
       updated_turn = Turn.next_phase(turn)
       assert updated_turn.phase == :steady
     end
@@ -807,7 +804,7 @@ defmodule Songy.Core.TurnTest do
 
       # Transition to next turn using new workflow: clear data first, then change phase
       # results -> waiting (clears data and advances player)
-      turn = turn |> Turn.next_phase()
+      turn = Turn.next_phase(turn)
 
       assert turn.phase == :waiting
       assert turn.track == nil
@@ -854,7 +851,7 @@ defmodule Songy.Core.TurnTest do
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
       timeline = [track1, track2]
 
-      turn = Turn.new() |> Turn.snapshot_user_timeline(timeline)
+      turn = Turn.snapshot_user_timeline(Turn.new(), timeline)
 
       assert turn.timeline == timeline
     end
@@ -873,7 +870,7 @@ defmodule Songy.Core.TurnTest do
     end
 
     test "handles empty timeline" do
-      turn = Turn.new() |> Turn.snapshot_user_timeline([])
+      turn = Turn.snapshot_user_timeline(Turn.new(), [])
 
       assert turn.timeline == []
     end
@@ -951,8 +948,7 @@ defmodule Songy.Core.TurnTest do
       track_b = Track.new(title: "Track B", artist: "Artist", year: 2021)
 
       turn =
-        Turn.new()
-        |> Turn.update_timeline(track_a, "user1", 0)
+        Turn.update_timeline(Turn.new(), track_a, "user1", 0)
 
       updated_turn = Turn.update_timeline(turn, track_b, "user1", 1)
 
@@ -1099,8 +1095,7 @@ defmodule Songy.Core.TurnTest do
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
 
       turn =
-        Turn.new()
-        |> Turn.update_timeline(track1, "user1", 0)
+        Turn.update_timeline(Turn.new(), track1, "user1", 0)
 
       result = Turn.reorder_timeline(turn, "nonexistent_user", 0)
 
@@ -1111,8 +1106,7 @@ defmodule Songy.Core.TurnTest do
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
 
       turn =
-        Turn.new()
-        |> Turn.update_timeline(track1, "user1", 0)
+        Turn.update_timeline(Turn.new(), track1, "user1", 0)
 
       # Move to same position should work
       {:ok, updated_turn} = Turn.reorder_timeline(turn, "user1", 0)

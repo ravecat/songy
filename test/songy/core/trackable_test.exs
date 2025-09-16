@@ -1,7 +1,8 @@
 defmodule Songy.Core.TrackableTest do
   use ExUnit.Case, async: true
 
-  alias Songy.Core.{Track, Trackable}
+  alias Songy.Core.Track
+  alias Songy.Core.Trackable
 
   describe "Trackable protocol for Spotify.Track" do
     setup do

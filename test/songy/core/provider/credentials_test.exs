@@ -2,7 +2,8 @@ defmodule Songy.Core.Provider.CredentialsTest do
   use ExUnit.Case, async: true
 
   alias Songy.Core.Provider
-  alias Songy.Core.Provider.{Credentials, Spotify}
+  alias Songy.Core.Provider.Credentials
+  alias Songy.Core.Provider.Spotify
 
   describe "Credentials protocol" do
     test "fetches credentials from Provider with valid Spotify meta" do

@@ -1,9 +1,9 @@
 defmodule SongyWeb.AuthTest do
   use SongyWeb.ConnCase, async: true
 
-  alias SongyWeb.Auth
-  alias Songy.Core.User
   alias Songy.Core.Provider
+  alias Songy.Core.User
+  alias SongyWeb.Auth
 
   describe "fetch_current_user/2" do
     test "assigns existing user from session", %{conn: conn} do
@@ -203,7 +203,7 @@ defmodule SongyWeb.AuthTest do
 
   describe "fetch_current_provider/2" do
     test "assigns existing valid provider from session", %{conn: conn} do
-      future_time = DateTime.utc_now() |> DateTime.add(3600, :second)
+      future_time = DateTime.add(DateTime.utc_now(), 3600, :second)
       credentials = %{access_token: "valid_token", expires_at: future_time}
       provider = Provider.new(:spotify, credentials)
 
@@ -237,7 +237,7 @@ defmodule SongyWeb.AuthTest do
   describe "spotify integration" do
     test "assigns provider when tokens are not close to expiry", %{conn: conn} do
       # 30 minutes from now
-      future_time = DateTime.utc_now() |> DateTime.add(1800, :second)
+      future_time = DateTime.add(DateTime.utc_now(), 1800, :second)
 
       credentials = %{
         access_token: "valid_token",
@@ -258,7 +258,7 @@ defmodule SongyWeb.AuthTest do
 
     test "attempts to refresh tokens when close to expiry", %{conn: conn} do
       # Token expires in 200 seconds (within refresh threshold)
-      expires_soon = DateTime.utc_now() |> DateTime.add(200, :second)
+      expires_soon = DateTime.add(DateTime.utc_now(), 200, :second)
 
       # Create provider with correct structure
       provider = %Provider{
@@ -348,7 +348,7 @@ defmodule SongyWeb.AuthTest do
     end
 
     test "preserves existing expires_at when token is valid", %{conn: conn} do
-      original_expires_at = DateTime.utc_now() |> DateTime.add(1800, :second)
+      original_expires_at = DateTime.add(DateTime.utc_now(), 1800, :second)
 
       provider_with_expires = %Provider{
         id: :spotify,
@@ -369,7 +369,7 @@ defmodule SongyWeb.AuthTest do
     end
 
     test "removes provider when token expiry is close and no refresh_token", %{conn: conn} do
-      expires_soon = DateTime.utc_now() |> DateTime.add(200, :second)
+      expires_soon = DateTime.add(DateTime.utc_now(), 200, :second)
 
       invalid_provider = %Provider{
         id: :spotify,
@@ -389,7 +389,7 @@ defmodule SongyWeb.AuthTest do
     end
 
     test "handles token refresh failure gracefully", %{conn: conn} do
-      expires_soon = DateTime.utc_now() |> DateTime.add(200, :second)
+      expires_soon = DateTime.add(DateTime.utc_now(), 200, :second)
 
       provider = %Provider{
         id: :spotify,
@@ -414,7 +414,7 @@ defmodule SongyWeb.AuthTest do
     end
 
     test "handles exact threshold boundary for token expiry", %{conn: conn} do
-      expires_at_threshold = DateTime.utc_now() |> DateTime.add(300, :second)
+      expires_at_threshold = DateTime.add(DateTime.utc_now(), 300, :second)
 
       provider = %Provider{
         id: :spotify,

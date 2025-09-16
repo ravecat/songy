@@ -33,9 +33,13 @@ defmodule Songy.Boundary.GameSession do
 
   use GenServer
 
-  alias Songy.Core.{Game, User, Provider, Trackable, Track}
-  alias Songy.Core.Provider.Credentials
   alias Songy.Boundary.Spotify
+  alias Songy.Core.Game
+  alias Songy.Core.Provider
+  alias Songy.Core.Provider.Credentials
+  alias Songy.Core.Track
+  alias Songy.Core.Trackable
+  alias Songy.Core.User
 
   require Logger
 

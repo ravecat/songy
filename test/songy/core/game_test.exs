@@ -1,7 +1,12 @@
 defmodule Songy.Core.GameTest do
   use ExUnit.Case, async: true
 
-  alias Songy.Core.{Game, User, Provider, Player, Turn, Track}
+  alias Songy.Core.Game
+  alias Songy.Core.Player
+  alias Songy.Core.Provider
+  alias Songy.Core.Track
+  alias Songy.Core.Turn
+  alias Songy.Core.User
 
   setup do
     {:ok, provider: Provider.new(:spotify)}

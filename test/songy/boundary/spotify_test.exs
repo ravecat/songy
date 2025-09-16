@@ -11,7 +11,8 @@ defmodule Songy.Boundary.SpotifyTest do
         :ok
       end)
 
-      assert {:ok, :playback_transferred} = Boundary.Spotify.transfer_playback(credentials, %{"device_id" => "test_device"})
+      assert {:ok, :playback_transferred} =
+               Boundary.Spotify.transfer_playback(credentials, %{"device_id" => "test_device"})
     end
 
     test "works with map containing access_token and refresh_token" do
@@ -21,7 +22,8 @@ defmodule Songy.Boundary.SpotifyTest do
         :ok
       end)
 
-      assert {:ok, :playback_transferred} = Boundary.Spotify.transfer_playback(credentials, %{"device_id" => "test_device"})
+      assert {:ok, :playback_transferred} =
+               Boundary.Spotify.transfer_playback(credentials, %{"device_id" => "test_device"})
     end
 
     test "returns error when device_id is missing from payload" do
@@ -74,7 +76,8 @@ defmodule Songy.Boundary.SpotifyTest do
         :ok
       end)
 
-      assert {:ok, :playback_transferred} = Boundary.Spotify.transfer_playback(credentials, %{"device_id" => "test_device"})
+      assert {:ok, :playback_transferred} =
+               Boundary.Spotify.transfer_playback(credentials, %{"device_id" => "test_device"})
     end
 
     test "returns error when Spotify.Player.transfer_playback fails" do

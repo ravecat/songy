@@ -1,8 +1,9 @@
 defmodule SongyWeb.UserSocketTest do
   use SongyWeb.ChannelCase
 
+  alias Songy.Core.Provider
+  alias Songy.Core.User
   alias SongyWeb.UserSocket
-  alias Songy.Core.{User, Provider}
 
   describe "connect/3 with user_token" do
     test "connects successfully with valid user token" do
@@ -41,9 +42,7 @@ defmodule SongyWeb.UserSocketTest do
       user = User.new()
 
       expired_token =
-        Phoenix.Token.sign(SongyWeb.Endpoint, "current_user", user.uuid,
-          signed_at: System.system_time(:second) - 90000
-        )
+        Phoenix.Token.sign(SongyWeb.Endpoint, "current_user", user.uuid, signed_at: System.system_time(:second) - 90000)
 
       assert :error = connect(UserSocket, %{"user_token" => expired_token})
     end

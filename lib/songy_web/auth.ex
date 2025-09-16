@@ -5,8 +5,8 @@ defmodule SongyWeb.Auth do
   import Plug.Conn
   import Phoenix.Controller
 
-  alias Songy.Core.User
   alias Songy.Core.Provider
+  alias Songy.Core.User
 
   @token_refresh_threshold 300
 

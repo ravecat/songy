@@ -42,12 +42,11 @@ defmodule Songy.Core.Provider.Spotify do
   end
 
   def changeset(provider, attrs) do
-    provider
-    |> cast(attrs, [:device_id])
+    cast(provider, attrs, [:device_id])
   end
 
   defp put_expires_at(changeset) do
-    expires_at = DateTime.utc_now() |> DateTime.add(@spotify_token_expires_in, :second)
+    expires_at = DateTime.add(DateTime.utc_now(), @spotify_token_expires_in, :second)
 
     case changeset do
       %Ecto.Changeset{valid?: true} ->

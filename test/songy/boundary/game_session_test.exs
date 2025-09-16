@@ -2,7 +2,8 @@ defmodule Songy.Boundary.GameSessionTest do
   use ExUnit.Case, async: true
 
   alias Songy.Boundary.GameSession
-  alias Songy.Core.{Provider, Game}
+  alias Songy.Core.Game
+  alias Songy.Core.Provider
 
   describe "create_game_session/2" do
     test "starts new game session process with owner and provider" do

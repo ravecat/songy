@@ -2,7 +2,8 @@ defmodule SongyWeb.RoomChannelTest do
   use SongyWeb.ChannelCase
 
   alias Songy.Boundary.GameSession
-  alias Songy.Core.{Provider, User}
+  alias Songy.Core.Provider
+  alias Songy.Core.User
 
   defp join_room_channel(current_user, room_uuid, assigns \\ %{}) do
     default_assigns = %{current_user_uuid: current_user.uuid}

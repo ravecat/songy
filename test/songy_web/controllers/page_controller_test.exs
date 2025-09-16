@@ -18,7 +18,7 @@ defmodule SongyWeb.PageControllerTest do
         id: :spotify,
         meta: %{
           access_token: "test_token",
-          expires_at: DateTime.utc_now() |> DateTime.add(3600, :second)
+          expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
         }
       }
 

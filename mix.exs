@@ -42,7 +42,6 @@ defmodule Songy.MixProject do
       {:bcrypt_elixir, "~> 3.0"},
       {:dotenvy, "~> 1.0.0"},
       {:phoenix_vite, "~> 0.3.3"},
-      {:igniter, "~> 0.6"},
       {:phoenix, "~> 1.8.1"},
       {:phoenix_ecto, "~> 4.5"},
       {:ecto_sql, "~> 3.10"},
@@ -68,6 +67,7 @@ defmodule Songy.MixProject do
       {:nimble_options, "~> 1.1"},
       {:repatch, "~> 1.5", only: :test},
       {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false},
+      {:recode, "~> 0.7.3", only: [:dev, :test], runtime: false},
       {:faker, "~> 0.19.0-alpha.1"},
       {:polymorphic_embed, git: "https://github.com/mathieuprog/polymorphic_embed.git", tag: "v5.0.3"},
       {:spotify_ex, github: "jsncmgs1/spotify_ex", tag: "v2.4.0"}

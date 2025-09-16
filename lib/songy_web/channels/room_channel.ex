@@ -1,8 +1,9 @@
 defmodule SongyWeb.RoomChannel do
   use SongyWeb, :channel
 
+  alias Songy.Boundary.GameSession
+  alias Songy.Boundary.Spotify
   alias SongyWeb.Presence
-  alias Songy.Boundary.{GameSession, Spotify}
 
   require Logger
 

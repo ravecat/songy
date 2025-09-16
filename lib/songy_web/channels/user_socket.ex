@@ -27,7 +27,7 @@ defmodule SongyWeb.UserSocket do
   # See `Phoenix.Token` documentation for examples in
   # performing token verification on connect.
   @impl true
-  def connect(%{"user_token" => user_token} = params, socket, _connect_info) do
+  def connect %{"user_token" => user_token} = params, socket, _connect_info do
     with {:ok, user_uuid} <- verify_user_token(socket, user_token),
          provider <- verify_provider_token(socket, params) do
       socket =
@@ -44,7 +44,7 @@ defmodule SongyWeb.UserSocket do
     end
   end
 
-  def connect(_params, _socket, _connect_info) do
+  def connect _params, _socket, _connect_info do
     :error
   end
 
