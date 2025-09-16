@@ -12,7 +12,7 @@ defmodule Songy.Boundary.Spotify do
           {:ok, :playback_transferred} | {:error, :invalid_credentials | :no_device_id | :playback_transfer_failed}
   def transfer_playback(credentials, %{"device_id" => device_id}) do
     with {:ok, credentials} <- ensure_credentials(credentials),
-         response <- Spotify.Player.transfer_playback(credentials, [device_id]),
+         response <- Spotify.Player.transfer_playback(credentials, [device_id], play: false),
          {:ok, _} <- handle_api_response(response) do
       Logger.info("Successfully transferred playback to device #{device_id}")
       {:ok, :playback_transferred}
