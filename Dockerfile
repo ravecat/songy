@@ -70,7 +70,7 @@ RUN mix release
 FROM ${RUNNER_IMAGE} AS final
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends libstdc++6 openssl libncurses5 locales ca-certificates nodejs \
+  && apt-get install -y --no-install-recommends libstdc++6 openssl libncurses5 locales ca-certificates nodejs curl wget \
   && rm -rf /var/lib/apt/lists/*
 
 # Set the locale
