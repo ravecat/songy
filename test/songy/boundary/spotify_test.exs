@@ -7,7 +7,7 @@ defmodule Songy.Boundary.SpotifyTest do
     test "works with Spotify.Credentials struct" do
       credentials = %Spotify.Credentials{access_token: "valid_token"}
 
-      Repatch.patch(Spotify.Player, :transfer_playback, fn _credentials, _device_ids ->
+      Repatch.patch(Spotify.Player, :transfer_playback, fn _credentials, _device_ids, _params ->
         :ok
       end)
 
@@ -18,7 +18,7 @@ defmodule Songy.Boundary.SpotifyTest do
     test "works with map containing access_token and refresh_token" do
       credentials = %{access_token: "valid_token", refresh_token: "refresh_token"}
 
-      Repatch.patch(Spotify.Player, :transfer_playback, fn _credentials, _device_ids ->
+      Repatch.patch(Spotify.Player, :transfer_playback, fn _credentials, _device_ids, _params ->
         :ok
       end)
 
@@ -72,7 +72,7 @@ defmodule Songy.Boundary.SpotifyTest do
     test "returns success when transfer_playback succeeds" do
       credentials = %{access_token: "valid_token"}
 
-      Repatch.patch(Spotify.Player, :transfer_playback, fn _credentials, _device_ids ->
+      Repatch.patch(Spotify.Player, :transfer_playback, fn _credentials, _device_ids, _params ->
         :ok
       end)
 
@@ -83,7 +83,7 @@ defmodule Songy.Boundary.SpotifyTest do
     test "returns error when Spotify.Player.transfer_playback fails" do
       credentials = %{access_token: "valid_token"}
 
-      Repatch.patch(Spotify.Player, :transfer_playback, fn _credentials, _device_ids ->
+      Repatch.patch(Spotify.Player, :transfer_playback, fn _credentials, _device_ids, _params ->
         {:error, :device_not_found}
       end)
 
