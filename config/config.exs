@@ -18,7 +18,7 @@ config :songy,
   ecto_repos: [],
   generators: [timestamp_type: :utc_datetime],
   game_session_termination_timeout: :timer.minutes(3),
-  challenging_phase_timeout: :timer.seconds(1)
+  challenging_phase_timeout: :timer.seconds(8)
 
 # Configures the endpoint
 config :songy, SongyWeb.Endpoint,
