@@ -15,11 +15,11 @@
 
   const player = useSpotifyPlayer({
     name: "Songy room",
-    getOAuthToken: (cb: (token: string) => void) => {
+    getOAuthToken: (cb) => {
       channel
         ?.push(PUSH_EVENT.GET_SPOTIFY_TOKEN, {})
-        .receive("ok", (payload: { token: string }) => {
-          cb(payload.token);
+        .receive("ok", ({ token }: { token: string }) => {
+          cb(token);
         });
     },
     on: {

@@ -6,6 +6,8 @@ defmodule Songy.Boundary.Spotify do
   managing playback, searching for tracks, and handling user authentication.
   """
 
+  @token_refresh_threshold 300
+
   require Logger
 
   @spec transfer_playback(credentials :: Spotify.Credentials.t() | map(), payload :: map()) ::
@@ -238,4 +240,53 @@ defmodule Songy.Boundary.Spotify do
   defp handle_api_response({:ok, result}), do: {:ok, result}
   defp handle_api_response(:ok), do: {:ok, :ok}
   defp handle_api_response(result), do: {:ok, result}
+
+  @doc """
+  Ensures that Spotify credentials are fresh and valid.
+
+  This function checks if the provided credentials need refreshing based on their
+  expiration time, and automatically refreshes them if necessary.
+
+  ## Parameters
+
+    * `credentials` - Map containing Spotify credentials
+
+  ## Returns
+
+    * `{:ok, updated_credentials}` - Fresh credentials (either original or refreshed)
+    * `{:error, reason}` - Failed to refresh or invalid credentials
+
+  """
+  @spec ensure_fresh_credentials(map()) :: {:ok, map()} | {:error, atom()}
+  def ensure_fresh_credentials(%{refresh_token: refresh_token} = credentials) when not is_nil(refresh_token) do
+    with true <- refresh_token?(credentials),
+         spotify_creds <- struct(Spotify.Credentials, credentials),
+         {:ok, new_credentials} <- Spotify.Authentication.refresh(spotify_creds) do
+      Logger.info("Successfully refreshed Spotify credentials")
+
+      {:ok, Map.from_struct(new_credentials)}
+    else
+      false ->
+        {:ok, credentials}
+
+      {:error, reason} ->
+        Logger.error("Failed to refresh Spotify credentials: #{inspect(reason)}")
+        {:error, reason}
+    end
+  end
+
+  def ensure_fresh_credentials(_), do: {:error, :invalid_credentials}
+
+  defp refresh_token?(credentials) do
+    expires_at = Map.get(credentials, :expires_at)
+
+    case expires_at do
+      nil ->
+        true
+
+      expires_at ->
+        threshold_time = DateTime.add(DateTime.utc_now(), @token_refresh_threshold, :second)
+        DateTime.compare(expires_at, threshold_time) == :lt
+    end
+  end
 end
