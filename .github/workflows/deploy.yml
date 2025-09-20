@@ -64,10 +64,13 @@ jobs:
     environment: stage
     steps:
       - name: Deploy to Staging
-        run: |
-          curl --request GET \
-            --header "Authorization: Bearer ${{ secrets.DEPLOY_TOKEN }}" \
-            "${{ secrets.DEPLOY_WEBHOOK_URL }}"
+        uses: indiesdev/curl@v1.1
+        with:
+          url: ${{ secrets.DEPLOY_WEBHOOK_URL }}
+          method: GET
+          bearer-token: ${{ secrets.DEPLOY_TOKEN }}
+          accept: 200
+          log-response: true
 
   deploy-production:
     name: Deploy to Production
@@ -78,7 +81,11 @@ jobs:
 
     steps:
       - name: Deploy to Production
-        run: |
-          curl --request GET \
-            --header "Authorization: Bearer ${{ secrets.DEPLOY_TOKEN }}" \
-            "${{ secrets.DEPLOY_WEBHOOK_URL }}&tag=${{ github.ref_name }}"
+        uses: indiesdev/curl@v1.1
+        with:
+          url: ${{ secrets.DEPLOY_WEBHOOK_URL }}
+          method: GET
+          bearer-token: ${{ secrets.DEPLOY_TOKEN }}
+          params: '{ "tag": "${{ github.ref_name }}" }'
+          accept: 200
+          log-response: true
