@@ -1,14 +1,15 @@
-name: Build and Push Docker Image
+name: Deploy
 
 on:
   push:
     branches:
       - master
     tags:
-      - '*.*.*'
+      - "*.*.*"
 
 jobs:
-  build-and-push-to-ghcr:
+  build-and-push:
+    name: Build and Push Docker Image to GHCR
     runs-on: ubuntu-latest
     env:
       REGISTRY: ghcr.io
@@ -54,3 +55,30 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
+
+  deploy-stage:
+    name: Deploy to Staging
+    needs: build-and-push
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    environment: stage
+    steps:
+      - name: Deploy to Staging
+        run: |
+          curl --request GET \
+            --header "Authorization: Bearer ${{ secrets.DEPLOY_TOKEN }}" \
+            "${{ secrets.DEPLOY_WEBHOOK_URL }}"
+
+  deploy-production:
+    name: Deploy to Production
+    needs: build-and-push
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Deploy to Production
+        run: |
+          curl --request GET \
+            --header "Authorization: Bearer ${{ secrets.DEPLOY_TOKEN }}" \
+            "${{ secrets.DEPLOY_WEBHOOK_URL }}&tag=${{ github.ref_name }}"
