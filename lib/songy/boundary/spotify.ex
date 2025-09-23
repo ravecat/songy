@@ -6,7 +6,7 @@ defmodule Songy.Boundary.Spotify do
   managing playback, searching for tracks, and handling user authentication.
   """
 
-  @token_refresh_threshold 300
+  @token_refresh_threshold 3600
 
   require Logger
 
@@ -226,7 +226,7 @@ defmodule Songy.Boundary.Spotify do
     ensure_credentials(Map.from_struct(params))
   end
 
-  defp ensure_credentials(%{access_token: access_token} = params) when is_map(params) and is_binary(access_token) do
+  defp ensure_credentials(%{access_token: access_token} = params) when is_binary(access_token) do
     credentials = struct(Spotify.Credentials, params)
 
     {:ok, credentials}
@@ -264,7 +264,12 @@ defmodule Songy.Boundary.Spotify do
          {:ok, new_credentials} <- Spotify.Authentication.refresh(spotify_creds) do
       Logger.info("Successfully refreshed Spotify credentials")
 
-      {:ok, Map.from_struct(new_credentials)}
+      credentials_with_timestamp =
+        new_credentials
+        |> Map.from_struct()
+        |> Map.put(:expires_at, DateTime.add(DateTime.utc_now(), @token_refresh_threshold, :second))
+
+      {:ok, credentials_with_timestamp}
     else
       false ->
         {:ok, credentials}
@@ -278,15 +283,9 @@ defmodule Songy.Boundary.Spotify do
   def ensure_fresh_credentials(_), do: {:error, :invalid_credentials}
 
   defp refresh_token?(credentials) do
-    expires_at = Map.get(credentials, :expires_at)
-
-    case expires_at do
-      nil ->
-        true
-
-      expires_at ->
-        threshold_time = DateTime.add(DateTime.utc_now(), @token_refresh_threshold, :second)
-        DateTime.compare(expires_at, threshold_time) == :lt
+    case Map.get(credentials, :expires_at) do
+      nil -> true
+      expires_at -> DateTime.compare(expires_at, DateTime.utc_now()) == :lt
     end
   end
 end

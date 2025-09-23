@@ -271,4 +271,147 @@ defmodule Songy.Boundary.SpotifyTest do
       assert {:ok, %{id: "test"}} = Boundary.Spotify.search_random_track(credentials)
     end
   end
+
+  describe "ensure_fresh_credentials/1" do
+    test "refreshes token when access_token expired" do
+      fixed_time = ~U[2025-07-15 12:00:00Z]
+      expires_at = DateTime.add(fixed_time, -3600, :second)
+      expected_expires_at = DateTime.add(fixed_time, 3600, :second)
+
+      credentials = %{
+        access_token: "expired_token",
+        refresh_token: "valid_refresh_token",
+        expires_at: expires_at
+      }
+
+      new_credentials = %Spotify.Credentials{access_token: "new_access_token", refresh_token: "valid_refresh_token"}
+
+      Repatch.patch(DateTime, :utc_now, fn -> fixed_time end)
+      Repatch.patch(Spotify.Authentication, :refresh, fn _spotify_creds ->
+        {:ok, new_credentials}
+      end)
+
+      assert {:ok, result} = Boundary.Spotify.ensure_fresh_credentials(credentials)
+      assert result.access_token == "new_access_token"
+      assert result.refresh_token == "valid_refresh_token"
+      assert result.expires_at == expected_expires_at
+    end
+
+    test "preserves token when expiring in future" do
+      fixed_time = ~U[2025-07-15 12:00:00Z]
+      expires_at = DateTime.add(fixed_time, 200, :second)
+
+      credentials = %{
+        access_token: "valid_token",
+        refresh_token: "valid_refresh_token",
+        expires_at: expires_at
+      }
+
+      Repatch.patch(DateTime, :utc_now, fn -> fixed_time end)
+
+      assert {:ok, ^credentials} = Boundary.Spotify.ensure_fresh_credentials(credentials)
+    end
+
+    test "refreshes token when access_token missing" do
+      fixed_time = ~U[2025-07-15 12:00:00Z]
+      expected_expires_at = DateTime.add(fixed_time, 3600, :second)
+
+      credentials = %{refresh_token: "valid_refresh_token"}
+      new_credentials = %Spotify.Credentials{access_token: "new_access_token", refresh_token: "valid_refresh_token"}
+
+      Repatch.patch(DateTime, :utc_now, fn -> fixed_time end)
+      Repatch.patch(Spotify.Authentication, :refresh, fn _spotify_creds ->
+        {:ok, new_credentials}
+      end)
+
+      assert {:ok, result} = Boundary.Spotify.ensure_fresh_credentials(credentials)
+      assert result.access_token == "new_access_token"
+      assert result.refresh_token == "valid_refresh_token"
+      assert result.expires_at == expected_expires_at
+    end
+
+    test "preserves token when access_token valid and not expired" do
+      expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
+
+      credentials = %{
+        access_token: "valid_token",
+        refresh_token: "refresh_token",
+        expires_at: expires_at
+      }
+
+      assert {:ok, ^credentials} = Boundary.Spotify.ensure_fresh_credentials(credentials)
+    end
+
+    test "returns error when both access_token and refresh_token missing" do
+      credentials = %{}
+
+      assert {:error, :invalid_credentials} = Boundary.Spotify.ensure_fresh_credentials(credentials)
+    end
+
+    test "returns error when refresh_token present but Spotify API fails" do
+      credentials = %{refresh_token: "valid_refresh_token"}
+
+      Repatch.patch(Spotify.Authentication, :refresh, fn _spotify_creds ->
+        {:error, :invalid_grant}
+      end)
+
+      assert {:error, :invalid_grant} = Boundary.Spotify.ensure_fresh_credentials(credentials)
+    end
+
+    test "preserves token when still valid" do
+      current_time = DateTime.utc_now()
+      expires_at = DateTime.add(current_time, 1800, :second)
+
+      credentials = %{
+        access_token: "valid_token",
+        refresh_token: "valid_refresh_token",
+        expires_at: expires_at
+      }
+
+      Repatch.patch(DateTime, :utc_now, fn -> current_time end)
+
+      assert {:ok, ^credentials} = Boundary.Spotify.ensure_fresh_credentials(credentials)
+    end
+
+    test "refreshes token when expired" do
+      current_time = ~U[2024-01-01 12:00:00Z]
+      expires_at = DateTime.add(current_time, -60, :second)
+
+      credentials = %{
+        access_token: "expired_token",
+        refresh_token: "valid_refresh_token",
+        expires_at: expires_at
+      }
+
+      new_credentials = %Spotify.Credentials{
+        access_token: "new_access_token",
+        refresh_token: "valid_refresh_token"
+      }
+
+      Repatch.patch(DateTime, :utc_now, fn -> current_time end)
+      Repatch.patch(Spotify.Authentication, :refresh, fn _spotify_creds ->
+        {:ok, new_credentials}
+      end)
+
+      assert {:ok, result} = Boundary.Spotify.ensure_fresh_credentials(credentials)
+      assert result.access_token == "new_access_token"
+      assert result.expires_at == DateTime.add(current_time, 3600, :second)
+    end
+
+    test "uses mocked DateTime.utc_now for expires_at calculation" do
+      fixed_time = ~U[2024-01-01 00:00:00Z]
+      expected_expires_at = ~U[2024-01-01 01:00:00Z]
+
+      credentials = %{refresh_token: "valid_refresh_token"}
+      new_credentials = %Spotify.Credentials{access_token: "new_access_token", refresh_token: "valid_refresh_token"}
+
+      Repatch.patch(DateTime, :utc_now, fn -> fixed_time end)
+      Repatch.patch(Spotify.Authentication, :refresh, fn _spotify_creds ->
+        {:ok, new_credentials}
+      end)
+
+      assert {:ok, result} = Boundary.Spotify.ensure_fresh_credentials(credentials)
+      assert result.expires_at == expected_expires_at
+    end
+  end
 end
