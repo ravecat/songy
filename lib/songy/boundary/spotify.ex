@@ -10,6 +10,19 @@ defmodule Songy.Boundary.Spotify do
 
   require Logger
 
+  @spec authenticate(Plug.Conn.t() | Spotify.Credentials.t(), map()) ::
+          {:ok, map()} | {:error, term()}
+  def authenticate(conn_or_credentials, params) do
+    case Spotify.Authentication.authenticate(conn_or_credentials, params) do
+      {:ok, credentials} ->
+        {:ok, with_expires_at(credentials)}
+
+      {:error, reason} ->
+        Logger.error("Failed to authenticate with Spotify: #{inspect(reason)}")
+        {:error, reason}
+    end
+  end
+
   @doc """
   Ensures that Spotify credentials are fresh and valid.
 
@@ -31,14 +44,7 @@ defmodule Songy.Boundary.Spotify do
     with true <- refresh_token?(credentials),
          spotify_creds <- struct(Spotify.Credentials, credentials),
          {:ok, new_credentials} <- Spotify.Authentication.refresh(spotify_creds) do
-      Logger.info("Successfully refreshed Spotify credentials")
-
-      credentials_with_timestamp =
-        new_credentials
-        |> Map.from_struct()
-        |> Map.put(:expires_at, DateTime.add(DateTime.utc_now(), @token_refresh_threshold, :second))
-
-      {:ok, credentials_with_timestamp}
+      {:ok, with_expires_at(new_credentials)}
     else
       false ->
         {:ok, credentials}
@@ -281,6 +287,12 @@ defmodule Songy.Boundary.Spotify do
   defp handle_api_response({:ok, result}), do: {:ok, result}
   defp handle_api_response(:ok), do: {:ok, :ok}
   defp handle_api_response(result), do: {:ok, result}
+
+  defp with_expires_at(credentials) do
+    credentials
+    |> Map.from_struct()
+    |> Map.put(:expires_at, DateTime.add(DateTime.utc_now(), @token_refresh_threshold, :second))
+  end
 
   defp refresh_token?(credentials) do
     case Map.get(credentials, :expires_at) do

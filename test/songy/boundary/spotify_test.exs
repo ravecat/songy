@@ -3,6 +3,38 @@ defmodule Songy.Boundary.SpotifyTest do
 
   alias Songy.Boundary
 
+  describe "authenticate/2" do
+    test "returns provider data when authentication succeeds" do
+      conn_credentials = %Spotify.Credentials{access_token: "existing_token"}
+      params = %{"code" => "valid_auth_code"}
+
+      credentials = %Spotify.Credentials{
+        access_token: "new_access_token",
+        refresh_token: "new_refresh_token"
+      }
+
+      Repatch.patch(Spotify.Authentication, :authenticate, fn _conn, _params ->
+        {:ok, credentials}
+      end)
+
+      assert {:ok, result} = Boundary.Spotify.authenticate(conn_credentials, params)
+      assert result.access_token == "new_access_token"
+      assert result.refresh_token == "new_refresh_token"
+      assert Map.has_key?(result, :expires_at)
+    end
+
+    test "handles errors when authentication fails" do
+      conn_credentials = %Spotify.Credentials{access_token: "existing_token"}
+      params = %{"code" => "valid_code"}
+
+      Repatch.patch(Spotify.Authentication, :authenticate, fn _conn, _params ->
+        {:error, :timeout}
+      end)
+
+      assert {:error, :timeout} = Boundary.Spotify.authenticate(conn_credentials, params)
+    end
+  end
+
   describe "transfer_playback/2" do
     test "works with Spotify.Credentials struct" do
       credentials = %Spotify.Credentials{access_token: "valid_token"}
@@ -287,6 +319,7 @@ defmodule Songy.Boundary.SpotifyTest do
       new_credentials = %Spotify.Credentials{access_token: "new_access_token", refresh_token: "valid_refresh_token"}
 
       Repatch.patch(DateTime, :utc_now, fn -> fixed_time end)
+
       Repatch.patch(Spotify.Authentication, :refresh, fn _spotify_creds ->
         {:ok, new_credentials}
       end)
@@ -320,6 +353,7 @@ defmodule Songy.Boundary.SpotifyTest do
       new_credentials = %Spotify.Credentials{access_token: "new_access_token", refresh_token: "valid_refresh_token"}
 
       Repatch.patch(DateTime, :utc_now, fn -> fixed_time end)
+
       Repatch.patch(Spotify.Authentication, :refresh, fn _spotify_creds ->
         {:ok, new_credentials}
       end)
@@ -389,6 +423,7 @@ defmodule Songy.Boundary.SpotifyTest do
       }
 
       Repatch.patch(DateTime, :utc_now, fn -> current_time end)
+
       Repatch.patch(Spotify.Authentication, :refresh, fn _spotify_creds ->
         {:ok, new_credentials}
       end)
@@ -406,6 +441,7 @@ defmodule Songy.Boundary.SpotifyTest do
       new_credentials = %Spotify.Credentials{access_token: "new_access_token", refresh_token: "valid_refresh_token"}
 
       Repatch.patch(DateTime, :utc_now, fn -> fixed_time end)
+
       Repatch.patch(Spotify.Authentication, :refresh, fn _spotify_creds ->
         {:ok, new_credentials}
       end)
