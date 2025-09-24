@@ -116,7 +116,7 @@ defmodule Songy.Providers do
   end
 
   defp ensure_data(:spotify, data) do
-    Songy.Boundary.Spotify.ensure_fresh_credentials(data)
+    Songy.Boundary.Spotify.ensure_provider_data(data)
   end
 
   defp ensure_data(_provider, data) do

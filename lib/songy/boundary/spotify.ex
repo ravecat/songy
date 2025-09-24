@@ -10,6 +10,47 @@ defmodule Songy.Boundary.Spotify do
 
   require Logger
 
+  @doc """
+  Ensures that Spotify credentials are fresh and valid.
+
+  This function checks if the provided credentials need refreshing based on their
+  expiration time, and automatically refreshes them if necessary.
+
+  ## Parameters
+
+    * `credentials` - Map containing Spotify credentials
+
+  ## Returns
+
+    * `{:ok, updated_credentials}` - Fresh credentials (either original or refreshed)
+    * `{:error, reason}` - Failed to refresh or invalid credentials
+
+  """
+  @spec ensure_provider_data(map()) :: {:ok, map()} | {:error, term()}
+  def ensure_provider_data(%{refresh_token: refresh_token} = credentials) when not is_nil(refresh_token) do
+    with true <- refresh_token?(credentials),
+         spotify_creds <- struct(Spotify.Credentials, credentials),
+         {:ok, new_credentials} <- Spotify.Authentication.refresh(spotify_creds) do
+      Logger.info("Successfully refreshed Spotify credentials")
+
+      credentials_with_timestamp =
+        new_credentials
+        |> Map.from_struct()
+        |> Map.put(:expires_at, DateTime.add(DateTime.utc_now(), @token_refresh_threshold, :second))
+
+      {:ok, credentials_with_timestamp}
+    else
+      false ->
+        {:ok, credentials}
+
+      {:error, reason} ->
+        Logger.error("Failed to refresh Spotify credentials: #{inspect(reason)}")
+        {:error, reason}
+    end
+  end
+
+  def ensure_provider_data(_), do: {:error, :invalid_credentials}
+
   @spec transfer_playback(credentials :: Spotify.Credentials.t() | map(), payload :: map()) ::
           {:ok, :playback_transferred} | {:error, :invalid_credentials | :no_device_id | :playback_transfer_failed}
   def transfer_playback(credentials, %{"device_id" => device_id}) do
@@ -240,47 +281,6 @@ defmodule Songy.Boundary.Spotify do
   defp handle_api_response({:ok, result}), do: {:ok, result}
   defp handle_api_response(:ok), do: {:ok, :ok}
   defp handle_api_response(result), do: {:ok, result}
-
-  @doc """
-  Ensures that Spotify credentials are fresh and valid.
-
-  This function checks if the provided credentials need refreshing based on their
-  expiration time, and automatically refreshes them if necessary.
-
-  ## Parameters
-
-    * `credentials` - Map containing Spotify credentials
-
-  ## Returns
-
-    * `{:ok, updated_credentials}` - Fresh credentials (either original or refreshed)
-    * `{:error, reason}` - Failed to refresh or invalid credentials
-
-  """
-  @spec ensure_fresh_credentials(map()) :: {:ok, map()} | {:error, atom()}
-  def ensure_fresh_credentials(%{refresh_token: refresh_token} = credentials) when not is_nil(refresh_token) do
-    with true <- refresh_token?(credentials),
-         spotify_creds <- struct(Spotify.Credentials, credentials),
-         {:ok, new_credentials} <- Spotify.Authentication.refresh(spotify_creds) do
-      Logger.info("Successfully refreshed Spotify credentials")
-
-      credentials_with_timestamp =
-        new_credentials
-        |> Map.from_struct()
-        |> Map.put(:expires_at, DateTime.add(DateTime.utc_now(), @token_refresh_threshold, :second))
-
-      {:ok, credentials_with_timestamp}
-    else
-      false ->
-        {:ok, credentials}
-
-      {:error, reason} ->
-        Logger.error("Failed to refresh Spotify credentials: #{inspect(reason)}")
-        {:error, reason}
-    end
-  end
-
-  def ensure_fresh_credentials(_), do: {:error, :invalid_credentials}
 
   defp refresh_token?(credentials) do
     case Map.get(credentials, :expires_at) do
