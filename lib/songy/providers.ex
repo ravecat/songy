@@ -55,8 +55,8 @@ defmodule Songy.Providers do
     key = {user_uuid, provider}
 
     with [{^key, data}] <- :ets.lookup(registry, key),
-         {:ok, ensured_data} <- ensure_data(provider, data),
-         {:match, true, _} <- {:match, match?(^data, ensured_data), ensured_data} do
+         {:ok, provider_data} <- ensure_data(provider, data),
+         {:match, true, _} <- {:match, match?(^data, provider_data), provider_data} do
       {:ok, data}
     else
       {:match, false, data} ->

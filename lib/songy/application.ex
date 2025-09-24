@@ -15,6 +15,8 @@ defmodule Songy.Application do
       {Phoenix.PubSub, name: Songy.PubSub},
       # Start a worker by calling: Songy.Worker.start_link(arg)
       # {Songy.Worker, arg},
+      # Provider credentials storage with ETS
+      {Songy.Providers, name: :providers},
       # Registry for game session process registration
       {Registry, [name: Songy.Registry, keys: :unique]},
       # Dynamic supervisor for game sessions

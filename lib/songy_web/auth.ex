@@ -61,28 +61,6 @@ defmodule SongyWeb.Auth do
     end
   end
 
-  def authenticate(conn, :spotify, %{"code" => code}) do
-    with credentials <- Spotify.Credentials.new(conn),
-         {:ok, credentials} <- Spotify.Authentication.authenticate(credentials, %{"code" => code}),
-         %Provider{} = provider <- Provider.new(:spotify, Map.from_struct(credentials)) do
-      conn
-      |> put_provider_in_session(provider)
-      |> put_flash(:info, "Successfully connected to Spotify!")
-      |> redirect(to: ~p"/")
-    else
-      {:error, _} ->
-        conn
-        |> put_flash(:error, "Failed to authenticate with Spotify. Please try again.")
-        |> redirect(to: ~p"/")
-    end
-  end
-
-  def authenticate(conn, _provider, _params) do
-    conn
-    |> put_flash(:error, "Unsupported provider or missing parameters.")
-    |> redirect(to: ~p"/")
-  end
-
   def delete(conn) do
     delete_csrf_token()
 

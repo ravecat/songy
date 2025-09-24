@@ -20,12 +20,31 @@ defmodule SongyWeb.SpotifyController do
   end
 
   def callback(conn, %{"code" => code}) do
-    authenticate(conn, :spotify, %{"code" => code})
+    %{assigns: %{current_user: %{uuid: user_uuid}}} = conn
+
+    with credentials <- Spotify.Credentials.new(conn),
+         {:ok, credentials_map} <- Songy.Boundary.Spotify.authenticate(credentials, %{"code" => code}),
+         :ok <- Songy.Providers.insert(:providers, user_uuid, :spotify, credentials_map) do
+      conn
+      |> put_flash(:info, "Successfully connected to Spotify!")
+      |> redirect(to: ~p"/")
+    else
+      {:error, _} ->
+        conn
+        |> put_flash(:error, "Failed to authenticate with Spotify. Please try again.")
+        |> redirect(to: ~p"/")
+    end
   end
 
   def callback(conn, %{"error" => error}) do
     Logger.error("Spotify OAuth error: #{error}")
 
+    conn
+    |> put_flash(:error, "Authentication was cancelled or failed.")
+    |> redirect(to: ~p"/")
+  end
+
+  def callback(conn, _) do
     conn
     |> put_flash(:error, "Authentication was cancelled or failed.")
     |> redirect(to: ~p"/")
