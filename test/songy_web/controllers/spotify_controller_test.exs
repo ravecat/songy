@@ -85,7 +85,7 @@ defmodule SongyWeb.SpotifyControllerTest do
 
       conn = get(conn, ~p"/auth/spotify/callback", %{"code" => "valid_auth_code"})
 
-      assert {:ok, stored_credentials} = Songy.Providers.lookup(:providers, user.uuid, :spotify)
+      assert {:ok, {:spotify, stored_credentials}} = Songy.Providers.lookup(:providers, user.uuid)
       assert stored_credentials.access_token == "successful_token"
       assert stored_credentials.refresh_token == "refresh_token_123"
       assert stored_credentials.expires_at == credentials_map.expires_at

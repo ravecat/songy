@@ -3,7 +3,8 @@ defmodule Songy.Providers do
   Provider data storage with ETS.
 
   Stores provider credentials and metadata in memory with automatic token refresh.
-  User-centric storage structure: {user_uuid, provider} keys.
+  User-centric storage structure: user_id -> {provider, provider_data}.
+  Each user can have only one active provider at a time.
   """
 
   use GenServer
@@ -22,7 +23,6 @@ defmodule Songy.Providers do
 
   @doc """
   Inserts or updates provider data for a specific user.
-  Merges with existing data if present.
 
   ## Examples
       iex> {:ok, pid} = Songy.Providers.start_link()
@@ -33,41 +33,38 @@ defmodule Songy.Providers do
       :ok
   """
   @spec insert(GenServer.server(), String.t(), atom(), map()) :: :ok
-  def insert(server, user_uuid, provider, attrs \\ %{})
-      when (is_pid(server) or is_atom(server)) and is_binary(user_uuid) and is_atom(provider) and is_map(attrs) do
-    GenServer.call(server, {:insert, user_uuid, provider, attrs})
+  def insert(server, user_id, provider, attrs \\ %{})
+      when (is_pid(server) or is_atom(server)) and is_binary(user_id) and is_atom(provider) and is_map(attrs) do
+    GenServer.call(server, {:insert, user_id, provider, attrs})
   end
 
   @doc """
-  Looks up the provider data for user.
-  Automatically refreshes tokens if they're close to expiry.
+  Looks up the provider data for user. Automatically refreshes tokens if they're close to expiry.
 
   ## Examples
       iex> {:ok, pid} = Songy.Providers.start_link(name: :providers)
-      iex> Songy.Providers.lookup(:providers, "user123", :spotify)
-      {:ok, %{access_token: "fresh_token", refresh_token: "refresh"}}
+      iex> Songy.Providers.lookup(:providers, "user123")
+      {:ok, {:spotify, %{access_token: "fresh_token", refresh_token: "refresh"}}}
 
-      iex> Songy.Providers.lookup(:providers, "user123", :unknown)
+      iex> Songy.Providers.lookup(:providers, "unknown_user")
       {:error, :not_found}
   """
-  @spec lookup(term(), String.t(), atom()) :: {:ok, map()} | {:error, atom()}
-  def lookup(registry, user_uuid, provider) when is_binary(user_uuid) and is_atom(provider) do
-    key = {user_uuid, provider}
-
-    with [{^key, data}] <- :ets.lookup(registry, key),
+  @spec lookup(term(), String.t()) :: {:ok, {atom(), map()}} | {:error, atom()}
+  def lookup(registry, user_id) when is_binary(user_id) do
+    with [{^user_id, {provider, data}}] <- :ets.lookup(registry, user_id),
          {:ok, provider_data} <- ensure_data(provider, data),
-         {:match, true, _} <- {:match, match?(^data, provider_data), provider_data} do
-      {:ok, data}
+         {:match, true, _, _} <- {:match, match?(^data, provider_data), provider, provider_data} do
+      {:ok, {provider, data}}
     else
-      {:match, false, data} ->
-        GenServer.call(registry, {:update, user_uuid, provider, data})
-        {:ok, data}
+      {:match, false, provider, updated_data} ->
+        GenServer.call(registry, {:update, user_id, provider, updated_data})
+        {:ok, {provider, updated_data}}
 
       [] ->
         {:error, :not_found}
 
       {:error, reason} ->
-        GenServer.call(registry, {:remove, user_uuid, provider})
+        GenServer.call(registry, {:remove, user_id})
         {:error, reason}
     end
   end
@@ -80,33 +77,23 @@ defmodule Songy.Providers do
   end
 
   @impl true
-  def handle_call({:insert, user_uuid, provider, attrs}, _from, table) do
-    key = {user_uuid, provider}
-
-    data =
-      case :ets.lookup(table, key) do
-        [{^key, existing}] -> Map.merge(existing, attrs)
-        [] -> attrs
-      end
-
-    :ets.insert(table, {key, data})
-    Logger.debug("Inserted #{provider} data for user #{user_uuid}")
+  def handle_call({:insert, user_id, provider, attrs}, _from, table) do
+    :ets.insert(table, {user_id, {provider, attrs}})
+    Logger.debug("Inserted #{provider} data for user #{user_id}")
     {:reply, :ok, table}
   end
 
   @impl true
-  def handle_call({:update, user_uuid, provider, data}, _from, table) do
-    key = {user_uuid, provider}
-    :ets.insert(table, {key, data})
-    Logger.debug("Updated #{provider} data for user #{user_uuid}")
+  def handle_call({:update, user_id, provider, data}, _from, table) do
+    :ets.insert(table, {user_id, {provider, data}})
+    Logger.debug("Updated #{provider} data for user #{user_id}")
     {:reply, :ok, table}
   end
 
   @impl true
-  def handle_call({:remove, user_uuid, provider}, _from, table) do
-    key = {user_uuid, provider}
-    :ets.delete(table, key)
-    Logger.info("Removed #{provider} data for user #{user_uuid}")
+  def handle_call({:remove, user_id}, _from, table) do
+    :ets.delete(table, user_id)
+    Logger.info("Removed provider data for user #{user_id}")
     {:reply, :ok, table}
   end
 
