@@ -5,10 +5,7 @@ defmodule SongyWeb.Auth do
   import Plug.Conn
   import Phoenix.Controller
 
-  alias Songy.Core.Provider
   alias Songy.Core.User
-
-  @token_refresh_threshold 300
 
   def fetch_current_user(conn, _opts) do
     user = get_session(conn, :current_user)
@@ -56,53 +53,5 @@ defmodule SongyWeb.Auth do
     conn
     |> configure_session(renew: true)
     |> clear_session()
-  end
-
-  defp put_provider_in_session(conn, provider) do
-    put_session(conn, :provider, provider)
-  end
-
-  defp ensure_provider(conn, %Provider{meta: nil}) do
-    Logger.warning("Provider credentials data are missing or invalid")
-    {delete_session(conn, :provider), nil}
-  end
-
-  defp ensure_provider(conn, %Provider{id: :spotify} = provider) do
-    ensure_spotify_provider(conn, provider)
-  end
-
-  defp ensure_provider(conn, _unsupported_provider) do
-    {delete_session(conn, :provider), nil}
-  end
-
-  defp ensure_spotify_provider(conn, %Provider{meta: meta} = provider) do
-    expires_at = meta.expires_at || DateTime.utc_now()
-    threshold_time = DateTime.add(DateTime.utc_now(), @token_refresh_threshold, :second)
-
-    with :lt <- DateTime.compare(expires_at, threshold_time),
-         credentials <- struct(Spotify.Credentials, Map.from_struct(meta)),
-         {:ok, refreshed_credentials} <- try_refresh_spotify_credentials(credentials) do
-      credentials_map = Map.from_struct(refreshed_credentials)
-      provider_with_credentials = Provider.new(:spotify, credentials_map)
-      {put_provider_in_session(conn, provider_with_credentials), provider_with_credentials}
-    else
-      :gt ->
-        {conn, provider}
-
-      :eq ->
-        {conn, provider}
-
-      error ->
-        Logger.warning("Failed to refresh Spotify credentials: #{inspect(error)}")
-        {delete_session(conn, :provider), nil}
-    end
-  end
-
-  defp try_refresh_spotify_credentials(credentials) do
-    try do
-      Spotify.Authentication.refresh(credentials)
-    rescue
-      Spotify.AuthenticationError -> {:error, :invalid_credentials_data}
-    end
   end
 end
