@@ -61,7 +61,7 @@ defmodule Songy.Boundary.GameSession do
   """
   @spec create_game_session(String.t(), atom()) :: {:ok, Game.t()} | {:error, term()}
   def create_game_session(owner_uuid, provider_id) when is_binary(owner_uuid) and is_atom(provider_id) do
-    with provider <- Provider.new(provider_id),
+    with %Provider{} = provider <- Provider.new(provider_id),
          game <- Game.new(owner_uuid, provider: provider),
          {:ok, _pid} <-
            DynamicSupervisor.start_child(

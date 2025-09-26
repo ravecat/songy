@@ -1,7 +1,6 @@
 defmodule SongyWeb.AuthTest do
   use SongyWeb.ConnCase
 
-  alias Songy.Core.Provider
   alias Songy.Core.User
   alias SongyWeb.Auth
 
@@ -202,115 +201,66 @@ defmodule SongyWeb.AuthTest do
   end
 
   describe "fetch_current_provider/2" do
-    test "assigns existing valid provider from session", %{conn: conn} do
-      future_time = DateTime.add(DateTime.utc_now(), 3600, :second)
-      credentials = %{access_token: "valid_token", expires_at: future_time}
-      provider = Provider.new(:spotify, credentials)
+    test "assigns :apple when user has no provider in ETS", %{conn: conn} do
+      user = User.new()
+
+      Repatch.patch(Songy.Providers, :lookup, fn :providers, _user_uuid ->
+        {:error, :not_found}
+      end)
 
       conn =
         conn
-        |> put_session(:provider, provider)
+        |> assign(:current_user, user)
         |> Auth.fetch_current_provider([])
 
-      assert conn.assigns.provider == provider
+      assert conn.assigns.provider == :apple
     end
 
-    test "assigns nil when no provider in session", %{conn: conn} do
-      conn = Auth.fetch_current_provider(conn, [])
+    test "assigns provider ID when provider data found in ETS", %{conn: conn} do
+      user = User.new()
+      credentials = %{access_token: "test_token"}
 
-      assert conn.assigns.provider == nil
-    end
-
-    test "handles unsupported provider types", %{conn: conn} do
-      unsupported_provider = Provider.new(:youtube, %{token: "token"})
+      Repatch.patch(Songy.Providers, :lookup, fn :providers, _user_uuid ->
+        {:ok, {:spotify, credentials}}
+      end)
 
       conn =
         conn
-        |> put_session(:provider, unsupported_provider)
+        |> assign(:current_user, user)
         |> Auth.fetch_current_provider([])
 
-      assert conn.assigns.provider == nil
-      assert get_session(conn, :provider) == nil
+      assert conn.assigns.provider == :spotify
     end
-  end
 
-  describe "require_provider/2" do
-    test "allows request when provider is present", %{conn: conn} do
-      provider = Provider.new(:spotify, %{access_token: "valid_token"})
+    test "assigns :apple when ETS returns error", %{conn: conn} do
+      user = User.new()
+
+      Repatch.patch(Songy.Providers, :lookup, fn :providers, _user_uuid ->
+        {:error, :timeout}
+      end)
 
       conn =
         conn
-        |> assign(:provider, provider)
-        |> Auth.require_provider([])
+        |> assign(:current_user, user)
+        |> Auth.fetch_current_provider([])
 
-      assert conn.assigns.provider == provider
-      refute conn.halted
+      assert conn.assigns.provider == :apple
     end
 
-    test "redirects to home with error when provider is nil", %{conn: conn} do
-      conn =
-        conn
-        |> fetch_flash()
-        |> assign(:provider, nil)
-        |> Auth.require_provider([])
+    test "assigns different provider IDs correctly", %{conn: conn} do
+      user = User.new()
 
-      assert conn.halted
-      assert redirected_to(conn) == "/"
-
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
-               "You must be authenticated by one of the supported providers."
-    end
-
-    test "redirects to home with error when provider is not assigned", %{conn: conn} do
-      conn =
-        conn
-        |> fetch_flash()
-        |> Auth.require_provider([])
-
-      assert conn.halted
-      assert redirected_to(conn) == "/"
-
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
-               "You must be authenticated by one of the supported providers."
-    end
-
-    test "works with different provider types", %{conn: conn} do
-      spotify_provider = Provider.new(:spotify, %{access_token: "spotify_token"})
+      # Test with :youtube provider
+      Repatch.patch(Songy.Providers, :lookup, fn :providers, _user_uuid ->
+        {:ok, {:youtube, %{token: "youtube_token"}}}
+      end)
 
       conn =
         conn
-        |> assign(:provider, spotify_provider)
-        |> Auth.require_provider([])
+        |> assign(:current_user, user)
+        |> Auth.fetch_current_provider([])
 
-      assert conn.assigns.provider.id == :spotify
-      refute conn.halted
-    end
-
-    test "preserves existing flash messages when provider is present", %{conn: conn} do
-      provider = Provider.new(:spotify, %{access_token: "token"})
-
-      conn =
-        conn
-        |> fetch_flash()
-        |> put_flash(:info, "Existing message")
-        |> assign(:provider, provider)
-        |> Auth.require_provider([])
-
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Existing message"
-      refute conn.halted
-    end
-
-    test "overwrites existing error flash when provider is missing", %{conn: conn} do
-      conn =
-        conn
-        |> fetch_flash()
-        |> put_flash(:error, "Previous error")
-        |> Auth.require_provider([])
-
-      assert conn.halted
-
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
-               "You must be authenticated by one of the supported providers."
+      assert conn.assigns.provider == :youtube
     end
   end
 end

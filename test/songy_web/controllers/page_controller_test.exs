@@ -4,7 +4,6 @@ defmodule SongyWeb.PageControllerTest do
   import Inertia.Testing
 
   alias Songy.Boundary.GameSession
-  alias Songy.Core.Provider
 
   test "GET /", %{conn: conn} do
     conn = get(conn, ~p"/")
@@ -12,17 +11,13 @@ defmodule SongyWeb.PageControllerTest do
     assert inertia_component(conn) == "Home"
   end
 
-  describe "start/2" do
-    test "creates game session authenticated by Spotify provider", %{conn: conn} do
-      provider = %Provider{
-        id: :spotify,
-        meta: %{
-          access_token: "test_token",
-          expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
-        }
-      }
+  describe "create/2" do
+    test "creates game session authenticated by valid provider", %{conn: conn} do
+      Repatch.patch(Songy.Providers, :lookup, fn :providers, _user_uuid ->
+        {:ok, {:spotify, %{access_token: "test_token", expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)}}}
+      end)
 
-      conn = conn |> put_session(:provider, provider) |> post(~p"/create")
+      conn = post(conn, ~p"/create")
 
       assert redirected_to(conn, 302) =~ ~r"^/[A-Za-z0-9_-]+$"
 
@@ -32,15 +27,6 @@ defmodule SongyWeb.PageControllerTest do
       assert {:ok, _game} = GameSession.lookup_game_session(uuid)
 
       GameSession.end_game_session(uuid)
-    end
-
-    test "returns error when provider is not authenticated", %{conn: conn} do
-      conn = post(conn, ~p"/create")
-
-      assert redirected_to(conn, 302) == "/"
-
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
-               "You must be authenticated by one of the supported providers."
     end
   end
 

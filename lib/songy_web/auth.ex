@@ -25,11 +25,14 @@ defmodule SongyWeb.Auth do
   end
 
   def fetch_current_provider(conn, _opts) do
-    with provider when not is_nil(provider) <- get_session(conn, :provider),
-         {conn, provider} <- ensure_provider(conn, provider) do
-      assign(conn, :provider, provider)
-    else
-      _ -> assign(conn, :provider, nil)
+    %{assigns: %{current_user: %{uuid: user_uuid}}} = conn
+
+    case Songy.Providers.lookup(:providers, user_uuid) do
+      {:ok, {provider_id, _credentials}} ->
+        assign(conn, :provider, provider_id)
+
+      _ ->
+        assign(conn, :provider, :apple)
     end
   end
 
@@ -46,20 +49,6 @@ defmodule SongyWeb.Auth do
   end
 
   def put_provider_token(conn, _), do: conn
-
-  @doc """
-  Plug for routes that require provider authentication.
-  """
-  def require_provider(conn, _opts) do
-    if Map.get(conn.assigns, :provider) do
-      conn
-    else
-      conn
-      |> put_flash(:error, "You must be authenticated by one of the supported providers.")
-      |> redirect(to: ~p"/")
-      |> halt()
-    end
-  end
 
   def delete(conn) do
     delete_csrf_token()
