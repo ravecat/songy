@@ -20,8 +20,6 @@ defmodule SongyWeb.PageController do
         |> redirect(to: ~p"/#{game.id}")
 
       {:error, reason} ->
-        dbg(reason)
-
         conn
         |> put_flash(:error, "Failed to create game session: #{inspect(reason)}")
         |> redirect(to: ~p"/")

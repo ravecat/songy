@@ -131,7 +131,6 @@ defmodule Songy.Boundary.GameSession do
       GenServer.call(via(game_uuid), {:start_game_session, track})
     else
       {:error, :game_session_not_found} -> {:error, :game_session_not_found}
-      {:error, :no_credentials} -> {:error, :no_credentials}
       {:error, reason} -> {:error, reason}
       _status -> {:error, :game_already_started}
     end
