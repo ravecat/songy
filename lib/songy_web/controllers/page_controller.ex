@@ -11,15 +11,17 @@ defmodule SongyWeb.PageController do
   end
 
   def create(conn, _params) do
-    %{assigns: %{current_user: %{uuid: user_id}, provider: provider_id}} = conn
+    %{assigns: %{current_user: %{uuid: user_id}}} = conn
 
-    case GameSession.create_game_session(user_id, provider_id) do
+    case GameSession.create_game_session(user_id) do
       {:ok, game} ->
         conn
         |> force_inertia_redirect()
         |> redirect(to: ~p"/#{game.id}")
 
       {:error, reason} ->
+        dbg(reason)
+
         conn
         |> put_flash(:error, "Failed to create game session: #{inspect(reason)}")
         |> redirect(to: ~p"/")

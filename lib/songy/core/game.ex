@@ -15,7 +15,6 @@ defmodule Songy.Core.Game do
              :max_participants,
              :status,
              :owner_uuid,
-             :provider,
              :player,
              :turn,
              :timelines,
@@ -23,7 +22,6 @@ defmodule Songy.Core.Game do
            ]}
 
   alias Songy.Core.Player
-  alias Songy.Core.Provider
   alias Songy.Core.Track
   alias Songy.Core.Turn
   alias Songy.Core.User
@@ -41,7 +39,6 @@ defmodule Songy.Core.Game do
     field :created_at, DateTime.t(), enforce: true
     field :status, status(), enforce: true
     field :owner_uuid, String.t(), enforce: true
-    field :provider, Provider.t(), enforce: true
     field :player, Player.t(), enforce: true
     field :turn, Turn.t()
     field :timelines, %{String.t() => list(Track.t())}, default: %{}
@@ -57,11 +54,6 @@ defmodule Songy.Core.Game do
     max_score: [
       type: :pos_integer,
       doc: "Maximum score to win the game"
-    ],
-    provider: [
-      type: {:struct, Provider},
-      required: true,
-      doc: "Provider instance for the game"
     ]
   ]
 
@@ -69,26 +61,21 @@ defmodule Songy.Core.Game do
   Creates a new game with the given owner and options.
 
   ## Options
-    * `:provider` - Provider instance (required, e.g., Provider.new(:spotify))
     * `:max_participants` - Maximum number of players allowed (default: 8)
     * `:max_score` - Maximum score to win the game (default: 10)
 
   ## Examples
-      iex> provider = Provider.new(:spotify)
-      iex> Game.new("user123", provider: provider)
-      %Game{id: "a1b2c3d4", participants: [], max_participants: 8, max_score: 10, status: :waiting, owner_uuid: "user123", provider: %Provider{id: :spotify}}
+      iex> Game.new("user123")
+      %Game{id: "a1b2c3d4", participants: [], max_participants: 8, max_score: 10, status: :waiting, owner_uuid: "user123"}
 
-      iex> provider = Provider.new(:spotify)
-      iex> Game.new("user123", provider: provider, max_participants: 4)
-      %Game{id: "a1b2c3d4", participants: [], max_participants: 4, max_score: 10, status: :waiting, owner_uuid: "user123", provider: %Provider{id: :spotify}}
+      iex> Game.new("user123", max_participants: 4)
+      %Game{id: "a1b2c3d4", participants: [], max_participants: 4, max_score: 10, status: :waiting, owner_uuid: "user123"}
 
-      iex> provider = Provider.new(:spotify)
-      iex> Game.new("user123", provider: provider, max_score: 5)
-      %Game{id: "a1b2c3d4", participants: [], max_participants: 8, max_score: 5, status: :waiting, owner_uuid: "user123", provider: %Provider{id: :spotify}}
+      iex> Game.new("user123", max_score: 5)
+      %Game{id: "a1b2c3d4", participants: [], max_participants: 8, max_score: 5, status: :waiting, owner_uuid: "user123"}
 
-      iex> provider = Provider.new(:spotify)
-      iex> Game.new("user123", provider: provider, max_participants: 12, max_score: 15)
-      %Game{id: "a1b2c3d4", participants: [], max_participants: 12, max_score: 15, status: :waiting, owner_uuid: "user123", provider: %Provider{id: :spotify}}
+      iex> Game.new("user123", max_participants: 12, max_score: 15)
+      %Game{id: "a1b2c3d4", participants: [], max_participants: 12, max_score: 15, status: :waiting, owner_uuid: "user123"}
   """
   @spec new(String.t(), keyword()) :: t()
   def new(owner_uuid, opts \\ []) when is_binary(owner_uuid) and is_list(opts) do
@@ -200,19 +187,16 @@ defmodule Songy.Core.Game do
   - :finished -> error (game cannot be advanced further)
 
   ## Examples
-      iex> provider = Provider.new(:spotify)
-      iex> game = Game.new("owner123", provider: provider)
+      iex> game = Game.new("owner123")
       iex> Game.update_status(game)
       {:ok, %Game{status: :in_progress}}
 
-      iex> provider = Provider.new(:spotify)
-      iex> game = Game.new("owner123", provider: provider)
+      iex> game = Game.new("owner123")
       iex> {:ok, in_progress_game} = Game.update_status(game)
       iex> Game.update_status(in_progress_game)
       {:ok, %Game{status: :finished}}
 
-      iex> provider = Provider.new(:spotify)
-      iex> game = Game.new("owner123", provider: provider)
+      iex> game = Game.new("owner123")
       iex> {:ok, in_progress_game} = Game.update_status(game)
       iex> {:ok, finished_game} = Game.update_status(in_progress_game)
       iex> Game.update_status(finished_game)
@@ -251,17 +235,11 @@ defmodule Songy.Core.Game do
     owner_uuid == user_uuid
   end
 
-  @spec update_provider(t(), Provider.t()) :: t()
-  def update_provider(%__MODULE__{} = game, %Provider{} = provider) do
-    %{game | provider: provider}
-  end
-
   @doc """
   Starts playback for the game.
 
   ## Examples
-      iex> provider = Provider.new(:spotify)
-      iex> game = Game.new("owner123", provider: provider)
+      iex> game = Game.new("owner123")
       iex> updated_game = Game.start_playback(game)
       iex> updated_game.player.is_playback
       true
@@ -275,8 +253,7 @@ defmodule Songy.Core.Game do
   Stops playback for the game.
 
   ## Examples
-      iex> provider = Provider.new(:spotify)
-      iex> game = Game.new("owner123", provider: provider)
+      iex> game = Game.new("owner123")
       iex> game = Game.start_playback(game)
       iex> updated_game = Game.pause_playback(game)
       iex> updated_game.player.is_playback
@@ -291,8 +268,7 @@ defmodule Songy.Core.Game do
   Toggles the playback state for the game.
 
   ## Examples
-      iex> provider = Provider.new(:spotify)
-      iex> game = Game.new("owner123", provider: provider)
+      iex> game = Game.new("owner123")
       iex> updated_game = Game.toggle_playback(game)
       iex> updated_game.player.is_playback
       true
@@ -313,12 +289,11 @@ defmodule Songy.Core.Game do
     * `false` - If game has at least one participant
 
   ## Examples
-      iex> provider = Provider.new(:spotify)
-      iex> game = Game.new("owner123", provider: provider)
+      iex> game = Game.new("owner123")
       iex> Game.empty?(game)
       true
 
-      iex> game = Game.new("owner123", provider: provider)
+      iex> game = Game.new("owner123")
       iex> user = User.get_user("user456")
       iex> {:ok, updated_game} = Game.add_participant(game, user)
       iex> Game.empty?(updated_game)
@@ -342,8 +317,7 @@ defmodule Songy.Core.Game do
     * `track` - The initial track to add
 
   ## Examples
-      iex> provider = Provider.new(:spotify)
-      iex> game = Game.new("owner123", provider: provider)
+      iex> game = Game.new("owner123")
       iex> track = Track.new(title: "Initial Song", artist: "Artist", year: 2023)
       iex> updated_game = Game.init_user_timeline(game, "user456", track)
       iex> Game.get_user_timeline(updated_game, "user456")
@@ -369,8 +343,7 @@ defmodule Songy.Core.Game do
     * `user_uuid` - UUID of the user
 
   ## Examples
-      iex> provider = Provider.new(:spotify)
-      iex> game = Game.new("owner123", provider: provider)
+      iex> game = Game.new("owner123")
       iex> track1 = Track.new(title: "Old Song", artist: "Artist", year: 2020)
       iex> track2 = Track.new(title: "New Song", artist: "Artist", year: 2023)
 
@@ -416,8 +389,7 @@ defmodule Songy.Core.Game do
     * `position` - Position to insert the track (0-based index). Defaults to 0 (head).
 
   ## Examples
-      iex> provider = Provider.new(:spotify)
-      iex> game = Game.new("owner123", provider: provider)
+      iex> game = Game.new("owner123")
       iex> track = Track.new(title: "Song", artist: "Artist", year: 2023)
       iex> game_with_track = Game.set_turn_track(game, track)
 
@@ -461,8 +433,7 @@ defmodule Songy.Core.Game do
     * List of Track structs for the user (empty list if no tracks)
 
   ## Examples
-      iex> provider = Provider.new(:spotify)
-      iex> game = Game.new("owner123", provider: provider)
+      iex> game = Game.new("owner123")
       iex> Game.get_user_timeline(game, "user456")
       []
   """
@@ -556,8 +527,7 @@ defmodule Songy.Core.Game do
     * `{:error, :no_turn}` - If game has no active turn
 
   ## Examples
-      iex> provider = Provider.new(:spotify)
-      iex> game = Game.new("owner123", provider: provider)
+      iex> game = Game.new("owner123")
       iex> track = Track.new(title: "Song", artist: "Artist", year: 2023)
       iex> Game.set_turn_track(game, track)
       {:ok, %Game{turn: %Turn{track: %Track{title: "Song"}}}}
@@ -596,18 +566,6 @@ defmodule Songy.Core.Game do
   def get_status(%__MODULE__{status: status}), do: status
 
   @doc """
-  Gets the provider for the game.
-
-  ## Examples
-      iex> provider = Provider.new(:spotify)
-      iex> game = Game.new("user123", provider: provider)
-      iex> Game.get_provider(game)
-      %Provider{id: :spotify}
-  """
-  @spec get_provider(t()) :: Provider.t()
-  def get_provider(%__MODULE__{provider: provider}), do: provider
-
-  @doc """
   Adds points to a player's score. Defaults to 1 point if not specified.
 
   If player key doesn't exist in scores, returns the game unchanged.
@@ -618,8 +576,7 @@ defmodule Songy.Core.Game do
     * `points` - Points to add (defaults to 1)
 
   ## Examples
-      iex> provider = Provider.new(:spotify)
-      iex> game = Game.new("owner123", provider: provider)
+      iex> game = Game.new("owner123")
       iex> user = User.new()
       iex> {:ok, game_with_user} = Game.add_participant(game, user)
       iex> updated_game = Game.increment_user_score(game_with_user, user.uuid)
@@ -653,14 +610,12 @@ defmodule Songy.Core.Game do
     * Updated game with next status
 
   ## Examples
-      iex> provider = Provider.new(:spotify)
-      iex> game = Game.new("owner123", provider: provider)
+      iex> game = Game.new("owner123")
       iex> updated_game = Game.next_status(game)
       iex> updated_game.status
       :in_progress
 
-      iex> provider = Provider.new(:spotify)
-      iex> game = Game.new("owner123", provider: provider)
+      iex> game = Game.new("owner123")
       iex> game = %{game | status: :in_progress}
       iex> updated_game = Game.next_status(game)
       iex> updated_game.status

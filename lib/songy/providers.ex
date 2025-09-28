@@ -80,6 +80,7 @@ defmodule Songy.Providers do
   def handle_call({:insert, user_id, provider, attrs}, _from, table) do
     :ets.insert(table, {user_id, {provider, attrs}})
     Logger.debug("Inserted #{provider} data for user #{user_id}")
+
     {:reply, :ok, table}
   end
 

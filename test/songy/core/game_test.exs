@@ -2,164 +2,134 @@ defmodule Songy.Core.GameTest do
   use ExUnit.Case, async: true
 
   alias Songy.Core.Game
-  alias Songy.Core.Player
-  alias Songy.Core.Provider
   alias Songy.Core.Track
   alias Songy.Core.Turn
   alias Songy.Core.User
 
-  setup do
-    {:ok, provider: Provider.new(:spotify)}
-  end
-
   describe "new/2" do
-    test "creates game with required provider", %{provider: provider} do
+    test "creates game with default options" do
       owner_uuid = "owner123"
-      game = Game.new(owner_uuid, provider: provider)
+      game = Game.new(owner_uuid)
 
       assert %Game{
                max_participants: 8,
                participants: [],
                status: :waiting,
-               owner_uuid: ^owner_uuid,
-               provider: %Provider{id: :spotify},
-               player: %Player{is_playback: false}
+               owner_uuid: ^owner_uuid
              } = game
 
       assert String.length(game.id) == 4
       assert %DateTime{} = game.created_at
     end
 
-    test "creates game with custom max participants and provider", %{provider: provider} do
+    test "creates game with custom max participants" do
       owner_uuid = "owner456"
-      game = Game.new(owner_uuid, provider: provider, max_participants: 4)
+      game = Game.new(owner_uuid, max_participants: 4)
 
       assert %Game{
                max_participants: 4,
                owner_uuid: ^owner_uuid,
                participants: [],
-               status: :waiting,
-               provider: %Provider{id: :spotify}
+               status: :waiting
              } = game
     end
 
-    test "creates game with multiple options", %{provider: provider} do
+    test "creates game with multiple options" do
       owner_uuid = "owner789"
-      game = Game.new(owner_uuid, provider: provider, max_participants: 12)
+      game = Game.new(owner_uuid, max_participants: 12)
 
       assert %Game{
                max_participants: 12,
                owner_uuid: ^owner_uuid,
                participants: [],
-               status: :waiting,
-               provider: %Provider{id: :spotify}
+               status: :waiting
              } = game
     end
 
-    test "creates game with empty options list", %{provider: provider} do
-      game = Game.new("owner000", provider: provider)
+    test "creates game with empty options list" do
+      game = Game.new("owner000")
 
       assert %Game{
                max_participants: 8,
                owner_uuid: "owner000",
                participants: [],
-               status: :waiting,
-               provider: %Provider{id: :spotify}
+               status: :waiting
              } = game
     end
 
-    test "raises error without provider" do
-      assert_raise NimbleOptions.ValidationError, fn ->
-        Game.new("owner123")
-      end
-    end
-
-    test "raises error with invalid provider" do
-      assert_raise NimbleOptions.ValidationError, fn ->
-        Game.new("owner123", provider: "invalid")
-      end
-    end
-
-    test "new game has empty scores", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "new game has empty scores" do
+      game = Game.new("owner123")
 
       assert %Game{scores: %{}} = game
     end
 
-    test "raises error with nil provider" do
+    test "raises error with invalid max_participants" do
       assert_raise NimbleOptions.ValidationError, fn ->
-        Game.new("owner123", provider: nil)
+        Game.new("owner123", max_participants: 0)
+      end
+
+      assert_raise NimbleOptions.ValidationError, fn ->
+        Game.new("owner123", max_participants: -1)
+      end
+
+      assert_raise NimbleOptions.ValidationError, fn ->
+        Game.new("owner123", max_participants: "invalid")
       end
     end
 
-    test "raises error with invalid max_participants", %{provider: provider} do
+    test "raises error with unknown options" do
       assert_raise NimbleOptions.ValidationError, fn ->
-        Game.new("owner123", provider: provider, max_participants: 0)
+        Game.new("owner123", created_at: DateTime.utc_now())
       end
 
       assert_raise NimbleOptions.ValidationError, fn ->
-        Game.new("owner123", provider: provider, max_participants: -1)
+        Game.new("owner123", uuid: "custom_uuid")
       end
 
       assert_raise NimbleOptions.ValidationError, fn ->
-        Game.new("owner123", provider: provider, max_participants: "invalid")
-      end
-    end
-
-    test "raises error with unknown options", %{provider: provider} do
-      assert_raise NimbleOptions.ValidationError, fn ->
-        Game.new("owner123", provider: provider, created_at: DateTime.utc_now())
-      end
-
-      assert_raise NimbleOptions.ValidationError, fn ->
-        Game.new("owner123", provider: provider, uuid: "custom_uuid")
-      end
-
-      assert_raise NimbleOptions.ValidationError, fn ->
-        Game.new("owner123", provider: provider, unknown_field: "test")
+        Game.new("owner123", unknown_field: "test")
       end
     end
 
-    test "creates game with default max_score", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "creates game with default max_score" do
+      game = Game.new("owner123")
 
       assert %Game{max_score: 10} = game
     end
 
-    test "creates game with custom max_score", %{provider: provider} do
-      game = Game.new("owner123", provider: provider, max_score: 5)
+    test "creates game with custom max_score" do
+      game = Game.new("owner123", max_score: 5)
 
       assert %Game{max_score: 5} = game
     end
 
-    test "validates max_score is positive integer", %{provider: provider} do
+    test "validates max_score is positive integer" do
       assert_raise NimbleOptions.ValidationError, fn ->
-        Game.new("owner123", provider: provider, max_score: 0)
+        Game.new("owner123", max_score: 0)
       end
 
       assert_raise NimbleOptions.ValidationError, fn ->
-        Game.new("owner123", provider: provider, max_score: -1)
+        Game.new("owner123", max_score: -1)
       end
 
       assert_raise NimbleOptions.ValidationError, fn ->
-        Game.new("owner123", provider: provider, max_score: "invalid")
+        Game.new("owner123", max_score: "invalid")
       end
     end
   end
 
   describe "add_participant/2" do
-    test "adds user to game successfully", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "adds user to game successfully" do
+      game = Game.new("owner123")
       user = User.new()
 
       assert {:ok, updated_game} = Game.add_participant(game, user)
       assert length(updated_game.participants) == 1
       assert hd(updated_game.participants).uuid == user.uuid
-      assert %Provider{id: :spotify} = updated_game.provider
     end
 
-    test "adds user to turn queue automatically", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "adds user to turn queue automatically" do
+      game = Game.new("owner123")
       user = User.new()
 
       assert {:ok, updated_game} = Game.add_participant(game, user)
@@ -168,8 +138,8 @@ defmodule Songy.Core.GameTest do
       assert Game.get_active_player(updated_game) == user.uuid
     end
 
-    test "returns error when game is full", %{provider: provider} do
-      game = Game.new("owner123", provider: provider, max_participants: 1)
+    test "returns error when game is full" do
+      game = Game.new("owner123", max_participants: 1)
       user1 = User.new()
       user2 = User.new()
 
@@ -177,16 +147,16 @@ defmodule Songy.Core.GameTest do
       assert {:error, :game_full} = Game.add_participant(game_with_user, user2)
     end
 
-    test "returns error when user already joined", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "returns error when user already joined" do
+      game = Game.new("owner123")
       user = User.new()
 
       {:ok, game_with_user} = Game.add_participant(game, user)
       assert {:error, :user_already_joined} = Game.add_participant(game_with_user, user)
     end
 
-    test "add_participant initializes player score to 0", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "add_participant initializes player score to 0" do
+      game = Game.new("owner123")
       user = User.new()
 
       {:ok, updated_game} = Game.add_participant(game, user)
@@ -197,18 +167,17 @@ defmodule Songy.Core.GameTest do
   end
 
   describe "remove_participant/2" do
-    test "removes user from game successfully", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "removes user from game successfully" do
+      game = Game.new("owner123")
       user = User.new()
 
       {:ok, game_with_user} = Game.add_participant(game, user)
       assert {:ok, updated_game} = Game.remove_participant(game_with_user, user.uuid)
       assert length(updated_game.participants) == 0
-      assert %Provider{id: :spotify} = updated_game.provider
     end
 
-    test "removes user from turn queue automatically", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "removes user from turn queue automatically" do
+      game = Game.new("owner123")
       user1 = User.new()
       user2 = User.new()
 
@@ -226,14 +195,14 @@ defmodule Songy.Core.GameTest do
       assert user1.uuid not in updated_game.turn.queue
     end
 
-    test "returns error when user not found", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "returns error when user not found" do
+      game = Game.new("owner123")
 
       assert {:error, :user_not_found} = Game.remove_participant(game, "non_existent_uuid")
     end
 
-    test "remove_participant preserves scores for reconnection", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "remove_participant preserves scores for reconnection" do
+      game = Game.new("owner123")
       user = User.new()
 
       {:ok, game_with_user} = Game.add_participant(game, user)
@@ -246,14 +215,14 @@ defmodule Songy.Core.GameTest do
   end
 
   describe "participant_count/1" do
-    test "returns 0 for empty game", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "returns 0 for empty game" do
+      game = Game.new("owner123")
 
       assert Game.participant_count(game) == 0
     end
 
-    test "returns correct count with participants", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "returns correct count with participants" do
+      game = Game.new("owner123")
       user1 = User.new()
       user2 = User.new()
 
@@ -266,8 +235,8 @@ defmodule Songy.Core.GameTest do
   end
 
   describe "increment_user_score/2" do
-    test "defaults to 1 point", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "defaults to 1 point" do
+      game = Game.new("owner123")
       user = User.new()
 
       {:ok, game_with_user} = Game.add_participant(game, user)
@@ -276,8 +245,8 @@ defmodule Songy.Core.GameTest do
       assert Map.get(updated_game.scores, user.uuid, 0) == 1
     end
 
-    test "works with default 1 point for multiple calls", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "works with default 1 point for multiple calls" do
+      game = Game.new("owner123")
       user = User.new()
 
       {:ok, game_with_user} = Game.add_participant(game, user)
@@ -291,8 +260,8 @@ defmodule Songy.Core.GameTest do
       assert Map.get(final_game.scores, user.uuid, 0) == 3
     end
 
-    test "returns unchanged game for non-existent player", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "returns unchanged game for non-existent player" do
+      game = Game.new("owner123")
 
       unchanged_game = Game.increment_user_score(game, "non_existent_uuid")
 
@@ -302,8 +271,8 @@ defmodule Songy.Core.GameTest do
   end
 
   describe "increment_user_score/3" do
-    test "accumulates points correctly with custom amount", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "accumulates points correctly with custom amount" do
+      game = Game.new("owner123")
       user = User.new()
 
       {:ok, game_with_user} = Game.add_participant(game, user)
@@ -313,8 +282,8 @@ defmodule Songy.Core.GameTest do
       assert Map.get(game_step2.scores, user.uuid, 0) == 50
     end
 
-    test "returns unchanged game for non-existent player", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "returns unchanged game for non-existent player" do
+      game = Game.new("owner123")
 
       unchanged_game = Game.increment_user_score(game, "non_existent_uuid", 10)
 
@@ -324,22 +293,22 @@ defmodule Songy.Core.GameTest do
   end
 
   describe "full?/1" do
-    test "returns false for empty game", %{provider: provider} do
-      game = Game.new("owner123", provider: provider, max_participants: 2)
+    test "returns false for empty game" do
+      game = Game.new("owner123", max_participants: 2)
 
       assert Game.full?(game) == false
     end
 
-    test "returns false for partially filled game", %{provider: provider} do
-      game = Game.new("owner123", provider: provider, max_participants: 2)
+    test "returns false for partially filled game" do
+      game = Game.new("owner123", max_participants: 2)
       user = User.new()
 
       {:ok, game_with_user} = Game.add_participant(game, user)
       assert Game.full?(game_with_user) == false
     end
 
-    test "returns true for full game", %{provider: provider} do
-      game = Game.new("owner123", provider: provider, max_participants: 1)
+    test "returns true for full game" do
+      game = Game.new("owner123", max_participants: 1)
       user = User.new()
 
       {:ok, full_game} = Game.add_participant(game, user)
@@ -348,23 +317,23 @@ defmodule Songy.Core.GameTest do
   end
 
   describe "update_status/1" do
-    test "advances from waiting to in_progress", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "advances from waiting to in_progress" do
+      game = Game.new("owner123")
 
       assert {:ok, updated_game} = Game.update_status(game)
       assert updated_game.status == :in_progress
     end
 
-    test "advances from in_progress to finished", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "advances from in_progress to finished" do
+      game = Game.new("owner123")
 
       {:ok, in_progress_game} = Game.update_status(game)
       assert {:ok, finished_game} = Game.update_status(in_progress_game)
       assert finished_game.status == :finished
     end
 
-    test "rejects advancing finished game", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "rejects advancing finished game" do
+      game = Game.new("owner123")
 
       {:ok, in_progress_game} = Game.update_status(game)
       {:ok, finished_game} = Game.update_status(in_progress_game)
@@ -372,8 +341,8 @@ defmodule Songy.Core.GameTest do
       assert {:error, :game_already_finished} = Game.update_status(finished_game)
     end
 
-    test "full lifecycle progression", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "full lifecycle progression" do
+      game = Game.new("owner123")
 
       assert {:ok, in_progress_game} = Game.update_status(game)
       assert in_progress_game.status == :in_progress
@@ -386,64 +355,32 @@ defmodule Songy.Core.GameTest do
   end
 
   describe "owner?/2" do
-    test "returns true when user is owner", %{provider: provider} do
+    test "returns true when user is owner" do
       owner_uuid = "owner123"
 
-      game = Game.new(owner_uuid, provider: provider)
+      game = Game.new(owner_uuid)
 
       assert Game.owner?(game, owner_uuid) == true
     end
 
-    test "returns false when user is not owner", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "returns false when user is not owner" do
+      game = Game.new("owner123")
 
       assert Game.owner?(game, "other456") == false
     end
   end
 
-  describe "update_provider/2" do
-    test "updates provider for game", %{provider: provider} do
-      new_provider = Provider.new(:spotify, %{device_id: "new-device"})
-
-      game = Game.new("owner123", provider: provider)
-      updated_game = Game.update_provider(game, new_provider)
-
-      assert updated_game.provider == new_provider
-      assert updated_game.id == game.id
-    end
-  end
-
-  describe "get_provider/1" do
-    test "returns provider for game" do
-      provider = Provider.new(:spotify, %{device_id: "test-device"})
-      game = Game.new("owner123", provider: provider)
-
-      assert Game.get_provider(game) == provider
-    end
-
-    test "returns provider with different configurations" do
-      provider1 = Provider.new(:spotify)
-      provider2 = Provider.new(:spotify, %{device_id: "device123", access_token: "token456"})
-
-      game1 = Game.new("owner123", provider: provider1)
-      game2 = Game.new("owner456", provider: provider2)
-
-      assert Game.get_provider(game1) == provider1
-      assert Game.get_provider(game2) == provider2
-    end
-  end
-
   describe "start_playback/1" do
-    test "starts playback for the game", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "starts playback for the game" do
+      game = Game.new("owner123")
 
       updated_game = Game.start_playback(game)
 
       assert updated_game.player.is_playback == true
     end
 
-    test "works when playback is already started", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "works when playback is already started" do
+      game = Game.new("owner123")
       game = Game.start_playback(game)
 
       updated_game = Game.start_playback(game)
@@ -453,8 +390,8 @@ defmodule Songy.Core.GameTest do
   end
 
   describe "pause_playback/1" do
-    test "stops playback for the game", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "stops playback for the game" do
+      game = Game.new("owner123")
       game = Game.start_playback(game)
 
       updated_game = Game.pause_playback(game)
@@ -462,8 +399,8 @@ defmodule Songy.Core.GameTest do
       assert updated_game.player.is_playback == false
     end
 
-    test "works when playback is already stopped", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "works when playback is already stopped" do
+      game = Game.new("owner123")
 
       updated_game = Game.pause_playback(game)
 
@@ -472,16 +409,16 @@ defmodule Songy.Core.GameTest do
   end
 
   describe "toggle_playback/1" do
-    test "toggles playback state from false to true", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "toggles playback state from false to true" do
+      game = Game.new("owner123")
 
       updated_game = Game.toggle_playback(game)
 
       assert updated_game.player.is_playback == true
     end
 
-    test "toggles playback state from true to false", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "toggles playback state from true to false" do
+      game = Game.new("owner123")
       game_with_playback = Game.toggle_playback(game)
 
       updated_game = Game.toggle_playback(game_with_playback)
@@ -491,22 +428,22 @@ defmodule Songy.Core.GameTest do
   end
 
   describe "empty?/1" do
-    test "returns true for game with no participants", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "returns true for game with no participants" do
+      game = Game.new("owner123")
 
       assert Game.empty?(game) == true
     end
 
-    test "returns false for game with participants", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "returns false for game with participants" do
+      game = Game.new("owner123")
       user = User.new()
       {:ok, updated_game} = Game.add_participant(game, user)
 
       assert Game.empty?(updated_game) == false
     end
 
-    test "returns true after removing all participants", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "returns true after removing all participants" do
+      game = Game.new("owner123")
       user = User.new()
       {:ok, game_with_user} = Game.add_participant(game, user)
       {:ok, game_without_user} = Game.remove_participant(game_with_user, user.uuid)
@@ -516,8 +453,8 @@ defmodule Songy.Core.GameTest do
   end
 
   describe "init_user_timeline/3" do
-    test "initializes user timeline with single track", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "initializes user timeline with single track" do
+      game = Game.new("owner123")
       track = Track.new(title: "Initial Song", artist: "Initial Artist", year: 2023)
 
       updated_game = Game.init_user_timeline(game, "user456", track)
@@ -527,8 +464,8 @@ defmodule Songy.Core.GameTest do
       assert updated_game.timelines == %{"user456" => [track]}
     end
 
-    test "replaces existing timeline with new track", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "replaces existing timeline with new track" do
+      game = Game.new("owner123")
 
       existing_track1 = Track.new(title: "Existing 1", artist: "Artist", year: 2020)
       existing_track2 = Track.new(title: "Existing 2", artist: "Artist", year: 2021)
@@ -546,8 +483,8 @@ defmodule Songy.Core.GameTest do
       assert length(Game.get_user_timeline(updated_game, "user456")) == 1
     end
 
-    test "initializes multiple users independently", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "initializes multiple users independently" do
+      game = Game.new("owner123")
       track1 = Track.new(title: "User1 Song", artist: "Artist1", year: 2023)
       track2 = Track.new(title: "User2 Song", artist: "Artist2", year: 2024)
 
@@ -561,8 +498,8 @@ defmodule Songy.Core.GameTest do
   end
 
   describe "extend_user_timeline/2" do
-    test "adds track to user timeline in chronological order", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "adds track to user timeline in chronological order" do
+      game = Game.new("owner123")
       track = Track.new(title: "Test Song", artist: "Test Artist", year: 2023)
 
       {:ok, game_with_track} = Game.set_turn_track(game, track)
@@ -572,8 +509,8 @@ defmodule Songy.Core.GameTest do
       assert updated_game.id == game.id
     end
 
-    test "maintains chronological order when adding multiple tracks", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "maintains chronological order when adding multiple tracks" do
+      game = Game.new("owner123")
 
       # Add tracks in non-chronological order to test automatic positioning
       track_2023 = Track.new(title: "Song 2023", artist: "Artist", year: 2023)
@@ -597,8 +534,8 @@ defmodule Songy.Core.GameTest do
       assert timeline == [track_2020, track_2023, track_2025]
     end
 
-    test "maintains stable sort for tracks with same year", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "maintains stable sort for tracks with same year" do
+      game = Game.new("owner123")
 
       track1 = Track.new(title: "Song A", artist: "Artist A", year: 2023)
       track2 = Track.new(title: "Song B", artist: "Artist B", year: 2023)
@@ -617,8 +554,8 @@ defmodule Songy.Core.GameTest do
   end
 
   describe "extend_active_timeline/3" do
-    test "adds track to turn timeline at head by default and records assumption", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "adds track to turn timeline at head by default and records assumption" do
+      game = Game.new("owner123")
       track = Track.new(title: "Song", artist: "Artist", year: 2023)
       {:ok, game_with_track} = Game.set_turn_track(game, track)
 
@@ -628,8 +565,8 @@ defmodule Songy.Core.GameTest do
       assert updated_game.turn.assumptions == [%{position: 0, user_id: "user123"}]
     end
 
-    test "adds multiple tracks to turn timeline and accumulates assumptions", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "adds multiple tracks to turn timeline and accumulates assumptions" do
+      game = Game.new("owner123")
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
 
@@ -646,8 +583,8 @@ defmodule Songy.Core.GameTest do
              ]
     end
 
-    test "adds track to head with position: 0 and records assumption", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "adds track to head with position: 0 and records assumption" do
+      game = Game.new("owner123")
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
 
@@ -664,8 +601,8 @@ defmodule Songy.Core.GameTest do
              ]
     end
 
-    test "adds track to specific position in timeline and records assumption", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "adds track to specific position in timeline and records assumption" do
+      game = Game.new("owner123")
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
       track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
@@ -687,8 +624,8 @@ defmodule Songy.Core.GameTest do
              ]
     end
 
-    test "adds track at end when position equals list length and records assumption", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "adds track at end when position equals list length and records assumption" do
+      game = Game.new("owner123")
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
       track3 = Track.new(title: "Song 3", artist: "Artist", year: 2022)
@@ -710,8 +647,8 @@ defmodule Songy.Core.GameTest do
              ]
     end
 
-    test "adds track at end when position is greater than list length and records assumption", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "adds track at end when position is greater than list length and records assumption" do
+      game = Game.new("owner123")
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
 
@@ -725,8 +662,8 @@ defmodule Songy.Core.GameTest do
       assert updated_game.turn.assumptions == [%{position: 0, user_id: "user123"}, %{position: 1, user_id: "user456"}]
     end
 
-    test "validates position argument types", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "validates position argument types" do
+      game = Game.new("owner123")
       track = Track.new(title: "Song", artist: "Artist", year: 2023)
       {:ok, game_with_track} = Game.set_turn_track(game, track)
 
@@ -739,8 +676,8 @@ defmodule Songy.Core.GameTest do
       end
     end
 
-    test "supports multiple position options scenarios and accumulates assumptions", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "supports multiple position options scenarios and accumulates assumptions" do
+      game = Game.new("owner123")
 
       tracks =
         for i <- 1..5 do
@@ -780,8 +717,8 @@ defmodule Songy.Core.GameTest do
   end
 
   describe "reorder_active_timeline/3" do
-    setup %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    setup do
+      game = Game.new("owner123")
 
       track1 = Track.new(title: "Song 1", artist: "Artist", year: 2020)
       track2 = Track.new(title: "Song 2", artist: "Artist", year: 2021)
@@ -855,8 +792,8 @@ defmodule Songy.Core.GameTest do
       assert result == {:error, :user_assumption_not_found}
     end
 
-    test "returns error when game has no turn", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "returns error when game has no turn" do
+      game = Game.new("owner123")
       game_without_turn = %{game | turn: nil}
 
       result = Game.reorder_active_timeline(game_without_turn, "setup_user1", 0)
@@ -926,22 +863,22 @@ defmodule Songy.Core.GameTest do
   end
 
   describe "get_user_timeline/2" do
-    test "gets empty timeline for user without tracks", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "gets empty timeline for user without tracks" do
+      game = Game.new("owner123")
 
       assert Game.get_user_timeline(game, "user456") == []
     end
 
-    test "initializes with empty timelines", %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    test "initializes with empty timelines" do
+      game = Game.new("owner123")
 
       assert game.timelines == %{}
     end
   end
 
   describe "next_phase/1" do
-    setup %{provider: provider} do
-      game = Game.new("owner123", provider: provider)
+    setup do
+      game = Game.new("owner123")
 
       user1 = User.new()
       user2 = User.new()
@@ -1336,10 +1273,10 @@ defmodule Songy.Core.GameTest do
   end
 
   describe "get_active_player/1" do
-    test "returns current player from game turn", %{provider: provider} do
+    test "returns current player from game turn" do
       owner_uuid = "owner123"
 
-      game = Game.new(owner_uuid, provider: provider)
+      game = Game.new(owner_uuid)
 
       turn =
         Turn.new()
@@ -1353,10 +1290,10 @@ defmodule Songy.Core.GameTest do
       assert Game.get_active_player(game) == "player-1"
     end
 
-    test "returns nil when queue is empty", %{provider: provider} do
+    test "returns nil when queue is empty" do
       owner_uuid = "owner123"
 
-      game = Game.new(owner_uuid, provider: provider)
+      game = Game.new(owner_uuid)
 
       assert Game.get_active_player(game) == nil
     end

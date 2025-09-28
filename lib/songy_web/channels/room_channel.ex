@@ -2,7 +2,6 @@ defmodule SongyWeb.RoomChannel do
   use SongyWeb, :channel
 
   alias Songy.Boundary.GameSession
-  alias Songy.Boundary.Spotify
   alias SongyWeb.Presence
 
   require Logger
@@ -34,12 +33,7 @@ defmodule SongyWeb.RoomChannel do
 
   @impl true
   def handle_info(:track_presence, socket) do
-    @room_prefix <> room_id = socket.topic
     user_uuid = socket.assigns.current_user_uuid
-
-    if GameSession.owner?(room_id, user_uuid) do
-      GameSession.set_credentials(room_id, Map.get(socket.assigns, :provider))
-    end
 
     Presence.track(socket, user_uuid, %{online_at: inspect(System.system_time(:second))})
 
@@ -63,7 +57,7 @@ defmodule SongyWeb.RoomChannel do
   def handle_in("start_game", _payload, socket) do
     @room_prefix <> room_id = socket.topic
 
-    case GameSession.start_game_session(room_id) do
+    case GameSession.start_game_session(room_id)  do
       {:ok, game} ->
         broadcast(socket, "state_updated", game)
         {:noreply, socket}
@@ -74,17 +68,12 @@ defmodule SongyWeb.RoomChannel do
   end
 
   @impl true
-  def handle_in(
-        "start_playback",
-        _payload,
-        %{assigns: %{provider: %{id: provider, meta: credentials}}} = socket
-      ) do
+  def handle_in("start_playback", _payload, socket) do
     @room_prefix <> room_id = socket.topic
     current_user_uuid = socket.assigns.current_user_uuid
 
     with true <- GameSession.owner?(room_id, current_user_uuid),
-         :ok <- GameSession.set_credentials(room_id, credentials),
-         {:ok, game} <- GameSession.start_playback(room_id, provider) do
+         {:ok, game} <- GameSession.start_playback(room_id) do
       broadcast(socket, "state_updated", game)
       {:reply, :ok, socket}
     else
@@ -95,17 +84,12 @@ defmodule SongyWeb.RoomChannel do
   end
 
   @impl true
-  def handle_in(
-        "pause_playback",
-        _payload,
-        %{assigns: %{provider: %{id: provider, meta: credentials}}} = socket
-      ) do
+  def handle_in("pause_playback", _payload, socket) do
     @room_prefix <> room_id = socket.topic
     current_user_uuid = socket.assigns.current_user_uuid
 
     with true <- GameSession.owner?(room_id, current_user_uuid),
-         :ok <- GameSession.set_credentials(room_id, credentials),
-         {:ok, game} <- GameSession.pause_playback(room_id, provider) do
+         {:ok, game} <- GameSession.pause_playback(room_id) do
       broadcast(socket, "state_updated", game)
       {:reply, :ok, socket}
     else
@@ -115,42 +99,6 @@ defmodule SongyWeb.RoomChannel do
 
       other ->
         Logger.warning("Pause playback failed with: #{inspect(other)}")
-        {:noreply, socket}
-    end
-  end
-
-  @impl true
-  def handle_in(
-        "update_provider",
-        %{"device_id" => _device_id} = payload,
-        %{assigns: %{provider: %{id: :spotify, meta: credentials}}} = socket
-      ) do
-    @room_prefix <> room_id = socket.topic
-    current_user_uuid = socket.assigns.current_user_uuid
-
-    with true <- GameSession.owner?(room_id, current_user_uuid),
-         {:ok, _game} <- GameSession.update_provider(room_id, payload),
-         {:ok, :playback_transferred} <- Spotify.transfer_playback(credentials, payload) do
-      {:reply, :ok, socket}
-    else
-      {:error, _reason} ->
-        {:noreply, socket}
-
-      _ ->
-        {:noreply, socket}
-    end
-  end
-
-  @impl true
-  def handle_in("update_provider", payload, socket) do
-    @room_prefix <> room_id = socket.topic
-    current_user_uuid = socket.assigns.current_user_uuid
-
-    with true <- GameSession.owner?(room_id, current_user_uuid),
-         {:ok, _game} <- GameSession.update_provider(room_id, payload) do
-      {:reply, :ok, socket}
-    else
-      _ ->
         {:noreply, socket}
     end
   end

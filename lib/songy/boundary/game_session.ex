@@ -8,15 +8,14 @@ defmodule Songy.Boundary.GameSession do
 
   ## Public API
 
-    * `create_game_session/2` - Creates and starts a new game session process with owner and provider
+    * `create_game_session/1` - Creates and starts a new game session process with owner
     * `remove_participant/2` - Removes a participant from an existing game session
     * `lookup_game_session/1` - Retrieves the current state of a game session
     * `start_game_session/1` - Starts the game by changing its status to in_progress
-    * `start_playback/2` - Starts playback for the game session
-    * `pause_playback/2` - Pauses playback for the game session
+    * `start_playback/1` - Starts playback for the game session
+    * `pause_playback/1` - Pauses playback for the game session
     * `end_game_session/1` - Terminates a game session process
     * `owner?/2` - Checks if a user is the owner of a game session
-    * `update_provider/2` - Updates the provider for a game session (owner only)
     * `set_credentials/2` - Stores provider credentials in Registry for session access
     * `make_assumption/2` - Adds current turn track to active timeline at beginning (position 0)
     * `make_assumption/3` - Adds current turn track to active timeline at specified position
@@ -35,8 +34,6 @@ defmodule Songy.Boundary.GameSession do
 
   alias Songy.Boundary.Spotify
   alias Songy.Core.Game
-  alias Songy.Core.Provider
-  alias Songy.Core.Provider.Credentials
   alias Songy.Core.Track
   alias Songy.Core.Trackable
   alias Songy.Core.User
@@ -44,25 +41,23 @@ defmodule Songy.Boundary.GameSession do
   require Logger
 
   @doc """
-  Creates and starts a new game session process with specified owner and provider.
+  Creates and starts a new game session process with specified owner.
 
   Generates a new game with a random UUID and starts the session process.
 
   ## Parameters
     * `owner_uuid` - UUID of the user who will own the game room
-    * `provider_id` - Provider identifier atom (e.g., :spotify)
 
   ## Examples
-      iex> GameSession.create_game_session("user123", :spotify)
-      {:ok, %Game{uuid: "a1b2c3", participants: [], owner_uuid: "user123", provider: %Provider{id: :spotify}}}
+      iex> GameSession.create_game_session("user123")
+      {:ok, %Game{uuid: "a1b2c3", participants: [], owner_uuid: "user123"}}
 
-      iex> GameSession.create_game_session("invalid", :spotify)
+      iex> GameSession.create_game_session("invalid")
       {:error, :process_start_failed}
   """
-  @spec create_game_session(String.t(), atom()) :: {:ok, Game.t()} | {:error, term()}
-  def create_game_session(owner_uuid, provider_id) when is_binary(owner_uuid) and is_atom(provider_id) do
-    with %Provider{} = provider <- Provider.new(provider_id),
-         game <- Game.new(owner_uuid, provider: provider),
+  @spec create_game_session(String.t()) :: {:ok, Game.t()} | {:error, term()}
+  def create_game_session(owner_uuid) when is_binary(owner_uuid) do
+    with game <- Game.new(owner_uuid),
          {:ok, _pid} <-
            DynamicSupervisor.start_child(
              Songy.Supervisor.GameSession,
@@ -130,7 +125,7 @@ defmodule Songy.Boundary.GameSession do
   def start_game_session(game_uuid) do
     with {:ok, game} <- lookup_game_session(game_uuid),
          :waiting <- Game.get_status(game),
-         {:ok, credentials} <- get_credentials(game_uuid),
+         {:ok, credentials} <- get_credentials_from_ets(game.owner_uuid),
          {:ok, random_track} <- Spotify.search_random_track(credentials),
          track <- Trackable.to_track(random_track) do
       GenServer.call(via(game_uuid), {:start_game_session, track})
@@ -142,12 +137,13 @@ defmodule Songy.Boundary.GameSession do
     end
   end
 
-  @doc """
+    @doc """
   Starts playback for the game session.
+
+  Looks up provider credentials from ETS using the game owner's user ID.
 
   ## Parameters
     * `game_uuid` - UUID of the game session
-    * `:spotify` - Provider identifier (only Spotify supported)
 
   ## Returns
     * `{:ok, game}` - Success with updated game state
@@ -158,21 +154,21 @@ defmodule Songy.Boundary.GameSession do
     * `{:error, :no_track_uri}` - Track does not have Spotify URI in metadata
 
   ## Examples
-      iex> {:ok, game} = GameSession.create_game_session("owner123", :spotify)
+      iex> {:ok, game} = GameSession.create_game_session("owner123")
       iex> {:ok, _} = GameSession.start_game_session(game.id)
       iex> :ok = GameSession.set_credentials(game.id, credentials)
-      iex> {:ok, updated_game} = GameSession.start_playback(game.id, :spotify)
+      iex> {:ok, updated_game} = GameSession.start_playback(game.id)
       iex> updated_game.player.is_playback
       true
 
-      iex> GameSession.start_playback("nonexistent", :spotify)
+      iex> GameSession.start_playback("nonexistent")
       {:error, :game_session_not_found}
   """
-  @spec start_playback(String.t(), atom()) :: {:ok, Game.t()} | {:error, atom()}
-  def start_playback(game_uuid, :spotify) do
+  @spec start_playback(String.t()) :: {:ok, Game.t()} | {:error, atom()}
+  def start_playback(game_uuid) do
     with {:ok, game} <- lookup_game_session(game_uuid),
          :in_progress <- Game.get_status(game),
-         {:ok, credentials} <- get_credentials(game_uuid),
+         {:ok, credentials} <- get_credentials_from_ets(game.owner_uuid),
          %Track{meta: %{uri: track_uri}} <- Game.get_turn_track(game),
          {:ok, :playback_started} <- Spotify.start_playback(credentials, uris: [track_uri]) do
       GenServer.call(via(game_uuid), :start_playback)
@@ -189,9 +185,10 @@ defmodule Songy.Boundary.GameSession do
   @doc """
   Pauses playback for the game session.
 
+  Looks up provider credentials from ETS using the game owner's user ID.
+
   ## Parameters
     * `game_uuid` - UUID of the game session
-    * `:spotify` - Provider identifier (only Spotify supported)
 
   ## Returns
     * `{:ok, game}` - Success with updated game state
@@ -200,18 +197,18 @@ defmodule Songy.Boundary.GameSession do
     * `{:error, :no_credentials}` - No credentials available for session
 
   ## Examples
-      iex> {:ok, updated_game} = GameSession.pause_playback(game.id, :spotify)
+      iex> {:ok, updated_game} = GameSession.pause_playback(game.id)
       iex> updated_game.player.is_playback
       false
 
-      iex> GameSession.pause_playback("nonexistent", :spotify)
+      iex> GameSession.pause_playback("nonexistent")
       {:error, :game_session_not_found}
   """
-  @spec pause_playback(String.t(), :spotify) :: {:ok, Game.t()} | {:error, atom()}
-  def pause_playback(game_uuid, :spotify) do
+  @spec pause_playback(String.t()) :: {:ok, Game.t()} | {:error, atom()}
+  def pause_playback(game_uuid) do
     with {:ok, game} <- lookup_game_session(game_uuid),
          :in_progress <- Game.get_status(game),
-         {:ok, credentials} <- get_credentials(game_uuid),
+         {:ok, credentials} <- get_credentials_from_ets(game.owner_uuid),
          {:ok, :playback_paused} <- Spotify.pause_playback(credentials) do
       GenServer.call(via(game_uuid), :pause_playback)
     else
@@ -270,30 +267,6 @@ defmodule Songy.Boundary.GameSession do
     case lookup_game_session(game_uuid) do
       {:ok, game} -> Game.owner?(game, user_uuid)
       {:error, _} -> false
-    end
-  end
-
-  @doc """
-  Updates the provider for the game session.
-
-  ## Parameters
-    * `game_uuid` - UUID of the game session
-    * `provider_data` - Map containing provider id and meta (%{id: atom(), meta: map()})
-
-  ## Examples
-      iex> GameSession.update_provider("game123", %{id: :spotify, meta: %{device_id: "abc123"}})
-      {:ok, %Game{provider: %Provider{id: :spotify, meta: %{device_id: "abc123"}}}}
-
-      iex> GameSession.update_provider("nonexistent", %{id: :spotify, meta: %{}})
-      {:error, :game_session_not_found}
-  """
-  @spec update_provider(String.t(), map()) :: {:ok, Game.t()} | {:error, atom()}
-  def update_provider(game_uuid, attrs) do
-    with {:ok, game} <- lookup_game_session(game_uuid),
-         %Provider{} = provider <- Provider.update(Game.get_provider(game), attrs) do
-      GenServer.call(via(game_uuid), {:update_provider, provider})
-    else
-      error -> error
     end
   end
 
@@ -403,43 +376,12 @@ defmodule Songy.Boundary.GameSession do
     end
   end
 
-  @doc """
-  Stores provider credentials in Registry for session access.
-
-  Uses the Credentials protocol to extract credential data from any structure
-  and stores it in Registry with a composite key for automatic cleanup.
-
-  ## Parameters
-    * `game_uuid` - UUID of the game session
-    * `credentials` - Any structure that implements the Credentials protocol
-
-  ## Examples
-      iex> provider = Provider.new(:spotify, %{access_token: "token123"})
-      iex> GameSession.set_credentials("game123", provider)
-      :ok
-
-      iex> GameSession.set_credentials("nonexistent", provider)
-      {:error, :game_session_not_found}
-  """
-  @spec set_credentials(String.t(), any()) :: :ok | {:error, :game_session_not_found}
-  def set_credentials(game_uuid, credentials) do
-    if game_session_exists?(game_uuid) do
-      GenServer.call(via(game_uuid), {:set_credentials, credentials})
-    else
-      {:error, :game_session_not_found}
-    end
-  end
-
-  @spec get_credentials(String.t()) :: {:ok, map()} | {:error, :no_credentials | :game_session_not_found}
-  defp get_credentials(game_uuid) do
-    if game_session_exists?(game_uuid) do
-      case Registry.lookup(Songy.Registry, {:credentials, game_uuid}) do
-        [{_pid, credentials}] when not is_nil(credentials) -> {:ok, credentials}
-        [{_pid, nil}] -> {:error, :no_credentials}
-        [] -> {:error, :no_credentials}
-      end
-    else
-      {:error, :game_session_not_found}
+  @spec get_credentials_from_ets(String.t()) :: {:ok, map()} | {:error, :no_credentials}
+  defp get_credentials_from_ets(owner_uuid) when is_binary(owner_uuid) do
+    case Songy.Providers.lookup(:providers, owner_uuid) do
+      {:ok, {_provider, credentials}} -> {:ok, credentials}
+      {:error, :not_found} -> {:error, :no_credentials}
+      {:error, _reason} -> {:error, :no_credentials}
     end
   end
 
@@ -542,7 +484,7 @@ defmodule Songy.Boundary.GameSession do
   @impl GenServer
   def handle_continue({:init_participant_timeline, user_uuid}, game) do
     with [] <- Game.get_user_timeline(game, user_uuid),
-         {:ok, credentials} <- get_credentials(game.id),
+         {:ok, credentials} <- get_credentials_from_ets(game.owner_uuid),
          {:ok, spotify_track} <- Spotify.search_random_track(credentials),
          track <- Trackable.to_track(spotify_track) do
       Logger.info("Init participant timeline with track '#{track.title}' by '#{track.artist}'")
@@ -640,7 +582,7 @@ defmodule Songy.Boundary.GameSession do
 
   @impl GenServer
   def handle_call(:next_phase, _from, %{turn: %{phase: :results}} = game) do
-    with {:ok, credentials} <- get_credentials(game.id),
+    with {:ok, credentials} <- get_credentials_from_ets(game.owner_uuid),
          {:ok, spotify_track} <- Spotify.search_random_track(credentials),
          %Track{} = track <- Trackable.to_track(spotify_track),
          {:ok, :playback_paused} <- Spotify.pause_playback(credentials),
@@ -673,13 +615,6 @@ defmodule Songy.Boundary.GameSession do
   end
 
   @impl GenServer
-  def handle_call({:update_provider, provider}, _from, game) do
-    updated_game = Game.update_provider(game, provider)
-
-    {:reply, {:ok, updated_game}, updated_game}
-  end
-
-  @impl GenServer
   def handle_call({:remove_participant, participant_uuid}, _from, game) do
     case Game.remove_participant(game, participant_uuid) do
       {:ok, updated_game} ->
@@ -694,16 +629,6 @@ defmodule Songy.Boundary.GameSession do
       {:error, reason} ->
         {:reply, {:error, reason}, game}
     end
-  end
-
-  @impl GenServer
-  def handle_call({:set_credentials, credentials}, _from, game) do
-    credential_data = Credentials.fetch(credentials)
-
-    Registry.unregister(Songy.Registry, {:credentials, game.id})
-    Registry.register(Songy.Registry, {:credentials, game.id}, credential_data)
-
-    {:reply, :ok, game}
   end
 
   @impl GenServer
