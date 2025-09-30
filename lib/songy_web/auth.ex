@@ -29,7 +29,7 @@ defmodule SongyWeb.Auth do
         assign(conn, :provider, provider_id)
 
       _ ->
-        assign(conn, :provider, :apple)
+        assign(conn, :provider, Application.fetch_env!(:songy, :default_provider))
     end
   end
 

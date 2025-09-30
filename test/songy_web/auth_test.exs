@@ -201,7 +201,7 @@ defmodule SongyWeb.AuthTest do
   end
 
   describe "fetch_current_provider/2" do
-    test "assigns :apple when user has no provider in ETS", %{conn: conn} do
+    test "assigns default provider when user has no provider in ETS", %{conn: conn} do
       user = User.new()
 
       Repatch.patch(Songy.Providers, :lookup, fn :providers, _user_uuid ->
@@ -213,7 +213,7 @@ defmodule SongyWeb.AuthTest do
         |> assign(:current_user, user)
         |> Auth.fetch_current_provider([])
 
-      assert conn.assigns.provider == :apple
+      assert conn.assigns.provider == :spotify
     end
 
     test "assigns provider ID when provider data found in ETS", %{conn: conn} do
@@ -232,7 +232,7 @@ defmodule SongyWeb.AuthTest do
       assert conn.assigns.provider == :spotify
     end
 
-    test "assigns :apple when ETS returns error", %{conn: conn} do
+    test "assigns default provider when ETS returns error", %{conn: conn} do
       user = User.new()
 
       Repatch.patch(Songy.Providers, :lookup, fn :providers, _user_uuid ->
@@ -244,7 +244,7 @@ defmodule SongyWeb.AuthTest do
         |> assign(:current_user, user)
         |> Auth.fetch_current_provider([])
 
-      assert conn.assigns.provider == :apple
+      assert conn.assigns.provider == :spotify
     end
 
     test "assigns different provider IDs correctly", %{conn: conn} do
