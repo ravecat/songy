@@ -105,11 +105,16 @@ defmodule SongyWeb.RoomChannel do
 
   @impl true
   def handle_in("get_spotify_token", _payload, socket) do
-    case socket.assigns[:provider] do
-      %{id: :spotify, meta: %{access_token: token}} when not is_nil(token) ->
+    user_uuid = socket.assigns.current_user_uuid
+
+    case Songy.Providers.lookup(:providers, user_uuid) do
+      {:ok, {:spotify, %{access_token: token}}} when not is_nil(token) ->
         {:reply, {:ok, %{token: token}}, socket}
 
-      _ ->
+      {:ok, {_other_provider, _data}} ->
+        {:reply, {:error, %{reason: "invalid_credentials"}}, socket}
+
+      {:error, _reason} ->
         {:reply, {:error, %{reason: "invalid_credentials"}}, socket}
     end
   end

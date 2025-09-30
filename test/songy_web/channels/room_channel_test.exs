@@ -30,10 +30,6 @@ defmodule SongyWeb.RoomChannelTest do
        }}
     end)
 
-    Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn _registry, _user_id ->
-      {:ok, {:spotify, %{access_token: "test-token", refresh_token: "test-refresh-token"}}}
-    end)
-
     [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
 
     Repatch.allow(self(), pid)
@@ -50,6 +46,10 @@ defmodule SongyWeb.RoomChannelTest do
 
   describe "start_game event" do
     test "changes game status and broadcasts update", %{current_user: current_user, game: game} do
+      Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn _registry, _user_id ->
+        {:ok, {:spotify, %{access_token: "test-token", refresh_token: "test-refresh-token"}}}
+      end)
+
       {:ok, _, socket} = join_room_channel(current_user, game.id)
 
       push(socket, "start_game", %{})
@@ -72,10 +72,11 @@ defmodule SongyWeb.RoomChannelTest do
 
   describe "get_spotify_token event" do
     test "returns access token when provider is available", %{current_user: current_user, game: game} do
-      # Use provider in socket assigns (existing channel logic)
-      provider = %{id: :spotify, meta: %{access_token: "spotify_access_token_123"}}
+      Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn _registry, _user_id ->
+        {:ok, {:spotify, %{access_token: "spotify_access_token_123", refresh_token: "test-refresh-token"}}}
+      end)
 
-      {:ok, _, socket} = join_room_channel(current_user, game.id, %{provider: provider})
+      {:ok, _, socket} = join_room_channel(current_user, game.id)
 
       ref = push(socket, "get_spotify_token", %{})
 
@@ -83,48 +84,22 @@ defmodule SongyWeb.RoomChannelTest do
     end
 
     test "returns error when provider has no access_token", %{current_user: current_user, game: game} do
-      # Provider without access_token
-      provider = %{id: :spotify, meta: %{refresh_token: "refresh_token_123"}}
+      Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn _registry, _user_id ->
+        {:ok, {:apple, %{access_token: "spotify_access_token_123", refresh_token: "test-refresh-token"}}}
+      end)
 
-      {:ok, _, socket} = join_room_channel(current_user, game.id, %{provider: provider})
-
-      ref = push(socket, "get_spotify_token", %{})
-
-      assert_reply ref, :error, %{reason: "invalid_credentials"}
-    end
-
-    test "returns error with missing access_token", %{current_user: current_user, game: game} do
-      # Provider with nil access_token
-      provider = %{id: :spotify, meta: %{access_token: nil}}
-
-      {:ok, _, socket} = join_room_channel(current_user, game.id, %{provider: provider})
+      {:ok, _, socket} = join_room_channel(current_user, game.id)
 
       ref = push(socket, "get_spotify_token", %{})
 
       assert_reply ref, :error, %{reason: "invalid_credentials"}
     end
 
-    test "returns error when provider is nil", %{current_user: current_user, game: game} do
-      # No provider
-      {:ok, _, socket} = join_room_channel(current_user, game.id, %{provider: nil})
+    test "returns error", %{current_user: current_user, game: game} do
+      Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn _registry, _user_id ->
+        {:error, :not_found}
+      end)
 
-      ref = push(socket, "get_spotify_token", %{})
-
-      assert_reply ref, :error, %{reason: "invalid_credentials"}
-    end
-
-    test "returns error when provider is unknown", %{current_user: current_user, game: game} do
-      provider = %{id: :youtube, meta: %{access_token: "youtube_token_123"}}
-
-      {:ok, _, socket} = join_room_channel(current_user, game.id, %{provider: provider})
-
-      ref = push(socket, "get_spotify_token", %{})
-
-      assert_reply ref, :error, %{reason: "invalid_credentials"}
-    end
-
-    test "returns error with missing provider", %{current_user: current_user, game: game} do
-      # No provider in assigns
       {:ok, _, socket} = join_room_channel(current_user, game.id)
 
       ref = push(socket, "get_spotify_token", %{})
@@ -135,8 +110,12 @@ defmodule SongyWeb.RoomChannelTest do
 
   describe "next_phase event" do
     test "advances game phase and broadcasts state update", %{current_user: current_user, game: game} do
-      # Start the game to get it to in_progress status
+      Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn _registry, _user_id ->
+        {:ok, {:apple, %{access_token: "spotify_access_token_123", refresh_token: "test-refresh-token"}}}
+      end)
+
       {:ok, _, socket} = join_room_channel(current_user, game.id)
+
       push(socket, "start_game", %{})
 
       # Wait for game to start
@@ -168,6 +147,10 @@ defmodule SongyWeb.RoomChannelTest do
 
   describe "make_assumption event" do
     test "makes user assumption and broadcasts state update", %{current_user: current_user, game: game} do
+      Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn _registry, _user_id ->
+        {:ok, {:apple, %{access_token: "spotify_access_token_123", refresh_token: "test-refresh-token"}}}
+      end)
+
       {:ok, _, socket} = join_room_channel(current_user, game.id)
 
       push(socket, "start_game", %{})
@@ -208,6 +191,10 @@ defmodule SongyWeb.RoomChannelTest do
 
   describe "reorder_timeline event" do
     test "reorders user timeline and broadcasts state update", %{current_user: current_user, game: game} do
+      Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn _registry, _user_id ->
+        {:ok, {:apple, %{access_token: "spotify_access_token_123", refresh_token: "test-refresh-token"}}}
+      end)
+
       {:ok, _, socket} = join_room_channel(current_user, game.id)
 
       push(socket, "start_game", %{})

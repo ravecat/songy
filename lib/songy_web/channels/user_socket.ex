@@ -27,19 +27,14 @@ defmodule SongyWeb.UserSocket do
   # See `Phoenix.Token` documentation for examples in
   # performing token verification on connect.
   @impl true
-  def connect %{"user_token" => user_token} = params, socket, _connect_info do
-    with {:ok, user_uuid} <- verify_user_token(socket, user_token),
-         provider <- verify_provider_token(socket, params) do
-      socket =
-        socket
-        |> assign(:current_user_uuid, user_uuid)
-        |> assign(:provider, provider)
+  def connect(%{"user_token" => user_token}, socket, _connect_info) do
+    case verify_user_token(socket, user_token) do
+      {:ok, user_uuid} ->
+        socket = assign(socket, :current_user_uuid, user_uuid)
+        {:ok, socket}
 
-      {:ok, socket}
-    else
       {:error, reason} ->
         Logger.error("Failed to connect user socket: #{inspect(reason)}")
-
         :error
     end
   end
@@ -72,18 +67,4 @@ defmodule SongyWeb.UserSocket do
         {:error, reason}
     end
   end
-
-  defp verify_provider_token(socket, %{"provider_token" => provider_token}) do
-    case Phoenix.Token.verify(socket, "current_provider", provider_token, max_age: 86400) do
-      {:ok, provider} ->
-        Logger.info("User socket connected with provider: #{inspect(provider)}")
-
-        provider
-
-      _ ->
-        nil
-    end
-  end
-
-  defp verify_provider_token(_socket, _params), do: nil
 end
