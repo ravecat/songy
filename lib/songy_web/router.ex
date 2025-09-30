@@ -14,7 +14,6 @@ defmodule SongyWeb.Router do
     plug :fetch_current_user
     plug :fetch_current_provider
     plug :put_user_token
-    plug :put_provider_token
   end
 
   pipeline :browser do
@@ -27,7 +26,6 @@ defmodule SongyWeb.Router do
     plug :fetch_current_user
     plug :fetch_current_provider
     plug :put_user_token
-    plug :put_provider_token
   end
 
   pipeline :api do

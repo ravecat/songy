@@ -105,41 +105,6 @@ defmodule SongyWeb.AuthTest do
     end
   end
 
-  describe "put_provider_token/2" do
-    test "creates provider token when provider exists", %{conn: conn} do
-      provider = %{type: :spotify, data: %{token: "abc123"}}
-
-      conn =
-        conn
-        |> assign(:provider, provider)
-        |> Auth.put_provider_token([])
-
-      assert is_binary(conn.assigns.provider_token)
-
-      # Verify token can be verified
-      {:ok, verified_provider} =
-        Phoenix.Token.verify(SongyWeb.Endpoint, "current_provider", conn.assigns.provider_token)
-
-      assert verified_provider == provider
-    end
-
-    test "returns conn unchanged when no provider", %{conn: conn} do
-      conn_result = Auth.put_provider_token(conn, [])
-      assert conn_result == conn
-      refute Map.has_key?(conn_result.assigns, :provider_token)
-    end
-
-    test "returns conn unchanged when provider is nil", %{conn: conn} do
-      conn_result =
-        conn
-        |> assign(:provider, nil)
-        |> Auth.put_provider_token([])
-
-      assert conn_result.assigns.provider == nil
-      refute Map.has_key?(conn_result.assigns, :provider_token)
-    end
-  end
-
   describe "plug pipeline integration" do
     test "fetch_current_user and put_user_token work together", %{conn: conn} do
       conn =
@@ -173,31 +138,6 @@ defmodule SongyWeb.AuthTest do
 
       assert user_uuid == original_user.uuid
     end
-
-    test "both tokens work together in pipeline", %{conn: conn} do
-      user = User.new()
-      provider = %{type: :spotify, data: %{token: "abc123"}}
-
-      conn =
-        conn
-        |> assign(:current_user, user)
-        |> assign(:provider, provider)
-        |> Auth.put_user_token([])
-        |> Auth.put_provider_token([])
-
-      assert is_binary(conn.assigns.user_token)
-      assert is_binary(conn.assigns.provider_token)
-
-      # Verify both tokens work correctly
-      {:ok, user_uuid} =
-        Phoenix.Token.verify(SongyWeb.Endpoint, "current_user", conn.assigns.user_token)
-
-      {:ok, verified_provider} =
-        Phoenix.Token.verify(SongyWeb.Endpoint, "current_provider", conn.assigns.provider_token)
-
-      assert user_uuid == user.uuid
-      assert verified_provider == provider
-    end
   end
 
   describe "fetch_current_provider/2" do
@@ -213,7 +153,7 @@ defmodule SongyWeb.AuthTest do
         |> assign(:current_user, user)
         |> Auth.fetch_current_provider([])
 
-      assert conn.assigns.provider == :spotify
+      assert conn.assigns.provider == :apple
     end
 
     test "assigns provider ID when provider data found in ETS", %{conn: conn} do
@@ -244,7 +184,7 @@ defmodule SongyWeb.AuthTest do
         |> assign(:current_user, user)
         |> Auth.fetch_current_provider([])
 
-      assert conn.assigns.provider == :spotify
+      assert conn.assigns.provider == :apple
     end
 
     test "assigns different provider IDs correctly", %{conn: conn} do

@@ -40,13 +40,6 @@ defmodule SongyWeb.Auth do
 
   def put_user_token(conn, _), do: conn
 
-  def put_provider_token(%{assigns: %{provider: provider}} = conn, _) when provider != nil do
-    token = Phoenix.Token.sign(conn, "current_provider", provider)
-    assign(conn, :provider_token, token)
-  end
-
-  def put_provider_token(conn, _), do: conn
-
   def delete(conn) do
     delete_csrf_token()
 

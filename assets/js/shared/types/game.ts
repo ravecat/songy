@@ -1,6 +1,5 @@
 import type { User } from './user';
 import type { Track } from './track';
-import type { Provider } from './provider';
 import type { Player } from './player';
 import type { Turn } from './turn';
 
@@ -41,9 +40,6 @@ export interface Game {
 
   /** UUID of the game owner/creator */
   owner_uuid: string;
-
-  /** Music provider configuration */
-  provider: Provider;
 
   /** Player state for playback control */
   player: Player;
