@@ -39,6 +39,23 @@ defmodule Songy.Providers do
   end
 
   @doc """
+  Updates provider data by merging with existing data.
+  New data takes priority over existing data.
+
+  ## Examples
+      iex> Songy.Providers.insert(:providers, "user123", :spotify, %{access_token: "token1"})
+      :ok
+      iex> Songy.Providers.update(:providers, "user123", :spotify, %{device_id: "device1"})
+      :ok
+      # Result: %{access_token: "token1", device_id: "device1"}
+  """
+  @spec update(GenServer.server(), String.t(), atom(), map()) :: :ok
+  def update(server, user_id, provider, new_data)
+      when (is_pid(server) or is_atom(server)) and is_binary(user_id) and is_atom(provider) and is_map(new_data) do
+    GenServer.call(server, {:update, user_id, provider, new_data})
+  end
+
+  @doc """
   Looks up the provider data for user. Automatically refreshes tokens if they're close to expiry.
 
   ## Examples
@@ -85,8 +102,16 @@ defmodule Songy.Providers do
   end
 
   @impl true
-  def handle_call({:update, user_id, provider, data}, _from, table) do
-    :ets.insert(table, {user_id, {provider, data}})
+  def handle_call({:update, user_id, provider, new_data}, _from, table) do
+    merged_data =
+      :ets.lookup(table, user_id)
+      |> case do
+        [{^user_id, {^provider, data}}] -> data
+        _ -> %{}
+      end
+      |> Map.merge(new_data)
+
+    :ets.insert(table, {user_id, {provider, merged_data}})
     Logger.debug("Updated #{provider} data for user #{user_id}")
     {:reply, :ok, table}
   end

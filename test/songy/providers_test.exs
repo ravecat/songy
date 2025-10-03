@@ -60,6 +60,37 @@ defmodule Songy.ProvidersTest do
     end
   end
 
+  describe "update/4" do
+    test "merges new data with existing data, giving priority to new values", %{table: table} do
+      user_id = "user123"
+      initial_data = %{access_token: "old_token", refresh_token: "refresh456"}
+      new_data = %{access_token: "new_token", device_id: "device789"}
+      expected_data = %{access_token: "new_token", refresh_token: "refresh456", device_id: "device789"}
+
+      assert :ok = Providers.insert(table, user_id, :apple, initial_data)
+      assert :ok = Providers.update(table, user_id, :apple, new_data)
+      assert {:ok, {:apple, ^expected_data}} = Providers.lookup(table, user_id)
+    end
+
+    test "handles update when user has no existing data", %{table: table} do
+      user_id = "user123"
+      new_data = %{device_id: "device789"}
+
+      assert :ok = Providers.update(table, user_id, :apple, new_data)
+      assert {:ok, {:apple, ^new_data}} = Providers.lookup(table, user_id)
+    end
+
+    test "handles update when user has different provider", %{table: table} do
+      user_id = "user123"
+      initial_data = %{access_token: "apple_token"}
+      new_data = %{device_id: "device789"}
+
+      assert :ok = Providers.insert(table, user_id, :soundcloud, initial_data)
+      assert :ok = Providers.update(table, user_id, :apple, new_data)
+      assert {:ok, {:apple, ^new_data}} = Providers.lookup(table, user_id)
+    end
+  end
+
   describe "lookup/2" do
     test "returns not_found for non-existent data", %{table: table} do
       assert {:error, :not_found} = Providers.lookup(table, "user123")
