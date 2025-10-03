@@ -108,6 +108,41 @@ defmodule SongyWeb.RoomChannelTest do
     end
   end
 
+  describe "update_provider event" do
+    test "updates provider data with new payload", %{current_user: current_user, game: game} do
+      initial_data = %{access_token: "token123", refresh_token: "refresh456"}
+
+      Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn _registry, _user_id ->
+        {:ok, {:spotify, initial_data}}
+      end)
+
+      Repatch.patch(Songy.Providers, :update, [mode: :shared], fn _registry, user_id, provider, payload ->
+        assert user_id == current_user.uuid
+        assert provider == :spotify
+        assert payload == %{"device_id" => "test-device-123"}
+        :ok
+      end)
+
+      {:ok, _, socket} = join_room_channel(current_user, game.id)
+
+      ref = push(socket, "update_provider", %{"device_id" => "test-device-123"})
+
+      assert_reply ref, :ok
+    end
+
+    test "returns error when user not found in ETS", %{current_user: current_user, game: game} do
+      Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn _registry, _user_id ->
+        {:error, :not_found}
+      end)
+
+      {:ok, _, socket} = join_room_channel(current_user, game.id)
+
+      ref = push(socket, "update_provider", %{"device_id" => "test-device-123"})
+
+      assert_reply ref, :error, %{reason: "provider_not_found"}
+    end
+  end
+
   describe "next_phase event" do
     test "advances game phase and broadcasts state update", %{current_user: current_user, game: game} do
       Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn _registry, _user_id ->

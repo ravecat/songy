@@ -57,7 +57,7 @@ defmodule SongyWeb.RoomChannel do
   def handle_in("start_game", _payload, socket) do
     @room_prefix <> room_id = socket.topic
 
-    case GameSession.start_game_session(room_id)  do
+    case GameSession.start_game_session(room_id) do
       {:ok, game} ->
         broadcast(socket, "state_updated", game)
         {:noreply, socket}
@@ -116,6 +116,23 @@ defmodule SongyWeb.RoomChannel do
 
       {:error, _reason} ->
         {:reply, {:error, %{reason: "invalid_credentials"}}, socket}
+    end
+  end
+
+  @impl true
+  def handle_in("update_provider", payload, socket) do
+    user_uuid = socket.assigns.current_user_uuid
+
+    case Songy.Providers.lookup(:providers, user_uuid) do
+      {:ok, {provider, _current_data}} ->
+        :ok = Songy.Providers.update(:providers, user_uuid, provider, payload)
+        Logger.debug("Updated provider data for user #{user_uuid} with #{inspect(payload)}")
+        {:reply, :ok, socket}
+
+      {:error, _reason} ->
+        Logger.warning("Failed to update provider for user #{user_uuid}: user not found in ETS")
+
+        {:reply, {:error, %{reason: "provider_not_found"}}, socket}
     end
   end
 
