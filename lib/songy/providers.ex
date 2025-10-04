@@ -95,7 +95,7 @@ defmodule Songy.Providers do
 
   @impl true
   def handle_call({:insert, user_id, provider, attrs}, _from, table) do
-    :ets.insert(table, {user_id, {provider, attrs}})
+    :ets.insert(table, {user_id, {provider, atomize_keys(attrs)}})
     Logger.debug("Inserted #{provider} data for user #{user_id}")
 
     {:reply, :ok, table}
@@ -106,10 +106,10 @@ defmodule Songy.Providers do
     merged_data =
       :ets.lookup(table, user_id)
       |> case do
-        [{^user_id, {^provider, data}}] -> data
+        [{^user_id, {^provider, data}}] -> atomize_keys(data)
         _ -> %{}
       end
-      |> Map.merge(new_data)
+      |> Map.merge(atomize_keys(new_data))
 
     :ets.insert(table, {user_id, {provider, merged_data}})
     Logger.debug("Updated #{provider} data for user #{user_id}")
@@ -126,6 +126,13 @@ defmodule Songy.Providers do
   @impl true
   def handle_info(_msg, table) do
     {:noreply, table}
+  end
+
+  defp atomize_keys(data) when is_map(data) do
+    Map.new(data, fn
+      {key, value} when is_binary(key) -> {String.to_atom(key), value}
+      {key, value} -> {key, value}
+    end)
   end
 
   defp ensure_data(:spotify, data) do

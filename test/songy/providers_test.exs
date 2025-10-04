@@ -58,6 +58,15 @@ defmodule Songy.ProvidersTest do
       assert :ok = Providers.insert(table, user_id, :soundcloud, %{token: "soundcloud_token"})
       assert {:ok, {:soundcloud, %{token: "soundcloud_token"}}} = Providers.lookup(table, user_id)
     end
+
+    test "normalizes string keys to atoms during insert", %{table: table} do
+      user_id = "user123"
+      string_key_data = %{"access_token" => "token123", "device_id" => "device789"}
+      expected_data = %{access_token: "token123", device_id: "device789"}
+
+      assert :ok = Providers.insert(table, user_id, :apple, string_key_data)
+      assert {:ok, {:apple, ^expected_data}} = Providers.lookup(table, user_id)
+    end
   end
 
   describe "update/4" do
@@ -88,6 +97,17 @@ defmodule Songy.ProvidersTest do
       assert :ok = Providers.insert(table, user_id, :soundcloud, initial_data)
       assert :ok = Providers.update(table, user_id, :apple, new_data)
       assert {:ok, {:apple, ^new_data}} = Providers.lookup(table, user_id)
+    end
+
+    test "normalizes string keys to atoms during update", %{table: table} do
+      user_id = "user123"
+      initial_data = %{access_token: "token123", refresh_token: "refresh456"}
+      string_key_data = %{"device_id" => "device789", "playlist_id" => "playlist123"}
+      expected_data = %{access_token: "token123", refresh_token: "refresh456", device_id: "device789", playlist_id: "playlist123"}
+
+      assert :ok = Providers.insert(table, user_id, :apple, initial_data)
+      assert :ok = Providers.update(table, user_id, :apple, string_key_data)
+      assert {:ok, {:apple, ^expected_data}} = Providers.lookup(table, user_id)
     end
   end
 
