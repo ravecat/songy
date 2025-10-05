@@ -1,8 +1,8 @@
 defmodule Songy.Boundary.PlayerTest do
   use ExUnit.Case, async: true
 
-  alias Songy.Boundary.Player
   alias Songy.Boundary
+  alias Songy.Boundary.Player
 
   describe "Spotify provider implementation" do
     setup do
@@ -40,6 +40,7 @@ defmodule Songy.Boundary.PlayerTest do
 
     test "search_random_track/1 delegates to Spotify.search_random_track/1", %{provider: provider} do
       spotify_track = %{id: "test_track", name: "Test Song"}
+
       expected_track = %Songy.Core.Track{
         id: "generated_id",
         title: "Test Song",
@@ -77,7 +78,9 @@ defmodule Songy.Boundary.PlayerTest do
       assert {:error, :playback_pause_failed} = Player.pause_playback(provider, [])
     end
 
-    test "search_random_track/1 handles errors from Spotify.search_random_track/1", %{provider: provider} do
+    test "search_random_track/1 handles errors from Spotify.search_random_track/1", %{
+      provider: provider
+    } do
       Repatch.patch(Boundary.Spotify, :search_random_track, fn _provider ->
         {:error, :no_tracks_found}
       end)

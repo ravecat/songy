@@ -252,7 +252,6 @@ defmodule Songy.Boundary.GameSessionTest do
       {:ok, initial_game} = GameSession.lookup_game_session(game.id)
       assert initial_game.player.is_playback == false
 
-
       assert {:ok, updated_game} = GameSession.start_playback(game.id)
       assert updated_game.player.is_playback == true
 
@@ -262,7 +261,6 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "returns error when game is in waiting status", %{game: game} do
-
       # Don't start the game, leave it in :waiting status
       assert {:error, :game_not_in_progress} = GameSession.start_playback(game.id)
     end
@@ -275,7 +273,6 @@ defmodule Songy.Boundary.GameSessionTest do
       Repatch.patch(Songy.Boundary.Spotify, :start_playback, [mode: :shared], fn _credentials, _params ->
         {:ok, :playback_started}
       end)
-
 
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
@@ -334,11 +331,9 @@ defmodule Songy.Boundary.GameSessionTest do
         {:ok, :playback_paused}
       end)
 
-
       assert [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
 
       Repatch.allow(self(), pid)
-
 
       {:ok, _} = GameSession.start_game_session(game.id)
 
@@ -361,7 +356,6 @@ defmodule Songy.Boundary.GameSessionTest do
       Repatch.patch(Songy.Boundary.Spotify, :pause_playback, [mode: :shared], fn _credentials, _params ->
         {:ok, :playback_paused}
       end)
-
 
       assert [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
       Repatch.allow(self(), pid)
@@ -389,7 +383,6 @@ defmodule Songy.Boundary.GameSessionTest do
            preview_url: "http://example.com/preview.mp3"
          }}
       end)
-
 
       assert [{pid, _}] = Registry.lookup(Songy.Registry, game.id)
 
@@ -429,7 +422,6 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "cycles through all phases correctly", %{game: game} do
-
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
          %Spotify.Track{
@@ -479,7 +471,6 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "fetches new track only when transitioning from results phase", %{game: game} do
-
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
          %Spotify.Track{
@@ -541,7 +532,6 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "automatically transitions from challenging to results after timeout", %{game: game} do
-
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
          %Spotify.Track{
@@ -845,7 +835,6 @@ defmodule Songy.Boundary.GameSessionTest do
 
       on_exit(fn -> GameSession.end_game_session(game.id) end)
 
-
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,
          %Spotify.Track{
@@ -965,7 +954,6 @@ defmodule Songy.Boundary.GameSessionTest do
       on_exit(fn -> GameSession.end_game_session(game.id) end)
 
       # Setup credentials
-
 
       Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
         {:ok,

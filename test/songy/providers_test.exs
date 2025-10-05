@@ -103,7 +103,13 @@ defmodule Songy.ProvidersTest do
       user_id = "user123"
       initial_data = %{access_token: "token123", refresh_token: "refresh456"}
       string_key_data = %{"device_id" => "device789", "playlist_id" => "playlist123"}
-      expected_data = %{access_token: "token123", refresh_token: "refresh456", device_id: "device789", playlist_id: "playlist123"}
+
+      expected_data = %{
+        access_token: "token123",
+        refresh_token: "refresh456",
+        device_id: "device789",
+        playlist_id: "playlist123"
+      }
 
       assert :ok = Providers.insert(table, user_id, :apple, initial_data)
       assert :ok = Providers.update(table, user_id, :apple, string_key_data)

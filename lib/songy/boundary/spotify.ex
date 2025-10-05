@@ -6,7 +6,7 @@ defmodule Songy.Boundary.Spotify do
   managing playback, searching for tracks, and handling user authentication.
   """
 
-  alias Songy.Core.Provider.Spotify, as: SpotifyProvider
+  alias Songy.Core.Provider
 
   require Logger
 
@@ -18,7 +18,7 @@ defmodule Songy.Boundary.Spotify do
         result =
           credentials
           |> Map.from_struct()
-          |> SpotifyProvider.new()
+          |> Provider.Spotify.new()
           |> Map.from_struct()
 
         {:ok, result}
@@ -53,7 +53,7 @@ defmodule Songy.Boundary.Spotify do
       result =
         new_credentials
         |> Map.from_struct()
-        |> SpotifyProvider.new()
+        |> Provider.Spotify.new()
         |> Map.from_struct()
 
       {:ok, result}

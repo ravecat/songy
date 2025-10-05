@@ -10,7 +10,7 @@ defmodule SongyWeb.UserSocket do
 
   ## Channels
 
-  channel "room:*", SongyWeb.RoomChannel
+  channel("room:*", SongyWeb.RoomChannel)
 
   # Socket params are passed from the client and can
   # be used to verify and authenticate a user. After
@@ -39,7 +39,7 @@ defmodule SongyWeb.UserSocket do
     end
   end
 
-  def connect _params, _socket, _connect_info do
+  def connect(_params, _socket, _connect_info) do
     :error
   end
 

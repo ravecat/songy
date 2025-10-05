@@ -51,7 +51,9 @@ defmodule SongyWeb.SpotifyControllerTest do
       conn = get(conn, ~p"/auth/spotify/callback", %{"code" => "invalid_code"})
 
       assert redirected_to(conn) == "/"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Failed to authenticate with Spotify. Please try again."
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Failed to authenticate with Spotify. Please try again."
     end
 
     test "redirects to home with error message on ETS insert failure", %{conn: conn} do
@@ -68,7 +70,9 @@ defmodule SongyWeb.SpotifyControllerTest do
       conn = get(conn, ~p"/auth/spotify/callback", %{"code" => "some_code"})
 
       assert redirected_to(conn) == "/"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Failed to authenticate with Spotify. Please try again."
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Failed to authenticate with Spotify. Please try again."
     end
 
     test "stores credentials in ETS on successful authentication", %{conn: conn, user: user} do
@@ -79,6 +83,7 @@ defmodule SongyWeb.SpotifyControllerTest do
       }
 
       Repatch.patch(Spotify.Credentials, :new, fn _conn -> %{test: "credentials"} end)
+
       Repatch.patch(Songy.Boundary.Spotify, :authenticate, fn _creds, _params ->
         {:ok, credentials_map}
       end)
@@ -98,7 +103,9 @@ defmodule SongyWeb.SpotifyControllerTest do
       conn = get(conn, ~p"/auth/spotify/callback", %{"error" => "access_denied"})
 
       assert redirected_to(conn) == "/"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Authentication was cancelled or failed."
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Authentication was cancelled or failed."
     end
   end
 
