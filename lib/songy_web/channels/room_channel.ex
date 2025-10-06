@@ -108,10 +108,10 @@ defmodule SongyWeb.RoomChannel do
     user_uuid = socket.assigns.current_user_uuid
 
     case Songy.Providers.lookup(:providers, user_uuid) do
-      {:ok, {:spotify, %{access_token: token}}} when not is_nil(token) ->
+      {:ok, %Songy.Core.Provider.Spotify{access_token: token}} when not is_nil(token) ->
         {:reply, {:ok, %{token: token}}, socket}
 
-      {:ok, {_other_provider, _data}} ->
+      {:ok, _other_provider} ->
         {:reply, {:error, %{reason: "invalid_credentials"}}, socket}
 
       {:error, _reason} ->
@@ -124,8 +124,10 @@ defmodule SongyWeb.RoomChannel do
     user_uuid = socket.assigns.current_user_uuid
 
     case Songy.Providers.lookup(:providers, user_uuid) do
-      {:ok, {provider, _current_data}} ->
-        :ok = Songy.Providers.update(:providers, user_uuid, provider, payload)
+      {:ok, current_data} ->
+        attrs = for {key, val} <- payload, into: %{}, do: {String.to_atom(key), val}
+        updated_data = Songy.Core.Provider.Spotify.update(current_data, attrs)
+        :ok = Songy.Providers.update(:providers, user_uuid, updated_data)
         Logger.debug("Updated provider data for user #{user_uuid} with #{inspect(payload)}")
         {:reply, :ok, socket}
 

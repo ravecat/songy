@@ -1,6 +1,7 @@
 defmodule Songy.ProvidersTest do
   use ExUnit.Case, async: true
 
+  alias Songy.Core.Provider.Spotify
   alias Songy.Providers
 
   setup context do
@@ -19,101 +20,165 @@ defmodule Songy.ProvidersTest do
     end
   end
 
-  describe "insert/4" do
+  describe "insert/3" do
     test "inserts new provider data", %{table: table} do
       user_id = "user123"
-      provider = :apple
-      attrs = %{access_token: "token123", refresh_token: "refresh456"}
 
-      assert :ok = Providers.insert(table, user_id, provider, attrs)
-      assert {:ok, {^provider, ^attrs}} = Providers.lookup(table, user_id)
+      data = %Spotify{
+        access_token: "token123",
+        refresh_token: "refresh456",
+        device_id: "test_device",
+        expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+      }
+
+      assert :ok = Providers.insert(table, user_id, data)
+      assert {:ok, %Spotify{} = result} = Providers.lookup(table, user_id)
+      assert result.access_token == data.access_token
+      assert result.refresh_token == data.refresh_token
+      assert result.device_id == data.device_id
     end
 
     test "replaces existing provider data", %{table: table} do
       user_id = "user123"
-      initial_attrs = %{access_token: "old_token", refresh_token: "refresh456"}
-      new_attrs = %{access_token: "new_token", device_id: "device789"}
 
-      assert :ok = Providers.insert(table, user_id, :apple, initial_attrs)
-      assert :ok = Providers.insert(table, user_id, :apple, new_attrs)
-      assert {:ok, {:apple, ^new_attrs}} = Providers.lookup(table, user_id)
+      initial_data = %Spotify{
+        access_token: "old_token",
+        refresh_token: "refresh456",
+        device_id: "test_device",
+        expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+      }
+
+      new_data = %Spotify{
+        access_token: "new_token",
+        refresh_token: "refresh456",
+        device_id: "device789",
+        expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+      }
+
+      assert :ok = Providers.insert(table, user_id, initial_data)
+      assert :ok = Providers.insert(table, user_id, new_data)
+      assert {:ok, %Spotify{} = result} = Providers.lookup(table, user_id)
+      assert result.access_token == new_data.access_token
+      assert result.device_id == new_data.device_id
     end
 
     test "handles multiple users with different providers", %{table: table} do
-      assert :ok = Providers.insert(table, "user1", :apple, %{token: "apple1"})
-      assert :ok = Providers.insert(table, "user2", :soundcloud, %{token: "soundcloud2"})
-      assert :ok = Providers.insert(table, "user3", :apple, %{token: "apple3"})
+      data1 = %Spotify{
+        access_token: "token1",
+        refresh_token: "test_refresh",
+        device_id: "test_device",
+        expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+      }
 
-      assert {:ok, {:apple, %{token: "apple1"}}} = Providers.lookup(table, "user1")
-      assert {:ok, {:soundcloud, %{token: "soundcloud2"}}} = Providers.lookup(table, "user2")
-      assert {:ok, {:apple, %{token: "apple3"}}} = Providers.lookup(table, "user3")
+      data2 = %Spotify{
+        access_token: "token2",
+        refresh_token: "test_refresh",
+        device_id: "test_device",
+        expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+      }
+
+      data3 = %Spotify{
+        access_token: "token3",
+        refresh_token: "test_refresh",
+        device_id: "test_device",
+        expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+      }
+
+      assert :ok = Providers.insert(table, "user1", data1)
+      assert :ok = Providers.insert(table, "user2", data2)
+      assert :ok = Providers.insert(table, "user3", data3)
+
+      assert {:ok, %Spotify{access_token: "token1"}} = Providers.lookup(table, "user1")
+      assert {:ok, %Spotify{access_token: "token2"}} = Providers.lookup(table, "user2")
+      assert {:ok, %Spotify{access_token: "token3"}} = Providers.lookup(table, "user3")
     end
 
     test "replaces provider when user switches to different provider", %{table: table} do
       user_id = "user123"
 
-      assert :ok = Providers.insert(table, user_id, :apple, %{token: "apple_token"})
-      assert {:ok, {:apple, %{token: "apple_token"}}} = Providers.lookup(table, user_id)
+      initial_data = %Spotify{
+        access_token: "apple_token",
+        refresh_token: "test_refresh",
+        device_id: "test_device",
+        expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+      }
 
-      assert :ok = Providers.insert(table, user_id, :soundcloud, %{token: "soundcloud_token"})
-      assert {:ok, {:soundcloud, %{token: "soundcloud_token"}}} = Providers.lookup(table, user_id)
-    end
+      new_data = %Spotify{
+        access_token: "soundcloud_token",
+        refresh_token: "test_refresh",
+        device_id: "test_device",
+        expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+      }
 
-    test "normalizes string keys to atoms during insert", %{table: table} do
-      user_id = "user123"
-      string_key_data = %{"access_token" => "token123", "device_id" => "device789"}
-      expected_data = %{access_token: "token123", device_id: "device789"}
+      assert :ok = Providers.insert(table, user_id, initial_data)
+      assert {:ok, %Spotify{access_token: "apple_token"}} = Providers.lookup(table, user_id)
 
-      assert :ok = Providers.insert(table, user_id, :apple, string_key_data)
-      assert {:ok, {:apple, ^expected_data}} = Providers.lookup(table, user_id)
+      assert :ok = Providers.insert(table, user_id, new_data)
+      assert {:ok, %Spotify{access_token: "soundcloud_token"}} = Providers.lookup(table, user_id)
     end
   end
 
-  describe "update/4" do
-    test "merges new data with existing data, giving priority to new values", %{table: table} do
+  describe "update/3" do
+    test "replaces provider data completely", %{table: table} do
       user_id = "user123"
-      initial_data = %{access_token: "old_token", refresh_token: "refresh456"}
-      new_data = %{access_token: "new_token", device_id: "device789"}
-      expected_data = %{access_token: "new_token", refresh_token: "refresh456", device_id: "device789"}
 
-      assert :ok = Providers.insert(table, user_id, :apple, initial_data)
-      assert :ok = Providers.update(table, user_id, :apple, new_data)
-      assert {:ok, {:apple, ^expected_data}} = Providers.lookup(table, user_id)
+      initial_data = %Spotify{
+        access_token: "old_token",
+        refresh_token: "refresh456",
+        device_id: "test_device",
+        expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+      }
+
+      new_data = %Spotify{
+        access_token: "new_token",
+        refresh_token: "refresh456",
+        device_id: "device789",
+        expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+      }
+
+      assert :ok = Providers.insert(table, user_id, initial_data)
+      assert :ok = Providers.update(table, user_id, new_data)
+      assert {:ok, %Spotify{} = result} = Providers.lookup(table, user_id)
+      assert result.access_token == new_data.access_token
+      assert result.device_id == new_data.device_id
     end
 
     test "handles update when user has no existing data", %{table: table} do
       user_id = "user123"
-      new_data = %{device_id: "device789"}
 
-      assert :ok = Providers.update(table, user_id, :apple, new_data)
-      assert {:ok, {:apple, ^new_data}} = Providers.lookup(table, user_id)
-    end
-
-    test "handles update when user has different provider", %{table: table} do
-      user_id = "user123"
-      initial_data = %{access_token: "apple_token"}
-      new_data = %{device_id: "device789"}
-
-      assert :ok = Providers.insert(table, user_id, :soundcloud, initial_data)
-      assert :ok = Providers.update(table, user_id, :apple, new_data)
-      assert {:ok, {:apple, ^new_data}} = Providers.lookup(table, user_id)
-    end
-
-    test "normalizes string keys to atoms during update", %{table: table} do
-      user_id = "user123"
-      initial_data = %{access_token: "token123", refresh_token: "refresh456"}
-      string_key_data = %{"device_id" => "device789", "playlist_id" => "playlist123"}
-
-      expected_data = %{
-        access_token: "token123",
-        refresh_token: "refresh456",
+      new_data = %Spotify{
+        access_token: "test_token",
+        refresh_token: "test_refresh",
         device_id: "device789",
-        playlist_id: "playlist123"
+        expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
       }
 
-      assert :ok = Providers.insert(table, user_id, :apple, initial_data)
-      assert :ok = Providers.update(table, user_id, :apple, string_key_data)
-      assert {:ok, {:apple, ^expected_data}} = Providers.lookup(table, user_id)
+      assert :ok = Providers.update(table, user_id, new_data)
+      assert {:ok, %Spotify{device_id: "device789"}} = Providers.lookup(table, user_id)
+    end
+
+    test "handles update when user switches provider", %{table: table} do
+      user_id = "user123"
+
+      initial_data = %Spotify{
+        access_token: "apple_token",
+        refresh_token: "test_refresh",
+        device_id: "test_device",
+        expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+      }
+
+      new_data = %Spotify{
+        access_token: "soundcloud_token",
+        refresh_token: "test_refresh",
+        device_id: "device789",
+        expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+      }
+
+      assert :ok = Providers.insert(table, user_id, initial_data)
+      assert :ok = Providers.update(table, user_id, new_data)
+      assert {:ok, %Spotify{} = result} = Providers.lookup(table, user_id)
+      assert result.access_token == new_data.access_token
+      assert result.device_id == new_data.device_id
     end
   end
 
@@ -124,31 +189,65 @@ defmodule Songy.ProvidersTest do
 
     test "returns data for existing providers", %{table: table} do
       user_id = "user123"
-      provider = :apple
-      attrs = %{access_token: "token123", refresh_token: "refresh456"}
 
-      assert :ok = Providers.insert(table, user_id, provider, attrs)
-      assert {:ok, {^provider, ^attrs}} = Providers.lookup(table, user_id)
+      data = %Spotify{
+        access_token: "token123",
+        refresh_token: "refresh456",
+        device_id: "test_device",
+        expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+      }
+
+      assert :ok = Providers.insert(table, user_id, data)
+      assert {:ok, %Spotify{} = result} = Providers.lookup(table, user_id)
+      assert result.access_token == data.access_token
+      assert result.refresh_token == data.refresh_token
     end
 
     test "isolates data between users", %{table: table} do
-      assert :ok = Providers.insert(table, "user1", :apple, %{token: "apple1"})
-      assert :ok = Providers.insert(table, "user2", :apple, %{token: "apple2"})
+      data1 = %Spotify{
+        access_token: "token1",
+        refresh_token: "test_refresh",
+        device_id: "test_device",
+        expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+      }
 
-      assert {:ok, {:apple, %{token: "apple1"}}} = Providers.lookup(table, "user1")
-      assert {:ok, {:apple, %{token: "apple2"}}} = Providers.lookup(table, "user2")
+      data2 = %Spotify{
+        access_token: "token2",
+        refresh_token: "test_refresh",
+        device_id: "test_device",
+        expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+      }
+
+      assert :ok = Providers.insert(table, "user1", data1)
+      assert :ok = Providers.insert(table, "user2", data2)
+
+      assert {:ok, %Spotify{access_token: "token1"}} = Providers.lookup(table, "user1")
+      assert {:ok, %Spotify{access_token: "token2"}} = Providers.lookup(table, "user2")
       assert {:error, :not_found} = Providers.lookup(table, "unknown_user")
     end
 
     test "returns current provider regardless of which was inserted", %{table: table} do
       user_id = "user123"
 
-      assert :ok = Providers.insert(table, user_id, :apple, %{token: "apple_token"})
-      assert {:ok, {:apple, %{token: "apple_token"}}} = Providers.lookup(table, user_id)
+      initial_data = %Spotify{
+        access_token: "apple_token",
+        refresh_token: "test_refresh",
+        device_id: "test_device",
+        expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+      }
 
-      # User switches to different provider, previous one is replaced
-      assert :ok = Providers.insert(table, user_id, :soundcloud, %{token: "soundcloud_token"})
-      assert {:ok, {:soundcloud, %{token: "soundcloud_token"}}} = Providers.lookup(table, user_id)
+      new_data = %Spotify{
+        access_token: "soundcloud_token",
+        refresh_token: "test_refresh",
+        device_id: "test_device",
+        expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+      }
+
+      assert :ok = Providers.insert(table, user_id, initial_data)
+      assert {:ok, %Spotify{access_token: "apple_token"}} = Providers.lookup(table, user_id)
+
+      assert :ok = Providers.insert(table, user_id, new_data)
+      assert {:ok, %Spotify{access_token: "soundcloud_token"}} = Providers.lookup(table, user_id)
     end
   end
 end

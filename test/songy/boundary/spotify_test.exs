@@ -2,6 +2,7 @@ defmodule Songy.Boundary.SpotifyTest do
   use ExUnit.Case, async: true
 
   alias Songy.Boundary
+  alias Songy.Core.Provider
 
   describe "authenticate/2" do
     test "returns provider data when authentication succeeds" do
@@ -310,7 +311,7 @@ defmodule Songy.Boundary.SpotifyTest do
       expires_at = DateTime.add(fixed_time, -3600, :second)
       expected_expires_at = DateTime.add(fixed_time, 3600, :second)
 
-      credentials = %{
+      credentials = %Provider.Spotify{
         access_token: "expired_token",
         refresh_token: "valid_refresh_token",
         expires_at: expires_at
@@ -334,7 +335,7 @@ defmodule Songy.Boundary.SpotifyTest do
       fixed_time = ~U[2025-07-15 12:00:00Z]
       expires_at = DateTime.add(fixed_time, 200, :second)
 
-      credentials = %{
+      credentials = %Provider.Spotify{
         access_token: "valid_token",
         refresh_token: "valid_refresh_token",
         expires_at: expires_at
@@ -349,7 +350,7 @@ defmodule Songy.Boundary.SpotifyTest do
       fixed_time = ~U[2025-07-15 12:00:00Z]
       expected_expires_at = DateTime.add(fixed_time, 3600, :second)
 
-      credentials = %{refresh_token: "valid_refresh_token"}
+      credentials = %Provider.Spotify{access_token: "", refresh_token: "valid_refresh_token"}
       new_credentials = %Spotify.Credentials{access_token: "new_access_token", refresh_token: "valid_refresh_token"}
 
       Repatch.patch(DateTime, :utc_now, fn -> fixed_time end)
@@ -367,7 +368,7 @@ defmodule Songy.Boundary.SpotifyTest do
     test "preserves token when access_token valid and not expired" do
       expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
 
-      credentials = %{
+      credentials = %Provider.Spotify{
         access_token: "valid_token",
         refresh_token: "refresh_token",
         expires_at: expires_at
@@ -376,14 +377,8 @@ defmodule Songy.Boundary.SpotifyTest do
       assert {:ok, ^credentials} = Boundary.Spotify.ensure_provider_data(credentials)
     end
 
-    test "returns error when both access_token and refresh_token missing" do
-      credentials = %{}
-
-      assert {:error, :invalid_credentials} = Boundary.Spotify.ensure_provider_data(credentials)
-    end
-
     test "returns error when refresh_token present but Spotify API fails" do
-      credentials = %{refresh_token: "valid_refresh_token"}
+      credentials = %Provider.Spotify{access_token: "", refresh_token: "valid_refresh_token"}
 
       Repatch.patch(Spotify.Authentication, :refresh, fn _spotify_creds ->
         {:error, :invalid_grant}
@@ -396,7 +391,7 @@ defmodule Songy.Boundary.SpotifyTest do
       current_time = DateTime.utc_now()
       expires_at = DateTime.add(current_time, 1800, :second)
 
-      credentials = %{
+      credentials = %Provider.Spotify{
         access_token: "valid_token",
         refresh_token: "valid_refresh_token",
         expires_at: expires_at
@@ -411,7 +406,7 @@ defmodule Songy.Boundary.SpotifyTest do
       current_time = ~U[2024-01-01 12:00:00Z]
       expires_at = DateTime.add(current_time, -60, :second)
 
-      credentials = %{
+      credentials = %Provider.Spotify{
         access_token: "expired_token",
         refresh_token: "valid_refresh_token",
         expires_at: expires_at
@@ -437,7 +432,7 @@ defmodule Songy.Boundary.SpotifyTest do
       fixed_time = ~U[2024-01-01 00:00:00Z]
       expected_expires_at = ~U[2024-01-01 01:00:00Z]
 
-      credentials = %{refresh_token: "valid_refresh_token"}
+      credentials = %Provider.Spotify{access_token: "", refresh_token: "valid_refresh_token"}
       new_credentials = %Spotify.Credentials{access_token: "new_access_token", refresh_token: "valid_refresh_token"}
 
       Repatch.patch(DateTime, :utc_now, fn -> fixed_time end)

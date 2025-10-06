@@ -23,8 +23,8 @@ defmodule SongyWeb.SpotifyController do
     %{assigns: %{current_user: %{uuid: user_uuid}}} = conn
 
     with credentials <- Spotify.Credentials.new(conn),
-         {:ok, credentials_map} <- Songy.Boundary.Spotify.authenticate(credentials, %{"code" => code}),
-         :ok <- Songy.Providers.insert(:providers, user_uuid, :spotify, credentials_map) do
+         {:ok, provider} <- Songy.Boundary.Spotify.authenticate(credentials, %{"code" => code}),
+         :ok <- Songy.Providers.insert(:providers, user_uuid, provider) do
       conn
       |> put_flash(:info, "Successfully connected to Spotify!")
       |> redirect(to: ~p"/")

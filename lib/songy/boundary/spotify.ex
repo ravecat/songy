@@ -10,8 +10,8 @@ defmodule Songy.Boundary.Spotify do
 
   require Logger
 
-  @spec authenticate(Plug.Conn.t() | Spotify.Credentials.t(), map()) ::
-          {:ok, map()} | {:error, term()}
+  @spec authenticate(Plug.Conn.t() | term(), map()) ::
+          {:ok, Provider.Spotify.t()} | {:error, term()}
   def authenticate(conn_or_credentials, params) do
     case Spotify.Authentication.authenticate(conn_or_credentials, params) do
       {:ok, credentials} ->
@@ -19,7 +19,6 @@ defmodule Songy.Boundary.Spotify do
           credentials
           |> Map.from_struct()
           |> Provider.Spotify.new()
-          |> Map.from_struct()
 
         {:ok, result}
 
@@ -37,39 +36,42 @@ defmodule Songy.Boundary.Spotify do
 
   ## Parameters
 
-    * `credentials` - Map containing Spotify credentials
+    * `credentials` - Provider.Spotify struct containing Spotify credentials
 
   ## Returns
 
-    * `{:ok, updated_credentials}` - Fresh credentials (either original or refreshed)
+    * `{:ok, updated_credentials}` - Fresh Provider.Spotify credentials (either original or refreshed)
     * `{:error, reason}` - Failed to refresh or invalid credentials
 
   """
-  @spec ensure_provider_data(map()) :: {:ok, map()} | {:error, term()}
-  def ensure_provider_data(%{refresh_token: refresh_token} = credentials) when not is_nil(refresh_token) do
-    with true <- refresh_token?(credentials),
-         spotify_creds <- struct(Spotify.Credentials, credentials),
-         {:ok, new_credentials} <- Spotify.Authentication.refresh(spotify_creds) do
+  @spec ensure_provider_data(Provider.Spotify.t()) :: {:ok, Provider.Spotify.t()} | {:error, term()}
+  def ensure_provider_data(%Provider.Spotify{access_token: access_token, refresh_token: refresh_token} = data) do
+    with true <- refresh_token?(data),
+         spotify_creds <- Spotify.Credentials.new(access_token, refresh_token),
+         {:ok, new_data} <- Spotify.Authentication.refresh(spotify_creds) do
       result =
-        new_credentials
+        new_data
         |> Map.from_struct()
         |> Provider.Spotify.new()
-        |> Map.from_struct()
 
       {:ok, result}
     else
       false ->
-        {:ok, credentials}
+        {:ok, data}
 
       {:error, reason} ->
-        Logger.error("Failed to refresh Spotify credentials: #{inspect(reason)}")
+        Logger.error("Failed to refresh Spotify data: #{inspect(reason)}")
         {:error, reason}
+
+      error ->
+        Logger.error("Unexpected response from Spotify API: #{inspect(error)}")
+        {:error, :authentication_failed}
     end
   end
 
   def ensure_provider_data(_), do: {:error, :invalid_credentials}
 
-  @spec transfer_playback(credentials :: Spotify.Credentials.t() | map(), payload :: map()) ::
+  @spec transfer_playback(credentials :: Provider.Spotify.t() | map(), payload :: map()) ::
           {:ok, :playback_transferred} | {:error, :invalid_credentials | :no_device_id | :playback_transfer_failed}
   def transfer_playback(credentials, %{"device_id" => device_id}) do
     with {:ok, credentials} <- ensure_credentials(credentials),
@@ -89,7 +91,7 @@ defmodule Songy.Boundary.Spotify do
 
   def transfer_playback(_, _), do: {:error, :no_device_id}
 
-  @spec start_playback(credentials :: Spotify.Credentials.t() | map(), params :: keyword()) ::
+  @spec start_playback(credentials :: Provider.Spotify.t() | map(), params :: keyword()) ::
           {:ok, :playback_started} | {:error, :invalid_credentials | :playback_start_failed}
   def start_playback(credentials, params \\ []) do
     with {:ok, credentials} <- ensure_credentials(credentials),
@@ -107,7 +109,7 @@ defmodule Songy.Boundary.Spotify do
     end
   end
 
-  @spec pause_playback(credentials :: Spotify.Credentials.t() | map(), params :: keyword()) ::
+  @spec pause_playback(credentials :: Provider.Spotify.t() | map(), params :: keyword()) ::
           {:ok, :playback_paused} | {:error, :invalid_credentials | :playback_pause_failed}
   def pause_playback(credentials, params \\ []) do
     with {:ok, credentials} <- ensure_credentials(credentials),
@@ -159,7 +161,7 @@ defmodule Songy.Boundary.Spotify do
       search(credentials, q: "queen", type: "artist", limit: 5)
 
   """
-  @spec search(credentials :: Spotify.Credentials.t() | map(), params :: keyword()) ::
+  @spec search(credentials :: Provider.Spotify.t() | map(), params :: keyword()) ::
           {:ok, map()} | {:error, :invalid_credentials | :search_failed}
   def search(credentials, params \\ []) do
     with {:ok, credentials} <- ensure_credentials(credentials),
@@ -211,7 +213,7 @@ defmodule Songy.Boundary.Spotify do
   - Limited to 1 track result
 
   """
-  @spec search_random_track(credentials :: Spotify.Credentials.t() | map()) ::
+  @spec search_random_track(credentials :: Provider.Spotify.t() | map()) ::
           {:ok, map()} | {:error, :invalid_credentials | :search_failed | :no_tracks_found}
   def search_random_track(credentials) do
     params = build_random_track_search_params()

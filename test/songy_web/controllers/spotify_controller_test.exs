@@ -28,10 +28,10 @@ defmodule SongyWeb.SpotifyControllerTest do
       Repatch.patch(Spotify.Credentials, :new, fn _conn -> %{test: "credentials"} end)
 
       Repatch.patch(Songy.Boundary.Spotify, :authenticate, fn _creds, _params ->
-        {:ok, %{access_token: "token123"}}
+        {:ok, %Songy.Core.Provider.Spotify{access_token: "token123", refresh_token: "refresh"}}
       end)
 
-      Repatch.patch(Songy.Providers, :insert, fn _registry, _user_uuid, _provider, _data ->
+      Repatch.patch(Songy.Providers, :insert, fn _registry, _user_uuid, _data ->
         :ok
       end)
 
@@ -60,10 +60,10 @@ defmodule SongyWeb.SpotifyControllerTest do
       Repatch.patch(Spotify.Credentials, :new, fn _conn -> %{test: "credentials"} end)
 
       Repatch.patch(Songy.Boundary.Spotify, :authenticate, fn _creds, _params ->
-        {:ok, %{access_token: "token123"}}
+        {:ok, %Songy.Core.Provider.Spotify{access_token: "token123", refresh_token: "refresh"}}
       end)
 
-      Repatch.patch(Songy.Providers, :insert, fn _registry, _user_uuid, _provider, _data ->
+      Repatch.patch(Songy.Providers, :insert, fn _registry, _user_uuid, _data ->
         {:error, :ets_failure}
       end)
 
@@ -76,7 +76,7 @@ defmodule SongyWeb.SpotifyControllerTest do
     end
 
     test "stores credentials in ETS on successful authentication", %{conn: conn, user: user} do
-      credentials_map = %{
+      provider = %Songy.Core.Provider.Spotify{
         access_token: "successful_token",
         refresh_token: "refresh_token_123",
         expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
@@ -85,15 +85,16 @@ defmodule SongyWeb.SpotifyControllerTest do
       Repatch.patch(Spotify.Credentials, :new, fn _conn -> %{test: "credentials"} end)
 
       Repatch.patch(Songy.Boundary.Spotify, :authenticate, fn _creds, _params ->
-        {:ok, credentials_map}
+        {:ok, provider}
       end)
 
       conn = get(conn, ~p"/auth/spotify/callback", %{"code" => "valid_auth_code"})
 
-      assert {:ok, {:spotify, stored_credentials}} = Songy.Providers.lookup(:providers, user.uuid)
-      assert stored_credentials.access_token == "successful_token"
-      assert stored_credentials.refresh_token == "refresh_token_123"
-      assert stored_credentials.expires_at == credentials_map.expires_at
+      assert {:ok, stored_provider} = Songy.Providers.lookup(:providers, user.uuid)
+      assert %Songy.Core.Provider.Spotify{} = stored_provider
+      assert stored_provider.access_token == "successful_token"
+      assert stored_provider.refresh_token == "refresh_token_123"
+      assert stored_provider.expires_at == provider.expires_at
 
       assert redirected_to(conn) == "/"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Successfully connected to Spotify!"

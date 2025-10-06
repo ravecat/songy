@@ -82,8 +82,10 @@ defmodule SongyWeb.RoomChannelTest do
     } do
       Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn _registry, _user_id ->
         {:ok,
-         {:spotify,
-          %{access_token: "spotify_access_token_123", refresh_token: "test-refresh-token"}}}
+         %Songy.Core.Provider.Spotify{
+           access_token: "spotify_access_token_123",
+           refresh_token: "test-refresh-token"
+         }}
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game.id)
@@ -125,19 +127,22 @@ defmodule SongyWeb.RoomChannelTest do
 
   describe "update_provider event" do
     test "updates provider data with new payload", %{current_user: current_user, game: game} do
-      initial_data = %{access_token: "token123", refresh_token: "refresh456"}
+      initial_provider = %Songy.Core.Provider.Spotify{
+        access_token: "token123",
+        refresh_token: "refresh456",
+        expires_at: DateTime.utc_now()
+      }
 
       Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn _registry, _user_id ->
-        {:ok, {:spotify, initial_data}}
+        {:ok, initial_provider}
       end)
 
       Repatch.patch(Songy.Providers, :update, [mode: :shared], fn _registry,
                                                                   user_id,
-                                                                  provider,
-                                                                  payload ->
+                                                                  updated_provider ->
         assert user_id == current_user.uuid
-        assert provider == :spotify
-        assert payload == %{"device_id" => "test-device-123"}
+        assert %Songy.Core.Provider.Spotify{} = updated_provider
+        assert updated_provider.device_id == "test-device-123"
         :ok
       end)
 
