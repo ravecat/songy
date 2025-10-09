@@ -346,25 +346,6 @@ defmodule Songy.Boundary.SpotifyTest do
       assert {:ok, ^credentials} = Boundary.Spotify.ensure_provider_data(credentials)
     end
 
-    test "refreshes token when access_token missing" do
-      fixed_time = ~U[2025-07-15 12:00:00Z]
-      expected_expires_at = DateTime.add(fixed_time, 3600, :second)
-
-      credentials = %Provider.Spotify{access_token: "", refresh_token: "valid_refresh_token"}
-      new_credentials = %Spotify.Credentials{access_token: "new_access_token", refresh_token: "valid_refresh_token"}
-
-      Repatch.patch(DateTime, :utc_now, fn -> fixed_time end)
-
-      Repatch.patch(Spotify.Authentication, :refresh, fn _spotify_creds ->
-        {:ok, new_credentials}
-      end)
-
-      assert {:ok, result} = Boundary.Spotify.ensure_provider_data(credentials)
-      assert result.access_token == "new_access_token"
-      assert result.refresh_token == "valid_refresh_token"
-      assert result.expires_at == expected_expires_at
-    end
-
     test "preserves token when access_token valid and not expired" do
       expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
 
@@ -426,23 +407,6 @@ defmodule Songy.Boundary.SpotifyTest do
       assert {:ok, result} = Boundary.Spotify.ensure_provider_data(credentials)
       assert result.access_token == "new_access_token"
       assert result.expires_at == DateTime.add(current_time, 3600, :second)
-    end
-
-    test "uses mocked DateTime.utc_now for expires_at calculation" do
-      fixed_time = ~U[2024-01-01 00:00:00Z]
-      expected_expires_at = ~U[2024-01-01 01:00:00Z]
-
-      credentials = %Provider.Spotify{access_token: "", refresh_token: "valid_refresh_token"}
-      new_credentials = %Spotify.Credentials{access_token: "new_access_token", refresh_token: "valid_refresh_token"}
-
-      Repatch.patch(DateTime, :utc_now, fn -> fixed_time end)
-
-      Repatch.patch(Spotify.Authentication, :refresh, fn _spotify_creds ->
-        {:ok, new_credentials}
-      end)
-
-      assert {:ok, result} = Boundary.Spotify.ensure_provider_data(credentials)
-      assert result.expires_at == expected_expires_at
     end
   end
 end

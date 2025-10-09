@@ -51,12 +51,7 @@ defmodule Songy.Boundary.Spotify do
          {:ok, new_data} <- Spotify.Authentication.refresh(spotify_creds) do
       Logger.info("Spotify refresh response #{inspect(new_data)}")
 
-      result =
-        new_data
-        |> Map.from_struct()
-        |> Provider.Spotify.new()
-
-      {:ok, result}
+      {:ok, Provider.Spotify.update(data, Map.from_struct(new_data))}
     else
       false ->
         {:ok, data}
