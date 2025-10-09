@@ -49,6 +49,8 @@ defmodule Songy.Boundary.Spotify do
     with true <- refresh_token?(data),
          spotify_creds <- Spotify.Credentials.new(access_token, refresh_token),
          {:ok, new_data} <- Spotify.Authentication.refresh(spotify_creds) do
+      Logger.info("Spotify refresh response #{inspect(new_data)}")
+
       result =
         new_data
         |> Map.from_struct()
