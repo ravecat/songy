@@ -68,26 +68,6 @@ defmodule Songy.Boundary.Spotify do
 
   def ensure_provider_data(_), do: {:error, :invalid_credentials}
 
-  @spec transfer_playback(credentials :: Provider.Spotify.t() | map(), payload :: map()) ::
-          {:ok, :playback_transferred} | {:error, :invalid_credentials | :no_device_id | :playback_transfer_failed}
-  def transfer_playback(credentials, %{"device_id" => device_id}) do
-    with {:ok, credentials} <- ensure_credentials(credentials),
-         response <- Spotify.Player.transfer_playback(credentials, [device_id], play: false),
-         {:ok, _} <- handle_api_response(response) do
-      Logger.info("Successfully transferred playback to device #{device_id}")
-      {:ok, :playback_transferred}
-    else
-      {:error, :invalid_credentials} ->
-        {:error, :invalid_credentials}
-
-      {:error, reason} ->
-        Logger.warning("Failed to transfer playback to device #{device_id}: #{inspect(reason)}")
-        {:error, :playback_transfer_failed}
-    end
-  end
-
-  def transfer_playback(_, _), do: {:error, :no_device_id}
-
   @spec start_playback(credentials :: Provider.Spotify.t() | map(), params :: keyword()) ::
           {:ok, :playback_started} | {:error, :invalid_credentials | :playback_start_failed}
   def start_playback(credentials, params \\ []) do
