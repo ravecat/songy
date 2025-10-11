@@ -43,7 +43,7 @@ end
 defimpl Songy.Boundary.Provider, for: Songy.Core.Provider.Spotify do
   alias Songy.Boundary.Spotify
   alias Songy.Core.Provider
-W
+
   @doc """
   Ensures Spotify provider credentials are fresh and valid.
 
@@ -63,6 +63,26 @@ W
 
       {:error, reason} ->
         {:error, reason}
+    end
+  end
+end
+
+defimpl Songy.Boundary.Provider, for: Songy.Core.Provider.Apple do
+  alias Songy.Core.Provider
+
+  @doc """
+  Ensures Apple Music provider is valid.
+
+  Apple Music uses Developer Token which is configured at application level,
+  so we only verify that the token is present in config.
+  """
+  def ensure(_provider) do
+    case Provider.Apple.access_token() do
+      token when is_binary(token) ->
+        {:ok, Provider.Apple.new()}
+
+      _ ->
+        {:error, :invalid_credentials}
     end
   end
 end

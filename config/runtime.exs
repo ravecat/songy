@@ -46,7 +46,8 @@ config :spotify_ex,
   callback_url: "http://127.0.0.1:4000/auth/spotify/callback"
 
 config :songy, :apple,
-  access_token: env!("APPLE_MUSIC_ACCESS_TOKEN", :string?, "")
+  access_token: env!("APPLE_MUSIC_ACCESS_TOKEN", :string?, ""),
+  storefront: "us"
 
 if config_env() == :prod do
   # Database connection disabled - uncomment if needed
