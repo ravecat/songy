@@ -56,6 +56,47 @@ defmodule Songy.Boundary.Apple do
     end
   end
 
+  @doc """
+  Searches for a random track in Apple Music catalog.
+  ## Parameters
+
+    * `token` - Apple Music Developer Token (required)
+
+  ## Returns
+
+    * `{:ok, track_data}` - One track map taken from the `songs.data` list returned by the API (raw Apple structure).
+    * `{:error, :search_failed}` - Apple Music API error (propagated from `search/2`).
+    * `{:error, :no_tracks_found}` - No tracks found for the random query or unexpected response shape.
+
+  ## Examples
+
+      Songy.Boundary.Apple.search_random_track("developer_token_jwt")
+      # => {:ok, %{"id" => "1613600188", "attributes" => %{"name" => "Entropy", ...}}}
+
+  """
+  @spec search_random_track(String.t()) :: {:ok, map()} | {:error, :search_failed | :no_tracks_found}
+  def search_random_track(token) do
+    params = build_random_track_search_params()
+
+    case search(token, params) do
+      {:ok, %{"songs" => %{"data" => [_ | _] = tracks}}} ->
+        track = Enum.random(tracks)
+        Logger.info("Successfully found random track #{inspect(track)} with params: #{inspect(params)}")
+        {:ok, track}
+
+      {:ok, %{"songs" => %{"data" => []}}} ->
+        Logger.warning("No tracks found for params: #{inspect(params)}")
+        {:error, :no_tracks_found}
+
+      {:ok, _other} ->
+        Logger.warning("Unexpected response structure for random track search")
+        {:error, :no_tracks_found}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   defp make_search_request(token, params) do
     {storefront, search_params} = Keyword.pop(params, :storefront, Application.fetch_env!(:songy, :apple)[:storefront])
 
@@ -66,5 +107,22 @@ defmodule Songy.Boundary.Apple do
       ],
       params: search_params
     )
+  end
+
+  defp build_random_track_search_params do
+    [
+      types: "songs",
+      term: generate_random_query(),
+      offset: generate_random_offset(),
+      limit: 25
+    ]
+  end
+
+  defp generate_random_query do
+    <<:rand.uniform(26) + ?a - 1>> <> "*"
+  end
+
+  defp generate_random_offset do
+    :rand.uniform(1000) - 1
   end
 end
