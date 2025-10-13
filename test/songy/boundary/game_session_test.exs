@@ -6,7 +6,8 @@ defmodule Songy.Boundary.GameSessionTest do
 
   setup do
     Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn :providers, _user_uuid ->
-      {:ok, %Songy.Core.Provider.Spotify{access_token: "test-token", refresh_token: "test-refresh", device_id: "test-device"}}
+      {:ok,
+       %Songy.Core.Provider.Spotify{access_token: "test-token", refresh_token: "test-refresh", device_id: "test-device"}}
     end)
 
     :ok
@@ -128,16 +129,15 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "starts the game by changing status to in_progress", %{game: game} do
-      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+      Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
         {:ok,
-         %Spotify.Track{
-           name: "Random Song",
-           uri: "spotify:track:track123",
-           artists: [%{"name" => "Random Artist"}],
-           album: %{
-             "release_date" => "2023-01-01",
-             "images" => [%{"url" => "https://example.com/cover.jpg"}]
-           }
+         %Songy.Core.Track{
+           id: "track123",
+           title: "Random Song",
+           artist: "Random Artist",
+           year: 2023,
+           cover_url: "https://example.com/cover.jpg",
+           meta: %{uri: "spotify:track:track123"}
          }}
       end)
 
@@ -161,18 +161,15 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "returns error when game is already started", %{game: game} do
-      # Setup credentials and mock for successful track search
-
-      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+      Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
         {:ok,
-         %Spotify.Track{
-           name: "Random Song",
-           uri: "spotify:track:track123",
-           artists: [%{"name" => "Random Artist"}],
-           album: %{
-             "release_date" => "2023-01-01",
-             "images" => [%{"url" => "https://example.com/cover.jpg"}]
-           }
+         %Songy.Core.Track{
+           id: "track123",
+           title: "Random Song",
+           artist: "Random Artist",
+           year: 2023,
+           cover_url: "https://example.com/cover.jpg",
+           meta: %{uri: "spotify:track:track123"}
          }}
       end)
 
@@ -225,20 +222,19 @@ defmodule Songy.Boundary.GameSessionTest do
     test "starts playback when game in progress", %{game: game} do
       # Setup credentials and mock for successful track search
 
-      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+      Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
         {:ok,
-         %Spotify.Track{
-           name: "Random Song",
-           uri: "spotify:track:track123",
-           artists: [%{"name" => "Random Artist"}],
-           album: %{
-             "release_date" => "2023-01-01",
-             "images" => [%{"url" => "https://example.com/cover.jpg"}]
-           }
+         %Songy.Core.Track{
+           id: "track123",
+           title: "Random Song",
+           artist: "Random Artist",
+           year: 2023,
+           cover_url: "https://example.com/cover.jpg",
+           meta: %{uri: "spotify:track:track123"}
          }}
       end)
 
-      Repatch.patch(Songy.Boundary.Spotify, :start_playback, [mode: :shared], fn _credentials, _params ->
+      Repatch.patch(Songy.Boundary.Player, :start_playback, [mode: :shared], fn _provider, _opts ->
         {:ok, :playback_started}
       end)
 
@@ -270,20 +266,19 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "idempotent when playback already started", %{game: game} do
-      Repatch.patch(Songy.Boundary.Spotify, :start_playback, [mode: :shared], fn _credentials, _params ->
+      Repatch.patch(Songy.Boundary.Player, :start_playback, [mode: :shared], fn _provider, _opts ->
         {:ok, :playback_started}
       end)
 
-      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+      Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
         {:ok,
-         %Spotify.Track{
-           name: "Random Song",
-           uri: "spotify:track:track123",
-           artists: [%{"name" => "Random Artist"}],
-           album: %{
-             "release_date" => "2023-01-01",
-             "images" => [%{"url" => "https://example.com/cover.jpg"}]
-           }
+         %Songy.Core.Track{
+           id: "track123",
+           title: "Random Song",
+           artist: "Random Artist",
+           year: 2023,
+           cover_url: "https://example.com/cover.jpg",
+           meta: %{uri: "spotify:track:track123"}
          }}
       end)
 
@@ -312,22 +307,23 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "pauses playback when game is in progress", %{game: game} do
-      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+      Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
         {:ok,
-         %Spotify.Track{
-           name: "Test Track",
-           uri: "spotify:track:track123",
-           artists: [%{name: "Test Artist"}],
-           duration_ms: 180_000,
-           preview_url: "http://example.com/preview.mp3"
+         %Songy.Core.Track{
+           id: "track123",
+           title: "Test Track",
+           artist: "Test Artist",
+           year: 2023,
+           cover_url: "https://example.com/cover.jpg",
+           meta: %{uri: "spotify:track:track123"}
          }}
       end)
 
-      Repatch.patch(Songy.Boundary.Spotify, :start_playback, [mode: :shared], fn _credentials, _params ->
+      Repatch.patch(Songy.Boundary.Player, :start_playback, [mode: :shared], fn _provider, _opts ->
         {:ok, :playback_started}
       end)
 
-      Repatch.patch(Songy.Boundary.Spotify, :pause_playback, [mode: :shared], fn _credentials, _params ->
+      Repatch.patch(Songy.Boundary.Player, :pause_playback, [mode: :shared], fn _provider, _opts ->
         {:ok, :playback_paused}
       end)
 
@@ -353,7 +349,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "returns error when game is in waiting status", %{game: game} do
-      Repatch.patch(Songy.Boundary.Spotify, :pause_playback, [mode: :shared], fn _credentials, _params ->
+      Repatch.patch(Songy.Boundary.Player, :pause_playback, [mode: :shared], fn _provider, _opts ->
         {:ok, :playback_paused}
       end)
 
@@ -369,18 +365,19 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "idempotent when playback already paused", %{game: game} do
-      Repatch.patch(Songy.Boundary.Spotify, :pause_playback, [mode: :shared], fn _credentials, _params ->
+      Repatch.patch(Songy.Boundary.Player, :pause_playback, [mode: :shared], fn _provider, _opts ->
         {:ok, :playback_paused}
       end)
 
-      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+      Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
         {:ok,
-         %Spotify.Track{
-           name: "Test Track",
-           uri: "spotify:track:track123",
-           artists: [%{name: "Test Artist"}],
-           duration_ms: 180_000,
-           preview_url: "http://example.com/preview.mp3"
+         %Songy.Core.Track{
+           id: "track123",
+           title: "Test Track",
+           artist: "Test Artist",
+           year: 2023,
+           cover_url: "https://example.com/cover.jpg",
+           meta: %{uri: "spotify:track:track123"}
          }}
       end)
 
@@ -422,19 +419,19 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "cycles through all phases correctly", %{game: game} do
-      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+      Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
         {:ok,
-         %Spotify.Track{
-           name: "Random Song",
-           artists: [%{"name" => "Random Artist"}],
-           album: %{
-             "release_date" => "2023-01-01",
-             "images" => [%{"url" => "https://example.com/cover.jpg"}]
-           }
+         %Songy.Core.Track{
+           id: "test123",
+           title: "Random Song",
+           artist: "Random Artist",
+           year: 2023,
+           cover_url: "https://example.com/cover.jpg",
+           meta: %{uri: "spotify:track:test123"}
          }}
       end)
 
-      Repatch.patch(Songy.Boundary.Spotify, :pause_playback, [mode: :shared], fn _credentials ->
+      Repatch.patch(Songy.Boundary.Player, :pause_playback, [mode: :shared], fn _provider ->
         {:ok, :playback_paused}
       end)
 
@@ -471,19 +468,21 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "fetches new track only when transitioning from results phase", %{game: game} do
-      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+      Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
+        track_id = "track_#{:erlang.unique_integer([:positive])}"
+
         {:ok,
-         %Spotify.Track{
-           name: "Random Song",
-           artists: [%{"name" => "Random Artist"}],
-           album: %{
-             "release_date" => "2023-01-01",
-             "images" => [%{"url" => "https://example.com/cover.jpg"}]
-           }
+         %Songy.Core.Track{
+           id: track_id,
+           title: "Random Song",
+           artist: "Random Artist",
+           year: 2023,
+           cover_url: "https://example.com/cover.jpg",
+           meta: %{uri: "spotify:track:#{track_id}"}
          }}
       end)
 
-      Repatch.patch(Songy.Boundary.Spotify, :pause_playback, [mode: :shared], fn _credentials ->
+      Repatch.patch(Songy.Boundary.Player, :pause_playback, [mode: :shared], fn _provider ->
         {:ok, :playback_paused}
       end)
 
@@ -505,7 +504,6 @@ defmodule Songy.Boundary.GameSessionTest do
       initial_track_id = started_game.turn.track.id
 
       # Cycle through phases: waiting -> ready -> steady -> challenging -> results
-      # These transitions should NOT trigger track fetching
       {:ok, ready_game} = GameSession.next_phase(game.id)
       assert ready_game.turn.phase == :ready
       assert ready_game.turn.track.id == initial_track_id
@@ -532,15 +530,15 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "automatically transitions from challenging to results after timeout", %{game: game} do
-      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+      Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
         {:ok,
-         %Spotify.Track{
-           name: "Random Song",
-           artists: [%{"name" => "Random Artist"}],
-           album: %{
-             "release_date" => "2023-01-01",
-             "images" => [%{"url" => "https://example.com/cover.jpg"}]
-           }
+         %Songy.Core.Track{
+           id: "test123",
+           title: "Random Song",
+           artist: "Random Artist",
+           year: 2023,
+           cover_url: "https://example.com/cover.jpg",
+           meta: %{uri: "spotify:track:test123"}
          }}
       end)
 
@@ -588,14 +586,15 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "updates game state with new participant" do
-      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _provider ->
+      Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
         {:ok,
-         %Spotify.Track{
-           name: "Test Track",
-           uri: "spotify:track:track123",
-           artists: [%{name: "Test Artist"}],
-           duration_ms: 180_000,
-           preview_url: "http://example.com/preview.mp3"
+         %Songy.Core.Track{
+           id: "track123",
+           title: "Test Track",
+           artist: "Test Artist",
+           year: 2023,
+           cover_url: "https://example.com/cover.jpg",
+           meta: %{uri: "spotify:track:track123"}
          }}
       end)
 
@@ -624,16 +623,15 @@ defmodule Songy.Boundary.GameSessionTest do
       {:ok, game} = GameSession.create_game_session("owner123")
 
       # Setup mock for successful random track search
-      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+      Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
         {:ok,
-         %Spotify.Track{
-           name: "Random Song",
-           uri: "spotify:track:track123",
-           artists: [%{"name" => "Random Artist"}],
-           album: %{
-             "release_date" => "2023-01-01",
-             "images" => [%{"url" => "https://example.com/cover.jpg"}]
-           }
+         %Songy.Core.Track{
+           id: "track123",
+           title: "Random Song",
+           artist: "Random Artist",
+           year: 2023,
+           cover_url: "https://example.com/cover.jpg",
+           meta: %{uri: "spotify:track:track123"}
          }}
       end)
 
@@ -662,7 +660,7 @@ defmodule Songy.Boundary.GameSessionTest do
       assert track.year == 2023
 
       # Verify Spotify.search_random_track was called
-      assert Repatch.called?(Songy.Boundary.Spotify, :search_random_track, 1, by: pid)
+      assert Repatch.called?(Songy.Boundary.Player, :search_random_track, 1, by: pid)
 
       GameSession.end_game_session(game.id)
     end
@@ -693,7 +691,7 @@ defmodule Songy.Boundary.GameSessionTest do
     test "handles random track search failure gracefully" do
       {:ok, game} = GameSession.create_game_session("owner123")
 
-      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+      Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
         {:error, :no_tracks_found}
       end)
 
@@ -718,7 +716,7 @@ defmodule Songy.Boundary.GameSessionTest do
       assert length(user_timeline) == 0
 
       # Verify Spotify.search_random_track was called but failed
-      assert Repatch.called?(Songy.Boundary.Spotify, :search_random_track, 1, by: pid)
+      assert Repatch.called?(Songy.Boundary.Player, :search_random_track, 1, by: pid)
 
       GameSession.end_game_session(game.id)
     end
@@ -727,7 +725,7 @@ defmodule Songy.Boundary.GameSessionTest do
       {:ok, game} = GameSession.create_game_session("owner123")
 
       # Setup mock for Spotify API error
-      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+      Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
         {:error, :search_failed}
       end)
 
@@ -752,7 +750,7 @@ defmodule Songy.Boundary.GameSessionTest do
       assert length(user_timeline) == 0
 
       # Verify Spotify.search_random_track was called but failed
-      assert Repatch.called?(Songy.Boundary.Spotify, :search_random_track, 1, by: pid)
+      assert Repatch.called?(Songy.Boundary.Player, :search_random_track, 1, by: pid)
 
       GameSession.end_game_session(game.id)
     end
@@ -761,16 +759,15 @@ defmodule Songy.Boundary.GameSessionTest do
       {:ok, game} = GameSession.create_game_session("owner123")
 
       # Setup mock for random track search - should only be called once
-      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+      Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
         {:ok,
-         %Spotify.Track{
-           name: "Original Song",
-           uri: "spotify:track:track123",
-           artists: [%{"name" => "Original Artist"}],
-           album: %{
-             "release_date" => "2023-01-01",
-             "images" => [%{"url" => "https://example.com/cover.jpg"}]
-           }
+         %Songy.Core.Track{
+           id: "track123",
+           title: "Original Song",
+           artist: "Original Artist",
+           year: 2023,
+           cover_url: "https://example.com/cover.jpg",
+           meta: %{uri: "spotify:track:track123"}
          }}
       end)
 
@@ -797,7 +794,7 @@ defmodule Songy.Boundary.GameSessionTest do
       assert first_track.artist == "Original Artist"
 
       # Verify search_random_track was called once
-      assert Repatch.called?(Songy.Boundary.Spotify, :search_random_track, 1, by: pid)
+      assert Repatch.called?(Songy.Boundary.Player, :search_random_track, 1, by: pid)
 
       # Simulate user leaving (they are removed from participants but timeline persists)
       send(pid, {:participant_left, "user456"})
@@ -823,7 +820,7 @@ defmodule Songy.Boundary.GameSessionTest do
       assert second_track.artist == "Original Artist"
 
       # Verify search_random_track was still called only once (not called on rejoin)
-      assert Repatch.called?(Songy.Boundary.Spotify, :search_random_track, 1, by: pid)
+      assert Repatch.called?(Songy.Boundary.Player, :search_random_track, 1, by: pid)
 
       GameSession.end_game_session(game.id)
     end
@@ -835,16 +832,15 @@ defmodule Songy.Boundary.GameSessionTest do
 
       on_exit(fn -> GameSession.end_game_session(game.id) end)
 
-      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+      Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
         {:ok,
-         %Spotify.Track{
-           name: "Turn Track",
-           uri: "spotify:track:track123",
-           artists: [%{"name" => "Turn Artist"}],
-           album: %{
-             "release_date" => "2023-01-01",
-             "images" => [%{"url" => "https://example.com/cover.jpg"}]
-           }
+         %Songy.Core.Track{
+           id: "track123",
+           title: "Turn Track",
+           artist: "Turn Artist",
+           year: 2023,
+           cover_url: "https://example.com/cover.jpg",
+           meta: %{uri: "spotify:track:track123"}
          }}
       end)
 
@@ -955,16 +951,15 @@ defmodule Songy.Boundary.GameSessionTest do
 
       # Setup credentials
 
-      Repatch.patch(Songy.Boundary.Spotify, :search_random_track, [mode: :shared], fn _credentials ->
+      Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
         {:ok,
-         %Spotify.Track{
-           name: "Test Track",
-           uri: "spotify:track:test123",
-           artists: [%{"name" => "Test Artist"}],
-           album: %{
-             "release_date" => "2023-01-01",
-             "images" => [%{"url" => "https://example.com/test.jpg"}]
-           }
+         %Songy.Core.Track{
+           id: "test123",
+           title: "Test Track",
+           artist: "Test Artist",
+           year: 2023,
+           cover_url: "https://example.com/test.jpg",
+           meta: %{uri: "spotify:track:test123"}
          }}
       end)
 

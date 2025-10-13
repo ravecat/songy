@@ -32,10 +32,9 @@ defmodule Songy.Boundary.GameSession do
 
   use GenServer
 
-  alias Songy.Boundary.Spotify
+  alias Songy.Boundary.Player
   alias Songy.Core.Game
   alias Songy.Core.Track
-  alias Songy.Core.Trackable
   alias Songy.Core.User
 
   require Logger
@@ -125,9 +124,8 @@ defmodule Songy.Boundary.GameSession do
   def start_game_session(game_uuid) do
     with {:ok, game} <- lookup_game_session(game_uuid),
          :waiting <- Game.get_status(game),
-          {:ok, credentials} <- Songy.Providers.lookup(:providers, game.owner_uuid),
-         {:ok, random_track} <- Spotify.search_random_track(credentials),
-         track <- Trackable.to_track(random_track) do
+         {:ok, provider} <- Songy.Providers.lookup(:providers, game.owner_uuid),
+         {:ok, %Track{} = track} <- Player.search_random_track(provider) do
       GenServer.call(via(game_uuid), {:start_game_session, track})
     else
       {:error, :game_session_not_found} -> {:error, :game_session_not_found}
@@ -167,9 +165,10 @@ defmodule Songy.Boundary.GameSession do
   def start_playback(game_uuid) do
     with {:ok, game} <- lookup_game_session(game_uuid),
          :in_progress <- Game.get_status(game),
-         {:ok, meta} <- Songy.Providers.lookup(:providers, game.owner_uuid),
+         {:ok, provider} <- Songy.Providers.lookup(:providers, game.owner_uuid),
          %Track{meta: %{uri: track_uri}} <- Game.get_turn_track(game),
-         {:ok, :playback_started} <- Spotify.start_playback(meta, uris: [track_uri], device_id: meta.device_id) do
+         {:ok, :playback_started} <-
+           Player.start_playback(provider, uris: [track_uri], device_id: provider.device_id) do
       GenServer.call(via(game_uuid), :start_playback)
     else
       {:error, reason} -> {:error, reason}
@@ -205,8 +204,8 @@ defmodule Songy.Boundary.GameSession do
   def pause_playback(game_uuid) do
     with {:ok, game} <- lookup_game_session(game_uuid),
          :in_progress <- Game.get_status(game),
-         {:ok, credentials} <- Songy.Providers.lookup(:providers, game.owner_uuid),
-         {:ok, :playback_paused} <- Spotify.pause_playback(credentials) do
+         {:ok, provider} <- Songy.Providers.lookup(:providers, game.owner_uuid),
+         {:ok, :playback_paused} <- Player.pause_playback(provider) do
       GenServer.call(via(game_uuid), :pause_playback)
     else
       {:error, reason} -> {:error, reason}
@@ -470,9 +469,8 @@ defmodule Songy.Boundary.GameSession do
   @impl GenServer
   def handle_continue({:init_participant_timeline, user_uuid}, game) do
     with [] <- Game.get_user_timeline(game, user_uuid),
-         {:ok, credentials} <- Songy.Providers.lookup(:providers, game.owner_uuid),
-         {:ok, spotify_track} <- Spotify.search_random_track(credentials),
-         track <- Trackable.to_track(spotify_track) do
+         {:ok, provider} <- Songy.Providers.lookup(:providers, game.owner_uuid),
+         {:ok, %Track{} = track} <- Player.search_random_track(provider) do
       Logger.info("Init participant timeline with track '#{track.title}' by '#{track.artist}'")
       game = Game.init_user_timeline(game, user_uuid, track)
 
@@ -568,10 +566,9 @@ defmodule Songy.Boundary.GameSession do
 
   @impl GenServer
   def handle_call(:next_phase, _from, %{turn: %{phase: :results}} = game) do
-    with {:ok, credentials} <- Songy.Providers.lookup(:providers, game.owner_uuid),
-         {:ok, spotify_track} <- Spotify.search_random_track(credentials),
-         %Track{} = track <- Trackable.to_track(spotify_track),
-         {:ok, :playback_paused} <- Spotify.pause_playback(credentials),
+    with {:ok, provider} <- Songy.Providers.lookup(:providers, game.owner_uuid),
+         {:ok, %Track{} = track} <- Player.search_random_track(provider),
+         {:ok, :playback_paused} <- Player.pause_playback(provider),
          game <- Game.pause_playback(game),
          game <- Game.next_phase(game),
          {:ok, game} <- Game.set_turn_track(game, track) do

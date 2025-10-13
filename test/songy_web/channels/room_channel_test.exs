@@ -52,7 +52,11 @@ defmodule SongyWeb.RoomChannelTest do
   describe "start_game event" do
     test "changes game status and broadcasts update", %{current_user: current_user, game: game} do
       Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn _registry, _user_id ->
-        {:ok, {:spotify, %{access_token: "test-token", refresh_token: "test-refresh-token"}}}
+        {:ok,
+         %Songy.Core.Provider.Spotify{
+           access_token: "test-token",
+           refresh_token: "test-refresh-token"
+         }}
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game.id)
@@ -100,9 +104,7 @@ defmodule SongyWeb.RoomChannelTest do
       game: game
     } do
       Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn _registry, _user_id ->
-        {:ok,
-         {:apple,
-          %{access_token: "spotify_access_token_123", refresh_token: "test-refresh-token"}}}
+        {:ok, %Songy.Core.Provider.Apple{}}
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game.id)
@@ -173,8 +175,10 @@ defmodule SongyWeb.RoomChannelTest do
     } do
       Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn _registry, _user_id ->
         {:ok,
-         {:apple,
-          %{access_token: "spotify_access_token_123", refresh_token: "test-refresh-token"}}}
+         %Songy.Core.Provider.Spotify{
+           access_token: "test-token",
+           refresh_token: "test-refresh-token"
+         }}
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game.id)
@@ -215,8 +219,10 @@ defmodule SongyWeb.RoomChannelTest do
     } do
       Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn _registry, _user_id ->
         {:ok,
-         {:apple,
-          %{access_token: "spotify_access_token_123", refresh_token: "test-refresh-token"}}}
+         %Songy.Core.Provider.Spotify{
+           access_token: "test-token",
+           refresh_token: "test-refresh-token"
+         }}
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game.id)
@@ -266,8 +272,10 @@ defmodule SongyWeb.RoomChannelTest do
     } do
       Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn _registry, _user_id ->
         {:ok,
-         {:apple,
-          %{access_token: "spotify_access_token_123", refresh_token: "test-refresh-token"}}}
+         %Songy.Core.Provider.Spotify{
+           access_token: "test-token",
+           refresh_token: "test-refresh-token"
+         }}
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game.id)
