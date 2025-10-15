@@ -3,6 +3,7 @@ defmodule Songy.Boundary.PlayerTest do
 
   alias Songy.Boundary
   alias Songy.Boundary.Player
+  alias Songy.Core.Track
 
   describe "Spotify provider implementation" do
     setup do
@@ -13,35 +14,56 @@ defmodule Songy.Boundary.PlayerTest do
         expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
       }
 
-      %{provider: provider}
+      track = %Track{
+        id: "track123",
+        title: "Test Song",
+        artist: "Test Artist",
+        year: 2023,
+        meta: %{uri: "spotify:track:test123"}
+      }
+
+      %{provider: provider, track: track}
     end
 
-    test "start_playback/2 delegates to Spotify.start_playback/2", %{provider: provider} do
-      opts = [uris: ["spotify:track:test"], device_id: "test_device"]
-
-      Repatch.patch(Boundary.Spotify, :start_playback, fn _provider, _opts ->
+    test "start_playback/2 delegates to Spotify.start_playback/2", %{
+      provider: provider,
+      track: track
+    } do
+      Repatch.patch(Boundary.Spotify, :start_playback, fn _provider, opts ->
+        assert opts[:uris] == ["spotify:track:test123"]
+        assert opts[:device_id] == "test_device"
         {:ok, :playback_started}
       end)
 
-      assert {:ok, :playback_started} = Player.start_playback(provider, opts)
+      assert {:ok, :playback_started} = Player.start_playback(provider, track)
       assert Repatch.called?(Boundary.Spotify, :start_playback, 2)
     end
 
-    test "pause_playback/2 delegates to Spotify.pause_playback/2", %{provider: provider} do
-      opts = [device_id: "test_device"]
+    test "start_playback/2 returns error when track has no URI", %{provider: provider} do
+      track_without_uri = %Track{
+        id: "track123",
+        title: "Test Song",
+        artist: "Test Artist",
+        year: 2023,
+        meta: %{}
+      }
 
+      assert {:error, :missing_track_uri} = Player.start_playback(provider, track_without_uri)
+    end
+
+    test "pause_playback/1 delegates to Spotify.pause_playback/2", %{provider: provider} do
       Repatch.patch(Boundary.Spotify, :pause_playback, fn _provider, _opts ->
         {:ok, :playback_paused}
       end)
 
-      assert {:ok, :playback_paused} = Player.pause_playback(provider, opts)
+      assert {:ok, :playback_paused} = Player.pause_playback(provider)
       assert Repatch.called?(Boundary.Spotify, :pause_playback, 2)
     end
 
     test "search_random_track/1 delegates to Spotify.search_random_track/1", %{provider: provider} do
       spotify_track = %{id: "test_track", name: "Test Song"}
 
-      expected_track = %Songy.Core.Track{
+      expected_track = %Track{
         id: "generated_id",
         title: "Test Song",
         artist: "Test Artist",
@@ -62,20 +84,23 @@ defmodule Songy.Boundary.PlayerTest do
       assert Repatch.called?(Songy.Core.Trackable, :to_track, 1)
     end
 
-    test "start_playback/2 handles errors from Spotify.start_playback/2", %{provider: provider} do
+    test "start_playback/2 handles errors from Spotify.start_playback/2", %{
+      provider: provider,
+      track: track
+    } do
       Repatch.patch(Boundary.Spotify, :start_playback, fn _provider, _opts ->
         {:error, :invalid_credentials}
       end)
 
-      assert {:error, :invalid_credentials} = Player.start_playback(provider, [])
+      assert {:error, :invalid_credentials} = Player.start_playback(provider, track)
     end
 
-    test "pause_playback/2 handles errors from Spotify.pause_playback/2", %{provider: provider} do
+    test "pause_playback/1 handles errors from Spotify.pause_playback/2", %{provider: provider} do
       Repatch.patch(Boundary.Spotify, :pause_playback, fn _provider, _opts ->
         {:error, :playback_pause_failed}
       end)
 
-      assert {:error, :playback_pause_failed} = Player.pause_playback(provider, [])
+      assert {:error, :playback_pause_failed} = Player.pause_playback(provider)
     end
 
     test "search_random_track/1 handles errors from Spotify.search_random_track/1", %{
@@ -94,23 +119,28 @@ defmodule Songy.Boundary.PlayerTest do
   describe "unsupported provider implementation" do
     setup do
       unsupported_provider = %{type: :unsupported, name: "Unknown Provider"}
-      %{provider: unsupported_provider}
+
+      track = %Track{
+        id: "track123",
+        title: "Test Song",
+        artist: "Test Artist",
+        year: 2023,
+        meta: %{}
+      }
+
+      %{provider: unsupported_provider, track: track}
     end
 
-    test "start_playback/2 returns not_supported error", %{provider: provider} do
-      assert {:error, :not_supported} = Player.start_playback(provider, [])
+    test "start_playback/2 returns not_supported error", %{provider: provider, track: track} do
+      assert {:error, :not_supported} = Player.start_playback(provider, track)
     end
 
-    test "pause_playback/2 returns not_supported error", %{provider: provider} do
-      assert {:error, :not_supported} = Player.pause_playback(provider, [])
+    test "pause_playback/1 returns not_supported error", %{provider: provider} do
+      assert {:error, :not_supported} = Player.pause_playback(provider)
     end
 
     test "search_random_track/1 returns not_supported error", %{provider: provider} do
       assert {:error, :not_supported} = Player.search_random_track(provider)
-    end
-
-    test "pause_playback/1 with default opts returns not_supported error", %{provider: provider} do
-      assert {:error, :not_supported} = Player.pause_playback(provider)
     end
   end
 end

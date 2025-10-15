@@ -148,7 +148,7 @@ defmodule Songy.Boundary.GameSession do
     * `{:error, :game_not_in_progress}` - Game is not in the correct status
     * `{:error, :not_found}` - No credentials available for session
     * `{:error, :no_current_track}` - No track is set for the current turn
-    * `{:error, :no_track_uri}` - Track does not have Spotify URI in metadata
+    * `{:error, :missing_track_uri}` - Track does not have required metadata for provider
 
   ## Examples
       iex> {:ok, game} = GameSession.create_game_session("owner123")
@@ -166,14 +166,12 @@ defmodule Songy.Boundary.GameSession do
     with {:ok, game} <- lookup_game_session(game_uuid),
          :in_progress <- Game.get_status(game),
          {:ok, provider} <- Songy.Providers.lookup(:providers, game.owner_uuid),
-         %Track{meta: %{uri: track_uri}} <- Game.get_turn_track(game),
-         {:ok, :playback_started} <-
-           Player.start_playback(provider, uris: [track_uri], device_id: provider.device_id) do
+         %Track{} = track <- Game.get_turn_track(game),
+         {:ok, :playback_started} <- Player.start_playback(provider, track) do
       GenServer.call(via(game_uuid), :start_playback)
     else
       {:error, reason} -> {:error, reason}
       nil -> {:error, :no_current_track}
-      %Track{meta: meta} when not is_map_key(meta, :uri) -> {:error, :no_current_track}
       _status -> {:error, :game_not_in_progress}
     end
   end

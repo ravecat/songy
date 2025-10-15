@@ -234,7 +234,7 @@ defmodule Songy.Boundary.GameSessionTest do
          }}
       end)
 
-      Repatch.patch(Songy.Boundary.Player, :start_playback, [mode: :shared], fn _provider, _opts ->
+      Repatch.patch(Songy.Boundary.Player, :start_playback, [mode: :shared], fn _provider, _track ->
         {:ok, :playback_started}
       end)
 
@@ -266,7 +266,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "idempotent when playback already started", %{game: game} do
-      Repatch.patch(Songy.Boundary.Player, :start_playback, [mode: :shared], fn _provider, _opts ->
+      Repatch.patch(Songy.Boundary.Player, :start_playback, [mode: :shared], fn _provider, _track ->
         {:ok, :playback_started}
       end)
 
@@ -319,11 +319,11 @@ defmodule Songy.Boundary.GameSessionTest do
          }}
       end)
 
-      Repatch.patch(Songy.Boundary.Player, :start_playback, [mode: :shared], fn _provider, _opts ->
+      Repatch.patch(Songy.Boundary.Player, :start_playback, [mode: :shared], fn _provider, _track ->
         {:ok, :playback_started}
       end)
 
-      Repatch.patch(Songy.Boundary.Player, :pause_playback, [mode: :shared], fn _provider, _opts ->
+      Repatch.patch(Songy.Boundary.Player, :pause_playback, [mode: :shared], fn _provider ->
         {:ok, :playback_paused}
       end)
 
@@ -349,7 +349,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "returns error when game is in waiting status", %{game: game} do
-      Repatch.patch(Songy.Boundary.Player, :pause_playback, [mode: :shared], fn _provider, _opts ->
+      Repatch.patch(Songy.Boundary.Player, :pause_playback, [mode: :shared], fn _provider ->
         {:ok, :playback_paused}
       end)
 
@@ -365,7 +365,7 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "idempotent when playback already paused", %{game: game} do
-      Repatch.patch(Songy.Boundary.Player, :pause_playback, [mode: :shared], fn _provider, _opts ->
+      Repatch.patch(Songy.Boundary.Player, :pause_playback, [mode: :shared], fn _provider ->
         {:ok, :playback_paused}
       end)
 
