@@ -115,8 +115,9 @@ defmodule Songy.Boundary.Provider.AppleTest do
 
       Repatch.patch(Req, :get, fn _url, _opts -> {:ok, expected_response} end)
 
-      assert {:ok, track} = Apple.search_random_track(@valid_token)
-      assert track in tracks
+      assert {:ok, %Songy.Core.Track.Apple{id: id} = track} = Apple.search_random_track(@valid_token)
+      assert id in ["123", "456", "789"]
+      assert is_map(track.attributes)
     end
 
     test "returns error when no tracks found" do
@@ -214,10 +215,10 @@ defmodule Songy.Boundary.Provider.AppleTest do
 
       Repatch.patch(Req, :get, fn _url, _opts -> {:ok, expected_response} end)
 
-      assert {:ok, track} = Apple.search_random_track(@valid_token)
-      assert is_map(track)
-      assert Map.has_key?(track, "id")
-      assert Map.has_key?(track, "attributes")
+      assert {:ok, %Songy.Core.Track.Apple{id: id} = track} = Apple.search_random_track(@valid_token)
+      assert is_binary(id)
+      assert is_map(track.attributes)
+      assert track.attributes["name"] =~ ~r/Track \d+/
     end
   end
 end

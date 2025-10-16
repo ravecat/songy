@@ -8,6 +8,8 @@ defmodule Songy.Boundary.Provider.Apple do
 
   require Logger
 
+  alias Songy.Core.Track
+
   @base_url "https://api.music.apple.com/v1"
 
   @doc """
@@ -64,24 +66,29 @@ defmodule Songy.Boundary.Provider.Apple do
 
   ## Returns
 
-    * `{:ok, track_data}` - One track map taken from the `songs.data` list returned by the API (raw Apple structure).
-    * `{:error, :search_failed}` - Apple Music API error (propagated from `search/2`).
-    * `{:error, :no_tracks_found}` - No tracks found for the random query or unexpected response shape.
+    * `{:ok, track}` - Apple Music Track.Apple struct
+    * `{:error, :search_failed}` - Apple Music API error (propagated from `search/2`)
+    * `{:error, :no_tracks_found}` - No tracks found for the random query or unexpected response shape
 
   ## Examples
 
       Songy.Boundary.Provider.Apple.search_random_track("developer_token_jwt")
-      # => {:ok, %{"id" => "1613600188", "attributes" => %{"name" => "Entropy", ...}}}
+      # => {:ok, %Track.Apple{id: "1613600188", attributes: %{"name" => "Entropy", ...}}}
 
   """
-  @spec search_random_track(String.t()) :: {:ok, map()} | {:error, :search_failed | :no_tracks_found}
+  @spec search_random_track(String.t()) :: {:ok, Track.Apple.t()} | {:error, :search_failed | :no_tracks_found}
   def search_random_track(token) do
     params = build_random_track_search_params()
 
     case search(token, params) do
-      {:ok, %{"songs" => %{"data" => [_ | _] = tracks}}} ->
-        track = Enum.random(tracks)
-        Logger.info("Successfully found random track #{inspect(track)} with params: #{inspect(params)}")
+      {:ok, %{"songs" => %{"data" => [_ | _] = data}}} ->
+        track =
+          data
+          |> Enum.random()
+          |> Track.Apple.to_struct()
+
+        Logger.info("Successfully found random track #{inspect(track.id)} with params: #{inspect(params)}")
+
         {:ok, track}
 
       {:ok, %{"songs" => %{"data" => []}}} ->

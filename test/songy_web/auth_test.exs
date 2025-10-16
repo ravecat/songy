@@ -158,6 +158,7 @@ defmodule SongyWeb.AuthTest do
 
     test "assigns provider ID when provider data found in ETS", %{conn: conn} do
       user = User.new()
+
       provider = %Songy.Core.Provider.Spotify{
         access_token: "test_token",
         refresh_token: "refresh"
