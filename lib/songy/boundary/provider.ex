@@ -41,7 +41,7 @@ defimpl Songy.Boundary.Provider, for: Any do
 end
 
 defimpl Songy.Boundary.Provider, for: Songy.Core.Provider.Spotify do
-  alias Songy.Boundary.Spotify
+  alias Songy.Boundary.Provider.Spotify
   alias Songy.Core.Provider
 
   @doc """

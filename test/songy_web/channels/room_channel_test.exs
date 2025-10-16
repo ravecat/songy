@@ -19,7 +19,7 @@ defmodule SongyWeb.RoomChannelTest do
     {:ok, game} = GameSession.create_game_session(owner.uuid)
 
     Repatch.patch(
-      Songy.Boundary.Spotify,
+      Songy.Boundary.Provider.Spotify,
       :search_random_track,
       [mode: :shared],
       fn _credentials ->

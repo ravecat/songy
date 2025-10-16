@@ -1,4 +1,4 @@
-defmodule Songy.Boundary.Spotify do
+defmodule Songy.Boundary.Provider.Spotify do
   @moduledoc """
   Boundary module for Spotify-related functionality in the Songy application.
 

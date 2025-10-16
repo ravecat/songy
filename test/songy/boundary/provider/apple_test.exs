@@ -1,7 +1,7 @@
-defmodule Songy.Boundary.AppleTest do
+defmodule Songy.Boundary.Provider.AppleTest do
   use ExUnit.Case, async: true
 
-  alias Songy.Boundary.Apple
+  alias Songy.Boundary.Provider.Apple
 
   @valid_token "test_developer_token"
 

@@ -1,4 +1,4 @@
-defmodule Songy.Boundary.Apple do
+defmodule Songy.Boundary.Provider.Apple do
   @moduledoc """
   Boundary module for Apple Music functionality.
 
@@ -70,7 +70,7 @@ defmodule Songy.Boundary.Apple do
 
   ## Examples
 
-      Songy.Boundary.Apple.search_random_track("developer_token_jwt")
+      Songy.Boundary.Provider.Apple.search_random_track("developer_token_jwt")
       # => {:ok, %{"id" => "1613600188", "attributes" => %{"name" => "Entropy", ...}}}
 
   """

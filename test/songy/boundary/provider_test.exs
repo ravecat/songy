@@ -47,7 +47,7 @@ defmodule Songy.Boundary.ProviderTest do
         expires_at: DateTime.utc_now()
       }
 
-      Repatch.patch(Songy.Boundary.Spotify, :ensure_provider_data, fn _provider ->
+      Repatch.patch(Songy.Boundary.Provider.Spotify, :ensure_provider_data, fn _provider ->
         {:ok, updated_provider}
       end)
 
@@ -60,7 +60,7 @@ defmodule Songy.Boundary.ProviderTest do
         refresh_token: "refresh_token"
       }
 
-      Repatch.patch(Songy.Boundary.Spotify, :ensure_provider_data, fn _provider ->
+      Repatch.patch(Songy.Boundary.Provider.Spotify, :ensure_provider_data, fn _provider ->
         {:error, :refresh_failed}
       end)
 
@@ -75,7 +75,7 @@ defmodule Songy.Boundary.ProviderTest do
         device_id: "device123"
       }
 
-      Repatch.patch(Songy.Boundary.Spotify, :ensure_provider_data, fn provider ->
+      Repatch.patch(Songy.Boundary.Provider.Spotify, :ensure_provider_data, fn provider ->
         {:ok, provider}
       end)
 
@@ -91,7 +91,7 @@ defmodule Songy.Boundary.ProviderTest do
       spotify_provider = %Spotify{access_token: "token", refresh_token: "refresh"}
       unsupported_provider = %{custom: "provider"}
 
-      Repatch.patch(Songy.Boundary.Spotify, :ensure_provider_data, fn provider ->
+      Repatch.patch(Songy.Boundary.Provider.Spotify, :ensure_provider_data, fn provider ->
         {:ok, provider}
       end)
 

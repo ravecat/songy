@@ -1,7 +1,7 @@
-defmodule Songy.Boundary.SpotifyTest do
+defmodule Songy.Boundary.Provider.SpotifyTest do
   use ExUnit.Case, async: true
 
-  alias Songy.Boundary
+  alias Songy.Boundary.Provider.Spotify, as: BoundarySpotify
   alias Songy.Core.Provider
 
   describe "authenticate/2" do
@@ -18,7 +18,7 @@ defmodule Songy.Boundary.SpotifyTest do
         {:ok, credentials}
       end)
 
-      assert {:ok, result} = Boundary.Spotify.authenticate(conn_credentials, params)
+      assert {:ok, result} = BoundarySpotify.authenticate(conn_credentials, params)
       assert result.access_token == "new_access_token"
       assert result.refresh_token == "new_refresh_token"
       assert Map.has_key?(result, :expires_at)
@@ -32,7 +32,7 @@ defmodule Songy.Boundary.SpotifyTest do
         {:error, :timeout}
       end)
 
-      assert {:error, :timeout} = Boundary.Spotify.authenticate(conn_credentials, params)
+      assert {:error, :timeout} = BoundarySpotify.authenticate(conn_credentials, params)
     end
   end
 
@@ -44,7 +44,7 @@ defmodule Songy.Boundary.SpotifyTest do
         :ok
       end)
 
-      assert {:ok, :playback_started} = Boundary.Spotify.start_playback(credentials)
+      assert {:ok, :playback_started} = BoundarySpotify.start_playback(credentials)
     end
 
     test "returns error when Spotify.Player.play fails" do
@@ -54,7 +54,7 @@ defmodule Songy.Boundary.SpotifyTest do
         {:error, :api_error}
       end)
 
-      assert {:error, :playback_start_failed} = Boundary.Spotify.start_playback(credentials)
+      assert {:error, :playback_start_failed} = BoundarySpotify.start_playback(credentials)
     end
 
     test "returns error when credentials have no access_token" do
@@ -64,7 +64,7 @@ defmodule Songy.Boundary.SpotifyTest do
         {:error, :invalid_request}
       end)
 
-      assert {:error, :invalid_credentials} = Boundary.Spotify.start_playback(credentials)
+      assert {:error, :invalid_credentials} = BoundarySpotify.start_playback(credentials)
     end
 
     test "returns error when credentials are empty" do
@@ -74,7 +74,7 @@ defmodule Songy.Boundary.SpotifyTest do
         {:error, :invalid_request}
       end)
 
-      assert {:error, :invalid_credentials} = Boundary.Spotify.start_playback(credentials)
+      assert {:error, :invalid_credentials} = BoundarySpotify.start_playback(credentials)
     end
   end
 
@@ -86,7 +86,7 @@ defmodule Songy.Boundary.SpotifyTest do
         :ok
       end)
 
-      assert {:ok, :playback_paused} = Boundary.Spotify.pause_playback(credentials)
+      assert {:ok, :playback_paused} = BoundarySpotify.pause_playback(credentials)
     end
 
     test "returns error when Spotify.Player.pause fails" do
@@ -96,7 +96,7 @@ defmodule Songy.Boundary.SpotifyTest do
         {:error, :api_error}
       end)
 
-      assert {:error, :playback_pause_failed} = Boundary.Spotify.pause_playback(credentials)
+      assert {:error, :playback_pause_failed} = BoundarySpotify.pause_playback(credentials)
     end
 
     test "returns error when credentials have no access_token" do
@@ -106,7 +106,7 @@ defmodule Songy.Boundary.SpotifyTest do
         {:error, :invalid_request}
       end)
 
-      assert {:error, :invalid_credentials} = Boundary.Spotify.pause_playback(credentials)
+      assert {:error, :invalid_credentials} = BoundarySpotify.pause_playback(credentials)
     end
 
     test "returns error when credentials are empty" do
@@ -116,7 +116,7 @@ defmodule Songy.Boundary.SpotifyTest do
         {:error, :invalid_request}
       end)
 
-      assert {:error, :invalid_credentials} = Boundary.Spotify.pause_playback(credentials)
+      assert {:error, :invalid_credentials} = BoundarySpotify.pause_playback(credentials)
     end
   end
 
@@ -130,7 +130,7 @@ defmodule Songy.Boundary.SpotifyTest do
         {:ok, %{items: []}}
       end)
 
-      Boundary.Spotify.search(credentials, params)
+      BoundarySpotify.search(credentials, params)
     end
 
     test "returns error when credentials have no access_token" do
@@ -141,7 +141,7 @@ defmodule Songy.Boundary.SpotifyTest do
       end)
 
       params = [q: "test query", type: "track"]
-      assert {:error, :invalid_credentials} = Boundary.Spotify.search(credentials, params)
+      assert {:error, :invalid_credentials} = BoundarySpotify.search(credentials, params)
     end
 
     test "returns error when credentials are empty" do
@@ -152,7 +152,7 @@ defmodule Songy.Boundary.SpotifyTest do
       end)
 
       params = [q: "test query", type: "track"]
-      assert {:error, :invalid_credentials} = Boundary.Spotify.search(credentials, params)
+      assert {:error, :invalid_credentials} = BoundarySpotify.search(credentials, params)
     end
 
     test "calls Spotify.Search.query with empty params by default" do
@@ -163,7 +163,7 @@ defmodule Songy.Boundary.SpotifyTest do
         {:ok, %{items: []}}
       end)
 
-      Boundary.Spotify.search(credentials)
+      BoundarySpotify.search(credentials)
     end
   end
 
@@ -182,7 +182,7 @@ defmodule Songy.Boundary.SpotifyTest do
         {:ok, %{items: [%{id: "test"}]}}
       end)
 
-      Boundary.Spotify.search_random_track(credentials)
+      BoundarySpotify.search_random_track(credentials)
     end
 
     test "returns error when credentials have no access_token" do
@@ -192,7 +192,7 @@ defmodule Songy.Boundary.SpotifyTest do
         {:error, :invalid_request}
       end)
 
-      assert {:error, :invalid_credentials} = Boundary.Spotify.search_random_track(credentials)
+      assert {:error, :invalid_credentials} = BoundarySpotify.search_random_track(credentials)
     end
 
     test "returns error when credentials are empty" do
@@ -202,7 +202,7 @@ defmodule Songy.Boundary.SpotifyTest do
         {:error, :invalid_request}
       end)
 
-      assert {:error, :invalid_credentials} = Boundary.Spotify.search_random_track(credentials)
+      assert {:error, :invalid_credentials} = BoundarySpotify.search_random_track(credentials)
     end
 
     test "works with Spotify.Credentials struct" do
@@ -212,7 +212,7 @@ defmodule Songy.Boundary.SpotifyTest do
         {:ok, %{items: [%{id: "test"}]}}
       end)
 
-      assert {:ok, %{id: "test"}} = Boundary.Spotify.search_random_track(credentials)
+      assert {:ok, %{id: "test"}} = BoundarySpotify.search_random_track(credentials)
     end
   end
 
@@ -236,7 +236,7 @@ defmodule Songy.Boundary.SpotifyTest do
         {:ok, new_credentials}
       end)
 
-      assert {:ok, result} = Boundary.Spotify.ensure_provider_data(credentials)
+      assert {:ok, result} = BoundarySpotify.ensure_provider_data(credentials)
       assert result.access_token == "new_access_token"
       assert result.refresh_token == "valid_refresh_token"
       assert result.expires_at == expected_expires_at
@@ -254,7 +254,7 @@ defmodule Songy.Boundary.SpotifyTest do
 
       Repatch.patch(DateTime, :utc_now, fn -> fixed_time end)
 
-      assert {:ok, ^credentials} = Boundary.Spotify.ensure_provider_data(credentials)
+      assert {:ok, ^credentials} = BoundarySpotify.ensure_provider_data(credentials)
     end
 
     test "preserves token when access_token valid and not expired" do
@@ -266,7 +266,7 @@ defmodule Songy.Boundary.SpotifyTest do
         expires_at: expires_at
       }
 
-      assert {:ok, ^credentials} = Boundary.Spotify.ensure_provider_data(credentials)
+      assert {:ok, ^credentials} = BoundarySpotify.ensure_provider_data(credentials)
     end
 
     test "returns error when refresh_token present but Spotify API fails" do
@@ -276,7 +276,7 @@ defmodule Songy.Boundary.SpotifyTest do
         {:error, :invalid_grant}
       end)
 
-      assert {:error, :invalid_grant} = Boundary.Spotify.ensure_provider_data(credentials)
+      assert {:error, :invalid_grant} = BoundarySpotify.ensure_provider_data(credentials)
     end
 
     test "preserves token when still valid" do
@@ -291,7 +291,7 @@ defmodule Songy.Boundary.SpotifyTest do
 
       Repatch.patch(DateTime, :utc_now, fn -> current_time end)
 
-      assert {:ok, ^credentials} = Boundary.Spotify.ensure_provider_data(credentials)
+      assert {:ok, ^credentials} = BoundarySpotify.ensure_provider_data(credentials)
     end
 
     test "refreshes token when expired" do
@@ -315,7 +315,7 @@ defmodule Songy.Boundary.SpotifyTest do
         {:ok, new_credentials}
       end)
 
-      assert {:ok, result} = Boundary.Spotify.ensure_provider_data(credentials)
+      assert {:ok, result} = BoundarySpotify.ensure_provider_data(credentials)
       assert result.access_token == "new_access_token"
       assert result.expires_at == DateTime.add(current_time, 3600, :second)
     end

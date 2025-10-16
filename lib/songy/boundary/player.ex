@@ -28,7 +28,7 @@ defimpl Songy.Boundary.Player, for: Any do
 end
 
 defimpl Songy.Boundary.Player, for: Songy.Core.Provider.Spotify do
-  alias Songy.Boundary.Spotify
+  alias Songy.Boundary.Provider.Spotify
   alias Songy.Core.Track
   alias Songy.Core.Trackable
 
