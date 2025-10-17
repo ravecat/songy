@@ -68,6 +68,7 @@ defimpl Songy.Boundary.Provider, for: Songy.Core.Provider.Spotify do
 end
 
 defimpl Songy.Boundary.Provider, for: Songy.Core.Provider.Apple do
+  alias Songy.Boundary.Provider.Apple
   alias Songy.Core.Provider
 
   @doc """
@@ -77,7 +78,7 @@ defimpl Songy.Boundary.Provider, for: Songy.Core.Provider.Apple do
   so we only verify that the token is present in config.
   """
   def ensure(_provider) do
-    case Provider.Apple.access_token() do
+    case Apple.access_token() do
       token when is_binary(token) ->
         {:ok, Provider.Apple.new()}
 

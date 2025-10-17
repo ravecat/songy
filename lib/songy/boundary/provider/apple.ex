@@ -13,6 +13,17 @@ defmodule Songy.Boundary.Provider.Apple do
   @base_url "https://api.music.apple.com/v1"
 
   @doc """
+  Returns Developer Token from application config.
+
+  Token is valid for up to 6 months and manually updated via environment variable.
+  Configured via APPLE_MUSIC_ACCESS_TOKEN in runtime.exs.
+  """
+  @spec access_token() :: String.t()
+  def access_token do
+    Application.fetch_env!(:songy, :apple)[:access_token]
+  end
+
+  @doc """
   Performs a general search on Apple Music catalog.
 
   This function searches for tracks, albums, artists, playlists, and other content types

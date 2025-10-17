@@ -66,3 +66,43 @@ defimpl Songy.Boundary.Player, for: Songy.Core.Provider.Spotify do
     end
   end
 end
+
+defimpl Songy.Boundary.Player, for: Songy.Core.Provider.Apple do
+  alias Songy.Boundary.Provider.Apple
+  alias Songy.Core.Trackable
+
+  @doc """
+  Starts Apple Music playback.
+
+  Accepts track parameter to match protocol signature.
+  """
+  def start_playback(_provider, _track) do
+    {:ok, :playback_started}
+  end
+
+  @doc """
+  Pauses Apple Music playback.
+
+  Accepts provider parameter to match protocol signature.
+  """
+  def pause_playback(_provider) do
+    {:ok, :playback_paused}
+  end
+
+  @doc """
+  Searches for a random track using Apple Music API.
+
+  Converts Apple Music track format to standardized Track struct.
+  """
+  def search_random_track(_provider) do
+    token = Apple.access_token()
+
+    case Apple.search_random_track(token) do
+      {:ok, track} ->
+        {:ok, Trackable.to_track(track)}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+end

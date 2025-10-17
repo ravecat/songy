@@ -116,6 +116,83 @@ defmodule Songy.Boundary.PlayerTest do
     end
   end
 
+  describe "Apple Music provider implementation" do
+    setup do
+      provider = %Songy.Core.Provider.Apple{}
+
+      track = %Track{
+        id: "1440783454",
+        title: "Firestarter",
+        artist: "The Prodigy",
+        year: 1996,
+        meta: %{}
+      }
+
+      %{provider: provider, track: track}
+    end
+
+    test "start_playback/2 returns immediate success", %{provider: provider, track: track} do
+      assert {:ok, :playback_started} = Player.start_playback(provider, track)
+    end
+
+    test "pause_playback/1 returns immediate success", %{provider: provider} do
+      assert {:ok, :playback_paused} = Player.pause_playback(provider)
+    end
+
+    test "search_random_track/1 delegates to Apple.search_random_track/1", %{provider: provider} do
+      apple_track = %Songy.Core.Track.Apple{
+        id: "1440783454",
+        type: "songs",
+        href: "/v1/catalog/us/songs/1440783454",
+        attributes: %{
+          "name" => "Firestarter",
+          "artistName" => "The Prodigy",
+          "albumName" => "The Fat of the Land",
+          "releaseDate" => "1996-06-30"
+        }
+      }
+
+      expected_track = %Track{
+        id: "generated_id",
+        title: "Firestarter",
+        artist: "The Prodigy",
+        year: 1996,
+        meta: %{}
+      }
+
+      Repatch.patch(Boundary.Provider.Apple, :access_token, fn ->
+        "test_developer_token"
+      end)
+
+      Repatch.patch(Boundary.Provider.Apple, :search_random_track, fn _token ->
+        {:ok, apple_track}
+      end)
+
+      Repatch.patch(Songy.Core.Trackable, :to_track, fn _apple_track ->
+        expected_track
+      end)
+
+      assert {:ok, ^expected_track} = Player.search_random_track(provider)
+      assert Repatch.called?(Boundary.Provider.Apple, :access_token, 0)
+      assert Repatch.called?(Boundary.Provider.Apple, :search_random_track, 1)
+      assert Repatch.called?(Songy.Core.Trackable, :to_track, 1)
+    end
+
+    test "search_random_track/1 handles errors from Apple.search_random_track/1", %{provider: provider} do
+      Repatch.patch(Boundary.Provider.Apple, :access_token, fn ->
+        "test_developer_token"
+      end)
+
+      Repatch.patch(Boundary.Provider.Apple, :search_random_track, fn _token ->
+        {:error, :no_tracks_found}
+      end)
+
+      assert {:error, :no_tracks_found} = Player.search_random_track(provider)
+      assert Repatch.called?(Boundary.Provider.Apple, :search_random_track, 1)
+      refute Repatch.called?(Songy.Core.Trackable, :to_track, 1)
+    end
+  end
+
   describe "unsupported provider implementation" do
     setup do
       unsupported_provider = %{type: :unsupported, name: "Unknown Provider"}
