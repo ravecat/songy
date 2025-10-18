@@ -1,5 +1,33 @@
 /// <reference types="@types/spotify-web-playback-sdk" />
 
+/**
+ * Spotify Web Playback SDK events
+ */
+export enum SPOTIFY_EVENT {
+  READY = "ready",
+  NOT_READY = "not_ready",
+  PLAYER_STATE_CHANGED = "player_state_changed",
+  AUTOPLAY_FAILED = "autoplay_failed",
+  INITIALIZATION_ERROR = "initialization_error",
+  AUTHENTICATION_ERROR = "authentication_error",
+  ACCOUNT_ERROR = "account_error",
+  PLAYBACK_ERROR = "playback_error",
+}
+
+/**
+ * Spotify event payloads mapping
+ */
+export interface SpotifyEventPayloads {
+  [SPOTIFY_EVENT.READY]: Spotify.WebPlaybackInstance;
+  [SPOTIFY_EVENT.NOT_READY]: Spotify.WebPlaybackInstance;
+  [SPOTIFY_EVENT.PLAYER_STATE_CHANGED]: Spotify.PlaybackState | null;
+  [SPOTIFY_EVENT.AUTOPLAY_FAILED]: void;
+  [SPOTIFY_EVENT.INITIALIZATION_ERROR]: Spotify.Error;
+  [SPOTIFY_EVENT.AUTHENTICATION_ERROR]: Spotify.Error;
+  [SPOTIFY_EVENT.ACCOUNT_ERROR]: Spotify.Error;
+  [SPOTIFY_EVENT.PLAYBACK_ERROR]: Spotify.Error;
+}
+
 export interface UseSpotifyPlayerOptions {
   /** Device name (default: 'Web Playback SDK Player') */
   name?: string;
@@ -9,14 +37,14 @@ export interface UseSpotifyPlayerOptions {
   volume?: number;
   /** Event handlers object for player events */
   on?: Partial<{
-    ready: (data: Spotify.WebPlaybackInstance) => void;
-    not_ready: (data: Spotify.WebPlaybackInstance) => void;
-    player_state_changed: (state: Spotify.PlaybackState | null) => void;
-    autoplay_failed: () => void;
-    initialization_error: (error: Spotify.Error) => void;
-    authentication_error: (error: Spotify.Error) => void;
-    account_error: (error: Spotify.Error) => void;
-    playback_error: (error: Spotify.Error) => void;
+    [SPOTIFY_EVENT.READY]: (data: SpotifyEventPayloads[typeof SPOTIFY_EVENT.READY]) => void;
+    [SPOTIFY_EVENT.NOT_READY]: (data: SpotifyEventPayloads[typeof SPOTIFY_EVENT.NOT_READY]) => void;
+    [SPOTIFY_EVENT.PLAYER_STATE_CHANGED]: (state: SpotifyEventPayloads[typeof SPOTIFY_EVENT.PLAYER_STATE_CHANGED]) => void;
+    [SPOTIFY_EVENT.AUTOPLAY_FAILED]: () => void;
+    [SPOTIFY_EVENT.INITIALIZATION_ERROR]: (error: SpotifyEventPayloads[typeof SPOTIFY_EVENT.INITIALIZATION_ERROR]) => void;
+    [SPOTIFY_EVENT.AUTHENTICATION_ERROR]: (error: SpotifyEventPayloads[typeof SPOTIFY_EVENT.AUTHENTICATION_ERROR]) => void;
+    [SPOTIFY_EVENT.ACCOUNT_ERROR]: (error: SpotifyEventPayloads[typeof SPOTIFY_EVENT.ACCOUNT_ERROR]) => void;
+    [SPOTIFY_EVENT.PLAYBACK_ERROR]: (error: SpotifyEventPayloads[typeof SPOTIFY_EVENT.PLAYBACK_ERROR]) => void;
   }>;
 }
 
@@ -55,19 +83,19 @@ export function useSpotifyPlayer(options: UseSpotifyPlayerOptions = {}): UseSpot
   } = options;
 
   const eventCallbacks: Required<UseSpotifyPlayerOptions['on']> = {
-    ready: (data: Spotify.WebPlaybackInstance) => console.log("Ready with Device ID", data.device_id),
-    not_ready: (data: Spotify.WebPlaybackInstance) =>
+    [SPOTIFY_EVENT.READY]: (data: Spotify.WebPlaybackInstance) => console.log("Ready with Device ID", data.device_id),
+    [SPOTIFY_EVENT.NOT_READY]: (data: Spotify.WebPlaybackInstance) =>
       console.log("Device ID has gone offline", data.device_id),
-    player_state_changed: () => { },
-    autoplay_failed: () =>
+    [SPOTIFY_EVENT.PLAYER_STATE_CHANGED]: () => { },
+    [SPOTIFY_EVENT.AUTOPLAY_FAILED]: () =>
       console.log("Autoplay is not allowed by the browser autoplay rules"),
-    initialization_error: (error: Spotify.Error) =>
+    [SPOTIFY_EVENT.INITIALIZATION_ERROR]: (error: Spotify.Error) =>
       console.error("Failed to initialize:", error.message),
-    authentication_error: (error: Spotify.Error) =>
+    [SPOTIFY_EVENT.AUTHENTICATION_ERROR]: (error: Spotify.Error) =>
       console.error("Failed to authenticate:", error.message),
-    account_error: (error: Spotify.Error) =>
+    [SPOTIFY_EVENT.ACCOUNT_ERROR]: (error: Spotify.Error) =>
       console.error("Failed to validate Spotify account:", error.message),
-    playback_error: (error: Spotify.Error) =>
+    [SPOTIFY_EVENT.PLAYBACK_ERROR]: (error: Spotify.Error) =>
       console.error("Failed to perform playback:", error.message),
     ...on,
   };
@@ -95,28 +123,28 @@ export function useSpotifyPlayer(options: UseSpotifyPlayerOptions = {}): UseSpot
 
       player = instancePlayer;
 
-      instancePlayer.addListener("ready", eventCallbacks.ready);
-      instancePlayer.addListener("not_ready", eventCallbacks.not_ready);
+      instancePlayer.addListener(SPOTIFY_EVENT.READY, eventCallbacks[SPOTIFY_EVENT.READY]);
+      instancePlayer.addListener(SPOTIFY_EVENT.NOT_READY, eventCallbacks[SPOTIFY_EVENT.NOT_READY]);
       instancePlayer.addListener(
-        "player_state_changed",
-        eventCallbacks.player_state_changed
+        SPOTIFY_EVENT.PLAYER_STATE_CHANGED,
+        eventCallbacks[SPOTIFY_EVENT.PLAYER_STATE_CHANGED]
       );
       instancePlayer.addListener(
-        "autoplay_failed",
-        eventCallbacks.autoplay_failed
+        SPOTIFY_EVENT.AUTOPLAY_FAILED,
+        eventCallbacks[SPOTIFY_EVENT.AUTOPLAY_FAILED]
       );
       instancePlayer.addListener(
-        "initialization_error",
-        eventCallbacks.initialization_error
+        SPOTIFY_EVENT.INITIALIZATION_ERROR,
+        eventCallbacks[SPOTIFY_EVENT.INITIALIZATION_ERROR]
       );
       instancePlayer.addListener(
-        "authentication_error",
-        eventCallbacks.authentication_error
+        SPOTIFY_EVENT.AUTHENTICATION_ERROR,
+        eventCallbacks[SPOTIFY_EVENT.AUTHENTICATION_ERROR]
       );
-      instancePlayer.addListener("account_error", eventCallbacks.account_error);
+      instancePlayer.addListener(SPOTIFY_EVENT.ACCOUNT_ERROR, eventCallbacks[SPOTIFY_EVENT.ACCOUNT_ERROR]);
       instancePlayer.addListener(
-        "playback_error",
-        eventCallbacks.playback_error
+        SPOTIFY_EVENT.PLAYBACK_ERROR,
+        eventCallbacks[SPOTIFY_EVENT.PLAYBACK_ERROR]
       );
 
       instancePlayer.connect();

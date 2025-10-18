@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import { getGameContext } from "~components/GameContext.svelte";
-  import { useSpotifyPlayer } from "~hooks/useSpotifyPlayer.svelte";
+  import { useSpotifyPlayer, SPOTIFY_EVENT } from "~hooks/useSpotifyPlayer.svelte";
   import { PUSH_EVENT } from "~shared/types/channel";
 
   interface Props {
@@ -22,7 +22,7 @@
         });
     },
     on: {
-      ready: ({ device_id }: { device_id: string }) => {
+      [SPOTIFY_EVENT.READY]: ({ device_id }: { device_id: string }) => {
         channel.push(PUSH_EVENT.UPDATE_PROVIDER, { device_id });
       },
     },
