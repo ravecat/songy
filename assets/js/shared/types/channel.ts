@@ -1,3 +1,8 @@
+import type { Game } from "./game";
+
+/**
+ * Client-to-server push events
+ */
 export enum PUSH_EVENT {
   START_GAME = "start_game",
   NEXT_PHASE = "next_phase",
@@ -10,7 +15,14 @@ export enum PUSH_EVENT {
   GET_CURRENT_USER = "get_current_user",
 }
 
-interface EventPayloads {
+/**
+ * Server-to-client broadcast events
+ */
+export enum BROADCAST_EVENT {
+  STATE_UPDATED = "state_updated",
+}
+
+interface PushEventPayloads {
   [PUSH_EVENT.START_GAME]: Record<string, never>;
   [PUSH_EVENT.NEXT_PHASE]: Record<string, never>;
   [PUSH_EVENT.MAKE_ASSUMPTION]: { position: number };
@@ -22,8 +34,12 @@ interface EventPayloads {
   [PUSH_EVENT.GET_CURRENT_USER]: Record<string, never>;
 }
 
+interface BroadcastEventPayloads {
+  [BROADCAST_EVENT.STATE_UPDATED]: Game;
+}
+
 declare module "phoenix" {
   interface Channel {
-    push<T extends PUSH_EVENT>(event: T, payload: EventPayloads[T], timeout?: number): Push;
+    push<T extends PUSH_EVENT>(event: T, payload: PushEventPayloads[T], timeout?: number): Push;
   }
 }

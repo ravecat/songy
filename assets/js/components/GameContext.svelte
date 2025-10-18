@@ -20,6 +20,7 @@
   import { useChannel } from "~hooks/useChannel.svelte";
   import socket from "~/socket";
   import type { Snippet } from "svelte";
+  import { BROADCAST_EVENT } from "~shared/types/channel";
 
   interface Props {
     topic: string;
@@ -32,7 +33,7 @@
     socket,
     topic,
     on: {
-      state_updated: (newState: Game) => {
+      [BROADCAST_EVENT.STATE_UPDATED]: (newState: Game) => {
         context.state = newState;
       },
     },
