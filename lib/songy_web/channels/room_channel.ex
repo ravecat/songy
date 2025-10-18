@@ -104,7 +104,7 @@ defmodule SongyWeb.RoomChannel do
   end
 
   @impl true
-  def handle_in("get_spotify_token", _payload, socket) do
+  def handle_in("get_provider", _payload, socket) do
     user_uuid = socket.assigns.current_user_uuid
 
     case Songy.Providers.lookup(:providers, user_uuid) do

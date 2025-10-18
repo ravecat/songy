@@ -48,7 +48,7 @@ describe("Room", () => {
     });
   });
 
-  test("should call channel.push('get_spotify_token') when getOAuthToken is invoked", () => {
+  test("should call channel.push('get_provider') when getOAuthToken is invoked", () => {
     render(Room, { roomId: "test-room" });
 
     const channel = socket.channel.mock.results[0].value;
@@ -61,7 +61,7 @@ describe("Room", () => {
 
     getOAuthTokenCallback(tokenCallback);
 
-    expect(channel.push).toHaveBeenCalledWith("get_spotify_token", {});
+    expect(channel.push).toHaveBeenCalledWith("get_provider", {});
   });
 
   test("should call channel.push('update_provider') when player ready event is fired", () => {

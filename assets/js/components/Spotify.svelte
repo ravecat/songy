@@ -16,7 +16,7 @@
     name: "Songy room",
     getOAuthToken: (cb) => {
       channel
-        ?.push(PUSH_EVENT.GET_SPOTIFY_TOKEN, {})
+        ?.push(PUSH_EVENT.GET_PROVIDER, {})
         .receive("ok", ({ token }: { token: string }) => {
           cb(token);
         });

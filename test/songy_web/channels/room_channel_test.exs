@@ -79,7 +79,7 @@ defmodule SongyWeb.RoomChannelTest do
     end
   end
 
-  describe "get_spotify_token event" do
+  describe "get_provider event" do
     test "returns access token when provider is available", %{
       current_user: current_user,
       game: game
@@ -94,7 +94,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game.id)
 
-      ref = push(socket, "get_spotify_token", %{})
+      ref = push(socket, "get_provider", %{})
 
       assert_reply(ref, :ok, %{token: "spotify_access_token_123"})
     end
@@ -109,7 +109,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game.id)
 
-      ref = push(socket, "get_spotify_token", %{})
+      ref = push(socket, "get_provider", %{})
 
       assert_reply(ref, :error, %{reason: "invalid_credentials"})
     end
@@ -121,7 +121,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game.id)
 
-      ref = push(socket, "get_spotify_token", %{})
+      ref = push(socket, "get_provider", %{})
 
       assert_reply(ref, :error, %{reason: "invalid_credentials"})
     end

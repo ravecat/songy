@@ -11,7 +11,7 @@ export enum PUSH_EVENT {
   START_PLAYBACK = "start_playback",
   PAUSE_PLAYBACK = "pause_playback",
   UPDATE_PROVIDER = "update_provider",
-  GET_SPOTIFY_TOKEN = "get_spotify_token",
+  GET_PROVIDER = "get_provider",
   GET_CURRENT_USER = "get_current_user",
 }
 
@@ -30,7 +30,7 @@ interface PushEventPayloads {
   [PUSH_EVENT.START_PLAYBACK]: Record<string, never>;
   [PUSH_EVENT.PAUSE_PLAYBACK]: Record<string, never>;
   [PUSH_EVENT.UPDATE_PROVIDER]: { device_id: string };
-  [PUSH_EVENT.GET_SPOTIFY_TOKEN]: Record<string, never>;
+  [PUSH_EVENT.GET_PROVIDER]: Record<string, never>;
   [PUSH_EVENT.GET_CURRENT_USER]: Record<string, never>;
 }
 
