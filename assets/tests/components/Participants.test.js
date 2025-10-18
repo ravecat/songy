@@ -1,10 +1,12 @@
 import { render, screen } from "@testing-library/svelte";
-import { expect, test, describe } from "vitest";
+import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
 import { GAME_CONTEXT_KEY } from "~components/GameContext.svelte";
-import { SCOPE_CONTEXT_KEY } from "~components/Scope.svelte";
+import * as Scope from "~components/Scope.svelte";
 import Participants from "~components/Participants.svelte";
 
 describe("Participants component", () => {
+  let getScopeContextSpy;
+  
   const mockParticipants = [
     {
       uuid: "user-1",
@@ -34,18 +36,27 @@ describe("Participants component", () => {
     },
   };
 
-  const mockScopeContext = {
-    user: {
-      uuid: "user-2",
-      name: "Bob",
-    },
-  };
+  beforeEach(() => {
+    getScopeContextSpy = vi.spyOn(Scope, 'getScopeContext');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   test("renders participants when participants list is not empty", () => {
+    const mockScopeContext = {
+      user: {
+        uuid: "user-2",
+        name: "Bob",
+      },
+    };
+    
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
+    
     render(Participants, {
       context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext],
-        [SCOPE_CONTEXT_KEY, mockScopeContext],
+        [GAME_CONTEXT_KEY, mockChannelContext]
       ]),
     });
 
@@ -55,10 +66,18 @@ describe("Participants component", () => {
   });
 
   test("shows star indicator for current user's avatar", () => {
+    const mockScopeContext = {
+      user: {
+        uuid: "user-2",
+        name: "Bob",
+      },
+    };
+    
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
+    
     render(Participants, {
       context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext],
-        [SCOPE_CONTEXT_KEY, mockScopeContext],
+        [GAME_CONTEXT_KEY, mockChannelContext]
       ]),
     });
 
@@ -69,11 +88,12 @@ describe("Participants component", () => {
     const noUserScopeContext = {
       user: null,
     };
+    
+    getScopeContextSpy.mockReturnValue(noUserScopeContext);
 
     render(Participants, {
       context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext],
-        [SCOPE_CONTEXT_KEY, noUserScopeContext],
+        [GAME_CONTEXT_KEY, mockChannelContext]
       ]),
     });
 
@@ -87,11 +107,12 @@ describe("Participants component", () => {
         name: "Different User",
       },
     };
+    
+    getScopeContextSpy.mockReturnValue(differentUserContext);
 
     render(Participants, {
       context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext],
-        [SCOPE_CONTEXT_KEY, differentUserContext],
+        [GAME_CONTEXT_KEY, mockChannelContext]
       ]),
     });
 
@@ -99,17 +120,25 @@ describe("Participants component", () => {
   });
 
   test("renders nothing when participants list is empty", () => {
+    const mockScopeContext = {
+      user: {
+        uuid: "user-2",
+        name: "Bob",
+      },
+    };
+    
     const emptyChannelContext = {
       state: {
         participants: [],
         scores: {},
       },
     };
+    
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
 
     render(Participants, {
       context: new Map([
         [GAME_CONTEXT_KEY, emptyChannelContext],
-        [SCOPE_CONTEXT_KEY, mockScopeContext],
       ]),
     });
 
@@ -119,10 +148,18 @@ describe("Participants component", () => {
   });
 
   test("renders avatar images with correct alt text", () => {
+    const mockScopeContext = {
+      user: {
+        uuid: "user-2",
+        name: "Bob",
+      },
+    };
+    
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
+    
     render(Participants, {
       context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext],
-        [SCOPE_CONTEXT_KEY, mockScopeContext],
+        [GAME_CONTEXT_KEY, mockChannelContext]
       ]),
     });
 
@@ -143,10 +180,18 @@ describe("Participants component", () => {
   });
 
   test("displays user scores in score indicators", () => {
+    const mockScopeContext = {
+      user: {
+        uuid: "user-2",
+        name: "Bob",
+      },
+    };
+    
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
+    
     render(Participants, {
       context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext],
-        [SCOPE_CONTEXT_KEY, mockScopeContext],
+        [GAME_CONTEXT_KEY, mockChannelContext]
       ]),
     });
 
@@ -156,17 +201,25 @@ describe("Participants component", () => {
   });
 
   test("does not display score indicator when user has no score data", () => {
+    const mockScopeContext = {
+      user: {
+        uuid: "user-2",
+        name: "Bob",
+      },
+    };
+    
     const contextWithoutScores = {
       state: {
         participants: mockParticipants,
         scores: {},
       },
     };
+    
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
 
     render(Participants, {
       context: new Map([
-        [GAME_CONTEXT_KEY, contextWithoutScores],
-        [SCOPE_CONTEXT_KEY, mockScopeContext],
+        [GAME_CONTEXT_KEY, contextWithoutScores]
       ]),
     });
 
@@ -174,16 +227,24 @@ describe("Participants component", () => {
   });
 
   test("does not display score indicator when scores field is missing", () => {
+    const mockScopeContext = {
+      user: {
+        uuid: "user-2",
+        name: "Bob",
+      },
+    };
+    
     const contextWithoutScoresField = {
       state: {
         participants: mockParticipants,
       },
     };
+    
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
 
     render(Participants, {
       context: new Map([
-        [GAME_CONTEXT_KEY, contextWithoutScoresField],
-        [SCOPE_CONTEXT_KEY, mockScopeContext],
+        [GAME_CONTEXT_KEY, contextWithoutScoresField]
       ]),
     });
 
@@ -191,6 +252,13 @@ describe("Participants component", () => {
   });
 
   test("displays score indicator only for users who have score entries", () => {
+    const mockScopeContext = {
+      user: {
+        uuid: "user-2",
+        name: "Bob",
+      },
+    };
+    
     const contextWithPartialScores = {
       state: {
         participants: mockParticipants,
@@ -201,11 +269,12 @@ describe("Participants component", () => {
         },
       },
     };
+    
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
 
     render(Participants, {
       context: new Map([
-        [GAME_CONTEXT_KEY, contextWithPartialScores],
-        [SCOPE_CONTEXT_KEY, mockScopeContext],
+        [GAME_CONTEXT_KEY, contextWithPartialScores]
       ]),
     });
 

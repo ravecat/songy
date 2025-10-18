@@ -1,23 +1,16 @@
 import { render, screen } from "@testing-library/svelte";
-import { expect, test, describe, beforeEach } from "vitest";
+import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
 import { TURN_PHASE } from "~shared/types/turn";
 import { GAME_CONTEXT_KEY } from "~components/GameContext.svelte";
-import { SCOPE_CONTEXT_KEY } from "~components/Scope.svelte";
+import * as Scope from "~components/Scope.svelte";
 
 import Game from "~components/Game.svelte";
 
 describe("Game", () => {
   let mockChannelContext;
-  let mockScopeContext;
+  let getScopeContextSpy;
 
   beforeEach(() => {
-    mockScopeContext = {
-      user: {
-        uuid: "test-user-uuid",
-        name: "Test User",
-      },
-    };
-
     mockChannelContext = {
       state: {
         participants: [
@@ -34,15 +27,29 @@ describe("Game", () => {
         },
       },
     };
+
+    getScopeContextSpy = vi.spyOn(Scope, 'getScopeContext');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   test("displays game interface on ready phase", () => {
+    const mockScopeContext = {
+      user: {
+        uuid: "test-user-uuid",
+        name: "Test User",
+      },
+    };
+    
     mockChannelContext.state.turn.phase = TURN_PHASE.STEADY;
+    
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
 
     render(Game, {
       context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext],
-        [SCOPE_CONTEXT_KEY, mockScopeContext],
+        [GAME_CONTEXT_KEY, mockChannelContext]
       ]),
     });
 
@@ -50,16 +57,20 @@ describe("Game", () => {
   });
 
   test("displays waiting view on waiting phase", () => {
-    mockChannelContext.state.turn.phase = TURN_PHASE.WAITING;
-    mockScopeContext.user = {
-      uuid: "user-1",
-      name: "Alice",
+    const mockScopeContext = {
+      user: {
+        uuid: "user-1",
+        name: "Alice",
+      },
     };
+    
+    mockChannelContext.state.turn.phase = TURN_PHASE.WAITING;
+    
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
 
     render(Game, {
       context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext],
-        [SCOPE_CONTEXT_KEY, mockScopeContext],
+        [GAME_CONTEXT_KEY, mockChannelContext]
       ]),
     });
 
@@ -68,12 +79,20 @@ describe("Game", () => {
   });
 
   test("displays results view on results phase", () => {
+    const mockScopeContext = {
+      user: {
+        uuid: "test-user-uuid",
+        name: "Test User",
+      },
+    };
+    
     mockChannelContext.state.turn.phase = TURN_PHASE.RESULTS;
+    
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
 
     render(Game, {
       context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext],
-        [SCOPE_CONTEXT_KEY, mockScopeContext],
+        [GAME_CONTEXT_KEY, mockChannelContext]
       ]),
     });
 
@@ -81,12 +100,20 @@ describe("Game", () => {
   });
 
   test("renders nothing when turn phase is undefined", () => {
+    const mockScopeContext = {
+      user: {
+        uuid: "test-user-uuid",
+        name: "Test User",
+      },
+    };
+    
     mockChannelContext.state.turn = undefined;
+    
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
 
     render(Game, {
       context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext],
-        [SCOPE_CONTEXT_KEY, mockScopeContext],
+        [GAME_CONTEXT_KEY, mockChannelContext]
       ]),
     });
 
@@ -95,16 +122,24 @@ describe("Game", () => {
   });
 
   test("renders nothing when state is undefined", () => {
+    const mockScopeContext = {
+      user: {
+        uuid: "test-user-uuid",
+        name: "Test User",
+      },
+    };
+    
     // Empty state that still has structure for components
     mockChannelContext.state = {
       participants: [],
       turn: undefined,
     };
+    
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
 
     render(Game, {
       context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext],
-        [SCOPE_CONTEXT_KEY, mockScopeContext],
+        [GAME_CONTEXT_KEY, mockChannelContext]
       ]),
     });
 
@@ -114,12 +149,20 @@ describe("Game", () => {
   });
 
   test("renders nothing when turn phase is null", () => {
+    const mockScopeContext = {
+      user: {
+        uuid: "test-user-uuid",
+        name: "Test User",
+      },
+    };
+    
     mockChannelContext.state.turn.phase = null;
+    
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
 
     render(Game, {
       context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext],
-        [SCOPE_CONTEXT_KEY, mockScopeContext],
+        [GAME_CONTEXT_KEY, mockChannelContext]
       ]),
     });
 
@@ -138,12 +181,20 @@ describe("Game", () => {
   test.each(["turn_countdown", "", "unknown_phase", 123, {}, []])(
     "renders nothing for invalid phase: %s",
     (phase) => {
+      const mockScopeContext = {
+        user: {
+          uuid: "test-user-uuid",
+          name: "Test User",
+        },
+      };
+      
       mockChannelContext.state.turn.phase = phase;
+      
+      getScopeContextSpy.mockReturnValue(mockScopeContext);
 
       render(Game, {
         context: new Map([
-          [GAME_CONTEXT_KEY, mockChannelContext],
-          [SCOPE_CONTEXT_KEY, mockScopeContext],
+          [GAME_CONTEXT_KEY, mockChannelContext]
         ]),
       });
 

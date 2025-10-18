@@ -1,15 +1,15 @@
 import { render, screen } from "@testing-library/svelte";
-import { expect, test, describe, beforeEach } from "vitest";
+import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
 import { TURN_PHASE } from "~shared/types/turn";
 import { GAME_CONTEXT_KEY } from "~components/GameContext.svelte";
-import { SCOPE_CONTEXT_KEY } from "~components/Scope.svelte";
+import * as Scope from "~components/Scope.svelte";
 
 import TurnChallenging from "~components/TurnChallenging.svelte";
 
 describe("TurnChallenging", () => {
   let mockChannelContext;
-  let mockScopeContext;
   let mockParticipants;
+  let getScopeContextSpy;
 
   beforeEach(() => {
     mockParticipants = [
@@ -41,20 +41,27 @@ describe("TurnChallenging", () => {
       },
     };
 
-    mockScopeContext = {
-      user: {
-        uuid: "user-2", // Bob is current user
-        name: "Bob",
-      },
-    };
+    getScopeContextSpy = vi.spyOn(Scope, 'getScopeContext');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe("when current user is NOT the active player (challenger)", () => {
     test("displays participants and current track components", () => {
+      const mockScopeContext = {
+        user: {
+          uuid: "user-2", // Bob is current user
+          name: "Bob",
+        },
+      };
+      
+      getScopeContextSpy.mockReturnValue(mockScopeContext);
+      
       render(TurnChallenging, {
         context: new Map([
-          [GAME_CONTEXT_KEY, mockChannelContext],
-          [SCOPE_CONTEXT_KEY, mockScopeContext],
+          [GAME_CONTEXT_KEY, mockChannelContext]
         ]),
       });
 
@@ -74,11 +81,12 @@ describe("TurnChallenging", () => {
           name: "Charlie",
         },
       };
+      
+      getScopeContextSpy.mockReturnValue(thirdUserContext);
 
       render(TurnChallenging, {
         context: new Map([
-          [GAME_CONTEXT_KEY, mockChannelContext],
-          [SCOPE_CONTEXT_KEY, thirdUserContext],
+          [GAME_CONTEXT_KEY, mockChannelContext]
         ]),
       });
 
@@ -92,6 +100,13 @@ describe("TurnChallenging", () => {
     });
 
     test("shows participants and timeline when active player changes to different user", () => {
+      const mockScopeContext = {
+        user: {
+          uuid: "user-2", // Bob is still current user
+          name: "Bob",
+        },
+      };
+      
       const differentActivePlayerContext = {
         state: {
           participants: mockParticipants,
@@ -102,11 +117,12 @@ describe("TurnChallenging", () => {
           },
         },
       };
+      
+      getScopeContextSpy.mockReturnValue(mockScopeContext);
 
       render(TurnChallenging, {
         context: new Map([
-          [GAME_CONTEXT_KEY, differentActivePlayerContext],
-          [SCOPE_CONTEXT_KEY, mockScopeContext], // Bob is still current user
+          [GAME_CONTEXT_KEY, differentActivePlayerContext]
         ]),
       });
 
@@ -128,11 +144,12 @@ describe("TurnChallenging", () => {
           name: "Alice",
         },
       };
+      
+      getScopeContextSpy.mockReturnValue(activeUserContext);
 
       render(TurnChallenging, {
         context: new Map([
-          [GAME_CONTEXT_KEY, mockChannelContext],
-          [SCOPE_CONTEXT_KEY, activeUserContext],
+          [GAME_CONTEXT_KEY, mockChannelContext]
         ]),
       });
 
@@ -149,6 +166,13 @@ describe("TurnChallenging", () => {
     });
 
     test("displays participants and player when active player index changes to current user", () => {
+      const mockScopeContext = {
+        user: {
+          uuid: "user-2", // Bob is current user
+          name: "Bob",
+        },
+      };
+      
       // Make Bob the active player
       const bobActiveContext = {
         state: {
@@ -160,11 +184,12 @@ describe("TurnChallenging", () => {
           },
         },
       };
+      
+      getScopeContextSpy.mockReturnValue(mockScopeContext);
 
       render(TurnChallenging, {
         context: new Map([
-          [GAME_CONTEXT_KEY, bobActiveContext],
-          [SCOPE_CONTEXT_KEY, mockScopeContext], // Bob is current user
+          [GAME_CONTEXT_KEY, bobActiveContext]
         ]),
       });
 
@@ -183,6 +208,13 @@ describe("TurnChallenging", () => {
 
   describe("edge cases", () => {
     test("handles missing active player gracefully", () => {
+      const mockScopeContext = {
+        user: {
+          uuid: "user-2",
+          name: "Bob",
+        },
+      };
+      
       const noActivePlayerContext = {
         state: {
           participants: mockParticipants,
@@ -193,19 +225,27 @@ describe("TurnChallenging", () => {
           },
         },
       };
+      
+      getScopeContextSpy.mockReturnValue(mockScopeContext);
 
       // Should not crash when activePlayer is undefined
       expect(() => {
         render(TurnChallenging, {
           context: new Map([
-            [GAME_CONTEXT_KEY, noActivePlayerContext],
-            [SCOPE_CONTEXT_KEY, mockScopeContext],
+            [GAME_CONTEXT_KEY, noActivePlayerContext]
           ]),
         });
       }).not.toThrow();
     });
 
     test("handles empty queue gracefully", () => {
+      const mockScopeContext = {
+        user: {
+          uuid: "user-2",
+          name: "Bob",
+        },
+      };
+      
       const emptyQueueContext = {
         state: {
           participants: mockParticipants,
@@ -216,30 +256,39 @@ describe("TurnChallenging", () => {
           },
         },
       };
+      
+      getScopeContextSpy.mockReturnValue(mockScopeContext);
 
       expect(() => {
         render(TurnChallenging, {
           context: new Map([
-            [GAME_CONTEXT_KEY, emptyQueueContext],
-            [SCOPE_CONTEXT_KEY, mockScopeContext],
+            [GAME_CONTEXT_KEY, emptyQueueContext]
           ]),
         });
       }).not.toThrow();
     });
 
     test("handles missing turn state gracefully", () => {
+      const mockScopeContext = {
+        user: {
+          uuid: "user-2",
+          name: "Bob",
+        },
+      };
+      
       const noTurnContext = {
         state: {
           participants: mockParticipants,
           turn: null,
         },
       };
+      
+      getScopeContextSpy.mockReturnValue(mockScopeContext);
 
       expect(() => {
         render(TurnChallenging, {
           context: new Map([
-            [GAME_CONTEXT_KEY, noTurnContext],
-            [SCOPE_CONTEXT_KEY, mockScopeContext],
+            [GAME_CONTEXT_KEY, noTurnContext]
           ]),
         });
       }).not.toThrow();
@@ -248,27 +297,46 @@ describe("TurnChallenging", () => {
 
   describe("required contexts", () => {
     test("throws error when gameContext is missing", () => {
+      const mockScopeContext = {
+        user: {
+          uuid: "user-2",
+          name: "Bob",
+        },
+      };
+      
+      getScopeContextSpy.mockReturnValue(mockScopeContext);
+      
       expect(() => {
-        render(TurnChallenging, {
-          context: new Map([[SCOPE_CONTEXT_KEY, mockScopeContext]]),
-        });
+        render(TurnChallenging);
       }).toThrow();
     });
 
     test("throws error when scope context is missing", () => {
+      getScopeContextSpy.mockImplementation(() => {
+        throw new Error("missing_context");
+      });
+      
       expect(() => {
         render(TurnChallenging, {
           context: new Map([[GAME_CONTEXT_KEY, mockChannelContext]]),
         });
-      }).toThrow();
+      }).toThrow("missing_context");
     });
 
     test("renders without error when both contexts are provided", () => {
+      const mockScopeContext = {
+        user: {
+          uuid: "user-2",
+          name: "Bob",
+        },
+      };
+      
+      getScopeContextSpy.mockReturnValue(mockScopeContext);
+      
       expect(() => {
         render(TurnChallenging, {
           context: new Map([
-            [GAME_CONTEXT_KEY, mockChannelContext],
-            [SCOPE_CONTEXT_KEY, mockScopeContext],
+            [GAME_CONTEXT_KEY, mockChannelContext]
           ]),
         });
       }).not.toThrow();

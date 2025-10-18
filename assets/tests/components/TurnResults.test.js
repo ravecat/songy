@@ -1,8 +1,8 @@
 import { render, screen, fireEvent } from "@testing-library/svelte";
-import { expect, test, describe, beforeEach, vi } from "vitest";
+import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
 import { Channel } from "phoenix";
 import { GAME_CONTEXT_KEY } from "~components/GameContext.svelte";
-import { SCOPE_CONTEXT_KEY } from "~components/Scope.svelte";
+import * as Scope from "~components/Scope.svelte";
 import { GAME_STATUS } from "~shared/types/game";
 import { PUSH_EVENT } from "~shared/types/channel";
 
@@ -12,16 +12,9 @@ vi.mock("phoenix");
 
 describe("Turn results view", () => {
   let mockChannelContext;
-  let mockScopeContext;
+  let getScopeContextSpy;
 
   beforeEach(() => {
-    mockScopeContext = {
-      user: {
-        uuid: "test-user-uuid",
-        name: "Test User",
-      },
-    };
-
     mockChannelContext = {
       state: {
         participants: [
@@ -45,13 +38,27 @@ describe("Turn results view", () => {
       },
       channel: new Channel("room:123", {}, null),
     };
+
+    getScopeContextSpy = vi.spyOn(Scope, 'getScopeContext');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   test("renders participants", () => {
+    const mockScopeContext = {
+      user: {
+        uuid: "test-user-uuid",
+        name: "Test User",
+      },
+    };
+    
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
+    
     render(TurnResults, {
       context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext],
-        [SCOPE_CONTEXT_KEY, mockScopeContext],
+        [GAME_CONTEXT_KEY, mockChannelContext]
       ]),
     });
 
@@ -60,10 +67,18 @@ describe("Turn results view", () => {
   });
 
   test("renders active timeline", () => {
+    const mockScopeContext = {
+      user: {
+        uuid: "test-user-uuid",
+        name: "Test User",
+      },
+    };
+    
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
+    
     render(TurnResults, {
       context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext],
-        [SCOPE_CONTEXT_KEY, mockScopeContext],
+        [GAME_CONTEXT_KEY, mockChannelContext]
       ]),
     });
 
@@ -76,10 +91,18 @@ describe("Turn results view", () => {
     });
 
     test("displays play again button", () => {
+      const mockScopeContext = {
+        user: {
+          uuid: "test-user-uuid",
+          name: "Test User",
+        },
+      };
+      
+      getScopeContextSpy.mockReturnValue(mockScopeContext);
+      
       render(TurnResults, {
         context: new Map([
-          [GAME_CONTEXT_KEY, mockChannelContext],
-          [SCOPE_CONTEXT_KEY, mockScopeContext],
+          [GAME_CONTEXT_KEY, mockChannelContext]
         ]),
       });
 
@@ -94,10 +117,18 @@ describe("Turn results view", () => {
     });
 
     test("does not display next turn button", () => {
+      const mockScopeContext = {
+        user: {
+          uuid: "test-user-uuid",
+          name: "Test User",
+        },
+      };
+      
+      getScopeContextSpy.mockReturnValue(mockScopeContext);
+      
       render(TurnResults, {
         context: new Map([
-          [GAME_CONTEXT_KEY, mockChannelContext],
-          [SCOPE_CONTEXT_KEY, mockScopeContext],
+          [GAME_CONTEXT_KEY, mockChannelContext]
         ]),
       });
 
@@ -107,10 +138,18 @@ describe("Turn results view", () => {
 
   describe("when game is not finished", () => {
     test("displays next turn button", () => {
+      const mockScopeContext = {
+        user: {
+          uuid: "test-user-uuid",
+          name: "Test User",
+        },
+      };
+      
+      getScopeContextSpy.mockReturnValue(mockScopeContext);
+      
       render(TurnResults, {
         context: new Map([
-          [GAME_CONTEXT_KEY, mockChannelContext],
-          [SCOPE_CONTEXT_KEY, mockScopeContext],
+          [GAME_CONTEXT_KEY, mockChannelContext]
         ]),
       });
 
@@ -121,10 +160,18 @@ describe("Turn results view", () => {
     });
 
     test("does not display play again button", () => {
+      const mockScopeContext = {
+        user: {
+          uuid: "test-user-uuid",
+          name: "Test User",
+        },
+      };
+      
+      getScopeContextSpy.mockReturnValue(mockScopeContext);
+      
       render(TurnResults, {
         context: new Map([
-          [GAME_CONTEXT_KEY, mockChannelContext],
-          [SCOPE_CONTEXT_KEY, mockScopeContext],
+          [GAME_CONTEXT_KEY, mockChannelContext]
         ]),
       });
 
@@ -132,10 +179,18 @@ describe("Turn results view", () => {
     });
 
     test("sends next phase event when next turn button is clicked", async () => {
+      const mockScopeContext = {
+        user: {
+          uuid: "test-user-uuid",
+          name: "Test User",
+        },
+      };
+      
+      getScopeContextSpy.mockReturnValue(mockScopeContext);
+      
       render(TurnResults, {
         context: new Map([
-          [GAME_CONTEXT_KEY, mockChannelContext],
-          [SCOPE_CONTEXT_KEY, mockScopeContext],
+          [GAME_CONTEXT_KEY, mockChannelContext]
         ]),
       });
 

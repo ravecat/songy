@@ -1,14 +1,15 @@
 import { render, screen } from "@testing-library/svelte";
-import { expect, test, describe, beforeEach } from "vitest";
+import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
 import { TURN_PHASE } from "~shared/types/turn";
 import { GAME_CONTEXT_KEY } from "~components/GameContext.svelte";
-import { SCOPE_CONTEXT_KEY } from "~components/Scope.svelte";
+import * as Scope from "~components/Scope.svelte";
 
 import CurrentTrack from "~components/CurrentTrack.svelte";
 
 describe("Current track component", () => {
   let mockTrack;
   let mockParticipants;
+  let getScopeContextSpy;
 
   beforeEach(() => {
     mockTrack = {
@@ -23,11 +24,19 @@ describe("Current track component", () => {
       { uuid: "user-2", name: "Bob" },
       { uuid: "user-3", name: "Charlie" }
     ];
+
+    getScopeContextSpy = vi.spyOn(Scope, 'getScopeContext');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe("in READY phase", () => {
     describe("for active player", () => {
       test("shows current track when player has not made assumption", () => {
+        const user = { uuid: "user-1", name: "Alice" };
+        
         const gameState = {
           turn: {
             phase: TURN_PHASE.READY,
@@ -38,12 +47,12 @@ describe("Current track component", () => {
           },
           participants: mockParticipants
         };
-        const user = { uuid: "user-1", name: "Alice" };
+        
+        getScopeContextSpy.mockReturnValue({ user });
         
         render(CurrentTrack, {
           context: new Map([
-            [GAME_CONTEXT_KEY, { state: gameState }],
-            [SCOPE_CONTEXT_KEY, { user }]
+            [GAME_CONTEXT_KEY, { state: gameState }]
           ])
         });
         
@@ -51,6 +60,8 @@ describe("Current track component", () => {
       });
 
       test("hides current track when player has made assumption", () => {
+        const user = { uuid: "user-1", name: "Alice" };
+        
         const gameState = {
           turn: {
             phase: TURN_PHASE.READY,
@@ -61,12 +72,12 @@ describe("Current track component", () => {
           },
           participants: mockParticipants
         };
-        const user = { uuid: "user-1", name: "Alice" };
+        
+        getScopeContextSpy.mockReturnValue({ user });
         
         render(CurrentTrack, {
           context: new Map([
-            [GAME_CONTEXT_KEY, { state: gameState }],
-            [SCOPE_CONTEXT_KEY, { user }]
+            [GAME_CONTEXT_KEY, { state: gameState }]
           ])
         });
         
@@ -76,6 +87,8 @@ describe("Current track component", () => {
 
     describe("for non-active players", () => {
       test("hides current track regardless of assumption status", () => {
+        const user = { uuid: "user-2", name: "Bob" };
+        
         const gameState = {
           turn: {
             phase: TURN_PHASE.READY,
@@ -86,12 +99,12 @@ describe("Current track component", () => {
           },
           participants: mockParticipants
         };
-        const user = { uuid: "user-2", name: "Bob" };
+        
+        getScopeContextSpy.mockReturnValue({ user });
         
         render(CurrentTrack, {
           context: new Map([
-            [GAME_CONTEXT_KEY, { state: gameState }],
-            [SCOPE_CONTEXT_KEY, { user }]
+            [GAME_CONTEXT_KEY, { state: gameState }]
           ])
         });
         
@@ -103,6 +116,8 @@ describe("Current track component", () => {
   describe("in CHALLENGING phase", () => {
     describe("for active player", () => {
       test("hides current track regardless of assumption status", () => {
+        const user = { uuid: "user-1", name: "Alice" };
+        
         const gameState = {
           turn: {
             phase: TURN_PHASE.CHALLENGING,
@@ -113,12 +128,12 @@ describe("Current track component", () => {
           },
           participants: mockParticipants
         };
-        const user = { uuid: "user-1", name: "Alice" };
+        
+        getScopeContextSpy.mockReturnValue({ user });
         
         render(CurrentTrack, {
           context: new Map([
-            [GAME_CONTEXT_KEY, { state: gameState }],
-            [SCOPE_CONTEXT_KEY, { user }]
+            [GAME_CONTEXT_KEY, { state: gameState }]
           ])
         });
         
@@ -128,6 +143,8 @@ describe("Current track component", () => {
 
     describe("for challenger players", () => {
       test("shows current track when player has not made assumption", () => {
+        const user = { uuid: "user-2", name: "Bob" };
+        
         const gameState = {
           turn: {
             phase: TURN_PHASE.CHALLENGING,
@@ -138,12 +155,12 @@ describe("Current track component", () => {
           },
           participants: mockParticipants
         };
-        const user = { uuid: "user-2", name: "Bob" };
+        
+        getScopeContextSpy.mockReturnValue({ user });
         
         render(CurrentTrack, {
           context: new Map([
-            [GAME_CONTEXT_KEY, { state: gameState }],
-            [SCOPE_CONTEXT_KEY, { user }]
+            [GAME_CONTEXT_KEY, { state: gameState }]
           ])
         });
         
@@ -151,6 +168,8 @@ describe("Current track component", () => {
       });
 
       test("hides current track when player has made assumption", () => {
+        const user = { uuid: "user-2", name: "Bob" };
+        
         const gameState = {
           turn: {
             phase: TURN_PHASE.CHALLENGING,
@@ -161,12 +180,12 @@ describe("Current track component", () => {
           },
           participants: mockParticipants
         };
-        const user = { uuid: "user-2", name: "Bob" };
+        
+        getScopeContextSpy.mockReturnValue({ user });
         
         render(CurrentTrack, {
           context: new Map([
-            [GAME_CONTEXT_KEY, { state: gameState }],
-            [SCOPE_CONTEXT_KEY, { user }]
+            [GAME_CONTEXT_KEY, { state: gameState }]
           ])
         });
         
@@ -174,6 +193,8 @@ describe("Current track component", () => {
       });
 
       test("displays track card with question mark to hide track details", () => {
+        const user = { uuid: "user-2", name: "Bob" };
+        
         const gameState = {
           turn: {
             phase: TURN_PHASE.CHALLENGING,
@@ -184,12 +205,12 @@ describe("Current track component", () => {
           },
           participants: mockParticipants
         };
-        const user = { uuid: "user-2", name: "Bob" };
+        
+        getScopeContextSpy.mockReturnValue({ user });
         
         render(CurrentTrack, {
           context: new Map([
-            [GAME_CONTEXT_KEY, { state: gameState }],
-            [SCOPE_CONTEXT_KEY, { user }]
+            [GAME_CONTEXT_KEY, { state: gameState }]
           ])
         });
         
@@ -203,6 +224,8 @@ describe("Current track component", () => {
   describe("in other game phases", () => {
     [TURN_PHASE.WAITING, TURN_PHASE.STEADY, TURN_PHASE.RESULTS].forEach(phase => {
       test(`hides current track in ${phase} phase`, () => {
+        const user = { uuid: "user-1", name: "Alice" };
+        
         const gameState = {
           turn: {
             phase: phase,
@@ -213,12 +236,12 @@ describe("Current track component", () => {
           },
           participants: mockParticipants
         };
-        const user = { uuid: "user-1", name: "Alice" };
+        
+        getScopeContextSpy.mockReturnValue({ user });
         
         render(CurrentTrack, {
           context: new Map([
-            [GAME_CONTEXT_KEY, { state: gameState }],
-            [SCOPE_CONTEXT_KEY, { user }]
+            [GAME_CONTEXT_KEY, { state: gameState }]
           ])
         });
         
@@ -229,13 +252,15 @@ describe("Current track component", () => {
 
   describe("with edge cases", () => {
     test("handles missing turn state gracefully", () => {
-      const gameState = { participants: mockParticipants };
       const user = { uuid: "user-1", name: "Alice" };
+      
+      const gameState = { participants: mockParticipants };
+      
+      getScopeContextSpy.mockReturnValue({ user });
       
       expect(() => render(CurrentTrack, {
         context: new Map([
-          [GAME_CONTEXT_KEY, { state: gameState }],
-          [SCOPE_CONTEXT_KEY, { user }]
+          [GAME_CONTEXT_KEY, { state: gameState }]
         ])
       })).not.toThrow();
       
@@ -243,6 +268,8 @@ describe("Current track component", () => {
     });
 
     test("handles empty player queue gracefully", () => {
+      const user = { uuid: "user-1", name: "Alice" };
+      
       const gameState = {
         turn: {
           phase: TURN_PHASE.READY,
@@ -253,12 +280,12 @@ describe("Current track component", () => {
         },
         participants: mockParticipants
       };
-      const user = { uuid: "user-1", name: "Alice" };
+      
+      getScopeContextSpy.mockReturnValue({ user });
       
       render(CurrentTrack, {
         context: new Map([
-          [GAME_CONTEXT_KEY, { state: gameState }],
-          [SCOPE_CONTEXT_KEY, { user }]
+          [GAME_CONTEXT_KEY, { state: gameState }]
         ])
       });
       
@@ -266,6 +293,8 @@ describe("Current track component", () => {
     });
 
     test("handles invalid cursor position gracefully", () => {
+      const user = { uuid: "user-1", name: "Alice" };
+      
       const gameState = {
         turn: {
           phase: TURN_PHASE.READY,
@@ -276,12 +305,12 @@ describe("Current track component", () => {
         },
         participants: mockParticipants
       };
-      const user = { uuid: "user-1", name: "Alice" };
+      
+      getScopeContextSpy.mockReturnValue({ user });
       
       render(CurrentTrack, {
         context: new Map([
-          [GAME_CONTEXT_KEY, { state: gameState }],
-          [SCOPE_CONTEXT_KEY, { user }]
+          [GAME_CONTEXT_KEY, { state: gameState }]
         ])
       });
       
@@ -289,6 +318,8 @@ describe("Current track component", () => {
     });
 
     test("handles missing track data gracefully", () => {
+      const user = { uuid: "user-1", name: "Alice" };
+      
       const gameState = {
         turn: {
           phase: TURN_PHASE.READY,
@@ -299,12 +330,12 @@ describe("Current track component", () => {
         },
         participants: mockParticipants
       };
-      const user = { uuid: "user-1", name: "Alice" };
+      
+      getScopeContextSpy.mockReturnValue({ user });
       
       render(CurrentTrack, {
         context: new Map([
-          [GAME_CONTEXT_KEY, { state: gameState }],
-          [SCOPE_CONTEXT_KEY, { user }]
+          [GAME_CONTEXT_KEY, { state: gameState }]
         ])
       });
       
@@ -316,10 +347,10 @@ describe("Current track component", () => {
     test("throws error when game context is missing", () => {
       const user = { uuid: "user-1", name: "Alice" };
       
+      getScopeContextSpy.mockReturnValue({ user });
+      
       expect(() => {
-        render(CurrentTrack, {
-          context: new Map([[SCOPE_CONTEXT_KEY, { user }]]),
-        });
+        render(CurrentTrack);
       }).toThrow();
     });
 
@@ -335,14 +366,20 @@ describe("Current track component", () => {
         participants: mockParticipants
       };
       
+      getScopeContextSpy.mockImplementation(() => {
+        throw new Error("missing_context");
+      });
+      
       expect(() => {
         render(CurrentTrack, {
           context: new Map([[GAME_CONTEXT_KEY, { state: gameState }]]),
         });
-      }).toThrow();
+      }).toThrow("missing_context");
     });
 
     test("renders without error when both contexts are provided", () => {
+      const user = { uuid: "user-1", name: "Alice" };
+      
       const gameState = {
         turn: {
           phase: TURN_PHASE.READY,
@@ -353,12 +390,12 @@ describe("Current track component", () => {
         },
         participants: mockParticipants
       };
-      const user = { uuid: "user-1", name: "Alice" };
+      
+      getScopeContextSpy.mockReturnValue({ user });
       
       expect(() => render(CurrentTrack, {
         context: new Map([
-          [GAME_CONTEXT_KEY, { state: gameState }],
-          [SCOPE_CONTEXT_KEY, { user }]
+          [GAME_CONTEXT_KEY, { state: gameState }]
         ])
       })).not.toThrow();
     });

@@ -1,9 +1,9 @@
 import { render, screen, fireEvent } from "@testing-library/svelte";
-import { expect, test, describe, beforeEach, vi } from "vitest";
+import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
 import { Channel } from "phoenix";
 import { TURN_PHASE } from "~shared/types/turn";
 import { GAME_CONTEXT_KEY } from "~components/GameContext.svelte";
-import { SCOPE_CONTEXT_KEY } from "~components/Scope.svelte";
+import * as Scope from "~components/Scope.svelte";
 
 import TurnWaiting from "~components/TurnWaiting.svelte";
 
@@ -11,7 +11,7 @@ vi.mock("phoenix");
 
 describe("Turn waiting view", () => {
   let mockChannelContext;
-  let mockScopeContext;
+  let getScopeContextSpy;
 
   beforeEach(() => {
     mockChannelContext = {
@@ -37,20 +37,25 @@ describe("Turn waiting view", () => {
       channel: new Channel("room:123", {}, null),
     };
 
-    mockScopeContext = {
+    getScopeContextSpy = vi.spyOn(Scope, "getScopeContext");
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test("displays personalized message when current user is active player", () => {
+    const mockScopeContext = {
       user: {
         uuid: "user-1",
         name: "Alice",
       },
     };
-  });
 
-  test("displays personalized message when current user is active player", () => {
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
+
     render(TurnWaiting, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext],
-        [SCOPE_CONTEXT_KEY, mockScopeContext],
-      ]),
+      context: new Map([[GAME_CONTEXT_KEY, mockChannelContext]]),
     });
 
     expect(screen.getByText("It's your turn")).toBeInTheDocument();
@@ -62,11 +67,17 @@ describe("Turn waiting view", () => {
   });
 
   test("displays ready button when current user is active player", () => {
+    const mockScopeContext = {
+      user: {
+        uuid: "user-1",
+        name: "Alice",
+      },
+    };
+
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
+
     render(TurnWaiting, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext],
-        [SCOPE_CONTEXT_KEY, mockScopeContext],
-      ]),
+      context: new Map([[GAME_CONTEXT_KEY, mockChannelContext]]),
     });
 
     expect(screen.getByText("Ready?")).toBeInTheDocument();
@@ -81,11 +92,10 @@ describe("Turn waiting view", () => {
       },
     };
 
+    getScopeContextSpy.mockReturnValue(nonActiveUserContext);
+
     render(TurnWaiting, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext],
-        [SCOPE_CONTEXT_KEY, nonActiveUserContext],
-      ]),
+      context: new Map([[GAME_CONTEXT_KEY, mockChannelContext]]),
     });
 
     expect(screen.getByText("Alice turn")).toBeInTheDocument();
@@ -94,17 +104,19 @@ describe("Turn waiting view", () => {
   });
 
   test("displays second player when cursor is 1 and shows ready button for them", () => {
-    mockChannelContext.state.turn.cursor = 1;
-    mockScopeContext.user = {
-      uuid: "user-2",
-      name: "Bob",
+    const mockScopeContext = {
+      user: {
+        uuid: "user-2",
+        name: "Bob",
+      },
     };
 
+    mockChannelContext.state.turn.cursor = 1;
+
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
+
     render(TurnWaiting, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext],
-        [SCOPE_CONTEXT_KEY, mockScopeContext],
-      ]),
+      context: new Map([[GAME_CONTEXT_KEY, mockChannelContext]]),
     });
 
     expect(screen.getByText("It's your turn")).toBeInTheDocument();
@@ -113,17 +125,19 @@ describe("Turn waiting view", () => {
   });
 
   test("shows active player info but hides button when different user is viewing", () => {
-    mockChannelContext.state.turn.cursor = 1;
-    mockScopeContext.user = {
-      uuid: "user-1",
-      name: "Alice",
+    const mockScopeContext = {
+      user: {
+        uuid: "user-1",
+        name: "Alice",
+      },
     };
 
+    mockChannelContext.state.turn.cursor = 1;
+
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
+
     render(TurnWaiting, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext],
-        [SCOPE_CONTEXT_KEY, mockScopeContext],
-      ]),
+      context: new Map([[GAME_CONTEXT_KEY, mockChannelContext]]),
     });
 
     expect(screen.getByText("Bob turn")).toBeInTheDocument();
@@ -132,29 +146,46 @@ describe("Turn waiting view", () => {
   });
 
   test("throws error when gameContext is missing", () => {
+    const mockScopeContext = {
+      user: {
+        uuid: "user-1",
+        name: "Alice",
+      },
+    };
+
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
+
     expect(() => {
-      render(TurnWaiting, {
-        context: new Map([[SCOPE_CONTEXT_KEY, mockScopeContext]]),
-      });
+      render(TurnWaiting);
     }).toThrow("getGameContext() must be called within a game context");
   });
 
   test("throws error when scopeContext is missing", () => {
+    getScopeContextSpy.mockImplementation(() => {
+      throw new Error("missing_context");
+    });
+
     expect(() => {
       render(TurnWaiting, {
         context: new Map([[GAME_CONTEXT_KEY, mockChannelContext]]),
       });
-    }).toThrow("getScopeContext() must be called within a scope context");
+    }).toThrow("missing_context");
   });
 
   test("sends next_phase event when Ready button is clicked by active player", async () => {
+    const mockScopeContext = {
+      user: {
+        uuid: "user-1",
+        name: "Alice",
+      },
+    };
+
     const pushSpy = vi.spyOn(mockChannelContext.channel, "push");
 
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
+
     render(TurnWaiting, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext],
-        [SCOPE_CONTEXT_KEY, mockScopeContext],
-      ]),
+      context: new Map([[GAME_CONTEXT_KEY, mockChannelContext]]),
     });
 
     const readyButton = screen.getByRole("button");
