@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
 import { TURN_PHASE } from "~shared/types/turn";
-import { GAME_CONTEXT_KEY } from "~components/GameContext.svelte";
+import * as GameContext from "~components/GameContext.svelte";
 import * as Scope from "~components/Scope.svelte";
 
 import TurnChallenging from "~components/TurnChallenging.svelte";
@@ -10,6 +10,7 @@ describe("TurnChallenging", () => {
   let mockChannelContext;
   let mockParticipants;
   let getScopeContextSpy;
+  let getGameContextSpy;
 
   beforeEach(() => {
     mockParticipants = [
@@ -42,6 +43,7 @@ describe("TurnChallenging", () => {
     };
 
     getScopeContextSpy = vi.spyOn(Scope, 'getScopeContext');
+    getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
   });
 
   afterEach(() => {
@@ -59,11 +61,8 @@ describe("TurnChallenging", () => {
       
       getScopeContextSpy.mockReturnValue(mockScopeContext);
       
-      render(TurnChallenging, {
-        context: new Map([
-          [GAME_CONTEXT_KEY, mockChannelContext]
-        ]),
-      });
+      getGameContextSpy.mockReturnValue(mockChannelContext);
+        render(TurnChallenging);
 
       // Should show all participants
       expect(screen.getByText("Alice")).toBeInTheDocument();
@@ -84,11 +83,8 @@ describe("TurnChallenging", () => {
       
       getScopeContextSpy.mockReturnValue(thirdUserContext);
 
-      render(TurnChallenging, {
-        context: new Map([
-          [GAME_CONTEXT_KEY, mockChannelContext]
-        ]),
-      });
+      getGameContextSpy.mockReturnValue(mockChannelContext);
+        render(TurnChallenging);
 
       // Should show all participants
       expect(screen.getByText("Alice")).toBeInTheDocument();
@@ -120,11 +116,8 @@ describe("TurnChallenging", () => {
       
       getScopeContextSpy.mockReturnValue(mockScopeContext);
 
-      render(TurnChallenging, {
-        context: new Map([
-          [GAME_CONTEXT_KEY, differentActivePlayerContext]
-        ]),
-      });
+      getGameContextSpy.mockReturnValue(differentActivePlayerContext);
+        render(TurnChallenging);
 
       expect(screen.getByText("Alice")).toBeInTheDocument();
       expect(screen.getByText("Bob")).toBeInTheDocument();
@@ -147,11 +140,8 @@ describe("TurnChallenging", () => {
       
       getScopeContextSpy.mockReturnValue(activeUserContext);
 
-      render(TurnChallenging, {
-        context: new Map([
-          [GAME_CONTEXT_KEY, mockChannelContext]
-        ]),
-      });
+      getGameContextSpy.mockReturnValue(mockChannelContext);
+        render(TurnChallenging);
 
       // Should show participants component
       expect(screen.getByText("Alice")).toBeInTheDocument();
@@ -187,11 +177,8 @@ describe("TurnChallenging", () => {
       
       getScopeContextSpy.mockReturnValue(mockScopeContext);
 
-      render(TurnChallenging, {
-        context: new Map([
-          [GAME_CONTEXT_KEY, bobActiveContext]
-        ]),
-      });
+      getGameContextSpy.mockReturnValue(bobActiveContext);
+        render(TurnChallenging);
 
       // Should show participants component
       expect(screen.getByText("Alice")).toBeInTheDocument();
@@ -230,11 +217,8 @@ describe("TurnChallenging", () => {
 
       // Should not crash when activePlayer is undefined
       expect(() => {
-        render(TurnChallenging, {
-          context: new Map([
-            [GAME_CONTEXT_KEY, noActivePlayerContext]
-          ]),
-        });
+        getGameContextSpy.mockReturnValue(noActivePlayerContext);
+        render(TurnChallenging);
       }).not.toThrow();
     });
 
@@ -260,11 +244,8 @@ describe("TurnChallenging", () => {
       getScopeContextSpy.mockReturnValue(mockScopeContext);
 
       expect(() => {
-        render(TurnChallenging, {
-          context: new Map([
-            [GAME_CONTEXT_KEY, emptyQueueContext]
-          ]),
-        });
+        getGameContextSpy.mockReturnValue(emptyQueueContext);
+        render(TurnChallenging);
       }).not.toThrow();
     });
 
@@ -286,11 +267,8 @@ describe("TurnChallenging", () => {
       getScopeContextSpy.mockReturnValue(mockScopeContext);
 
       expect(() => {
-        render(TurnChallenging, {
-          context: new Map([
-            [GAME_CONTEXT_KEY, noTurnContext]
-          ]),
-        });
+        getGameContextSpy.mockReturnValue(noTurnContext);
+        render(TurnChallenging);
       }).not.toThrow();
     });
   });
@@ -317,9 +295,8 @@ describe("TurnChallenging", () => {
       });
       
       expect(() => {
-        render(TurnChallenging, {
-          context: new Map([[GAME_CONTEXT_KEY, mockChannelContext]]),
-        });
+        getGameContextSpy.mockReturnValue(mockChannelContext);
+        render(TurnChallenging);
       }).toThrow("missing_context");
     });
 
@@ -334,11 +311,8 @@ describe("TurnChallenging", () => {
       getScopeContextSpy.mockReturnValue(mockScopeContext);
       
       expect(() => {
-        render(TurnChallenging, {
-          context: new Map([
-            [GAME_CONTEXT_KEY, mockChannelContext]
-          ]),
-        });
+        getGameContextSpy.mockReturnValue(mockChannelContext);
+        render(TurnChallenging);
       }).not.toThrow();
     });
   });

@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
 import { Channel } from "phoenix";
-import { GAME_CONTEXT_KEY } from "~components/GameContext.svelte";
+import * as GameContext from "~components/GameContext.svelte";
 import * as Scope from "~components/Scope.svelte";
 import { GAME_STATUS } from "~shared/types/game";
 import { PUSH_EVENT } from "~shared/types/channel";
@@ -13,6 +13,7 @@ vi.mock("phoenix");
 describe("Turn results view", () => {
   let mockChannelContext;
   let getScopeContextSpy;
+  let getGameContextSpy;
 
   beforeEach(() => {
     mockChannelContext = {
@@ -40,6 +41,7 @@ describe("Turn results view", () => {
     };
 
     getScopeContextSpy = vi.spyOn(Scope, 'getScopeContext');
+    getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
   });
 
   afterEach(() => {
@@ -56,11 +58,8 @@ describe("Turn results view", () => {
     
     getScopeContextSpy.mockReturnValue(mockScopeContext);
     
-    render(TurnResults, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext]
-      ]),
-    });
+    getGameContextSpy.mockReturnValue(mockChannelContext);
+        render(TurnResults);
 
     expect(screen.getByText("Alice")).toBeInTheDocument();
     expect(screen.getByText("Bob")).toBeInTheDocument();
@@ -76,11 +75,8 @@ describe("Turn results view", () => {
     
     getScopeContextSpy.mockReturnValue(mockScopeContext);
     
-    render(TurnResults, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext]
-      ]),
-    });
+    getGameContextSpy.mockReturnValue(mockChannelContext);
+        render(TurnResults);
 
     expect(screen.getByText("Alice")).toBeInTheDocument();
   });
@@ -100,11 +96,8 @@ describe("Turn results view", () => {
       
       getScopeContextSpy.mockReturnValue(mockScopeContext);
       
-      render(TurnResults, {
-        context: new Map([
-          [GAME_CONTEXT_KEY, mockChannelContext]
-        ]),
-      });
+      getGameContextSpy.mockReturnValue(mockChannelContext);
+        render(TurnResults);
 
       expect(screen.getByText("Play again")).toBeInTheDocument();
       expect(
@@ -126,11 +119,8 @@ describe("Turn results view", () => {
       
       getScopeContextSpy.mockReturnValue(mockScopeContext);
       
-      render(TurnResults, {
-        context: new Map([
-          [GAME_CONTEXT_KEY, mockChannelContext]
-        ]),
-      });
+      getGameContextSpy.mockReturnValue(mockChannelContext);
+        render(TurnResults);
 
       expect(screen.queryByText("Next Turn")).not.toBeInTheDocument();
     });
@@ -147,11 +137,8 @@ describe("Turn results view", () => {
       
       getScopeContextSpy.mockReturnValue(mockScopeContext);
       
-      render(TurnResults, {
-        context: new Map([
-          [GAME_CONTEXT_KEY, mockChannelContext]
-        ]),
-      });
+      getGameContextSpy.mockReturnValue(mockChannelContext);
+        render(TurnResults);
 
       expect(screen.getByText("Next Turn")).toBeInTheDocument();
       expect(
@@ -169,11 +156,8 @@ describe("Turn results view", () => {
       
       getScopeContextSpy.mockReturnValue(mockScopeContext);
       
-      render(TurnResults, {
-        context: new Map([
-          [GAME_CONTEXT_KEY, mockChannelContext]
-        ]),
-      });
+      getGameContextSpy.mockReturnValue(mockChannelContext);
+        render(TurnResults);
 
       expect(screen.queryByText("Play again")).not.toBeInTheDocument();
     });
@@ -188,11 +172,8 @@ describe("Turn results view", () => {
       
       getScopeContextSpy.mockReturnValue(mockScopeContext);
       
-      render(TurnResults, {
-        context: new Map([
-          [GAME_CONTEXT_KEY, mockChannelContext]
-        ]),
-      });
+      getGameContextSpy.mockReturnValue(mockChannelContext);
+        render(TurnResults);
 
       await fireEvent.click(screen.getByText("Next Turn"));
 

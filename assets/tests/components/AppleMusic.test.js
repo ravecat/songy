@@ -1,10 +1,11 @@
 import { render } from "@testing-library/svelte";
-import { expect, test, describe, beforeEach } from "vitest";
-import { GAME_CONTEXT_KEY } from "~components/GameContext.svelte";
+import { expect, test, describe, beforeEach, vi } from "vitest";
+import * as GameContext from "~components/GameContext.svelte";
 import AppleMusic from "~components/AppleMusic.svelte";
 
 describe("AppleMusic component", () => {
   let mockGameContext;
+  let getGameContextSpy;
 
   beforeEach(() => {
     mockGameContext = {
@@ -22,21 +23,23 @@ describe("AppleMusic component", () => {
         },
       },
     };
+
+    getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
   });
 
   test("renders audio element", () => {
-    const { container } = render(AppleMusic, {
-      context: new Map([[GAME_CONTEXT_KEY, mockGameContext]]),
-    });
+    getGameContextSpy.mockReturnValue(mockGameContext);
+
+    const { container } = render(AppleMusic);
 
     const audio = container.querySelector("audio");
     expect(audio).toBeInTheDocument();
   });
 
   test("sets audio src from track preview_url", () => {
-    const { container } = render(AppleMusic, {
-      context: new Map([[GAME_CONTEXT_KEY, mockGameContext]]),
-    });
+    getGameContextSpy.mockReturnValue(mockGameContext);
+
+    const { container } = render(AppleMusic);
 
     const audio = container.querySelector("audio");
     expect(audio).toHaveAttribute(
@@ -46,9 +49,10 @@ describe("AppleMusic component", () => {
   });
 
   test("renders without error when children snippet is provided", () => {
+    getGameContextSpy.mockReturnValue(mockGameContext);
+
     expect(() => {
       render(AppleMusic, {
-        context: new Map([[GAME_CONTEXT_KEY, mockGameContext]]),
         props: {
           children: () => {},
         },
@@ -59,9 +63,9 @@ describe("AppleMusic component", () => {
   test("handles missing preview_url gracefully", () => {
     mockGameContext.state.turn.track.meta = {};
 
-    const { container } = render(AppleMusic, {
-      context: new Map([[GAME_CONTEXT_KEY, mockGameContext]]),
-    });
+    getGameContextSpy.mockReturnValue(mockGameContext);
+
+    const { container } = render(AppleMusic);
 
     const audio = container.querySelector("audio");
     expect(audio).toBeInTheDocument();

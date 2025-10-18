@@ -1,13 +1,14 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi } from "vitest";
 import { Channel } from "phoenix";
-import { GAME_CONTEXT_KEY } from "~components/GameContext.svelte";
+import * as GameContext from "~components/GameContext.svelte";
 import Scope from "~components/Scope.svelte";
 
 vi.mock("phoenix");
 
 describe("Scope", () => {
   let mockGameContext;
+  let getGameContextSpy;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -15,12 +16,14 @@ describe("Scope", () => {
     mockGameContext = {
       channel: new Channel("room:123", {}, null),
     };
+
+    getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
   });
 
   test("requests user data on mount", () => {
-    render(Scope, {
-      context: new Map([[GAME_CONTEXT_KEY, mockGameContext]]),
-    });
+    getGameContextSpy.mockReturnValue(mockGameContext);
+
+    render(Scope);
 
     expect(mockGameContext.channel.push).toHaveBeenCalledWith(
       "get_current_user",
@@ -29,9 +32,9 @@ describe("Scope", () => {
   });
 
   test("renders correctly during initialization", () => {
-    render(Scope, {
-      context: new Map([[GAME_CONTEXT_KEY, mockGameContext]]),
-    });
+    getGameContextSpy.mockReturnValue(mockGameContext);
+
+    render(Scope);
 
     expect(screen.getByLabelText("Loading")).toBeInTheDocument();
   });
@@ -52,9 +55,9 @@ describe("Scope", () => {
       }),
     });
 
-    render(Scope, {
-      context: new Map([[GAME_CONTEXT_KEY, mockGameContext]]),
-    });
+    getGameContextSpy.mockReturnValue(mockGameContext);
+
+    render(Scope);
 
     expect(screen.queryByLabelText("Loading")).not.toBeInTheDocument();
   });

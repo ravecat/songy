@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
 import { TURN_PHASE } from "~shared/types/turn";
-import { GAME_CONTEXT_KEY } from "~components/GameContext.svelte";
+import * as GameContext from "~components/GameContext.svelte";
 import * as Scope from "~components/Scope.svelte";
 
 import Game from "~components/Game.svelte";
@@ -9,6 +9,7 @@ import Game from "~components/Game.svelte";
 describe("Game", () => {
   let mockChannelContext;
   let getScopeContextSpy;
+  let getGameContextSpy;
 
   beforeEach(() => {
     mockChannelContext = {
@@ -28,7 +29,8 @@ describe("Game", () => {
       },
     };
 
-    getScopeContextSpy = vi.spyOn(Scope, 'getScopeContext');
+    getScopeContextSpy = vi.spyOn(Scope, "getScopeContext");
+    getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
   });
 
   afterEach(() => {
@@ -42,16 +44,13 @@ describe("Game", () => {
         name: "Test User",
       },
     };
-    
-    mockChannelContext.state.turn.phase = TURN_PHASE.STEADY;
-    
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
 
-    render(Game, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext]
-      ]),
-    });
+    mockChannelContext.state.turn.phase = TURN_PHASE.STEADY;
+
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
+    getGameContextSpy.mockReturnValue(mockChannelContext);
+
+    render(Game);
 
     expect(screen.getByText("Alice")).toBeInTheDocument();
   });
@@ -63,16 +62,13 @@ describe("Game", () => {
         name: "Alice",
       },
     };
-    
-    mockChannelContext.state.turn.phase = TURN_PHASE.WAITING;
-    
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
 
-    render(Game, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext]
-      ]),
-    });
+    mockChannelContext.state.turn.phase = TURN_PHASE.WAITING;
+
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
+    getGameContextSpy.mockReturnValue(mockChannelContext);
+
+    render(Game);
 
     expect(screen.getByText("It's your turn")).toBeInTheDocument();
     expect(screen.getByText("Ready?")).toBeInTheDocument();
@@ -85,16 +81,13 @@ describe("Game", () => {
         name: "Test User",
       },
     };
-    
-    mockChannelContext.state.turn.phase = TURN_PHASE.RESULTS;
-    
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
 
-    render(Game, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext]
-      ]),
-    });
+    mockChannelContext.state.turn.phase = TURN_PHASE.RESULTS;
+
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
+    getGameContextSpy.mockReturnValue(mockChannelContext);
+
+    render(Game);
 
     expect(screen.getByText("Alice")).toBeInTheDocument();
   });
@@ -106,18 +99,14 @@ describe("Game", () => {
         name: "Test User",
       },
     };
-    
+
     mockChannelContext.state.turn = undefined;
-    
+
     getScopeContextSpy.mockReturnValue(mockScopeContext);
+    getGameContextSpy.mockReturnValue(mockChannelContext);
 
-    render(Game, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext]
-      ]),
-    });
+    render(Game);
 
-    // Should render nothing for undefined phase
     expect(screen.queryByText("Alice")).not.toBeInTheDocument();
   });
 
@@ -128,22 +117,17 @@ describe("Game", () => {
         name: "Test User",
       },
     };
-    
-    // Empty state that still has structure for components
+
     mockChannelContext.state = {
       participants: [],
       turn: undefined,
     };
-    
+
     getScopeContextSpy.mockReturnValue(mockScopeContext);
+    getGameContextSpy.mockReturnValue(mockChannelContext);
 
-    render(Game, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext]
-      ]),
-    });
+    render(Game);
 
-    // Should render nothing for undefined turn
     expect(screen.queryByText("waiting")).not.toBeInTheDocument();
     expect(screen.queryByText("Alice")).not.toBeInTheDocument();
   });
@@ -155,26 +139,24 @@ describe("Game", () => {
         name: "Test User",
       },
     };
-    
+
     mockChannelContext.state.turn.phase = null;
-    
+
     getScopeContextSpy.mockReturnValue(mockScopeContext);
+    getGameContextSpy.mockReturnValue(mockChannelContext);
 
-    render(Game, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext]
-      ]),
-    });
+    render(Game);
 
-    // Should render nothing for null phase
     expect(screen.queryByText("Alice")).not.toBeInTheDocument();
   });
 
   test("throws error when gameContext is missing", () => {
+    getGameContextSpy.mockImplementation(() => {
+      throw new Error("getGameContext() must be called within a game context");
+    });
+
     expect(() => {
-      render(Game, {
-        context: new Map(),
-      });
+      render(Game);
     }).toThrow("getGameContext() must be called within a game context");
   });
 
@@ -187,16 +169,13 @@ describe("Game", () => {
           name: "Test User",
         },
       };
-      
-      mockChannelContext.state.turn.phase = phase;
-      
-      getScopeContextSpy.mockReturnValue(mockScopeContext);
 
-      render(Game, {
-        context: new Map([
-          [GAME_CONTEXT_KEY, mockChannelContext]
-        ]),
-      });
+      mockChannelContext.state.turn.phase = phase;
+
+      getScopeContextSpy.mockReturnValue(mockScopeContext);
+      getGameContextSpy.mockReturnValue(mockChannelContext);
+
+      render(Game);
 
       expect(screen.queryByText("Alice")).not.toBeInTheDocument();
     }

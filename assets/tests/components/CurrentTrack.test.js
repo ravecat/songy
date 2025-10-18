@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
 import { TURN_PHASE } from "~shared/types/turn";
-import { GAME_CONTEXT_KEY } from "~components/GameContext.svelte";
+import * as GameContext from "~components/GameContext.svelte";
 import * as Scope from "~components/Scope.svelte";
 
 import CurrentTrack from "~components/CurrentTrack.svelte";
@@ -10,6 +10,7 @@ describe("Current track component", () => {
   let mockTrack;
   let mockParticipants;
   let getScopeContextSpy;
+  let getGameContextSpy;
 
   beforeEach(() => {
     mockTrack = {
@@ -26,6 +27,7 @@ describe("Current track component", () => {
     ];
 
     getScopeContextSpy = vi.spyOn(Scope, 'getScopeContext');
+    getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
   });
 
   afterEach(() => {
@@ -50,11 +52,8 @@ describe("Current track component", () => {
         
         getScopeContextSpy.mockReturnValue({ user });
         
-        render(CurrentTrack, {
-          context: new Map([
-            [GAME_CONTEXT_KEY, { state: gameState }]
-          ])
-        });
+        getGameContextSpy.mockReturnValue({ state: gameState });
+        render(CurrentTrack);
         
         expect(screen.getByRole("list")).toBeInTheDocument();
       });
@@ -75,11 +74,8 @@ describe("Current track component", () => {
         
         getScopeContextSpy.mockReturnValue({ user });
         
-        render(CurrentTrack, {
-          context: new Map([
-            [GAME_CONTEXT_KEY, { state: gameState }]
-          ])
-        });
+        getGameContextSpy.mockReturnValue({ state: gameState });
+        render(CurrentTrack);
         
         expect(screen.queryByRole("list")).not.toBeInTheDocument();
       });
@@ -102,11 +98,8 @@ describe("Current track component", () => {
         
         getScopeContextSpy.mockReturnValue({ user });
         
-        render(CurrentTrack, {
-          context: new Map([
-            [GAME_CONTEXT_KEY, { state: gameState }]
-          ])
-        });
+        getGameContextSpy.mockReturnValue({ state: gameState });
+        render(CurrentTrack);
         
         expect(screen.queryByRole("list")).not.toBeInTheDocument();
       });
@@ -131,11 +124,8 @@ describe("Current track component", () => {
         
         getScopeContextSpy.mockReturnValue({ user });
         
-        render(CurrentTrack, {
-          context: new Map([
-            [GAME_CONTEXT_KEY, { state: gameState }]
-          ])
-        });
+        getGameContextSpy.mockReturnValue({ state: gameState });
+        render(CurrentTrack);
         
         expect(screen.queryByRole("list")).not.toBeInTheDocument();
       });
@@ -158,11 +148,8 @@ describe("Current track component", () => {
         
         getScopeContextSpy.mockReturnValue({ user });
         
-        render(CurrentTrack, {
-          context: new Map([
-            [GAME_CONTEXT_KEY, { state: gameState }]
-          ])
-        });
+        getGameContextSpy.mockReturnValue({ state: gameState });
+        render(CurrentTrack);
         
         expect(screen.getByRole("list")).toBeInTheDocument();
       });
@@ -183,11 +170,8 @@ describe("Current track component", () => {
         
         getScopeContextSpy.mockReturnValue({ user });
         
-        render(CurrentTrack, {
-          context: new Map([
-            [GAME_CONTEXT_KEY, { state: gameState }]
-          ])
-        });
+        getGameContextSpy.mockReturnValue({ state: gameState });
+        render(CurrentTrack);
         
         expect(screen.queryByRole("list")).not.toBeInTheDocument();
       });
@@ -208,11 +192,8 @@ describe("Current track component", () => {
         
         getScopeContextSpy.mockReturnValue({ user });
         
-        render(CurrentTrack, {
-          context: new Map([
-            [GAME_CONTEXT_KEY, { state: gameState }]
-          ])
-        });
+        getGameContextSpy.mockReturnValue({ state: gameState });
+        render(CurrentTrack);
         
         expect(screen.getByText("?")).toBeInTheDocument();
         expect(screen.queryByText("Test Song")).not.toBeInTheDocument();
@@ -239,11 +220,8 @@ describe("Current track component", () => {
         
         getScopeContextSpy.mockReturnValue({ user });
         
-        render(CurrentTrack, {
-          context: new Map([
-            [GAME_CONTEXT_KEY, { state: gameState }]
-          ])
-        });
+        getGameContextSpy.mockReturnValue({ state: gameState });
+        render(CurrentTrack);
         
         expect(screen.queryByRole("list")).not.toBeInTheDocument();
       });
@@ -257,12 +235,9 @@ describe("Current track component", () => {
       const gameState = { participants: mockParticipants };
       
       getScopeContextSpy.mockReturnValue({ user });
+      getGameContextSpy.mockReturnValue({ state: gameState });
       
-      expect(() => render(CurrentTrack, {
-        context: new Map([
-          [GAME_CONTEXT_KEY, { state: gameState }]
-        ])
-      })).not.toThrow();
+      expect(() => render(CurrentTrack)).not.toThrow();
       
       expect(screen.queryByRole("list")).not.toBeInTheDocument();
     });
@@ -283,11 +258,8 @@ describe("Current track component", () => {
       
       getScopeContextSpy.mockReturnValue({ user });
       
-      render(CurrentTrack, {
-        context: new Map([
-          [GAME_CONTEXT_KEY, { state: gameState }]
-        ])
-      });
+      getGameContextSpy.mockReturnValue({ state: gameState });
+        render(CurrentTrack);
       
       expect(screen.queryByRole("list")).not.toBeInTheDocument();
     });
@@ -308,11 +280,8 @@ describe("Current track component", () => {
       
       getScopeContextSpy.mockReturnValue({ user });
       
-      render(CurrentTrack, {
-        context: new Map([
-          [GAME_CONTEXT_KEY, { state: gameState }]
-        ])
-      });
+      getGameContextSpy.mockReturnValue({ state: gameState });
+        render(CurrentTrack);
       
       expect(screen.queryByRole("list")).not.toBeInTheDocument();
     });
@@ -333,11 +302,8 @@ describe("Current track component", () => {
       
       getScopeContextSpy.mockReturnValue({ user });
       
-      render(CurrentTrack, {
-        context: new Map([
-          [GAME_CONTEXT_KEY, { state: gameState }]
-        ])
-      });
+      getGameContextSpy.mockReturnValue({ state: gameState });
+        render(CurrentTrack);
       
       expect(screen.queryByRole("list")).not.toBeInTheDocument();
     });
@@ -371,9 +337,8 @@ describe("Current track component", () => {
       });
       
       expect(() => {
-        render(CurrentTrack, {
-          context: new Map([[GAME_CONTEXT_KEY, { state: gameState }]]),
-        });
+        getGameContextSpy.mockReturnValue({ state: gameState });
+        render(CurrentTrack);
       }).toThrow("missing_context");
     });
 
@@ -392,12 +357,9 @@ describe("Current track component", () => {
       };
       
       getScopeContextSpy.mockReturnValue({ user });
+      getGameContextSpy.mockReturnValue({ state: gameState });
       
-      expect(() => render(CurrentTrack, {
-        context: new Map([
-          [GAME_CONTEXT_KEY, { state: gameState }]
-        ])
-      })).not.toThrow();
+      expect(() => render(CurrentTrack)).not.toThrow();
     });
   });
 });

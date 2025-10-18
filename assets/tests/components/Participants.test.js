@@ -1,11 +1,12 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
-import { GAME_CONTEXT_KEY } from "~components/GameContext.svelte";
+import * as GameContext from "~components/GameContext.svelte";
 import * as Scope from "~components/Scope.svelte";
 import Participants from "~components/Participants.svelte";
 
 describe("Participants component", () => {
   let getScopeContextSpy;
+  let getGameContextSpy;
   
   const mockParticipants = [
     {
@@ -38,6 +39,7 @@ describe("Participants component", () => {
 
   beforeEach(() => {
     getScopeContextSpy = vi.spyOn(Scope, 'getScopeContext');
+    getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
   });
 
   afterEach(() => {
@@ -53,12 +55,9 @@ describe("Participants component", () => {
     };
     
     getScopeContextSpy.mockReturnValue(mockScopeContext);
+    getGameContextSpy.mockReturnValue(mockChannelContext);
     
-    render(Participants, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext]
-      ]),
-    });
+    render(Participants);
 
     expect(screen.getByText("Alice")).toBeInTheDocument();
     expect(screen.getByText("Bob")).toBeInTheDocument();
@@ -74,12 +73,9 @@ describe("Participants component", () => {
     };
     
     getScopeContextSpy.mockReturnValue(mockScopeContext);
+    getGameContextSpy.mockReturnValue(mockChannelContext);
     
-    render(Participants, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext]
-      ]),
-    });
+    render(Participants);
 
     expect(screen.getByLabelText("Your avatar")).toBeInTheDocument();
   });
@@ -90,12 +86,9 @@ describe("Participants component", () => {
     };
     
     getScopeContextSpy.mockReturnValue(noUserScopeContext);
+    getGameContextSpy.mockReturnValue(mockChannelContext);
 
-    render(Participants, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext]
-      ]),
-    });
+    render(Participants);
 
     expect(screen.queryByLabelText("Your avatar")).not.toBeInTheDocument();
   });
@@ -103,18 +96,15 @@ describe("Participants component", () => {
   test("shows star indicator only for matching user UUID", () => {
     const differentUserContext = {
       user: {
-        uuid: "user-999", // Non-existent user
+        uuid: "user-999",
         name: "Different User",
       },
     };
     
     getScopeContextSpy.mockReturnValue(differentUserContext);
+    getGameContextSpy.mockReturnValue(mockChannelContext);
 
-    render(Participants, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext]
-      ]),
-    });
+    render(Participants);
 
     expect(screen.queryByLabelText("Your avatar")).not.toBeInTheDocument();
   });
@@ -135,12 +125,9 @@ describe("Participants component", () => {
     };
     
     getScopeContextSpy.mockReturnValue(mockScopeContext);
+    getGameContextSpy.mockReturnValue(emptyChannelContext);
 
-    render(Participants, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, emptyChannelContext],
-      ]),
-    });
+    render(Participants);
 
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Your avatar")).not.toBeInTheDocument();
@@ -156,12 +143,9 @@ describe("Participants component", () => {
     };
     
     getScopeContextSpy.mockReturnValue(mockScopeContext);
+    getGameContextSpy.mockReturnValue(mockChannelContext);
     
-    render(Participants, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext]
-      ]),
-    });
+    render(Participants);
 
     const aliceAvatar = screen.getByAltText("Alice");
     const bobAvatar = screen.getByAltText("Bob");
@@ -188,12 +172,9 @@ describe("Participants component", () => {
     };
     
     getScopeContextSpy.mockReturnValue(mockScopeContext);
+    getGameContextSpy.mockReturnValue(mockChannelContext);
     
-    render(Participants, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, mockChannelContext]
-      ]),
-    });
+    render(Participants);
 
     expect(screen.getByText("42")).toBeInTheDocument();
     expect(screen.getByText("15")).toBeInTheDocument();
@@ -216,12 +197,9 @@ describe("Participants component", () => {
     };
     
     getScopeContextSpy.mockReturnValue(mockScopeContext);
+    getGameContextSpy.mockReturnValue(contextWithoutScores);
 
-    render(Participants, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, contextWithoutScores]
-      ]),
-    });
+    render(Participants);
 
     expect(screen.queryByText("0")).not.toBeInTheDocument();
   });
@@ -241,12 +219,9 @@ describe("Participants component", () => {
     };
     
     getScopeContextSpy.mockReturnValue(mockScopeContext);
+    getGameContextSpy.mockReturnValue(contextWithoutScoresField);
 
-    render(Participants, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, contextWithoutScoresField]
-      ]),
-    });
+    render(Participants);
 
     expect(screen.queryByText("0")).not.toBeInTheDocument();
   });
@@ -265,21 +240,17 @@ describe("Participants component", () => {
         scores: {
           "user-1": 25,
           "user-3": 0,
-          // user-2 has no score entry
         },
       },
     };
     
     getScopeContextSpy.mockReturnValue(mockScopeContext);
+    getGameContextSpy.mockReturnValue(contextWithPartialScores);
 
-    render(Participants, {
-      context: new Map([
-        [GAME_CONTEXT_KEY, contextWithPartialScores]
-      ]),
-    });
+    render(Participants);
 
     expect(screen.getByText("25")).toBeInTheDocument();
     expect(screen.getByText("0")).toBeInTheDocument();
-    expect(screen.getAllByText(/\d+/)).toHaveLength(2); // Only 2 score indicators shown
+    expect(screen.getAllByText(/\d+/)).toHaveLength(2);
   });
 });
