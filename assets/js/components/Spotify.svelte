@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { setContext } from "svelte";
   import type { Snippet } from "svelte";
   import { getGameContext } from "~components/GameContext.svelte";
   import { useSpotifyPlayer } from "~hooks/useSpotifyPlayer.svelte";
@@ -13,7 +12,7 @@
 
   const { channel } = $derived.by(getGameContext);
 
-  const player = useSpotifyPlayer({
+  useSpotifyPlayer({
     name: "Songy room",
     getOAuthToken: (cb) => {
       channel
@@ -28,8 +27,6 @@
       },
     },
   });
-
-  setContext("spotify", player);
 </script>
 
 {@render children?.()}
