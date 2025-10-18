@@ -1,0 +1,30 @@
+<script lang="ts">
+  import type { Snippet } from "svelte";
+  import { getGameContext } from "~components/GameContext.svelte";
+
+  interface Props {
+    children?: Snippet;
+  }
+
+  let { children }: Props = $props();
+
+  let paused = $state(true);
+  let currentTime = $state(0);
+  let duration = $state(0);
+
+  const { state: gameState } = $derived.by(getGameContext);
+
+  const src = $derived(gameState?.turn?.track?.meta?.preview_url);
+</script>
+
+<audio
+  {src}
+  bind:paused
+  bind:currentTime
+  bind:duration
+  onended={() => {
+    currentTime = 0;
+  }}
+></audio>
+
+{@render children?.()}
