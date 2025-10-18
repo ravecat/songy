@@ -4,7 +4,7 @@
   import Game from "~components/Game.svelte";
   import Logo from "~components/Logo.svelte";
 
-  const { state } = $derived(getGameContext());
+  const { state } = $derived.by(getGameContext);
   let isWaiting = $derived(state?.status === "waiting");
 </script>
 

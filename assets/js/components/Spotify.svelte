@@ -11,7 +11,7 @@
 
   let { children }: Props = $props();
 
-  const { channel } = $derived(getGameContext());
+  const { channel } = $derived.by(getGameContext);
 
   const player = useSpotifyPlayer({
     name: "Songy room",

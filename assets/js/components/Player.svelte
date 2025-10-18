@@ -6,7 +6,7 @@
   import playIcon from "~icons/play.svg?raw";
   import pauseIcon from "~icons/pause.svg?raw";
 
-  const { state, channel } = $derived(getGameContext());
+  const { state, channel } = $derived.by(getGameContext);
   const { user: currentPlayer } = $derived.by(getScopeContext);
 
   let isPlayback = $derived(state?.player?.is_playback ?? false);

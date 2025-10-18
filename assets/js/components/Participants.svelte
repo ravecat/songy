@@ -4,8 +4,8 @@
   import { getScopeContext } from "~components/Scope.svelte";
   import star from "~icons/star.svg?raw";
 
-  const { state } = $derived(getGameContext());
-  const { user } = $derived(getScopeContext());
+  const { state } = $derived.by(getGameContext);
+  const { user } = $derived.by(getScopeContext);
 </script>
 
 {#if state.participants && state.participants.length > 0}

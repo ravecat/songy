@@ -3,7 +3,7 @@
   import { getGameContext } from "~components/GameContext.svelte";
   import { PUSH_EVENT } from "~/shared/types/channel";
 
-  const { channel } = $derived(getGameContext());
+  const { channel } = $derived.by(getGameContext);
   let isLoading = $state(false);
 
   const handleStartGame = () => {
