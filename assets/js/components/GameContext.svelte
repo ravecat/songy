@@ -33,8 +33,8 @@
     socket,
     topic,
     on: {
-      [BROADCAST_EVENT.STATE_UPDATED]: (newState: Game) => {
-        context.state = newState;
+      [BROADCAST_EVENT.STATE_UPDATED]: (state: Game) => {
+        context.state = state;
       },
     },
   });

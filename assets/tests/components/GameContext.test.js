@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/svelte";
+import { render } from "@testing-library/svelte";
 import { afterEach, expect, test, vi } from "vitest";
-import Room from "~pages/Room.svelte";
+import GameContext from "~components/GameContext.svelte";
 import socket from "~/socket";
 
 vi.mock("~/socket", async () => {
@@ -11,19 +11,19 @@ vi.mock("~/socket", async () => {
   };
 });
 
-describe("Room", () => {
+describe("GameContext", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  test("joins to channel with room id", () => {
-    render(Room, { roomId: "test-room" });
+  test("joins to channel with provided topic", () => {
+    render(GameContext, { topic: "room:test-room" });
 
     expect(socket.channel).toHaveBeenCalledWith("room:test-room", {});
   });
 
   test("listens state_updated event", () => {
-    render(Room, { roomId: "test-room" });
+    render(GameContext, { topic: "room:test-room" });
 
     const channel = socket.channel.mock.results[0].value;
 
