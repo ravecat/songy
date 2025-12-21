@@ -24,7 +24,7 @@ export enum GAME_STATUS {
  */
 export interface Game {
   /** Unique game room identifier */
-  uuid: string;
+  id: string;
 
   /** List of participants in the game */
   participants: User[];

@@ -29,7 +29,7 @@ export interface Turn {
   cursor: number;
 
   /** List of challenger UUIDs */
-  challengers: string[];
+  challengers?: string[];
 
   /** Currently playing track */
   track?: Track;
