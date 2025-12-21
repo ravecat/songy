@@ -8,7 +8,6 @@ defmodule Songy.Core.NewTurnTest do
     test "creates a new turn with default values" do
       turn = %NewTurn{}
 
-      assert turn.game_id == nil
       assert turn.queue == nil
       assert turn.cursor == nil
       assert turn.track == nil
@@ -17,9 +16,8 @@ defmodule Songy.Core.NewTurnTest do
       assert turn.assumptions == nil
     end
 
-    test "creates a new turn with game ID" do
+    test "creates a new turn with all fields" do
       turn = %NewTurn{
-        game_id: "game-123",
         queue: [],
         cursor: 0,
         phase: :waiting,
@@ -27,7 +25,6 @@ defmodule Songy.Core.NewTurnTest do
         assumptions: []
       }
 
-      assert turn.game_id == "game-123"
       assert turn.queue == []
       assert turn.cursor == 0
       assert turn.phase == :waiting
@@ -39,7 +36,6 @@ defmodule Songy.Core.NewTurnTest do
   describe "types" do
     test "has correct type definitions" do
       turn = %NewTurn{
-        game_id: "game-123",
         queue: [],
         cursor: 0,
         phase: :waiting,
@@ -47,7 +43,6 @@ defmodule Songy.Core.NewTurnTest do
         assumptions: []
       }
 
-      assert is_binary(turn.game_id)
       assert is_list(turn.queue)
       assert is_integer(turn.cursor)
       assert turn.cursor >= 0
@@ -60,7 +55,6 @@ defmodule Songy.Core.NewTurnTest do
   describe "structure" do
     test "has all required fields" do
       turn = %NewTurn{
-        game_id: "game-123",
         queue: [],
         cursor: 0,
         track: nil,
@@ -69,24 +63,23 @@ defmodule Songy.Core.NewTurnTest do
         assumptions: []
       }
 
-      assert %NewTurn{game_id: _, queue: _, cursor: _, track: _, phase: _, timeline: _, assumptions: _} = turn
+      assert %NewTurn{queue: _, cursor: _, track: _, phase: _, timeline: _, assumptions: _} = turn
     end
 
     test "can be updated with struct syntax" do
-      turn = %NewTurn{game_id: "game-123", queue: [], cursor: 0, phase: :waiting, timeline: [], assumptions: []}
+      turn = %NewTurn{queue: [], cursor: 0, phase: :waiting, timeline: [], assumptions: []}
       track = %Track{id: "1", title: "Song", artist: "Artist", year: 2020}
 
       updated_turn = %{turn | track: track, phase: :ready}
 
       assert updated_turn.track == track
       assert updated_turn.phase == :ready
-      assert updated_turn.game_id == turn.game_id
     end
   end
 
   describe "phase transitions" do
     test "can be manually updated to different phases" do
-      turn = %NewTurn{game_id: "game-123", queue: [], cursor: 0, phase: :waiting, timeline: [], assumptions: []}
+      turn = %NewTurn{queue: [], cursor: 0, phase: :waiting, timeline: [], assumptions: []}
 
       phases = [:waiting, :ready, :steady, :challenging, :results]
 
@@ -99,7 +92,7 @@ defmodule Songy.Core.NewTurnTest do
 
   describe "queue management" do
     test "can add players to queue" do
-      turn = %NewTurn{game_id: "game-123", queue: [], cursor: 0, phase: :waiting, timeline: [], assumptions: []}
+      turn = %NewTurn{queue: [], cursor: 0, phase: :waiting, timeline: [], assumptions: []}
 
       updated_turn = %{turn | queue: ["player-1", "player-2"]}
 
@@ -108,7 +101,7 @@ defmodule Songy.Core.NewTurnTest do
     end
 
     test "can update cursor" do
-      turn = %NewTurn{game_id: "game-123", queue: ["player-1", "player-2", "player-3"], cursor: 0, phase: :waiting, timeline: [], assumptions: []}
+      turn = %NewTurn{queue: ["player-1", "player-2", "player-3"], cursor: 0, phase: :waiting, timeline: [], assumptions: []}
 
       updated_turn = %{turn | cursor: 1}
 
@@ -119,7 +112,7 @@ defmodule Songy.Core.NewTurnTest do
 
   describe "timeline management" do
     test "can add tracks to timeline" do
-      turn = %NewTurn{game_id: "game-123", queue: [], cursor: 0, phase: :waiting, timeline: [], assumptions: []}
+      turn = %NewTurn{queue: [], cursor: 0, phase: :waiting, timeline: [], assumptions: []}
       track1 = %Track{id: "1", title: "Song 1", artist: "Artist 1", year: 2020}
       track2 = %Track{id: "2", title: "Song 2", artist: "Artist 2", year: 2021}
 
@@ -133,7 +126,7 @@ defmodule Songy.Core.NewTurnTest do
 
   describe "assumptions management" do
     test "can add assumptions" do
-      turn = %NewTurn{game_id: "game-123", queue: [], cursor: 0, phase: :waiting, timeline: [], assumptions: []}
+      turn = %NewTurn{queue: [], cursor: 0, phase: :waiting, timeline: [], assumptions: []}
 
       assumptions = [
         %{position: 0, user_id: "user-1"},

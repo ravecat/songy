@@ -41,7 +41,6 @@ npm-debug.log
 # Ignore tools artifacts.
 /.elixir_ls/
 /context_portal/
-*.prompt.md
 
 # Environment variables
 /envs/*

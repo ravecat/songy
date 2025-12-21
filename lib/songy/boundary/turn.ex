@@ -59,10 +59,9 @@ defmodule Songy.Boundary.Turn do
 
   # Callbacks
 
-  def init(game_id) do
+  def init(_game_id) do
     {:ok, :waiting,
      %NewTurn{
-       game_id: game_id,
        queue: [],
        cursor: 0,
        track: nil,
@@ -98,7 +97,7 @@ defmodule Songy.Boundary.Turn do
   end
 
   def waiting({:call, from}, {:remove_player, player_uuid}, data) do
-    new_data = remove_player_logic(data, player_uuid)
+    new_data = do_remove_player(data, player_uuid)
     {:keep_state, new_data, [{:reply, from, :ok}]}
   end
 
@@ -135,7 +134,7 @@ defmodule Songy.Boundary.Turn do
   end
 
   def ready({:call, from}, {:remove_player, player_uuid}, data) do
-    new_data = remove_player_logic(data, player_uuid)
+    new_data = do_remove_player(data, player_uuid)
     {:keep_state, new_data, [{:reply, from, :ok}]}
   end
 
@@ -167,7 +166,7 @@ defmodule Songy.Boundary.Turn do
   end
 
   def steady({:call, from}, {:remove_player, player_uuid}, data) do
-    new_data = remove_player_logic(data, player_uuid)
+    new_data = do_remove_player(data, player_uuid)
     {:keep_state, new_data, [{:reply, from, :ok}]}
   end
 
@@ -208,7 +207,7 @@ defmodule Songy.Boundary.Turn do
   end
 
   def challenging({:call, from}, {:remove_player, player_uuid}, data) do
-    new_data = remove_player_logic(data, player_uuid)
+    new_data = do_remove_player(data, player_uuid)
     {:keep_state, new_data, [{:reply, from, :ok}]}
   end
 
@@ -238,7 +237,7 @@ defmodule Songy.Boundary.Turn do
   end
 
   def results({:call, from}, {:remove_player, player_uuid}, data) do
-    new_data = remove_player_logic(data, player_uuid)
+    new_data = do_remove_player(data, player_uuid)
     {:keep_state, new_data, [{:reply, from, :ok}]}
   end
 
@@ -249,8 +248,6 @@ defmodule Songy.Boundary.Turn do
   def results({:call, from}, _event, data) do
     {:keep_state, data, [{:reply, from, {:error, :invalid_action}}]}
   end
-
-  # Helpers
 
   defp get_player_timeline(%{queue: _queue, cursor: _cursor}) do
     []
@@ -322,7 +319,6 @@ defmodule Songy.Boundary.Turn do
     new_cursor = rem(data.cursor + 1, max(length(data.queue), 1))
 
     %NewTurn{
-      game_id: data.game_id,
       queue: data.queue,
       cursor: new_cursor,
       track: nil,
@@ -332,7 +328,7 @@ defmodule Songy.Boundary.Turn do
     }
   end
 
-  defp remove_player_logic(%{queue: queue} = data, player_uuid) do
+  defp do_remove_player(%{queue: queue} = data, player_uuid) do
     case Enum.find_index(queue, &(&1 == player_uuid)) do
       nil ->
         data

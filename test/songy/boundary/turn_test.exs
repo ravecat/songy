@@ -5,27 +5,25 @@ defmodule Songy.Boundary.TurnTest do
   alias Songy.Core.NewTurn
   alias Songy.Core.Track
 
-  setup do
-    {:ok, pid} = Turn.start_link("game-123")
+  setup %{test: test} do
+    {:ok, pid} = start_supervised({Turn, game_id: test})
     %{pid: pid}
   end
 
-  describe "start_link/2" do
-    test "starts a turn process with game ID" do
-      {:ok, pid} = Turn.start_link("game-456")
-      assert is_pid(pid)
-      assert Process.alive?(pid)
-    end
-
-    test "initializes with waiting phase" do
-      {:ok, pid} = Turn.start_link("game-789")
+  describe "initialization" do
+    test "starts in :waiting phase with correct defaults", %{pid: pid} do
       state = Turn.get_state(pid)
+
       assert state.phase == :waiting
-      assert state.game_id == "game-789"
+      assert state.queue == []
+      assert state.cursor == 0
+      assert state.track == nil
+      assert state.timeline == []
+      assert state.assumptions == []
     end
   end
 
-  describe "add_player/2" do
+  describe ":waiting phase - add_player" do
     test "adds a player to the queue", %{pid: pid} do
       assert :ok = Turn.add_player(pid, "player-1")
       state = Turn.get_state(pid)
@@ -40,17 +38,10 @@ defmodule Songy.Boundary.TurnTest do
       state = Turn.get_state(pid)
       assert state.queue == ["player-1", "player-2", "player-3"]
     end
-
-    test "only works in waiting phase", %{pid: pid} do
-      Turn.add_player(pid, "player-1")
-      Turn.next_phase(pid)
-
-      assert {:error, :invalid_action} = Turn.add_player(pid, "player-2")
-    end
   end
 
-  describe "next_phase/1" do
-    test "transitions from waiting to ready", %{pid: pid} do
+  describe ":waiting phase - next_phase" do
+    test "transitions to :ready when players exist", %{pid: pid} do
       Turn.add_player(pid, "player-1")
       assert :ok = Turn.next_phase(pid)
 
@@ -58,17 +49,97 @@ defmodule Songy.Boundary.TurnTest do
       assert state.phase == :ready
     end
 
-    test "fails to transition from waiting if no players", %{pid: pid} do
+    test "fails to transition if no players", %{pid: pid} do
       assert {:error, :no_players} = Turn.next_phase(pid)
 
       state = Turn.get_state(pid)
       assert state.phase == :waiting
     end
+  end
 
-    test "transitions from ready to steady", %{pid: pid} do
+  describe ":waiting phase - get_active_player" do
+    test "returns nil for empty queue", %{pid: pid} do
+      assert {:ok, nil} = Turn.get_active_player(pid)
+    end
+
+    test "returns first player when players exist", %{pid: pid} do
+      Turn.add_player(pid, "player-1")
+      Turn.add_player(pid, "player-2")
+
+      assert {:ok, "player-1"} = Turn.get_active_player(pid)
+    end
+  end
+
+  describe ":waiting phase - remove_player" do
+    test "removes player from queue", %{pid: pid} do
+      Turn.add_player(pid, "player-1")
+      Turn.add_player(pid, "player-2")
+
+      assert :ok = Turn.remove_player(pid, "player-1")
+
+      state = Turn.get_state(pid)
+      assert state.queue == ["player-2"]
+    end
+
+    test "does nothing if player not found", %{pid: pid} do
+      Turn.add_player(pid, "player-1")
+
+      assert :ok = Turn.remove_player(pid, "player-2")
+
+      state = Turn.get_state(pid)
+      assert state.queue == ["player-1"]
+    end
+  end
+
+  describe ":waiting phase - invalid actions" do
+    test "rejects set_track", %{pid: pid} do
+      track = %Track{id: "1", title: "Song", artist: "Artist", year: 2020}
+      assert {:error, :invalid_action} = Turn.set_track(pid, track)
+    end
+
+    test "rejects update_timeline", %{pid: pid} do
+      track = %Track{id: "1", title: "Song", artist: "Artist", year: 2020}
+      assert {:error, :invalid_action} = Turn.update_timeline(pid, track, "user-1", 0)
+    end
+
+    test "rejects reorder_timeline", %{pid: pid} do
+      assert {:error, :invalid_action} = Turn.reorder_timeline(pid, "user-1", 0)
+    end
+  end
+
+  describe ":ready phase - operations" do
+    setup %{pid: pid} do
       Turn.add_player(pid, "player-1")
       Turn.next_phase(pid)
 
+      :ok
+    end
+
+    test "can set track", %{pid: pid} do
+      track = %Track{id: "1", title: "Song", artist: "Artist", year: 2020}
+      assert :ok = Turn.set_track(pid, track)
+
+      state = Turn.get_state(pid)
+      assert state.track == track
+    end
+
+    test "get_track returns the set track", %{pid: pid} do
+      track = %Track{id: "1", title: "Song", artist: "Artist", year: 2020}
+      Turn.set_track(pid, track)
+
+      assert {:ok, ^track} = Turn.get_track(pid)
+    end
+  end
+
+  describe ":ready phase - next_phase" do
+    setup %{pid: pid} do
+      Turn.add_player(pid, "player-1")
+      Turn.next_phase(pid)
+
+      :ok
+    end
+
+    test "transitions to :steady when track is set", %{pid: pid} do
       track = %Track{id: "1", title: "Song", artist: "Artist", year: 2020}
       Turn.set_track(pid, track)
       assert :ok = Turn.next_phase(pid)
@@ -77,17 +148,38 @@ defmodule Songy.Boundary.TurnTest do
       assert state.phase == :steady
     end
 
-    test "fails to transition from ready if no track", %{pid: pid} do
-      Turn.add_player(pid, "player-1")
-      Turn.next_phase(pid)
-
+    test "fails to transition if no track", %{pid: pid} do
       assert {:error, :no_track} = Turn.next_phase(pid)
 
       state = Turn.get_state(pid)
       assert state.phase == :ready
     end
+  end
 
-    test "transitions from steady to challenging", %{pid: pid} do
+  describe ":ready phase - invalid actions" do
+    setup %{pid: pid} do
+      Turn.add_player(pid, "player-1")
+      Turn.next_phase(pid)
+
+      :ok
+    end
+
+    test "rejects add_player", %{pid: pid} do
+      assert {:error, :invalid_action} = Turn.add_player(pid, "player-2")
+    end
+
+    test "rejects update_timeline", %{pid: pid} do
+      track = %Track{id: "1", title: "Song", artist: "Artist", year: 2020}
+      assert {:error, :invalid_action} = Turn.update_timeline(pid, track, "user-1", 0)
+    end
+
+    test "rejects reorder_timeline", %{pid: pid} do
+      assert {:error, :invalid_action} = Turn.reorder_timeline(pid, "user-1", 0)
+    end
+  end
+
+  describe ":steady phase - operations" do
+    setup %{pid: pid} do
       Turn.add_player(pid, "player-1")
       Turn.next_phase(pid)
 
@@ -95,68 +187,49 @@ defmodule Songy.Boundary.TurnTest do
       Turn.set_track(pid, track)
       Turn.next_phase(pid)
 
+      :ok
+    end
+
+    test "transitions to :challenging", %{pid: pid} do
       assert :ok = Turn.next_phase(pid)
 
       state = Turn.get_state(pid)
       assert state.phase == :challenging
     end
-
-    test "transitions from challenging to results", %{pid: pid} do
-      Turn.add_player(pid, "player-1")
-      Turn.next_phase(pid)
-
-      track = %Track{id: "1", title: "Song", artist: "Artist", year: 2020}
-      Turn.set_track(pid, track)
-      Turn.next_phase(pid)
-      Turn.next_phase(pid)
-
-      assert :ok = Turn.next_phase(pid)
-
-      state = Turn.get_state(pid)
-      assert state.phase == :results
-    end
-
-    test "transitions from results to waiting and advances cursor", %{pid: pid} do
-      Turn.add_player(pid, "player-1")
-      Turn.add_player(pid, "player-2")
-      Turn.next_phase(pid)
-
-      track = %Track{id: "1", title: "Song", artist: "Artist", year: 2020}
-      Turn.set_track(pid, track)
-      Turn.next_phase(pid)
-      Turn.next_phase(pid)
-      Turn.next_phase(pid)
-
-      assert :ok = Turn.next_phase(pid)
-
-      state = Turn.get_state(pid)
-      assert state.phase == :waiting
-      assert state.cursor == 1
-      assert state.track == nil
-      assert state.timeline == []
-      assert state.assumptions == []
-    end
   end
 
-  describe "set_track/2" do
-    test "sets the track in ready phase", %{pid: pid} do
+  describe ":steady phase - invalid actions" do
+    setup %{pid: pid} do
       Turn.add_player(pid, "player-1")
       Turn.next_phase(pid)
 
       track = %Track{id: "1", title: "Song", artist: "Artist", year: 2020}
-      assert :ok = Turn.set_track(pid, track)
+      Turn.set_track(pid, track)
+      Turn.next_phase(pid)
 
-      state = Turn.get_state(pid)
-      assert state.track == track
+      :ok
     end
 
-    test "only works in ready phase", %{pid: pid} do
-      track = %Track{id: "1", title: "Song", artist: "Artist", year: 2020}
+    test "rejects add_player", %{pid: pid} do
+      assert {:error, :invalid_action} = Turn.add_player(pid, "player-2")
+    end
+
+    test "rejects set_track", %{pid: pid} do
+      track = %Track{id: "2", title: "Song 2", artist: "Artist", year: 2021}
       assert {:error, :invalid_action} = Turn.set_track(pid, track)
     end
+
+    test "rejects update_timeline", %{pid: pid} do
+      track = %Track{id: "2", title: "Song 2", artist: "Artist", year: 2021}
+      assert {:error, :invalid_action} = Turn.update_timeline(pid, track, "user-1", 0)
+    end
+
+    test "rejects reorder_timeline", %{pid: pid} do
+      assert {:error, :invalid_action} = Turn.reorder_timeline(pid, "user-1", 0)
+    end
   end
 
-  describe "update_timeline/4" do
+  describe ":challenging phase - update_timeline" do
     setup %{pid: pid} do
       Turn.add_player(pid, "player-1")
       Turn.next_phase(pid)
@@ -166,7 +239,7 @@ defmodule Songy.Boundary.TurnTest do
       Turn.next_phase(pid)
       Turn.next_phase(pid)
 
-      %{pid: pid}
+      :ok
     end
 
     test "adds track to timeline at position 0", %{pid: pid} do
@@ -216,16 +289,9 @@ defmodule Songy.Boundary.TurnTest do
       assert Enum.at(state.assumptions, 0).user_id == "user-1"
       assert Enum.at(state.assumptions, 0).position == 1
     end
-
-    test "only works in challenging phase", %{pid: pid} do
-      Turn.next_phase(pid)
-
-      track = %Track{id: "2", title: "Song 2", artist: "Artist", year: 2021}
-      assert {:error, :invalid_action} = Turn.update_timeline(pid, track, "user-1", 0)
-    end
   end
 
-  describe "reorder_timeline/3" do
+  describe ":challenging phase - reorder_timeline" do
     setup %{pid: pid} do
       Turn.add_player(pid, "player-1")
       Turn.next_phase(pid)
@@ -240,7 +306,7 @@ defmodule Songy.Boundary.TurnTest do
       Turn.update_timeline(pid, track1, "user-1", 0)
       Turn.update_timeline(pid, track2, "user-2", 0)
 
-      %{pid: pid}
+      :ok
     end
 
     test "moves track to new position", %{pid: pid} do
@@ -263,27 +329,54 @@ defmodule Songy.Boundary.TurnTest do
       user2_assumption = Enum.find(state.assumptions, &(&1.user_id == "user-2"))
       assert user2_assumption.position == 1
     end
+  end
 
-    test "only works in challenging phase", %{pid: pid} do
+  describe ":challenging phase - next_phase" do
+    setup %{pid: pid} do
+      Turn.add_player(pid, "player-1")
       Turn.next_phase(pid)
 
-      assert {:error, :invalid_action} = Turn.reorder_timeline(pid, "user-1", 0)
+      track = %Track{id: "1", title: "Song", artist: "Artist", year: 2020}
+      Turn.set_track(pid, track)
+      Turn.next_phase(pid)
+      Turn.next_phase(pid)
+
+      :ok
+    end
+
+    test "transitions to :results", %{pid: pid} do
+      assert :ok = Turn.next_phase(pid)
+
+      state = Turn.get_state(pid)
+      assert state.phase == :results
     end
   end
 
-  describe "get_active_player/1" do
-    test "returns nil for empty queue", %{pid: pid} do
-      assert {:ok, nil} = Turn.get_active_player(pid)
-    end
-
-    test "returns first player initially", %{pid: pid} do
+  describe ":challenging phase - invalid actions" do
+    setup %{pid: pid} do
       Turn.add_player(pid, "player-1")
-      Turn.add_player(pid, "player-2")
+      Turn.next_phase(pid)
 
-      assert {:ok, "player-1"} = Turn.get_active_player(pid)
+      track = %Track{id: "1", title: "Song", artist: "Artist", year: 2020}
+      Turn.set_track(pid, track)
+      Turn.next_phase(pid)
+      Turn.next_phase(pid)
+
+      :ok
     end
 
-    test "returns next player after cursor advance", %{pid: pid} do
+    test "rejects add_player", %{pid: pid} do
+      assert {:error, :invalid_action} = Turn.add_player(pid, "player-2")
+    end
+
+    test "rejects set_track", %{pid: pid} do
+      track = %Track{id: "2", title: "Song 2", artist: "Artist", year: 2021}
+      assert {:error, :invalid_action} = Turn.set_track(pid, track)
+    end
+  end
+
+  describe ":results phase - next_phase" do
+    setup %{pid: pid} do
       Turn.add_player(pid, "player-1")
       Turn.add_player(pid, "player-2")
       Turn.next_phase(pid)
@@ -293,23 +386,62 @@ defmodule Songy.Boundary.TurnTest do
       Turn.next_phase(pid)
       Turn.next_phase(pid)
       Turn.next_phase(pid)
+
+      :ok
+    end
+
+    test "transitions to :waiting and advances cursor", %{pid: pid} do
+      assert :ok = Turn.next_phase(pid)
+
+      state = Turn.get_state(pid)
+      assert state.phase == :waiting
+      assert state.cursor == 1
+      assert state.track == nil
+      assert state.timeline == []
+      assert state.assumptions == []
+    end
+
+    test "updates active player after cursor advance", %{pid: pid} do
       Turn.next_phase(pid)
 
       assert {:ok, "player-2"} = Turn.get_active_player(pid)
     end
   end
 
-  describe "remove_player/2" do
-    test "removes player from queue", %{pid: pid} do
+  describe ":results phase - invalid actions" do
+    setup %{pid: pid} do
       Turn.add_player(pid, "player-1")
-      Turn.add_player(pid, "player-2")
+      Turn.next_phase(pid)
 
-      assert :ok = Turn.remove_player(pid, "player-1")
+      track = %Track{id: "1", title: "Song", artist: "Artist", year: 2020}
+      Turn.set_track(pid, track)
+      Turn.next_phase(pid)
+      Turn.next_phase(pid)
+      Turn.next_phase(pid)
 
-      state = Turn.get_state(pid)
-      assert state.queue == ["player-2"]
+      :ok
     end
 
+    test "rejects add_player", %{pid: pid} do
+      assert {:error, :invalid_action} = Turn.add_player(pid, "player-2")
+    end
+
+    test "rejects set_track", %{pid: pid} do
+      track = %Track{id: "2", title: "Song 2", artist: "Artist", year: 2021}
+      assert {:error, :invalid_action} = Turn.set_track(pid, track)
+    end
+
+    test "rejects update_timeline", %{pid: pid} do
+      track = %Track{id: "2", title: "Song 2", artist: "Artist", year: 2021}
+      assert {:error, :invalid_action} = Turn.update_timeline(pid, track, "user-1", 0)
+    end
+
+    test "rejects reorder_timeline", %{pid: pid} do
+      assert {:error, :invalid_action} = Turn.reorder_timeline(pid, "user-1", 0)
+    end
+  end
+
+  describe "remove_player - cursor adjustment" do
     test "adjusts cursor when removing player before cursor", %{pid: pid} do
       Turn.add_player(pid, "player-1")
       Turn.add_player(pid, "player-2")
@@ -332,71 +464,16 @@ defmodule Songy.Boundary.TurnTest do
       assert state.cursor == 0
       assert {:ok, "player-2"} = Turn.get_active_player(pid)
     end
-
-    test "does nothing if player not found", %{pid: pid} do
-      Turn.add_player(pid, "player-1")
-
-      assert :ok = Turn.remove_player(pid, "player-2")
-
-      state = Turn.get_state(pid)
-      assert state.queue == ["player-1"]
-    end
   end
 
-  describe "get_track/1" do
-    test "returns nil initially", %{pid: pid} do
-      assert {:ok, nil} = Turn.get_track(pid)
-    end
-
-    test "returns track after set", %{pid: pid} do
-      Turn.add_player(pid, "player-1")
-      Turn.next_phase(pid)
-
-      track = %Track{id: "1", title: "Song", artist: "Artist", year: 2020}
-      Turn.set_track(pid, track)
-
-      assert {:ok, ^track} = Turn.get_track(pid)
-    end
-  end
-
-  describe "get_state/1" do
+  describe "get_state" do
     test "returns complete state", %{pid: pid} do
       state = Turn.get_state(pid)
 
       assert %NewTurn{} = state
-      assert state.game_id == "game-123"
       assert state.phase == :waiting
       assert state.queue == []
       assert state.cursor == 0
-    end
-  end
-
-  describe "state machine validation" do
-    test "prevents invalid transitions", %{pid: pid} do
-      track = %Track{id: "1", title: "Song", artist: "Artist", year: 2020}
-
-      assert {:error, :invalid_action} = Turn.set_track(pid, track)
-      assert {:error, :invalid_action} = Turn.update_timeline(pid, track, "user-1", 0)
-      assert {:error, :invalid_action} = Turn.reorder_timeline(pid, "user-1", 0)
-    end
-
-    test "allows valid operations in each phase", %{pid: pid} do
-      # waiting phase
-      assert :ok = Turn.add_player(pid, "player-1")
-
-      # ready phase
-      Turn.next_phase(pid)
-      track = %Track{id: "1", title: "Song", artist: "Artist", year: 2020}
-      assert :ok = Turn.set_track(pid, track)
-
-      # steady phase
-      Turn.next_phase(pid)
-      assert :ok = Turn.next_phase(pid)
-
-      # challenging phase
-      track2 = %Track{id: "2", title: "Song 2", artist: "Artist", year: 2021}
-      assert :ok = Turn.update_timeline(pid, track2, "user-1", 0)
-      assert :ok = Turn.reorder_timeline(pid, "user-1", 0)
     end
   end
 

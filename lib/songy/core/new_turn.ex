@@ -6,7 +6,6 @@ defmodule Songy.Core.NewTurn do
   @derive {Jason.Encoder, only: [:queue, :cursor, :track, :phase, :timeline, :assumptions]}
 
   defstruct [
-    :game_id,
     :queue,
     :cursor,
     :track,
@@ -14,9 +13,6 @@ defmodule Songy.Core.NewTurn do
     :timeline,
     :assumptions
   ]
-
-  @typedoc "Game ID"
-  @type game_id :: String.t()
 
   @typedoc "Players queue"
   @type queue :: list(String.t())
@@ -38,7 +34,6 @@ defmodule Songy.Core.NewTurn do
 
   @typedoc "Turn structure"
   @type t :: %__MODULE__{
-          game_id: game_id,
           queue: queue,
           cursor: cursor,
           track: track,
