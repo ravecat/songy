@@ -181,12 +181,11 @@ defmodule Songy.Boundary.Game do
 
   def in_progress({:call, from}, :next_phase, data) do
     Logger.debug("Game #{data.id}: Advancing turn phase")
-    turn_pid = lookup_turn_process(data.id)
 
-    case Turn.next_phase(turn_pid) do
-      :ok ->
-        {:keep_state, data, [{:reply, from, {:ok, data}}]}
-
+    with turn_pid when not is_nil(turn_pid) <- lookup_turn_process(data.id),
+         :ok <- Turn.next_phase(turn_pid) do
+      {:keep_state, data, [{:reply, from, {:ok, data}}]}
+    else
       {:error, _reason} = error ->
         {:keep_state, data, [{:reply, from, error}]}
     end
@@ -194,12 +193,11 @@ defmodule Songy.Boundary.Game do
 
   def in_progress({:call, from}, {:set_track, track}, data) do
     Logger.debug("Game #{data.id}: Setting track")
-    turn_pid = lookup_turn_process(data.id)
 
-    case Turn.set_track(turn_pid, track) do
-      :ok ->
-        {:keep_state, data, [{:reply, from, {:ok, data}}]}
-
+    with turn_pid when not is_nil(turn_pid) <- lookup_turn_process(data.id),
+         :ok <- Turn.set_track(turn_pid, track) do
+      {:keep_state, data, [{:reply, from, {:ok, data}}]}
+    else
       {:error, _reason} = error ->
         {:keep_state, data, [{:reply, from, error}]}
     end
@@ -207,12 +205,11 @@ defmodule Songy.Boundary.Game do
 
   def in_progress({:call, from}, {:update_timeline, track, user_uuid, position}, data) do
     Logger.debug("Game #{data.id}: Updating timeline for #{user_uuid}")
-    turn_pid = lookup_turn_process(data.id)
 
-    case Turn.update_timeline(turn_pid, track, user_uuid, position) do
-      :ok ->
-        {:keep_state, data, [{:reply, from, {:ok, data}}]}
-
+    with turn_pid when not is_nil(turn_pid) <- lookup_turn_process(data.id),
+         :ok <- Turn.update_timeline(turn_pid, track, user_uuid, position) do
+      {:keep_state, data, [{:reply, from, {:ok, data}}]}
+    else
       {:error, _reason} = error ->
         {:keep_state, data, [{:reply, from, error}]}
     end
@@ -224,18 +221,17 @@ defmodule Songy.Boundary.Game do
     updated_scores = Map.update(data.scores, user_uuid, points, &(&1 + points))
     updated_game = %{data | scores: updated_scores}
 
-    case check_winner(updated_game) do
-      {:winner, winner_uuid} ->
-        Logger.info("Game #{data.id}: Game won by #{winner_uuid}")
+    with {:winner, winner_uuid} <- check_winner(updated_game) do
+      Logger.info("Game #{data.id}: Game won by #{winner_uuid}")
 
-        # Остановить Turn FSM
-        if turn_pid = lookup_turn_process(data.id) do
-          DynamicSupervisor.terminate_child(Songy.Supervisor.GameSession, turn_pid)
-        end
+      # Stop Turn FSM
+      if turn_pid = lookup_turn_process(data.id) do
+        DynamicSupervisor.terminate_child(Songy.Supervisor.GameSession, turn_pid)
+      end
 
-        finished_game = %{updated_game | status: :finished, turn: nil}
-        {:next_state, :finished, finished_game, [{:reply, from, {:ok, finished_game}}]}
-
+      finished_game = %{updated_game | status: :finished, turn: nil}
+      {:next_state, :finished, finished_game, [{:reply, from, {:ok, finished_game}}]}
+    else
       :no_winner ->
         {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}]}
     end
@@ -254,13 +250,8 @@ defmodule Songy.Boundary.Game do
   def finished(:enter, _old_state, data) do
     Logger.info("Game #{data.id}: Game finished")
 
-    # Остановить Turn FSM если он ещё работает
-    case lookup_turn_process(data.id) do
-      nil ->
-        :ok
-
-      turn_pid ->
-        DynamicSupervisor.terminate_child(Songy.Supervisor.GameSession, turn_pid)
+    with turn_pid when not is_nil(turn_pid) <- lookup_turn_process(data.id) do
+      DynamicSupervisor.terminate_child(Songy.Supervisor.GameSession, turn_pid)
     end
 
     {:keep_state, data}
@@ -280,18 +271,13 @@ defmodule Songy.Boundary.Game do
   end
 
   defp fetch_turn_state(game_id) do
-    case lookup_turn_process(game_id) do
-      nil ->
-        nil
-
-      turn_pid ->
-        try do
-          Turn.get_state(turn_pid)
-        catch
-          :exit, {:noproc, _} -> nil
-          :exit, {:normal, _} -> nil
-        end
+    with turn_pid when not is_nil(turn_pid) <- lookup_turn_process(game_id) do
+      Turn.get_state(turn_pid)
     end
+  rescue
+    _ -> nil
+  catch
+    _, _ -> nil
   end
 
   defp lookup_turn_process(game_id) do
@@ -343,8 +329,10 @@ defmodule Songy.Boundary.Game do
   end
 
   defp check_winner(game) do
-    case Enum.find(game.scores, fn {_uuid, score} -> score >= game.max_score end) do
-      {winner_uuid, _score} -> {:winner, winner_uuid}
+    with {winner_uuid, _score} when not is_nil(winner_uuid) <-
+           Enum.find(game.scores, fn {_uuid, score} -> score >= game.max_score end) do
+      {:winner, winner_uuid}
+    else
       nil -> :no_winner
     end
   end
