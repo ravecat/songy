@@ -8,7 +8,7 @@ defmodule SongyWeb.PageControllerTest do
   test "GET /", %{conn: conn} do
     conn = get(conn, ~p"/")
 
-    assert inertia_component(conn) == "Home"
+    assert inertia_component(conn) == "home"
   end
 
   describe "create/2" do
@@ -45,7 +45,7 @@ defmodule SongyWeb.PageControllerTest do
 
       conn = get(conn, ~p"/#{game.id}")
 
-      assert inertia_component(conn) == "Room"
+      assert inertia_component(conn) == "room"
 
       GameSession.end_game_session(game.id)
     end

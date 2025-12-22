@@ -7,7 +7,7 @@ defmodule SongyWeb.PageController do
   def home(conn, _params) do
     conn
     |> assign_prop(:provider, conn.assigns[:provider])
-    |> render_inertia("Home")
+    |> render_inertia("home")
   end
 
   def create(conn, _params) do
@@ -31,7 +31,7 @@ defmodule SongyWeb.PageController do
       {:ok, game} ->
         conn
         |> assign_prop(:room_id, game.id)
-        |> render_inertia("Room")
+        |> render_inertia("room")
 
       {:error, :game_session_not_found} ->
         conn
