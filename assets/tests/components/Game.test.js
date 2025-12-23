@@ -21,10 +21,10 @@ describe("Game", () => {
             avatar_url: "https://example.com/alice.jpg",
           },
         ],
+        queue: ["user-1"],
+        cursor: 0,
         turn: {
           phase: TURN_PHASE.STEADY,
-          queue: ["user-1"],
-          cursor: 0,
         },
       },
     };

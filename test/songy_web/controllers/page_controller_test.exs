@@ -24,7 +24,8 @@ defmodule SongyWeb.PageControllerTest do
       location = redirected_to(conn, 302)
       uuid = String.trim_leading(location, "/")
 
-      assert {:ok, _game} = GameSession.lookup_game_session(uuid)
+      assert {:ok, pid} = GameSession.lookup_game_session(uuid)
+      assert Process.alive?(pid)
 
       GameSession.end_game_session(uuid)
     end

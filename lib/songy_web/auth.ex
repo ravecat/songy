@@ -22,9 +22,9 @@ defmodule SongyWeb.Auth do
   end
 
   def fetch_current_provider(conn, _opts) do
-    %{assigns: %{current_user: %{uuid: user_uuid}}} = conn
+    %{assigns: %{current_user: %{uuid: user_id}}} = conn
 
-    case Songy.Providers.lookup(:providers, user_uuid) do
+    case Songy.Providers.lookup(:providers, user_id) do
       {:ok, %Songy.Core.Provider.Spotify{}} ->
         assign(conn, :provider, :spotify)
 

@@ -47,10 +47,10 @@ defmodule SongyWeb.AuthTest do
       assert is_binary(conn.assigns.user_token)
 
       # Verify token can be verified with new structure
-      {:ok, user_uuid} =
+      {:ok, user_id} =
         Phoenix.Token.verify(SongyWeb.Endpoint, "current_user", conn.assigns.user_token)
 
-      assert user_uuid == user.uuid
+      assert user_id == user.uuid
     end
 
     test "works with user from session", %{conn: conn} do
@@ -65,10 +65,10 @@ defmodule SongyWeb.AuthTest do
       assert is_binary(conn.assigns.user_token)
 
       # Verify token integrity
-      {:ok, user_uuid} =
+      {:ok, user_id} =
         Phoenix.Token.verify(SongyWeb.Endpoint, "current_user", conn.assigns.user_token)
 
-      assert user_uuid == user.uuid
+      assert user_id == user.uuid
     end
 
     test "generates different tokens for different users", %{conn: conn} do
@@ -116,10 +116,10 @@ defmodule SongyWeb.AuthTest do
       assert is_binary(conn.assigns.user_token)
 
       # Verify token matches user
-      {:ok, user_uuid} =
+      {:ok, user_id} =
         Phoenix.Token.verify(SongyWeb.Endpoint, "current_user", conn.assigns.user_token)
 
-      assert user_uuid == conn.assigns.current_user.uuid
+      assert user_id == conn.assigns.current_user.uuid
     end
 
     test "preserves existing user through pipeline", %{conn: conn} do
@@ -133,10 +133,10 @@ defmodule SongyWeb.AuthTest do
 
       assert conn.assigns.current_user == original_user
 
-      {:ok, user_uuid} =
+      {:ok, user_id} =
         Phoenix.Token.verify(SongyWeb.Endpoint, "current_user", conn.assigns.user_token)
 
-      assert user_uuid == original_user.uuid
+      assert user_id == original_user.uuid
     end
   end
 

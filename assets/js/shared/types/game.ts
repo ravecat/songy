@@ -39,7 +39,7 @@ export interface Game {
   status: GAME_STATUS;
 
   /** UUID of the game owner/creator */
-  owner_uuid: string;
+  owner_id: string;
 
   /** Player state for playback control */
   player: Player;

@@ -14,13 +14,13 @@
 
   const shouldShow = $derived.by(() => {
     const phase = state?.turn?.phase;
-    const currentTrack = state?.turn?.track;
+    const currentTrack = state?.track;
     const assumptions = state?.turn?.assumptions || [];
     const userHasAssumption = assumptions.some(
       (assumption) => assumption.user_id === user.uuid
     );
 
-    const activePlayerUuid = state?.turn?.queue?.[state?.turn?.cursor];
+    const activePlayerUuid = state?.queue?.[state?.cursor];
     const isActivePlayer = activePlayerUuid === user.uuid;
 
     if (!currentTrack) return false;
@@ -36,7 +36,7 @@
   });
 
   let timeline = $derived.by(() => {
-    const currentTrack = state?.turn?.track;
+    const currentTrack = state?.track;
 
     return currentTrack
       ? [

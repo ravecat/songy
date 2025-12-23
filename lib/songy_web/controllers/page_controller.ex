@@ -27,11 +27,30 @@ defmodule SongyWeb.PageController do
   end
 
   def join(conn, %{"room_id" => room_id}) do
-    case GameSession.lookup_game_session(room_id) do
+    case GameSession.get_state(room_id) do
       {:ok, game} ->
         conn
         |> assign_prop(:room_id, game.id)
         |> render_inertia("room")
+
+      {:error, :game_session_not_found} ->
+        conn
+        |> put_flash(:error, "Game session not found")
+        |> redirect(to: ~p"/")
+
+      {:error, reason} ->
+        conn
+        |> put_flash(:error, "Failed to access game session: #{reason}")
+        |> redirect(to: ~p"/")
+    end
+  end
+
+  def pixi(conn, %{"room_id" => room_id}) do
+    case GameSession.get_state(room_id) do
+      {:ok, game} ->
+        conn
+        |> assign_prop(:room_id, game.id)
+        |> render_inertia("pixi")
 
       {:error, :game_session_not_found} ->
         conn

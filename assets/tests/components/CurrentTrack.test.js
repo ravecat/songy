@@ -38,16 +38,16 @@ describe("Current track component", () => {
     describe("for active player", () => {
       test("shows current track when player has not made assumption", () => {
         const user = { uuid: "user-1", name: "Alice" };
-        
+
         const gameState = {
+          queue: ["user-1", "user-2", "user-3"],
+          cursor: 0,
+          track: mockTrack,
+          participants: mockParticipants,
           turn: {
             phase: TURN_PHASE.READY,
-            queue: ["user-1", "user-2", "user-3"],
-            cursor: 0,
-            track: mockTrack,
             assumptions: []
-          },
-          participants: mockParticipants
+          }
         };
         
         getScopeContextSpy.mockReturnValue({ user });
@@ -60,16 +60,16 @@ describe("Current track component", () => {
 
       test("hides current track when player has made assumption", () => {
         const user = { uuid: "user-1", name: "Alice" };
-        
+
         const gameState = {
+          queue: ["user-1", "user-2", "user-3"],
+          cursor: 0,
+          track: mockTrack,
+          participants: mockParticipants,
           turn: {
             phase: TURN_PHASE.READY,
-            queue: ["user-1", "user-2", "user-3"],
-            cursor: 0,
-            track: mockTrack,
             assumptions: [{ position: 0, user_id: "user-1" }]
-          },
-          participants: mockParticipants
+          }
         };
         
         getScopeContextSpy.mockReturnValue({ user });
@@ -84,16 +84,16 @@ describe("Current track component", () => {
     describe("for non-active players", () => {
       test("hides current track regardless of assumption status", () => {
         const user = { uuid: "user-2", name: "Bob" };
-        
+
         const gameState = {
+          queue: ["user-1", "user-2", "user-3"],
+          cursor: 0,
+          track: mockTrack,
+          participants: mockParticipants,
           turn: {
             phase: TURN_PHASE.READY,
-            queue: ["user-1", "user-2", "user-3"],
-            cursor: 0,
-            track: mockTrack,
             assumptions: []
-          },
-          participants: mockParticipants
+          }
         };
         
         getScopeContextSpy.mockReturnValue({ user });
@@ -110,16 +110,16 @@ describe("Current track component", () => {
     describe("for active player", () => {
       test("hides current track regardless of assumption status", () => {
         const user = { uuid: "user-1", name: "Alice" };
-        
+
         const gameState = {
+          queue: ["user-1", "user-2", "user-3"],
+          cursor: 0,
+          track: mockTrack,
+          participants: mockParticipants,
           turn: {
             phase: TURN_PHASE.CHALLENGING,
-            queue: ["user-1", "user-2", "user-3"],
-            cursor: 0,
-            track: mockTrack,
             assumptions: []
-          },
-          participants: mockParticipants
+          }
         };
         
         getScopeContextSpy.mockReturnValue({ user });
@@ -134,16 +134,16 @@ describe("Current track component", () => {
     describe("for challenger players", () => {
       test("shows current track when player has not made assumption", () => {
         const user = { uuid: "user-2", name: "Bob" };
-        
+
         const gameState = {
+          queue: ["user-1", "user-2", "user-3"],
+          cursor: 0,
+          track: mockTrack,
+          participants: mockParticipants,
           turn: {
             phase: TURN_PHASE.CHALLENGING,
-            queue: ["user-1", "user-2", "user-3"],
-            cursor: 0,
-            track: mockTrack,
             assumptions: []
-          },
-          participants: mockParticipants
+          }
         };
         
         getScopeContextSpy.mockReturnValue({ user });
@@ -156,16 +156,16 @@ describe("Current track component", () => {
 
       test("hides current track when player has made assumption", () => {
         const user = { uuid: "user-2", name: "Bob" };
-        
+
         const gameState = {
+          queue: ["user-1", "user-2", "user-3"],
+          cursor: 0,
+          track: mockTrack,
+          participants: mockParticipants,
           turn: {
             phase: TURN_PHASE.CHALLENGING,
-            queue: ["user-1", "user-2", "user-3"],
-            cursor: 0,
-            track: mockTrack,
             assumptions: [{ position: 0, user_id: "user-2" }]
-          },
-          participants: mockParticipants
+          }
         };
         
         getScopeContextSpy.mockReturnValue({ user });
@@ -178,16 +178,16 @@ describe("Current track component", () => {
 
       test("displays track card with question mark to hide track details", () => {
         const user = { uuid: "user-2", name: "Bob" };
-        
+
         const gameState = {
+          queue: ["user-1", "user-2", "user-3"],
+          cursor: 0,
+          track: mockTrack,
+          participants: mockParticipants,
           turn: {
             phase: TURN_PHASE.CHALLENGING,
-            queue: ["user-1", "user-2", "user-3"],
-            cursor: 0,
-            track: mockTrack,
             assumptions: []
-          },
-          participants: mockParticipants
+          }
         };
         
         getScopeContextSpy.mockReturnValue({ user });
@@ -206,16 +206,16 @@ describe("Current track component", () => {
     [TURN_PHASE.WAITING, TURN_PHASE.STEADY, TURN_PHASE.RESULTS].forEach(phase => {
       test(`hides current track in ${phase} phase`, () => {
         const user = { uuid: "user-1", name: "Alice" };
-        
+
         const gameState = {
+          queue: ["user-1", "user-2", "user-3"],
+          cursor: 0,
+          track: mockTrack,
+          participants: mockParticipants,
           turn: {
             phase: phase,
-            queue: ["user-1", "user-2", "user-3"],
-            cursor: 0,
-            track: mockTrack,
             assumptions: []
-          },
-          participants: mockParticipants
+          }
         };
         
         getScopeContextSpy.mockReturnValue({ user });
@@ -244,16 +244,16 @@ describe("Current track component", () => {
 
     test("handles empty player queue gracefully", () => {
       const user = { uuid: "user-1", name: "Alice" };
-      
+
       const gameState = {
+        queue: [],
+        cursor: 0,
+        track: mockTrack,
+        participants: mockParticipants,
         turn: {
           phase: TURN_PHASE.READY,
-          queue: [],
-          cursor: 0,
-          track: mockTrack,
           assumptions: []
-        },
-        participants: mockParticipants
+        }
       };
       
       getScopeContextSpy.mockReturnValue({ user });
@@ -266,16 +266,16 @@ describe("Current track component", () => {
 
     test("handles invalid cursor position gracefully", () => {
       const user = { uuid: "user-1", name: "Alice" };
-      
+
       const gameState = {
+        queue: ["user-1", "user-2"],
+        cursor: 5, // Invalid cursor
+        track: mockTrack,
+        participants: mockParticipants,
         turn: {
           phase: TURN_PHASE.READY,
-          queue: ["user-1", "user-2"],
-          cursor: 5, // Invalid cursor
-          track: mockTrack,
           assumptions: []
-        },
-        participants: mockParticipants
+        }
       };
       
       getScopeContextSpy.mockReturnValue({ user });
@@ -288,16 +288,16 @@ describe("Current track component", () => {
 
     test("handles missing track data gracefully", () => {
       const user = { uuid: "user-1", name: "Alice" };
-      
+
       const gameState = {
+        queue: ["user-1", "user-2"],
+        cursor: 0,
+        track: null,
+        participants: mockParticipants,
         turn: {
           phase: TURN_PHASE.READY,
-          queue: ["user-1", "user-2"],
-          cursor: 0,
-          track: null,
           assumptions: []
-        },
-        participants: mockParticipants
+        }
       };
       
       getScopeContextSpy.mockReturnValue({ user });
@@ -344,16 +344,16 @@ describe("Current track component", () => {
 
     test("renders without error when both contexts are provided", () => {
       const user = { uuid: "user-1", name: "Alice" };
-      
+
       const gameState = {
+        queue: ["user-1", "user-2", "user-3"],
+        cursor: 0,
+        track: mockTrack,
+        participants: mockParticipants,
         turn: {
           phase: TURN_PHASE.READY,
-          queue: ["user-1", "user-2", "user-3"],
-          cursor: 0,
-          track: mockTrack,
           assumptions: []
-        },
-        participants: mockParticipants
+        }
       };
       
       getScopeContextSpy.mockReturnValue({ user });

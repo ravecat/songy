@@ -10,7 +10,7 @@ defmodule SongyWeb.UserSocketTest do
       user_token = Phoenix.Token.sign(SongyWeb.Endpoint, "current_user", user.uuid)
 
       assert {:ok, socket} = connect(UserSocket, %{"user_token" => user_token})
-      assert socket.assigns.current_user_uuid == user.uuid
+      assert socket.assigns.current_user_id == user.uuid
     end
 
     test "connects with valid user token" do
@@ -23,7 +23,7 @@ defmodule SongyWeb.UserSocketTest do
       }
 
       assert {:ok, socket} = connect(UserSocket, params)
-      assert socket.assigns.current_user_uuid == user.uuid
+      assert socket.assigns.current_user_id == user.uuid
     end
 
     test "rejects connection with invalid user token" do
@@ -53,7 +53,7 @@ defmodule SongyWeb.UserSocketTest do
   end
 
   describe "id/1" do
-    test "returns user socket id based on current_user_uuid" do
+    test "returns user socket id based on current_user_id" do
       user = User.new()
       user_token = Phoenix.Token.sign(SongyWeb.Endpoint, "current_user", user.uuid)
 

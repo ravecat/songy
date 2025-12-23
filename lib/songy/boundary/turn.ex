@@ -5,104 +5,101 @@ defmodule Songy.Boundary.Turn do
 
   use GenStateMachine, callback_mode: [:state_functions, :state_enter]
 
-  alias Songy.Core.NewTurn
+  alias Songy.Core
 
-  @doc "Starts a turn process for the given game."
-  def start_link(game_id, opts \\ []) do
-    GenStateMachine.start_link(__MODULE__, game_id, opts)
+  def child_spec(opts) do
+    game_id = Keyword.fetch!(opts, :id)
+
+    %{
+      id: {__MODULE__, game_id},
+      start: {__MODULE__, :start_link, [opts]},
+      restart: :temporary
+    }
   end
 
-  @doc "Adds a player to the queue."
-  def add_player(pid, player_uuid) do
-    GenStateMachine.call(pid, {:add_player, player_uuid})
+  @doc "Starts a turn process for the given game."
+  def start_link(opts) when is_list(opts) do
+    game_id = Keyword.fetch!(opts, :id)
+
+    GenStateMachine.start_link(__MODULE__, opts, name: via(game_id))
+  end
+
+  @doc "Looks up the turn process PID for a game."
+  def lookup_turn_process(game_id) do
+    case Registry.lookup(Songy.Registry, {:turn, game_id}) do
+      [{pid, _}] -> pid
+      [] -> nil
+    end
   end
 
   @doc "Advances to the next phase."
-  def next_phase(pid) do
-    GenStateMachine.call(pid, :next_phase)
+  def next_phase(game_id, timeout \\ 1_000) do
+    call_if_exists(game_id, :next_phase, timeout)
   end
 
-  @doc "Sets the current track."
-  def set_track(pid, track) do
-    GenStateMachine.call(pid, {:set_track, track})
+  @doc "Snapshots the active player's timeline for this turn."
+  def set_turn_timeline(game_id, timeline, timeout \\ 1_000) when is_list(timeline) do
+    call_if_exists(game_id, {:set_turn_timeline, timeline}, timeout)
   end
 
   @doc "Updates the timeline with a track at the specified position."
-  def update_timeline(pid, track, user_uuid, position \\ 0) do
-    GenStateMachine.call(pid, {:update_timeline, track, user_uuid, position})
+  def update_timeline(game_id, track, user_id, position \\ 0, timeout \\ 1_000) do
+    call_if_exists(game_id, {:update_timeline, track, user_id, position}, timeout)
   end
 
   @doc "Reorders the timeline by moving a user's track to a new position."
-  def reorder_timeline(pid, user_uuid, new_position) do
-    GenStateMachine.call(pid, {:reorder_timeline, user_uuid, new_position})
+  def reorder_timeline(game_id, user_id, new_position, timeout \\ 1_000) do
+    call_if_exists(game_id, {:reorder_timeline, user_id, new_position}, timeout)
   end
 
   @doc "Gets the current turn state."
-  def get_state(pid) do
-    GenStateMachine.call(pid, :get_state)
-  end
-
-  @doc "Gets the active player UUID from the queue."
-  def get_active_player(pid) do
-    GenStateMachine.call(pid, :get_active_player)
-  end
-
-  @doc "Removes a player from the queue."
-  def remove_player(pid, player_uuid) do
-    GenStateMachine.call(pid, {:remove_player, player_uuid})
-  end
-
-  @doc "Gets the current track."
-  def get_track(pid) do
-    GenStateMachine.call(pid, :get_track)
+  def get_state(game_id, timeout \\ 1_000) do
+    call_if_exists(game_id, :get_state, timeout)
   end
 
   # Callbacks
 
-  def init(_game_id) do
+  def init(opts) do
+    _game_id = Keyword.fetch!(opts, :id)
+
     {:ok, :waiting,
-     %NewTurn{
-       queue: [],
-       cursor: 0,
-       track: nil,
+     %Core.Turn{
        phase: :waiting,
        timeline: [],
        assumptions: []
      }}
   end
 
+  defp via(game_id) do
+    {:via, Registry, {Songy.Registry, {:turn, game_id}}}
+  end
+
+  defp call_if_exists(game_id, message, timeout) do
+    case lookup_turn_process(game_id) do
+      nil -> {:error, :no_turn}
+      pid -> GenStateMachine.call(pid, message, timeout)
+    end
+  rescue
+    _ -> {:error, :no_turn}
+  catch
+    _, _ -> {:error, :no_turn}
+  end
+
   # State: :waiting
   def waiting(:enter, _old_state, data), do: {:keep_state, data}
 
-  def waiting({:call, from}, {:add_player, player}, data) do
-    new_data = %{data | queue: data.queue ++ [player]}
-    {:keep_state, new_data, [{:reply, from, :ok}]}
-  end
-
-  def waiting({:call, from}, :next_phase, %{queue: []} = data) do
-    {:keep_state, data, [{:reply, from, {:error, :no_players}}]}
+  def waiting({:call, from}, {:set_turn_timeline, timeline}, data) do
+    new_data = %{data | timeline: timeline}
+    {:keep_state, new_data, [{:reply, from, {:ok, new_data}}]}
   end
 
   def waiting({:call, from}, :next_phase, data) do
-    {:next_state, :ready, %{data | phase: :ready}, [{:reply, from, :ok}]}
+    new_data = %{data | phase: :ready}
+    {:next_state, :ready, new_data, [{:reply, from, {:ok, new_data}}]}
   end
 
   def waiting({:call, from}, :get_state, data) do
-    {:keep_state, data, [{:reply, from, data}]}
-  end
-
-  def waiting({:call, from}, :get_active_player, %{queue: queue, cursor: cursor} = data) do
-    active_player = Enum.at(queue, cursor)
-    {:keep_state, data, [{:reply, from, {:ok, active_player}}]}
-  end
-
-  def waiting({:call, from}, {:remove_player, player_uuid}, data) do
-    new_data = do_remove_player(data, player_uuid)
-    {:keep_state, new_data, [{:reply, from, :ok}]}
-  end
-
-  def waiting({:call, from}, :get_track, %{track: track} = data) do
-    {:keep_state, data, [{:reply, from, {:ok, track}}]}
+    {:keep_state, data, [{:reply, from, {:ok, data}}]}
   end
 
   def waiting({:call, from}, _event, data) do
@@ -112,34 +109,13 @@ defmodule Songy.Boundary.Turn do
   # State: :ready
   def ready(:enter, _old_state, data), do: {:keep_state, data}
 
-  def ready({:call, from}, {:set_track, track}, data) do
-    {:keep_state, %{data | track: track}, [{:reply, from, :ok}]}
-  end
-
-  def ready({:call, from}, :next_phase, %{track: nil} = data) do
-    {:keep_state, data, [{:reply, from, {:error, :no_track}}]}
-  end
-
   def ready({:call, from}, :next_phase, data) do
-    {:next_state, :steady, %{data | phase: :steady}, [{:reply, from, :ok}]}
+    new_data = %{data | phase: :steady}
+    {:next_state, :steady, new_data, [{:reply, from, {:ok, new_data}}]}
   end
 
   def ready({:call, from}, :get_state, data) do
-    {:keep_state, data, [{:reply, from, data}]}
-  end
-
-  def ready({:call, from}, :get_active_player, %{queue: queue, cursor: cursor} = data) do
-    active_player = Enum.at(queue, cursor)
-    {:keep_state, data, [{:reply, from, {:ok, active_player}}]}
-  end
-
-  def ready({:call, from}, {:remove_player, player_uuid}, data) do
-    new_data = do_remove_player(data, player_uuid)
-    {:keep_state, new_data, [{:reply, from, :ok}]}
-  end
-
-  def ready({:call, from}, :get_track, %{track: track} = data) do
-    {:keep_state, data, [{:reply, from, {:ok, track}}]}
+    {:keep_state, data, [{:reply, from, {:ok, data}}]}
   end
 
   def ready({:call, from}, _event, data) do
@@ -147,31 +123,15 @@ defmodule Songy.Boundary.Turn do
   end
 
   # State: :steady
-  def steady(:enter, _old_state, data) do
-    timeline = get_player_timeline(data)
-    {:keep_state, %{data | timeline: timeline}}
-  end
+  def steady(:enter, _old_state, data), do: {:keep_state, data}
 
   def steady({:call, from}, :next_phase, data) do
-    {:next_state, :challenging, %{data | phase: :challenging}, [{:reply, from, :ok}]}
+    new_data = %{data | phase: :challenging}
+    {:next_state, :challenging, new_data, [{:reply, from, {:ok, new_data}}]}
   end
 
   def steady({:call, from}, :get_state, data) do
-    {:keep_state, data, [{:reply, from, data}]}
-  end
-
-  def steady({:call, from}, :get_active_player, %{queue: queue, cursor: cursor} = data) do
-    active_player = Enum.at(queue, cursor)
-    {:keep_state, data, [{:reply, from, {:ok, active_player}}]}
-  end
-
-  def steady({:call, from}, {:remove_player, player_uuid}, data) do
-    new_data = do_remove_player(data, player_uuid)
-    {:keep_state, new_data, [{:reply, from, :ok}]}
-  end
-
-  def steady({:call, from}, :get_track, %{track: track} = data) do
-    {:keep_state, data, [{:reply, from, {:ok, track}}]}
+    {:keep_state, data, [{:reply, from, {:ok, data}}]}
   end
 
   def steady({:call, from}, _event, data) do
@@ -183,36 +143,23 @@ defmodule Songy.Boundary.Turn do
 
   def challenging({:call, from}, {:update_timeline, track, user, pos}, data) do
     new_data = update_timeline_logic(data, track, user, pos)
-    {:keep_state, new_data, [{:reply, from, :ok}]}
+    {:keep_state, new_data, [{:reply, from, {:ok, new_data}}]}
   end
 
   def challenging({:call, from}, {:reorder_timeline, user, new_pos}, data) do
     case reorder_timeline_logic(data, user, new_pos) do
-      {:ok, new_data} -> {:keep_state, new_data, [{:reply, from, :ok}]}
+      {:ok, new_data} -> {:keep_state, new_data, [{:reply, from, {:ok, new_data}}]}
       {:error, reason} -> {:keep_state, data, [{:reply, from, {:error, reason}}]}
     end
   end
 
   def challenging({:call, from}, :next_phase, data) do
-    {:next_state, :results, %{data | phase: :results}, [{:reply, from, :ok}]}
+    new_data = %{data | phase: :results}
+    {:next_state, :results, new_data, [{:reply, from, {:ok, new_data}}]}
   end
 
   def challenging({:call, from}, :get_state, data) do
-    {:keep_state, data, [{:reply, from, data}]}
-  end
-
-  def challenging({:call, from}, :get_active_player, %{queue: queue, cursor: cursor} = data) do
-    active_player = Enum.at(queue, cursor)
-    {:keep_state, data, [{:reply, from, {:ok, active_player}}]}
-  end
-
-  def challenging({:call, from}, {:remove_player, player_uuid}, data) do
-    new_data = do_remove_player(data, player_uuid)
-    {:keep_state, new_data, [{:reply, from, :ok}]}
-  end
-
-  def challenging({:call, from}, :get_track, %{track: track} = data) do
-    {:keep_state, data, [{:reply, from, {:ok, track}}]}
+    {:keep_state, data, [{:reply, from, {:ok, data}}]}
   end
 
   def challenging({:call, from}, _event, data) do
@@ -224,36 +171,18 @@ defmodule Songy.Boundary.Turn do
 
   def results({:call, from}, :next_phase, data) do
     new_data = reset_for_next_player(data)
-    {:next_state, :waiting, %{new_data | phase: :waiting}, [{:reply, from, :ok}]}
+    {:next_state, :waiting, new_data, [{:reply, from, {:ok, new_data}}]}
   end
 
   def results({:call, from}, :get_state, data) do
-    {:keep_state, data, [{:reply, from, data}]}
-  end
-
-  def results({:call, from}, :get_active_player, %{queue: queue, cursor: cursor} = data) do
-    active_player = Enum.at(queue, cursor)
-    {:keep_state, data, [{:reply, from, {:ok, active_player}}]}
-  end
-
-  def results({:call, from}, {:remove_player, player_uuid}, data) do
-    new_data = do_remove_player(data, player_uuid)
-    {:keep_state, new_data, [{:reply, from, :ok}]}
-  end
-
-  def results({:call, from}, :get_track, %{track: track} = data) do
-    {:keep_state, data, [{:reply, from, {:ok, track}}]}
+    {:keep_state, data, [{:reply, from, {:ok, data}}]}
   end
 
   def results({:call, from}, _event, data) do
     {:keep_state, data, [{:reply, from, {:error, :invalid_action}}]}
   end
 
-  defp get_player_timeline(%{queue: _queue, cursor: _cursor}) do
-    []
-  end
-
-  defp update_timeline_logic(data, track, user_uuid, position) do
+  defp update_timeline_logic(data, track, user_id, position) do
     case Enum.find_index(data.timeline, fn t -> t.id == track.id end) do
       nil ->
         {before, after_items} = Enum.split(data.timeline, position)
@@ -261,7 +190,7 @@ defmodule Songy.Boundary.Turn do
 
         new_assumptions =
           data.assumptions
-          |> Enum.reject(&(&1.user_id == user_uuid))
+          |> Enum.reject(&(&1.user_id == user_id))
           |> Enum.map(fn
             %{position: pos} = assumption when pos >= position ->
               %{assumption | position: pos + 1}
@@ -269,7 +198,7 @@ defmodule Songy.Boundary.Turn do
             assumption ->
               assumption
           end)
-          |> Enum.concat([%{position: position, user_id: user_uuid}])
+          |> Enum.concat([%{position: position, user_id: user_id}])
 
         %{data | timeline: new_timeline, assumptions: new_assumptions}
 
@@ -278,8 +207,8 @@ defmodule Songy.Boundary.Turn do
     end
   end
 
-  defp reorder_timeline_logic(data, user_uuid, new_position) do
-    case Enum.find_index(data.assumptions, fn %{user_id: uid} -> uid == user_uuid end) do
+  defp reorder_timeline_logic(data, user_id, new_position) do
+    case Enum.find_index(data.assumptions, fn %{user_id: uid} -> uid == user_id end) do
       nil ->
         {:error, :user_assumption_not_found}
 
@@ -315,42 +244,11 @@ defmodule Songy.Boundary.Turn do
     end
   end
 
-  defp reset_for_next_player(data) do
-    new_cursor = rem(data.cursor + 1, max(length(data.queue), 1))
-
-    %NewTurn{
-      queue: data.queue,
-      cursor: new_cursor,
-      track: nil,
+  defp reset_for_next_player(_data) do
+    %Core.Turn{
       phase: :waiting,
       timeline: [],
       assumptions: []
     }
-  end
-
-  defp do_remove_player(%{queue: queue} = data, player_uuid) do
-    case Enum.find_index(queue, &(&1 == player_uuid)) do
-      nil ->
-        data
-
-      player_index ->
-        new_queue = List.delete_at(queue, player_index)
-
-        new_index =
-          cond do
-            player_index < data.cursor -> data.cursor - 1
-            player_index == data.cursor -> data.cursor
-            player_index > data.cursor -> data.cursor
-          end
-
-        adjusted_index =
-          if length(new_queue) > 0 do
-            rem(new_index, length(new_queue))
-          else
-            0
-          end
-
-        %{data | queue: new_queue, cursor: adjusted_index}
-    end
   end
 end

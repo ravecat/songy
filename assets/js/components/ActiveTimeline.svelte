@@ -13,7 +13,7 @@
 
   const { state, channel } = $derived.by(getGameContext);
   const { user: currentPlayer } = $derived.by(getScopeContext);
-  const currentTrack = $derived(state?.turn?.track);
+  const currentTrack = $derived(state?.track);
   const zoneId = $derived(`participant-timeline-${currentPlayer.uuid}`);
   const turnPhase = $derived(state?.turn?.phase);
 
@@ -45,7 +45,7 @@
   type TimelineItem = (typeof timeline)[number];
 
   const activePlayerId = $derived.by(() => {
-    return state?.turn?.queue?.[state?.turn?.cursor];
+    return state?.queue?.[state?.cursor];
   });
 
   const canUserDragItem = (item: TimelineItem): boolean => {

@@ -14,7 +14,7 @@
 
   const { state: gameState } = $derived.by(getGameContext);
 
-  const src = $derived(gameState?.turn?.track?.meta?.preview_url);
+  const src = $derived(gameState?.track?.meta?.preview_url);
 </script>
 
 <audio

@@ -2,22 +2,25 @@ defmodule Songy.Boundary.GameTest do
   use ExUnit.Case, async: true
 
   alias Songy.Boundary.Game
-  alias Songy.Core.{User, Track}
+  alias Songy.Boundary.Turn
+  alias Songy.Core.User
 
   setup %{test: test} do
     owner = %User{uuid: "owner-1", name: "Owner"}
+    game_id = to_string(test)
 
-    {:ok, _pid} = start_supervised({Game, id: test, owner_uuid: owner.uuid})
+    {:ok, _pid} = start_supervised({Turn, id: game_id})
+    {:ok, _pid} = start_supervised({Game, id: game_id, owner_id: owner.uuid})
 
-    %{game_id: test, owner: owner}
+    %{game_id: game_id, owner: owner}
   end
 
   describe "initialization" do
     test "starts in :waiting state with correct defaults", %{game_id: game_id, owner: owner} do
-      game = Game.get_state(game_id)
+      {:ok, game} = Game.get_state(game_id)
 
       assert game.id == game_id
-      assert game.owner_uuid == owner.uuid
+      assert game.owner_id == owner.uuid
       assert game.status == :waiting
       assert game.participants == []
       assert game.max_participants == 10
@@ -26,17 +29,19 @@ defmodule Songy.Boundary.GameTest do
       assert game.turn == nil
     end
 
-    test "accepts custom max_participants and max_score", %{test: test} do
+    test "accepts custom max_participants and max_score", %{game_id: game_id} do
       custom_owner = %User{uuid: "custom-owner", name: "CustomOwner"}
-      custom_game_id = {test, :custom}
+      custom_game_id = "#{game_id}-custom"
+
+      {:ok, _pid} = start_supervised({Turn, id: custom_game_id})
 
       {:ok, _pid} =
         start_supervised(
-          {Game, id: custom_game_id, owner_uuid: custom_owner.uuid, max_participants: 4, max_score: 5},
+          {Game, id: custom_game_id, owner_id: custom_owner.uuid, max_participants: 4, max_score: 5},
           id: {:game_test, custom_game_id}
         )
 
-      game = Game.get_state(custom_game_id)
+      {:ok, game} = Game.get_state(custom_game_id)
 
       assert game.max_participants == 4
       assert game.max_score == 5
@@ -121,10 +126,10 @@ defmodule Songy.Boundary.GameTest do
 
       assert game.status == :in_progress
 
-      # Verify Turn FSM received participants
-      response = Game.get_state(game_id)
+      # Verify queue has participants
+      {:ok, response} = Game.get_state(game_id)
       assert response.turn != nil
-      assert length(response.turn.queue) == 2
+      assert length(response.queue) == 2
     end
 
     test "rejects start with insufficient participants", %{game_id: game_id} do
@@ -143,11 +148,6 @@ defmodule Songy.Boundary.GameTest do
   describe ":waiting state - invalid actions" do
     test "rejects next_phase in waiting", %{game_id: game_id} do
       assert {:error, :invalid_action} = Game.next_phase(game_id)
-    end
-
-    test "rejects set_track in waiting", %{game_id: game_id} do
-      track = %Track{id: "track-1", title: "Test Track", artist: "Test Artist", year: 2000}
-      assert {:error, :invalid_action} = Game.set_track(game_id, track)
     end
 
     test "rejects increment_score in waiting", %{game_id: game_id} do
@@ -177,14 +177,6 @@ defmodule Songy.Boundary.GameTest do
     test "can advance turn phase", %{game_id: game_id} do
       # Turn FSM starts in :waiting, needs players to advance
       assert {:ok, _} = Game.next_phase(game_id)
-    end
-
-    test "can set track", %{game_id: game_id} do
-      # Advance to :ready phase first
-      Game.next_phase(game_id)
-
-      track = %Track{id: "track-1", title: "Test Track", artist: "Test Artist", year: 2000}
-      assert {:ok, _} = Game.set_track(game_id, track)
     end
 
     test "can increment score", %{game_id: game_id, user1: user1} do
@@ -224,7 +216,7 @@ defmodule Songy.Boundary.GameTest do
     end
 
     test "rejects start_game when already in progress", %{game_id: game_id} do
-      assert {:error, :invalid_action} = Game.start_game(game_id)
+      assert {:error, :game_already_started} = Game.start_game(game_id)
     end
   end
 
@@ -242,7 +234,7 @@ defmodule Songy.Boundary.GameTest do
     end
 
     test "can get_state in finished", %{game_id: game_id} do
-      game = Game.get_state(game_id)
+      {:ok, game} = Game.get_state(game_id)
       assert game.status == :finished
     end
 
@@ -266,16 +258,16 @@ defmodule Songy.Boundary.GameTest do
       {:ok, _} = Game.add_participant(game_id, user2)
       {:ok, _} = Game.start_game(game_id)
 
-      game = Game.get_state(game_id)
+      {:ok, game} = Game.get_state(game_id)
 
       assert game.status == :in_progress
       assert game.turn != nil
       assert game.turn.phase == :waiting
-      assert length(game.turn.queue) == 2
+      assert length(game.queue) == 2
     end
 
     test "returns nil turn when not started", %{game_id: game_id} do
-      game = Game.get_state(game_id)
+      {:ok, game} = Game.get_state(game_id)
 
       assert game.turn == nil
       assert game.status == :waiting

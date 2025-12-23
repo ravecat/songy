@@ -18,20 +18,20 @@ defmodule SongyWeb.Presence do
 
   def handle_metas(@room_prefix <> _room_id = topic, %{joins: joins, leaves: leaves}, _, state) do
     # Emit participant join events
-    for {user_uuid, _} <- joins do
+    for {user_id, _} <- joins do
       Phoenix.PubSub.local_broadcast(
         Songy.PubSub,
         @presence_prefix <> topic,
-        {:participant_joined, user_uuid}
+        {:participant_joined, user_id}
       )
     end
 
     # Emit participant leave events
-    for {user_uuid, _} <- leaves do
+    for {user_id, _} <- leaves do
       Phoenix.PubSub.local_broadcast(
         Songy.PubSub,
         @presence_prefix <> topic,
-        {:participant_left, user_uuid}
+        {:participant_left, user_id}
       )
     end
 

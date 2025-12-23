@@ -10,15 +10,13 @@ describe("AppleMusic component", () => {
   beforeEach(() => {
     mockGameContext = {
       state: {
-        turn: {
-          track: {
-            id: "1440783454",
-            title: "Firestarter",
-            artist: "The Prodigy",
-            year: 1996,
-            meta: {
-              preview_url: "https://audio-ssl.itunes.apple.com/preview.m4a",
-            },
+        track: {
+          id: "1440783454",
+          title: "Firestarter",
+          artist: "The Prodigy",
+          year: 1996,
+          meta: {
+            preview_url: "https://audio-ssl.itunes.apple.com/preview.m4a",
           },
         },
       },
@@ -61,7 +59,7 @@ describe("AppleMusic component", () => {
   });
 
   test("handles missing preview_url gracefully", () => {
-    mockGameContext.state.turn.track.meta = {};
+    mockGameContext.state.track.meta = {};
 
     getGameContextSpy.mockReturnValue(mockGameContext);
 

@@ -10,8 +10,11 @@ defmodule SongyWeb.RoomChannel do
 
   @impl true
   def join(@room_prefix <> _, _payload, socket) do
+    user_id = socket.assigns.current_user_id
+
+    {:ok, _} = Presence.track(socket, user_id, %{online_at: inspect(System.system_time(:second))})
+
     send(self(), :init_client_state)
-    send(self(), :track_presence)
 
     {:ok, socket}
   end
@@ -20,22 +23,13 @@ defmodule SongyWeb.RoomChannel do
   def handle_info(:init_client_state, socket) do
     @room_prefix <> room_id = socket.topic
 
-    case GameSession.lookup_game_session(room_id) do
+    case GameSession.get_state(room_id) do
       {:ok, game} ->
         push(socket, "state_updated", game)
 
       {:error, _} ->
         Logger.warning("Game session not found for room #{room_id}")
     end
-
-    {:noreply, socket}
-  end
-
-  @impl true
-  def handle_info(:track_presence, socket) do
-    user_uuid = socket.assigns.current_user_uuid
-
-    Presence.track(socket, user_uuid, %{online_at: inspect(System.system_time(:second))})
 
     {:noreply, socket}
   end
@@ -70,9 +64,9 @@ defmodule SongyWeb.RoomChannel do
   @impl true
   def handle_in("start_playback", _payload, socket) do
     @room_prefix <> room_id = socket.topic
-    current_user_uuid = socket.assigns.current_user_uuid
+    current_user_id = socket.assigns.current_user_id
 
-    with true <- GameSession.owner?(room_id, current_user_uuid),
+    with true <- GameSession.owner?(room_id, current_user_id),
          {:ok, game} <- GameSession.start_playback(room_id) do
       broadcast(socket, "state_updated", game)
       {:reply, :ok, socket}
@@ -86,9 +80,9 @@ defmodule SongyWeb.RoomChannel do
   @impl true
   def handle_in("pause_playback", _payload, socket) do
     @room_prefix <> room_id = socket.topic
-    current_user_uuid = socket.assigns.current_user_uuid
+    current_user_id = socket.assigns.current_user_id
 
-    with true <- GameSession.owner?(room_id, current_user_uuid),
+    with true <- GameSession.owner?(room_id, current_user_id),
          {:ok, game} <- GameSession.pause_playback(room_id) do
       broadcast(socket, "state_updated", game)
       {:reply, :ok, socket}
@@ -105,9 +99,9 @@ defmodule SongyWeb.RoomChannel do
 
   @impl true
   def handle_in("get_provider", _payload, socket) do
-    user_uuid = socket.assigns.current_user_uuid
+    user_id = socket.assigns.current_user_id
 
-    case Songy.Providers.lookup(:providers, user_uuid) do
+    case Songy.Providers.lookup(:providers, user_id) do
       {:ok, %Songy.Core.Provider.Spotify{access_token: token}} when not is_nil(token) ->
         {:reply, {:ok, %{token: token}}, socket}
 
@@ -121,18 +115,18 @@ defmodule SongyWeb.RoomChannel do
 
   @impl true
   def handle_in("update_provider", payload, socket) do
-    user_uuid = socket.assigns.current_user_uuid
+    user_id = socket.assigns.current_user_id
 
-    case Songy.Providers.lookup(:providers, user_uuid) do
+    case Songy.Providers.lookup(:providers, user_id) do
       {:ok, current_data} ->
         attrs = for {key, val} <- payload, into: %{}, do: {String.to_atom(key), val}
         updated_data = Songy.Core.Provider.Spotify.update(current_data, attrs)
-        :ok = Songy.Providers.update(:providers, user_uuid, updated_data)
-        Logger.debug("Updated provider data for user #{user_uuid} with #{inspect(payload)}")
+        :ok = Songy.Providers.update(:providers, user_id, updated_data)
+        Logger.debug("Updated provider data for user #{user_id} with #{inspect(payload)}")
         {:reply, :ok, socket}
 
       {:error, _reason} ->
-        Logger.warning("Failed to update provider for user #{user_uuid}: user not found in ETS")
+        Logger.warning("Failed to update provider for user #{user_id}: user not found in ETS")
 
         {:reply, {:error, %{reason: "provider_not_found"}}, socket}
     end
@@ -140,8 +134,8 @@ defmodule SongyWeb.RoomChannel do
 
   @impl true
   def handle_in("get_current_user", _payload, socket) do
-    user_uuid = socket.assigns.current_user_uuid
-    user = Songy.Core.User.get_user(user_uuid)
+    user_id = socket.assigns.current_user_id
+    user = Songy.Core.User.get_user(user_id)
     {:reply, {:ok, user}, socket}
   end
 
@@ -162,9 +156,9 @@ defmodule SongyWeb.RoomChannel do
   @impl true
   def handle_in("make_assumption", %{"position" => position}, socket) do
     @room_prefix <> room_id = socket.topic
-    current_user_uuid = socket.assigns.current_user_uuid
+    current_user_id = socket.assigns.current_user_id
 
-    case GameSession.make_assumption(room_id, current_user_uuid, position) do
+    case GameSession.make_assumption(room_id, current_user_id, position) do
       {:ok, game} ->
         broadcast(socket, "state_updated", game)
 
@@ -178,9 +172,9 @@ defmodule SongyWeb.RoomChannel do
   @impl true
   def handle_in("reorder_timeline", %{"position" => position}, socket) do
     @room_prefix <> room_id = socket.topic
-    user_uuid = socket.assigns.current_user_uuid
+    user_id = socket.assigns.current_user_id
 
-    case GameSession.reorder_timeline(room_id, user_uuid, position) do
+    case GameSession.reorder_timeline(room_id, user_id, position) do
       {:ok, game} ->
         broadcast(socket, "state_updated", game)
 

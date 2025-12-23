@@ -12,7 +12,7 @@
   let isPlayback = $derived(state?.player?.is_playback ?? false);
   const turnPhase = $derived(state?.turn?.phase);
   const activePlayerId = $derived.by(() => {
-    return state?.turn?.queue?.[state?.turn?.cursor];
+    return state?.queue?.[state?.cursor];
   });
 
   const showReady = $derived.by(() => {

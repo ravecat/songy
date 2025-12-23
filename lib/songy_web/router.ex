@@ -42,6 +42,7 @@ defmodule SongyWeb.Router do
     pipe_through [:inertia]
 
     get "/", PageController, :home
+    get "/pixi/:room_id", PageController, :pixi
     get "/:room_id", PageController, :join
   end
 

@@ -29,9 +29,9 @@ describe("Turn waiting view", () => {
             avatar_url: "https://example.com/bob.jpg",
           },
         ],
+        queue: ["user-1", "user-2"],
+        cursor: 0,
         turn: {
-          queue: ["user-1", "user-2"],
-          cursor: 0,
           phase: TURN_PHASE.WAITING,
         },
       },
@@ -110,7 +110,7 @@ describe("Turn waiting view", () => {
       },
     };
 
-    mockChannelContext.state.turn.cursor = 1;
+    mockChannelContext.state.cursor = 1;
 
     getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockReturnValue(mockChannelContext);
@@ -130,7 +130,7 @@ describe("Turn waiting view", () => {
       },
     };
 
-    mockChannelContext.state.turn.cursor = 1;
+    mockChannelContext.state.cursor = 1;
 
     getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockReturnValue(mockChannelContext);

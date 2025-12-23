@@ -7,9 +7,9 @@
   const { user: currentPlayer } = $derived.by(getScopeContext);
 
   const activePlayer = $derived.by(() => {
-    const activePlayerUuid = state?.turn?.queue?.[state?.turn?.cursor];
+    const activePlayerUuid = state?.queue?.[state?.cursor];
 
-    return state?.participants?.find(({ uuid }) => uuid === activePlayerUuid)!;
+    return state?.participants?.find(({ uuid }) => uuid === activePlayerUuid);
   });
 
   const isCurrentPlayerActive = $derived.by(() => {
@@ -21,23 +21,25 @@
   };
 </script>
 
-<div class="turn-waiting-screen">
-  <div class="player-info">
-    <div class="avatar">
-      <div
-        class="ring-primary ring-offset-base-100 w-16 rounded-full ring-2 ring-offset-2"
-      >
-        <img src={activePlayer.avatar_url} alt={activePlayer.name} />
+{#if activePlayer}
+  <div class="turn-waiting-screen">
+    <div class="player-info">
+      <div class="avatar">
+        <div
+          class="ring-primary ring-offset-base-100 w-16 rounded-full ring-2 ring-offset-2"
+        >
+          <img src={activePlayer.avatar_url} alt={activePlayer.name} />
+        </div>
       </div>
+      <h2 class="mb-0">
+        {isCurrentPlayerActive ? "It's your turn" : `${activePlayer.name} turn`}
+      </h2>
+      {#if isCurrentPlayerActive}
+        <button class="btn btn-primary w-full" onclick={handleReady}>Ready?</button>
+      {/if}
     </div>
-    <h2 class="mb-0">
-      {isCurrentPlayerActive ? "It's your turn" : `${activePlayer.name} turn`}
-    </h2>
-    {#if isCurrentPlayerActive}
-      <button class="btn btn-primary w-full" onclick={handleReady}>Ready?</button>
-    {/if}
   </div>
-</div>
+{/if}
 
 <style>
   .turn-waiting-screen {

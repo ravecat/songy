@@ -45,3 +45,7 @@ npm-debug.log
 # Environment variables
 /envs/*
 !envs/.env.example
+
+.vscode/
+.idea/
+*.iml

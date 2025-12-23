@@ -13,8 +13,7 @@ config :bun,
   vite: [args: ~w(x vite), cd: Path.expand("../assets", __DIR__)]
 
 config :songy,
-  # Database connection disabled - uncomment if needed
-  # ecto_repos: [Songy.Repo],
+  # Ecto disabled for this project - using in-memory state management
   ecto_repos: [],
   generators: [timestamp_type: :utc_datetime],
   game_session_termination_timeout: :timer.minutes(3),
