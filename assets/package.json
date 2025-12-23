@@ -19,6 +19,7 @@
     "phoenix": "workspace:*",
     "phoenix_html": "workspace:*",
     "phoenix_live_view": "workspace:*",
+    "pixi.js": "^8.14.3",
     "svelte": "^5.41.0",
     "svelte-dnd-action": "^0.9.64",
     "topbar": "^3.0.0"
