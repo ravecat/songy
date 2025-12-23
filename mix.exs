@@ -97,6 +97,7 @@ defmodule Songy.MixProject do
       "assets.test.watch": ["bun assets run test:watch"],
       "assets.test.ui": ["bun assets run test:ui"],
       "assets.test.coverage": ["bun assets run test:coverage"],
+      "assets.test.typecheck": ["bun assets run typecheck"],
       "assets.deploy": [
         "assets.build",
         "phx.digest"
