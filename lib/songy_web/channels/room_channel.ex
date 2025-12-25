@@ -9,7 +9,7 @@ defmodule SongyWeb.RoomChannel do
   @room_prefix "room:"
 
   @impl true
-  def join(@room_prefix <> _, _payload, socket) do
+  def join(_topic, _payload, socket) do
     user_id = socket.assigns.current_user_id
 
     {:ok, _} = Presence.track(socket, user_id, %{online_at: inspect(System.system_time(:second))})
@@ -35,8 +35,6 @@ defmodule SongyWeb.RoomChannel do
   end
 
   def handle_info({:game_state_updated, game}, socket) do
-    Logger.info("Game state updated for room #{socket.topic}: #{inspect(game)}")
-
     broadcast(socket, "state_updated", game)
 
     {:noreply, socket}

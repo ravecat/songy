@@ -1,7 +1,6 @@
 defmodule SongyWeb.RoomChannelTest do
   use SongyWeb.ChannelCase
 
-  alias Songy.Boundary.Game
   alias Songy.Boundary.GameSession
   alias Songy.Core.Track
   alias Songy.Core.User
@@ -14,30 +13,6 @@ defmodule SongyWeb.RoomChannelTest do
     |> subscribe_and_join(SongyWeb.RoomChannel, "room:#{room_uuid}")
   end
 
-  defp join_participant(game_id, user_id) do
-    {:ok, pid} = Game.lookup_game(game_id)
-    send(pid, {:participant_joined, user_id})
-    wait_until(fn ->
-      case Game.get_state(game_id) do
-        {:ok, game} -> Enum.any?(game.participants, &(&1.uuid == user_id))
-        _ -> false
-      end
-    end)
-  end
-
-  defp wait_until(fun, attempts \\ 25) do
-    if fun.() do
-      :ok
-    else
-      if attempts <= 0 do
-        flunk("condition not met")
-      else
-        Process.sleep(5)
-        wait_until(fun, attempts - 1)
-      end
-    end
-  end
-
   setup do
     previous_timeout = Application.fetch_env!(:songy, :challenging_phase_timeout)
     Application.put_env(:songy, :challenging_phase_timeout, :timer.seconds(8))
@@ -47,7 +22,6 @@ defmodule SongyWeb.RoomChannelTest do
     owner = User.get_user("owner123")
 
     {:ok, game} = GameSession.create_game_session(owner.uuid)
-    :ok = join_participant(game.id, owner.uuid)
 
     Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn _registry, _user_id ->
       {:ok,
@@ -79,10 +53,12 @@ defmodule SongyWeb.RoomChannelTest do
     %{current_user: current_user, owner: owner, game: game}
   end
 
-  describe "channel join" do
-    test "adds participant on join and responds ok", %{current_user: current_user, game: game} do
-      {:ok, reply, _socket} = join_room_channel(current_user, game.id)
-      assert reply == %{}
+  describe "join" do
+    test "broadcasts update", %{current_user: current_user, game: game} do
+      {:ok, _reply, _socket} = join_room_channel(current_user, game.id)
+
+      assert_broadcast("presence_diff", %{joins: joins})
+      assert Map.has_key?(joins, current_user.uuid)
 
       assert_broadcast("state_updated", %{participants: participants})
       assert Enum.any?(participants, &(&1.uuid == current_user.uuid))
@@ -90,91 +66,101 @@ defmodule SongyWeb.RoomChannelTest do
   end
 
   describe "start_game event" do
-    test "changes game status and broadcasts update", %{current_user: current_user, game: game} do
+    test "changes game status", %{current_user: current_user, owner: owner, game: game} do
       {:ok, _, socket} = join_room_channel(current_user, game.id)
-
-      assert_broadcast("state_updated", %{participants: participants})
-      assert Enum.any?(participants, &(&1.uuid == current_user.uuid))
+      join_room_channel(owner, game.id)
 
       push(socket, "start_game", %{})
 
-      assert_broadcast("state_updated", %{status: :in_progress})
-
-      assert {:ok, updated_game} = GameSession.get_state(game.id)
-      assert updated_game.status == :in_progress
-      assert %Track{} = updated_game.track
+      assert_broadcast("state_updated", %{status: :in_progress, track: %Track{}})
     end
   end
 
   describe "next_phase event" do
-    test "advances game phase and broadcasts state update", %{
+    test "advances game phase", %{
       current_user: current_user,
+      owner: owner,
       game: game
     } do
       {:ok, _, socket} = join_room_channel(current_user, game.id)
-
-      assert_broadcast("state_updated", %{participants: participants})
-      assert Enum.any?(participants, &(&1.uuid == current_user.uuid))
+      join_room_channel(owner, game.id)
 
       push(socket, "start_game", %{})
       assert_broadcast("state_updated", %{status: :in_progress})
 
-      ref = push(socket, "next_phase", %{})
-
-      assert_reply(ref, :ok)
+      push(socket, "next_phase", %{})
       assert_broadcast("state_updated", %{turn: %{phase: :ready}})
     end
   end
 
   describe "make_assumption event" do
-    test "adds turn track to timeline and broadcasts", %{
+    test "adds turn track to timeline", %{
       current_user: current_user,
+      owner: owner,
       game: game
     } do
       {:ok, _, socket} = join_room_channel(current_user, game.id)
-
-      assert_broadcast("state_updated", %{participants: participants})
-      assert Enum.any?(participants, &(&1.uuid == current_user.uuid))
+      join_room_channel(owner, game.id)
+      # Skip the presence update broadcast
+      assert_broadcast("state_updated", _)
 
       push(socket, "start_game", %{})
-      assert_broadcast("state_updated", %{status: :in_progress})
+      assert_broadcast("state_updated", %{status: :in_progress, track: %Track{}})
 
       push(socket, "next_phase", %{})
-      assert_broadcast("state_updated", %{turn: %{phase: :ready}})
+      assert_broadcast("state_updated", %{turn: %{phase: :ready}, track: %Track{}})
+
       push(socket, "next_phase", %{})
-      assert_broadcast("state_updated", %{turn: %{phase: :steady}})
+      assert_broadcast("state_updated", %{turn: %{phase: :steady}, track: %Track{}})
+
       push(socket, "next_phase", %{})
-      assert_broadcast("state_updated", %{turn: %{phase: :challenging}})
+      assert_broadcast("state_updated", %{turn: %{phase: :challenging}, track: track})
 
       push(socket, "make_assumption", %{"position" => 0})
 
-      assert_broadcast("state_updated", %{turn: %{timeline: timeline}} = _payload)
-      assert length(timeline) >= 1
+      assert_broadcast(
+        "state_updated",
+        %{turn: %{timeline: [^track], assumptions: [%{position: 0, user_id: _}]}}
+      )
     end
   end
 
   describe "reorder_timeline event" do
-    test "reorders assumption and broadcasts update", %{
+    test "reorders assumption", %{
       current_user: current_user,
+      owner: owner,
       game: game
     } do
       {:ok, _, socket} = join_room_channel(current_user, game.id)
-
-      assert_broadcast("state_updated", %{participants: participants})
-      assert Enum.any?(participants, &(&1.uuid == current_user.uuid))
+      join_room_channel(owner, game.id)
+      # Skip the presence update broadcast
+      assert_broadcast("state_updated", _)
 
       push(socket, "start_game", %{})
-      assert_broadcast("state_updated", %{status: :in_progress})
+      assert_broadcast("state_updated", %{status: :in_progress, track: %Track{}})
 
       push(socket, "next_phase", %{})
-      assert_broadcast("state_updated", %{turn: %{phase: :ready}})
+      assert_broadcast("state_updated", %{turn: %{phase: :ready}, track: %Track{}})
+
       push(socket, "next_phase", %{})
-      assert_broadcast("state_updated", %{turn: %{phase: :steady}})
+      assert_broadcast("state_updated", %{turn: %{phase: :steady}, track: %Track{}})
+
       push(socket, "next_phase", %{})
-      assert_broadcast("state_updated", %{turn: %{phase: :challenging}})
+      assert_broadcast("state_updated", %{turn: %{phase: :challenging}, track: track})
 
       push(socket, "make_assumption", %{"position" => 0})
-      assert_broadcast("state_updated", _)
+
+      assert_broadcast(
+        "state_updated",
+        %{turn: %{timeline: [^track], assumptions: [%{position: 0, user_id: _}]}}
+      )
+
+      push(socket, "reorder_timeline", %{"position" => 0})
+
+      assert_broadcast(
+        "state_updated",
+        %{turn: %{timeline: [^track], assumptions: [%{position: 0, user_id: _}]}}
+      )
     end
   end
 end
