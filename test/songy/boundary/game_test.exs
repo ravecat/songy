@@ -323,4 +323,31 @@ defmodule Songy.Boundary.GameTest do
       assert game.status == :waiting
     end
   end
+
+  describe ":challenging" do
+    setup %{game_id: game_id} do
+      user1 = %User{uuid: "user-1", name: "Player1"}
+      user2 = %User{uuid: "user-2", name: "Player2"}
+
+      :ok = join_participant(game_id, user1.uuid)
+      :ok = join_participant(game_id, user2.uuid)
+      {:ok, _} = Game.start_game(game_id)
+
+      # Advance to challenging phase
+      # waiting -> ready
+      {:ok, _} = Game.next_phase(game_id)
+      # ready -> steady
+      {:ok, _} = Game.next_phase(game_id)
+
+      %{user1: user1, user2: user2}
+    end
+
+    test "auto-advances from challenging to results after timeout", %{game_id: game_id} do
+      {:ok, game} = Game.next_phase(game_id) # steady -> challenging
+      assert game.turn.phase == :challenging
+
+      {:ok, game} = Game.get_state(game_id)
+      assert game.turn.phase == :results
+    end
+  end
 end

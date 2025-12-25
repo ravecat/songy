@@ -187,9 +187,12 @@ defmodule Songy.Boundary.Game do
     {:keep_state, new_data, [{:reply, from, {:ok, new_data}}]}
   end
 
+  def handle_event({:call, from}, :get_track, {:waiting, :none}, %{track: nil} = data) do
+    {:keep_state, data, [{:reply, from, {:error, :no_current_track}}]}
+  end
+
   def handle_event({:call, from}, :get_track, {:waiting, :none}, %{track: track} = data) do
-    response = if is_nil(track), do: {:error, :no_current_track}, else: {:ok, track}
-    {:keep_state, data, [{:reply, from, response}]}
+    {:keep_state, data, [{:reply, from, {:ok, track}}]}
   end
 
   def handle_event({:call, from}, _event, {:waiting, :none}, data) do
@@ -206,7 +209,9 @@ defmodule Songy.Boundary.Game do
     handle_presence_left(data, user_id)
   end
 
-  def handle_event(:info, :next_phase, {:in_progress, :challenging}, data) do
+  def handle_event(:timeout, :auto_advance, {:in_progress, :challenging}, data) do
+    Logger.debug("Game #{data.id}: Challenging phase timeout - auto-advancing to results")
+
     turn = data.turn || %Core.Turn{phase: :challenging, timeline: [], assumptions: []}
     updated_game = apply_challenging_results(data, turn)
     updated_game = %{updated_game | turn: %{turn | phase: :results}}
@@ -249,9 +254,10 @@ defmodule Songy.Boundary.Game do
 
     turn = data.turn || %Core.Turn{phase: :challenging, timeline: [], assumptions: []}
     updated_game = %{data | turn: %{turn | phase: :challenging}}
-    schedule_challenging_timeout()
+    timeout = Application.fetch_env!(:songy, :challenging_phase_timeout)
 
-    {:next_state, {:in_progress, :challenging}, updated_game, [{:reply, from, {:ok, updated_game}}]}
+    {:next_state, {:in_progress, :challenging}, updated_game,
+     [{:reply, from, {:ok, updated_game}}, {:timeout, timeout, :auto_advance}]}
   end
 
   def handle_event({:call, from}, :next_phase, {:in_progress, :challenging}, data) do
@@ -541,11 +547,11 @@ defmodule Songy.Boundary.Game do
     end
   end
 
-  defp apply_challenging_results(game, turn_state) do
+  defp apply_challenging_results(game, turn) do
     track = game.track
 
     game =
-      case Enum.find(turn_state.assumptions, &valid_assumption?(turn_state.timeline, &1.position)) do
+      case Enum.find(turn.assumptions, &valid_assumption?(turn.timeline, &1.position)) do
         %{user_id: user_id} ->
           game
           |> increment_user_score_local(user_id, 1)
@@ -599,12 +605,6 @@ defmodule Songy.Boundary.Game do
 
       {:ok, updated_game}
     end
-  end
-
-  defp schedule_challenging_timeout do
-    timeout = Application.fetch_env!(:songy, :challenging_phase_timeout)
-    Process.send_after(self(), :next_phase, timeout)
-    :ok
   end
 
   defp get_user_timeline(game, user_id) when is_binary(user_id) do

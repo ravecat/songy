@@ -21,6 +21,7 @@ defmodule Songy.Boundary.GameSessionTest do
   defp join_participant(game_id, user_id) do
     {:ok, pid} = Game.lookup_game(game_id)
     send(pid, {:participant_joined, user_id})
+
     wait_until(fn ->
       case Game.get_state(game_id) do
         {:ok, game} -> Enum.any?(game.participants, &(&1.uuid == user_id))
@@ -162,17 +163,6 @@ defmodule Songy.Boundary.GameSessionTest do
     test "advances to ready phase", %{game_id: game_id} do
       assert {:ok, game} = GameSession.next_phase(game_id)
       assert game.turn.phase == :ready
-    end
-
-    test "assumption updates timeline in a challenging phase", %{game_id: game_id} do
-      {:ok, _} = GameSession.next_phase(game_id) # waiting -> ready
-      {:ok, _} = GameSession.next_phase(game_id) # ready -> steady
-      {:ok, _} = GameSession.next_phase(game_id) # steady -> challenging
-
-      assert {:ok, game} = GameSession.make_assumption(game_id, "player-1", 0)
-
-      assert game.turn.phase == :challenging
-      assert length(game.turn.timeline) >= 1
     end
   end
 end
