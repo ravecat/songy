@@ -1,6 +1,5 @@
 defmodule Songy.Boundary.GameSession do
   alias Songy.Boundary.Game
-  alias Songy.Boundary.GameSessionSupervisor
   alias Songy.Boundary.Player
   alias Songy.Core
   alias Songy.Providers
@@ -17,7 +16,7 @@ defmodule Songy.Boundary.GameSession do
     with {:ok, _pid} <-
            DynamicSupervisor.start_child(
              Songy.Supervisor.GameSession,
-             {GameSessionSupervisor, opts}
+             {Game, opts}
            ),
          {:ok, game} <- Game.get_state(game_id) do
       {:ok, game}
@@ -29,8 +28,8 @@ defmodule Songy.Boundary.GameSession do
 
   @spec end_game_session(String.t(), term(), timeout()) :: :ok
   def end_game_session(game_id, reason \\ :normal, timeout \\ :infinity) do
-    case lookup_session(game_id) do
-      {:ok, pid} -> Supervisor.stop(pid, reason, timeout)
+    case lookup_game(game_id) do
+      {:ok, pid} -> :gen_statem.stop(pid, reason, timeout)
       {:error, _} -> :ok
     end
   end
@@ -38,12 +37,12 @@ defmodule Songy.Boundary.GameSession do
   @spec lookup_game_session(String.t()) ::
           {:ok, pid()} | {:error, :game_session_not_found}
   def lookup_game_session(game_id) when is_binary(game_id) or is_atom(game_id) do
-    lookup_session(game_id)
+    lookup_game(game_id)
   end
 
   @spec game_session_exists?(String.t()) :: boolean()
   def game_session_exists?(game_id) when is_binary(game_id) do
-    case lookup_session(game_id) do
+    case lookup_game(game_id) do
       {:ok, _pid} -> true
       {:error, _} -> false
     end
@@ -88,8 +87,6 @@ defmodule Songy.Boundary.GameSession do
   end
 
   defdelegate owner?(game_id, user_id), to: Game
-  defdelegate add_participant(game_id, user), to: Game
-  defdelegate remove_participant(game_id, user_id), to: Game
   defdelegate next_phase(game_id), to: Game
 
   defdelegate update_timeline(game_id, track, user_id), to: Game
@@ -114,14 +111,7 @@ defmodule Songy.Boundary.GameSession do
     @id_size |> :crypto.strong_rand_bytes() |> Base.encode32(padding: false)
   end
 
-  defp lookup_session(game_id) do
-    case Registry.lookup(Songy.Registry, {:session, game_id}) do
-      [{pid, _value}] -> {:ok, pid}
-      [] -> {:error, :game_session_not_found}
-    end
-  rescue
-    _ -> {:error, :game_session_not_found}
-  catch
-    _, _ -> {:error, :game_session_not_found}
+  defp lookup_game(game_id) do
+    Game.lookup_game(game_id)
   end
 end

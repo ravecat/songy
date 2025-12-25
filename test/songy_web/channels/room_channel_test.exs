@@ -1,6 +1,7 @@
 defmodule SongyWeb.RoomChannelTest do
   use SongyWeb.ChannelCase
 
+  alias Songy.Boundary.Game
   alias Songy.Boundary.GameSession
   alias Songy.Core.Track
   alias Songy.Core.User
@@ -13,6 +14,30 @@ defmodule SongyWeb.RoomChannelTest do
     |> subscribe_and_join(SongyWeb.RoomChannel, "room:#{room_uuid}")
   end
 
+  defp join_participant(game_id, user_id) do
+    {:ok, pid} = Game.lookup_game(game_id)
+    send(pid, {:participant_joined, user_id})
+    wait_until(fn ->
+      case Game.get_state(game_id) do
+        {:ok, game} -> Enum.any?(game.participants, &(&1.uuid == user_id))
+        _ -> false
+      end
+    end)
+  end
+
+  defp wait_until(fun, attempts \\ 25) do
+    if fun.() do
+      :ok
+    else
+      if attempts <= 0 do
+        flunk("condition not met")
+      else
+        Process.sleep(5)
+        wait_until(fun, attempts - 1)
+      end
+    end
+  end
+
   setup do
     previous_timeout = Application.fetch_env!(:songy, :challenging_phase_timeout)
     Application.put_env(:songy, :challenging_phase_timeout, :timer.seconds(8))
@@ -22,7 +47,7 @@ defmodule SongyWeb.RoomChannelTest do
     owner = User.get_user("owner123")
 
     {:ok, game} = GameSession.create_game_session(owner.uuid)
-    {:ok, _} = GameSession.add_participant(game.id, owner)
+    :ok = join_participant(game.id, owner.uuid)
 
     Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn _registry, _user_id ->
       {:ok,

@@ -1,6 +1,7 @@
 defmodule Songy.Boundary.GameSessionTest do
   use ExUnit.Case, async: true
 
+  alias Songy.Boundary.Game
   alias Songy.Boundary.GameSession
   alias Songy.Core.Track
   alias Songy.Core.User
@@ -15,6 +16,30 @@ defmodule Songy.Boundary.GameSessionTest do
     end)
 
     :ok
+  end
+
+  defp join_participant(game_id, user_id) do
+    {:ok, pid} = Game.lookup_game(game_id)
+    send(pid, {:participant_joined, user_id})
+    wait_until(fn ->
+      case Game.get_state(game_id) do
+        {:ok, game} -> Enum.any?(game.participants, &(&1.uuid == user_id))
+        _ -> false
+      end
+    end)
+  end
+
+  defp wait_until(fun, attempts \\ 25) do
+    if fun.() do
+      :ok
+    else
+      if attempts <= 0 do
+        flunk("condition not met")
+      else
+        Process.sleep(5)
+        wait_until(fun, attempts - 1)
+      end
+    end
   end
 
   describe "create_game_session/1" do
@@ -34,9 +59,9 @@ defmodule Songy.Boundary.GameSessionTest do
     setup do
       owner = User.get_user("owner-1")
       {:ok, game} = GameSession.create_game_session(owner.uuid)
-      {:ok, _} = GameSession.add_participant(game.id, owner)
+      :ok = join_participant(game.id, owner.uuid)
       user = User.get_user("player-1")
-      {:ok, _} = GameSession.add_participant(game.id, user)
+      :ok = join_participant(game.id, user.uuid)
 
       Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
         {:ok,
@@ -70,9 +95,9 @@ defmodule Songy.Boundary.GameSessionTest do
     setup do
       owner = User.get_user("owner-1")
       {:ok, game} = GameSession.create_game_session(owner.uuid)
-      {:ok, _} = GameSession.add_participant(game.id, owner)
+      :ok = join_participant(game.id, owner.uuid)
       user = User.get_user("player-1")
-      {:ok, _} = GameSession.add_participant(game.id, user)
+      :ok = join_participant(game.id, user.uuid)
 
       Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
         {:ok,
@@ -114,9 +139,9 @@ defmodule Songy.Boundary.GameSessionTest do
     setup do
       owner = User.get_user("owner-1")
       {:ok, game} = GameSession.create_game_session(owner.uuid)
-      {:ok, _} = GameSession.add_participant(game.id, owner)
+      :ok = join_participant(game.id, owner.uuid)
       user = User.get_user("player-1")
-      {:ok, _} = GameSession.add_participant(game.id, user)
+      :ok = join_participant(game.id, user.uuid)
 
       Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
         {:ok,
