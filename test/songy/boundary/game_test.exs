@@ -282,20 +282,33 @@ defmodule Songy.Boundary.GameTest do
       :ok = join_participant(game_id, user1.uuid)
       :ok = join_participant(game_id, user2.uuid)
       {:ok, _} = Game.start_game(game_id)
-      {:ok, _} = Game.increment_score(game_id, user1.uuid, 10)
 
-      :ok
+      %{game_id: game_id, user1: user1}
     end
 
-    test "can get_state in finished", %{game_id: game_id} do
-      {:ok, game} = Game.get_state(game_id)
+    test "terminates after timeout", %{game_id: game_id, user1: user1} do
+      assert {:ok, pid} = Game.lookup_game(game_id)
+      ref = Process.monitor(pid)
+
+      assert {:ok, %{status: :finished}} = Game.increment_score(game_id, user1.uuid, 10)
+
+      assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 200
+
+      refute Game.game_exists?(game_id)
+    end
+
+    test "rejects calls after termination", %{game_id: game_id, user1: user1} do
+      assert {:ok, pid} = Game.lookup_game(game_id)
+      ref = Process.monitor(pid)
+
+      {:ok, game} = Game.increment_score(game_id, user1.uuid, 10)
       assert game.status == :finished
-    end
 
-    test "rejects all mutations in finished state", %{game_id: game_id} do
-      assert {:error, :game_finished} = Game.start_game(game_id)
-      assert {:error, :game_finished} = Game.next_phase(game_id)
-      assert {:error, :game_finished} = Game.increment_score(game_id, "user-1")
+      assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 200
+
+      assert {:error, :game_session_not_found} = Game.start_game(game_id)
+      assert {:error, :game_session_not_found} = Game.next_phase(game_id)
+      assert {:error, :game_session_not_found} = Game.increment_score(game_id, "user-1")
     end
   end
 
@@ -343,7 +356,8 @@ defmodule Songy.Boundary.GameTest do
     end
 
     test "auto-advances from challenging to results after timeout", %{game_id: game_id} do
-      {:ok, game} = Game.next_phase(game_id) # steady -> challenging
+      # steady -> challenging
+      {:ok, game} = Game.next_phase(game_id)
       assert game.turn.phase == :challenging
 
       {:ok, game} = Game.get_state(game_id)

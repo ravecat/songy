@@ -45,7 +45,7 @@ defmodule Songy.Boundary.Game do
   @doc "Checks whether a game process exists for the given id."
   def game_exists?(game_id) do
     case lookup_game(game_id) do
-      {:ok, _pid} -> true
+      {:ok, pid} -> Process.alive?(pid)
       {:error, _} -> false
     end
   end
@@ -217,8 +217,12 @@ defmodule Songy.Boundary.Game do
     updated_game = %{updated_game | turn: %{turn | phase: :results}}
 
     case updated_game.status do
-      :finished -> {:next_state, {:finished, :none}, updated_game}
-      _ -> {:next_state, {:in_progress, :results}, updated_game}
+      :finished ->
+        timeout = Application.fetch_env!(:songy, :game_session_termination_timeout)
+        {:next_state, {:finished, :none}, updated_game, [{:state_timeout, timeout, :shutdown}]}
+
+      _ ->
+        {:next_state, {:in_progress, :results}, updated_game}
     end
   end
 
@@ -270,8 +274,12 @@ defmodule Songy.Boundary.Game do
     reply = [{:reply, from, {:ok, updated_game}}]
 
     case updated_game.status do
-      :finished -> {:next_state, {:finished, :none}, updated_game, reply}
-      _ -> {:next_state, {:in_progress, :results}, updated_game, reply}
+      :finished ->
+        timeout = Application.fetch_env!(:songy, :game_session_termination_timeout)
+        {:next_state, {:finished, :none}, updated_game, reply ++ [{:state_timeout, timeout, :shutdown}]}
+
+      _ ->
+        {:next_state, {:in_progress, :results}, updated_game, reply}
     end
   end
 
@@ -357,7 +365,10 @@ defmodule Songy.Boundary.Game do
 
       finished_game = %{updated_game | status: :finished}
 
-      {:next_state, {:finished, :none}, finished_game, [{:reply, from, {:ok, finished_game}}]}
+      timeout = Application.fetch_env!(:songy, :game_session_termination_timeout)
+
+      {:next_state, {:finished, :none}, finished_game,
+       [{:reply, from, {:ok, finished_game}}, {:state_timeout, timeout, :shutdown}]}
     else
       :no_winner ->
         {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}]}
@@ -388,6 +399,10 @@ defmodule Songy.Boundary.Game do
   end
 
   # State: :finished (game completed)
+
+  def handle_event(:state_timeout, :shutdown, {:finished, :none}, data) do
+    {:stop, :normal, data}
+  end
 
   def handle_event(:info, {:participant_joined, _user_id}, {:finished, :none}, data) do
     {:keep_state, data}
