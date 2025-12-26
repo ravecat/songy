@@ -2,8 +2,8 @@ defmodule Songy.Core.Game do
   @moduledoc """
   Game state structure for FSM-based game management.
 
-  This module defines the pure data structure for a game without any business logic.
-  All game logic is handled by `Songy.Boundary.Game` FSM.
+  This module defines the data structure for a game and provides validation helpers
+  used by `Songy.Boundary.Game` FSM.
   """
 
   @derive {Jason.Encoder,
@@ -24,9 +24,9 @@ defmodule Songy.Core.Game do
              :turn
            ]}
 
-  alias Songy.Core.Turn
   alias Songy.Core.Player
   alias Songy.Core.Track
+  alias Songy.Core.Turn
   alias Songy.Core.User
 
   defstruct [
@@ -105,4 +105,60 @@ defmodule Songy.Core.Game do
           track: track,
           turn: turn
         }
+
+  @doc false
+  @spec valid_assumption?(list(Track.t()), non_neg_integer()) :: boolean()
+  def valid_assumption?(timeline, position) do
+    case Enum.at(timeline, position) do
+      nil ->
+        false
+
+      %Track{year: year} ->
+        left_neighbor = if position > 0, do: Enum.at(timeline, position - 1), else: nil
+        right_neighbor = Enum.at(timeline, position + 1)
+
+        left_valid = is_nil(left_neighbor) or left_neighbor.year <= year
+        right_valid = is_nil(right_neighbor) or year <= right_neighbor.year
+
+        left_valid and right_valid
+    end
+  end
+
+  @doc false
+  @spec validate_not_full(t()) :: :ok | {:error, :game_full}
+  def validate_not_full(%__MODULE__{} = game) do
+    if length(game.participants) < game.max_participants do
+      :ok
+    else
+      {:error, :game_full}
+    end
+  end
+
+  @doc false
+  @spec validate_not_duplicate(t(), User.t()) :: :ok | {:error, :already_joined}
+  def validate_not_duplicate(%__MODULE__{} = game, %User{} = user) do
+    if Enum.any?(game.participants, &(&1.uuid == user.uuid)) do
+      {:error, :already_joined}
+    else
+      :ok
+    end
+  end
+
+  @doc false
+  @spec validate_min_participants(t()) :: :ok | {:error, :insufficient_participants}
+  def validate_min_participants(%__MODULE__{} = game) do
+    if length(game.participants) >= 2 do
+      :ok
+    else
+      {:error, :insufficient_participants}
+    end
+  end
+
+  @doc false
+  @spec check_winner(t()) :: {:winner, String.t()} | :no_winner
+  def check_winner(%__MODULE__{} = game) do
+    Enum.find_value(game.scores, :no_winner, fn {user_id, score} ->
+      if score >= game.max_score, do: {:winner, user_id}
+    end)
+  end
 end

@@ -158,7 +158,7 @@ defmodule Songy.Boundary.Game do
   def handle_event({:call, from}, :start_game, {:waiting, :none}, data) do
     Logger.info("Game #{data.id}: Starting game")
 
-    with :ok <- validate_min_participants(data) do
+    with :ok <- Core.Game.validate_min_participants(data) do
       game = %{
         data
         | status: :in_progress,
@@ -209,21 +209,13 @@ defmodule Songy.Boundary.Game do
     handle_presence_left(data, user_id)
   end
 
-  def handle_event(:timeout, :auto_advance, {:in_progress, :challenging}, data) do
+  def handle_event(:timeout, :auto_advance, {:in_progress, :challenging}, %{turn: turn} = data) do
     Logger.debug("Game #{data.id}: Challenging phase timeout - auto-advancing to results")
 
-    turn = data.turn || %Core.Turn{phase: :challenging, timeline: [], assumptions: []}
     updated_game = apply_challenging_results(data, turn)
     updated_game = %{updated_game | turn: %{turn | phase: :results}}
 
-    case updated_game.status do
-      :finished ->
-        timeout = Application.fetch_env!(:songy, :game_session_termination_timeout)
-        {:next_state, {:finished, :none}, updated_game, [{:state_timeout, timeout, :shutdown}]}
-
-      _ ->
-        {:next_state, {:in_progress, :results}, updated_game}
-    end
+    {:next_state, {:in_progress, :results}, updated_game}
   end
 
   def handle_event(:info, _event, {:in_progress, _phase}, data) do
@@ -238,25 +230,23 @@ defmodule Songy.Boundary.Game do
     Logger.debug("Game #{data.id}: Advancing turn phase")
 
     updated_game = snapshot_active_user_timeline(data)
-    turn = updated_game.turn || %Core.Turn{phase: :ready, timeline: [], assumptions: []}
+    turn = updated_game.turn
     updated_game = %{updated_game | turn: %{turn | phase: :ready}}
 
     {:next_state, {:in_progress, :ready}, updated_game, [{:reply, from, {:ok, updated_game}}]}
   end
 
-  def handle_event({:call, from}, :next_phase, {:in_progress, :ready}, data) do
+  def handle_event({:call, from}, :next_phase, {:in_progress, :ready}, %{turn: turn} = data) do
     Logger.debug("Game #{data.id}: Advancing turn phase")
 
-    turn = data.turn || %Core.Turn{phase: :steady, timeline: [], assumptions: []}
     updated_game = %{data | turn: %{turn | phase: :steady}}
 
     {:next_state, {:in_progress, :steady}, updated_game, [{:reply, from, {:ok, updated_game}}]}
   end
 
-  def handle_event({:call, from}, :next_phase, {:in_progress, :steady}, data) do
+  def handle_event({:call, from}, :next_phase, {:in_progress, :steady}, %{turn: turn} = data) do
     Logger.debug("Game #{data.id}: Advancing turn phase")
 
-    turn = data.turn || %Core.Turn{phase: :challenging, timeline: [], assumptions: []}
     updated_game = %{data | turn: %{turn | phase: :challenging}}
     timeout = Application.fetch_env!(:songy, :challenging_phase_timeout)
 
@@ -264,72 +254,84 @@ defmodule Songy.Boundary.Game do
      [{:reply, from, {:ok, updated_game}}, {:timeout, timeout, :auto_advance}]}
   end
 
-  def handle_event({:call, from}, :next_phase, {:in_progress, :challenging}, data) do
+  def handle_event({:call, from}, :next_phase, {:in_progress, :challenging}, %{turn: turn} = data) do
     Logger.debug("Game #{data.id}: Advancing turn phase")
 
-    turn = data.turn || %Core.Turn{phase: :challenging, timeline: [], assumptions: []}
     updated_game = apply_challenging_results(data, turn)
     updated_game = %{updated_game | turn: %{turn | phase: :results}}
 
     reply = [{:reply, from, {:ok, updated_game}}]
 
-    case updated_game.status do
-      :finished ->
-        timeout = Application.fetch_env!(:songy, :game_session_termination_timeout)
-        {:next_state, {:finished, :none}, updated_game, reply ++ [{:state_timeout, timeout, :shutdown}]}
-
-      _ ->
-        {:next_state, {:in_progress, :results}, updated_game, reply}
-    end
+    {:next_state, {:in_progress, :results}, updated_game, reply}
   end
 
   def handle_event({:call, from}, :next_phase, {:in_progress, :results}, data) do
     Logger.debug("Game #{data.id}: Advancing turn phase")
 
-    case handle_results_phase(data) do
-      {:ok, updated_game} ->
-        updated_game = %{
-          updated_game
-          | turn: %Core.Turn{phase: :waiting, timeline: [], assumptions: []}
-        }
+    with :no_winner <- Core.Game.check_winner(data),
+         {:ok, provider} <- Songy.Providers.lookup(:providers, data.owner_id),
+         {:ok, %Core.Track{} = track} <- Playback.search_random_track(provider),
+         {:ok, :playback_paused} <- Playback.pause_playback(provider) do
+      updated_game = %{
+        data
+        | player: Core.Player.set_playback(data.player, false),
+          track: track,
+          cursor: next_cursor(data.cursor, data.queue),
+          turn: %Core.Turn{phase: :waiting, timeline: [], assumptions: []}
+      }
 
-        {:next_state, {:in_progress, :waiting}, updated_game, [{:reply, from, {:ok, updated_game}}]}
+      {:next_state, {:in_progress, :waiting}, updated_game, [{:reply, from, {:ok, updated_game}}]}
+    else
+      {:winner, _winner_id} ->
+        game = %{data | status: :finished}
+        timeout = Application.fetch_env!(:songy, :game_session_termination_timeout)
+
+        {:next_state, {:finished, :none}, game, [{:reply, from, {:ok, game}}, {:state_timeout, timeout, :shutdown}]}
 
       {:error, reason} ->
         {:keep_state, data, [{:reply, from, {:error, reason}}]}
     end
   end
 
-  def handle_event({:call, from}, {:update_timeline, track, user_id, position}, {:in_progress, :challenging}, data) do
+  def handle_event(
+        {:call, from},
+        {:update_timeline, track, user_id, position},
+        {:in_progress, :challenging},
+        %{turn: turn} = data
+      ) do
     Logger.debug("Game #{data.id}: Updating timeline for #{user_id}")
 
-    turn = data.turn || %Core.Turn{phase: :challenging, timeline: [], assumptions: []}
-    updated_turn = update_timeline_logic(turn, track, user_id, position)
+    updated_turn = do_update_timeline(turn, track, user_id, position)
     updated_game = %{data | turn: updated_turn}
 
     {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}]}
   end
 
-  def handle_event({:call, from}, {:make_assumption, user_id, position}, {:in_progress, :challenging}, data) do
+  def handle_event(
+        {:call, from},
+        {:make_assumption, user_id, position},
+        {:in_progress, :challenging},
+        %{track: track, turn: turn} = data
+      ) do
     Logger.debug("Game #{data.id}: Making assumption for #{user_id} at #{position}")
-
-    track = data.track
 
     if is_nil(track) do
       {:keep_state, data, [{:reply, from, {:error, :no_current_track}}]}
     else
-      turn = data.turn || %Core.Turn{phase: :challenging, timeline: [], assumptions: []}
-      updated_turn = update_timeline_logic(turn, track, user_id, position)
+      updated_turn = do_update_timeline(turn, track, user_id, position)
       updated_game = %{data | turn: updated_turn}
 
       {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}]}
     end
   end
 
-  def handle_event({:call, from}, {:reorder_timeline, user_id, position}, {:in_progress, :challenging}, data) do
+  def handle_event(
+        {:call, from},
+        {:reorder_timeline, user_id, position},
+        {:in_progress, :challenging},
+        %{turn: turn} = data
+      ) do
     Logger.debug("Game #{data.id}: Reordering timeline for #{user_id} to #{position}")
-
-    turn = data.turn || %Core.Turn{phase: :challenging, timeline: [], assumptions: []}
 
     case reorder_timeline_logic(turn, user_id, position) do
       {:ok, updated_turn} ->
@@ -360,7 +362,7 @@ defmodule Songy.Boundary.Game do
     updated_scores = Map.update(data.scores, user_id, points, &(&1 + points))
     updated_game = %{data | scores: updated_scores}
 
-    with {:winner, winner_uuid} <- check_winner(updated_game) do
+    with {:winner, winner_uuid} <- Core.Game.check_winner(updated_game) do
       Logger.info("Game #{data.id}: Game won by #{winner_uuid}")
 
       finished_game = %{updated_game | status: :finished}
@@ -435,8 +437,8 @@ defmodule Songy.Boundary.Game do
   defp handle_presence_joined(data, user_id) do
     user = Core.User.get_user(user_id)
 
-    with :ok <- validate_not_full(data),
-         :ok <- validate_not_duplicate(data, user) do
+    with :ok <- Core.Game.validate_not_full(data),
+         :ok <- Core.Game.validate_not_duplicate(data, user) do
       updated_game = %{
         data
         | participants: data.participants ++ [user],
@@ -493,14 +495,14 @@ defmodule Songy.Boundary.Game do
 
     if is_binary(active_player) do
       timeline = get_user_timeline(game, active_player)
-      turn = game.turn || %Core.Turn{phase: :waiting, timeline: [], assumptions: []}
+      turn = game.turn
       %{game | turn: %{turn | timeline: timeline}}
     else
       game
     end
   end
 
-  defp update_timeline_logic(%Core.Turn{} = turn, track, user_id, position) do
+  defp do_update_timeline(%Core.Turn{} = turn, track, user_id, position) do
     case Enum.find_index(turn.timeline, fn t -> t.id == track.id end) do
       nil ->
         {before, after_items} = Enum.split(turn.timeline, position)
@@ -566,7 +568,7 @@ defmodule Songy.Boundary.Game do
     track = game.track
 
     game =
-      case Enum.find(turn.assumptions, &valid_assumption?(turn.timeline, &1.position)) do
+      case Enum.find(turn.assumptions, &Core.Game.valid_assumption?(turn.timeline, &1.position)) do
         %{user_id: user_id} ->
           game
           |> increment_user_score_local(user_id, 1)
@@ -576,7 +578,7 @@ defmodule Songy.Boundary.Game do
           game
       end
 
-    maybe_finish_game(game)
+    game
   end
 
   defp remove_player_from_queue(game, player_uuid) do
@@ -605,21 +607,8 @@ defmodule Songy.Boundary.Game do
     end
   end
 
-  defp handle_results_phase(game) do
-    with {:ok, provider} <- Songy.Providers.lookup(:providers, game.owner_id),
-         {:ok, %Core.Track{} = track} <- Playback.search_random_track(provider),
-         {:ok, :playback_paused} <- Playback.pause_playback(provider) do
-      new_cursor = rem(game.cursor + 1, max(length(game.queue), 1))
-
-      updated_game = %{
-        game
-        | player: Core.Player.set_playback(game.player, false),
-          track: track,
-          cursor: new_cursor
-      }
-
-      {:ok, updated_game}
-    end
+  defp next_cursor(cursor, queue) do
+    rem(cursor + 1, max(length(queue), 1))
   end
 
   defp get_user_timeline(game, user_id) when is_binary(user_id) do
@@ -642,62 +631,6 @@ defmodule Songy.Boundary.Game do
   defp increment_user_score_local(game, user_id, points) do
     updated_scores = Map.update(game.scores, user_id, points, &(&1 + points))
     %{game | scores: updated_scores}
-  end
-
-  defp maybe_finish_game(game) do
-    case check_winner(game) do
-      {:winner, _winner_uuid} -> %{game | status: :finished}
-      :no_winner -> game
-    end
-  end
-
-  defp valid_assumption?(timeline, position) do
-    case Enum.at(timeline, position) do
-      nil ->
-        false
-
-      %Core.Track{year: year} ->
-        left_neighbor = if position > 0, do: Enum.at(timeline, position - 1), else: nil
-        right_neighbor = Enum.at(timeline, position + 1)
-
-        left_valid = is_nil(left_neighbor) or left_neighbor.year <= year
-        right_valid = is_nil(right_neighbor) or year <= right_neighbor.year
-
-        left_valid and right_valid
-    end
-  end
-
-  defp validate_not_full(game) do
-    if length(game.participants) < game.max_participants do
-      :ok
-    else
-      {:error, :game_full}
-    end
-  end
-
-  defp validate_not_duplicate(game, user) do
-    if Enum.any?(game.participants, &(&1.uuid == user.uuid)) do
-      {:error, :already_joined}
-    else
-      :ok
-    end
-  end
-
-  defp validate_min_participants(game) do
-    if length(game.participants) >= 2 do
-      :ok
-    else
-      {:error, :insufficient_participants}
-    end
-  end
-
-  defp check_winner(game) do
-    with {winner_uuid, _score} when not is_nil(winner_uuid) <-
-           Enum.find(game.scores, fn {_uuid, score} -> score >= game.max_score end) do
-      {:winner, winner_uuid}
-    else
-      nil -> :no_winner
-    end
   end
 
   defp call_if_exists(game_id, message, timeout) do
