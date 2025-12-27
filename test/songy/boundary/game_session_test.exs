@@ -15,6 +15,17 @@ defmodule Songy.Boundary.GameSessionTest do
        }}
     end)
 
+    Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
+      {:ok,
+       %Track{
+         id: "track-1",
+         title: "Random Song",
+         artist: "Random Artist",
+         year: 2023,
+         meta: %{uri: "spotify:track:track-1"}
+       }}
+    end)
+
     :ok
   end
 
@@ -60,20 +71,12 @@ defmodule Songy.Boundary.GameSessionTest do
     setup do
       owner = User.get_user("owner-1")
       {:ok, game} = GameSession.create_game_session(owner.uuid)
+      {:ok, pid} = Game.lookup_game(game.id)
+      :ok = Repatch.allow(self(), pid)
+
       :ok = join_participant(game.id, owner.uuid)
       user = User.get_user("player-1")
       :ok = join_participant(game.id, user.uuid)
-
-      Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
-        {:ok,
-         %Track{
-           id: "track-1",
-           title: "Random Song",
-           artist: "Random Artist",
-           year: 2023,
-           meta: %{uri: "spotify:track:track-1"}
-         }}
-      end)
 
       %{game_id: game.id, owner: owner, user: user}
     end
@@ -96,20 +99,12 @@ defmodule Songy.Boundary.GameSessionTest do
     setup do
       owner = User.get_user("owner-1")
       {:ok, game} = GameSession.create_game_session(owner.uuid)
+      {:ok, pid} = Game.lookup_game(game.id)
+      :ok = Repatch.allow(self(), pid)
+
       :ok = join_participant(game.id, owner.uuid)
       user = User.get_user("player-1")
       :ok = join_participant(game.id, user.uuid)
-
-      Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
-        {:ok,
-         %Track{
-           id: "track-1",
-           title: "Random Song",
-           artist: "Random Artist",
-           year: 2023,
-           meta: %{uri: "spotify:track:track-1"}
-         }}
-      end)
 
       Repatch.patch(Songy.Boundary.Player, :start_playback, [mode: :shared], fn _provider, _track ->
         {:ok, :playback_started}
@@ -140,20 +135,12 @@ defmodule Songy.Boundary.GameSessionTest do
     setup do
       owner = User.get_user("owner-1")
       {:ok, game} = GameSession.create_game_session(owner.uuid)
+      {:ok, pid} = Game.lookup_game(game.id)
+      :ok = Repatch.allow(self(), pid)
+
       :ok = join_participant(game.id, owner.uuid)
       user = User.get_user("player-1")
       :ok = join_participant(game.id, user.uuid)
-
-      Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
-        {:ok,
-         %Track{
-           id: "track-1",
-           title: "Random Song",
-           artist: "Random Artist",
-           year: 2023,
-           meta: %{uri: "spotify:track:track-1"}
-         }}
-      end)
 
       {:ok, game} = GameSession.start_game_session(game.id)
 

@@ -205,11 +205,9 @@ defmodule Songy.Boundary.Game do
     updated_game =
       case Enum.find(turn.assumptions, &Core.Game.valid_assumption?(turn.timeline, &1.position)) do
         %{user_id: user_id} ->
-          updated_scores = Map.update(data.scores, user_id, 1, &(&1 + 1))
-
           data
-          |> Map.put(:scores, updated_scores)
-          |> extend_user_timeline(user_id, data.track)
+          |> increment_score(user_id)
+          |> extend_user_timeline(user_id)
 
         nil ->
           data
@@ -228,22 +226,13 @@ defmodule Songy.Boundary.Game do
     {:keep_state, data, [{:reply, from, {:error, :game_already_started}}]}
   end
 
-  def handle_event({:call, from}, :next_phase, {:in_progress, :waiting}, data) do
+  def handle_event({:call, from}, :next_phase, {:in_progress, :waiting}, %{turn: turn} = data) do
     Logger.debug("Game #{data.id}: Advancing turn phase")
 
-    updated_game =
-      case Enum.at(data.queue, data.cursor) do
-        active_player when is_binary(active_player) ->
-          timeline = Map.get(data.timelines, active_player, [])
-          turn = data.turn
-          %{data | turn: %{turn | timeline: timeline}}
+    active_player = Enum.at(data.queue, data.cursor)
+    timeline = Map.get(data.timelines, active_player, [])
 
-        _ ->
-          data
-      end
-
-    turn = updated_game.turn
-    updated_game = %{updated_game | turn: %{turn | phase: :ready}}
+    updated_game = %{data | turn: %{turn | timeline: timeline, phase: :ready}}
 
     {:next_state, {:in_progress, :ready}, updated_game, [{:reply, from, {:ok, updated_game}}]}
   end
@@ -400,22 +389,39 @@ defmodule Songy.Boundary.Game do
     user = Core.User.get_user(user_id)
 
     with :ok <- Core.Game.validate_not_full(data),
-         :ok <- Core.Game.validate_not_duplicate(data, user) do
+         :ok <- Core.Game.validate_not_duplicate(data, user),
+         :new <- rejoin?(data, user_id),
+         {:ok, provider} <- Songy.Providers.lookup(:providers, data.owner_id),
+         {:ok, %Core.Track{} = track} <- Playback.search_random_track(provider) do
       updated_game = %{
         data
         | participants: data.participants ++ [user],
           scores: Map.put(data.scores, user.uuid, 0),
-          queue: data.queue ++ [user.uuid]
+          queue: data.queue ++ [user_id],
+          timelines: Map.put(data.timelines, user.uuid, [track])
       }
 
       broadcast_game_state(updated_game)
-
       {:keep_state, updated_game}
     else
+      :rejoined ->
+        updated_game = %{
+          data
+          | participants: data.participants ++ [user],
+            queue: data.queue ++ [user_id]
+        }
+
+        broadcast_game_state(updated_game)
+        {:keep_state, updated_game}
+
       {:error, reason} ->
         Logger.debug("Game #{data.id}: Skipping participant #{user_id} - #{reason}")
         {:keep_state, data}
     end
+  end
+
+  defp rejoin?(data, user_id) do
+    if Enum.member?(data.queue, user_id), do: :rejoined, else: :new
   end
 
   defp handle_presence_left(data, user_id) do
@@ -540,9 +546,10 @@ defmodule Songy.Boundary.Game do
     rem(cursor + 1, max(length(queue), 1))
   end
 
-  defp extend_user_timeline(game, _user_id, nil), do: game
+  defp extend_user_timeline(%{track: nil} = game, _user_id), do: game
 
-  defp extend_user_timeline(game, user_id, %Core.Track{} = track) when is_binary(user_id) do
+  defp extend_user_timeline(%{track: %Core.Track{} = track} = game, user_id)
+       when is_binary(user_id) do
     current_timeline = Map.get(game.timelines, user_id, [])
 
     position =
@@ -551,6 +558,11 @@ defmodule Songy.Boundary.Game do
     updated_timeline = List.insert_at(current_timeline, position, track)
 
     %{game | timelines: Map.put(game.timelines, user_id, updated_timeline)}
+  end
+
+  defp increment_score(game, user_id) when is_binary(user_id) do
+    updated_scores = Map.update(game.scores, user_id, 1, &(&1 + 1))
+    %{game | scores: updated_scores}
   end
 
   defp call_if_exists(game_id, message, timeout) do

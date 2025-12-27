@@ -2,13 +2,35 @@ defmodule Songy.Boundary.GameTest do
   use ExUnit.Case, async: true
 
   alias Songy.Boundary.Game
+  alias Songy.Core.Track
   alias Songy.Core.User
 
   setup %{test: test} do
+    Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn :providers, user_id ->
+      {:ok,
+       %Songy.Core.Provider.Spotify{
+         access_token: "token-#{user_id}",
+         refresh_token: "refresh-#{user_id}"
+       }}
+    end)
+
+    Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
+      {:ok,
+       %Track{
+         id: "track-1",
+         title: "Random Song",
+         artist: "Random Artist",
+         year: 2023,
+         meta: %{uri: "spotify:track:track-1"}
+       }}
+    end)
+
     owner = %User{uuid: "owner-1", name: "Owner"}
     game_id = to_string(test)
 
     {:ok, _pid} = start_supervised({Game, id: game_id, owner_id: owner.uuid})
+    {:ok, pid} = Game.lookup_game(game_id)
+    :ok = Repatch.allow(self(), pid)
 
     %{game_id: game_id, owner: owner}
   end
@@ -98,6 +120,29 @@ defmodule Songy.Boundary.GameTest do
       assert hd(game.participants).uuid == user1.uuid
       assert game.scores[user1.uuid] == 0
       assert game.status == :waiting
+    end
+
+    test "initializes timeline for new participant", %{game_id: game_id} do
+      user1 = %User{uuid: "user-1", name: "Player1"}
+
+      :ok = join_participant(game_id, user1.uuid)
+      {:ok, game} = Game.get_state(game_id)
+
+      assert length(Map.get(game.timelines, user1.uuid, [])) == 1
+    end
+
+    test "keeps stored timeline on reconnect", %{game_id: game_id} do
+      user1 = %User{uuid: "user-1", name: "Player1"}
+
+      :ok = join_participant(game_id, user1.uuid)
+      {:ok, game} = Game.get_state(game_id)
+      [track] = Map.get(game.timelines, user1.uuid, [])
+
+      :ok = leave_participant(game_id, user1.uuid)
+      :ok = join_participant(game_id, user1.uuid)
+      {:ok, rejoined_game} = Game.get_state(game_id)
+
+      assert rejoined_game.timelines[user1.uuid] == [track]
     end
 
     test "adds multiple participants", %{game_id: game_id} do
