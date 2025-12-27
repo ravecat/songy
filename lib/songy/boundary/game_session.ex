@@ -89,10 +89,6 @@ defmodule Songy.Boundary.GameSession do
   defdelegate owner?(game_id, user_id), to: Game
   defdelegate next_phase(game_id), to: Game
 
-  defdelegate update_timeline(game_id, track, user_id), to: Game
-  defdelegate update_timeline(game_id, track, user_id, position), to: Game
-  defdelegate update_timeline(game_id, track, user_id, position, timeout), to: Game
-
   defdelegate make_assumption(game_id, user_id), to: Game
   defdelegate make_assumption(game_id, user_id, position), to: Game
   defdelegate make_assumption(game_id, user_id, position, timeout), to: Game

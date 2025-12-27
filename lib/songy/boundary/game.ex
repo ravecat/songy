@@ -83,11 +83,6 @@ defmodule Songy.Boundary.Game do
     call_if_exists(game_id, :next_phase, timeout)
   end
 
-  @doc "Updates the timeline with a track at the specified position."
-  def update_timeline(game_id, track, user_id, position \\ 0, timeout \\ 1_000) do
-    call_if_exists(game_id, {:update_timeline, track, user_id, position}, timeout)
-  end
-
   @doc "Adds an assumption for a user at the specified position."
   def make_assumption(game_id, user_id, position \\ 0, timeout \\ 1_000) do
     call_if_exists(game_id, {:make_assumption, user_id, position}, timeout)
@@ -291,20 +286,6 @@ defmodule Songy.Boundary.Game do
       {:error, reason} ->
         {:keep_state, data, [{:reply, from, {:error, reason}}]}
     end
-  end
-
-  def handle_event(
-        {:call, from},
-        {:update_timeline, track, user_id, position},
-        {:in_progress, :challenging},
-        %{turn: turn} = data
-      ) do
-    Logger.debug("Game #{data.id}: Updating timeline for #{user_id}")
-
-    updated_turn = do_update_timeline(turn, track, user_id, position)
-    updated_game = %{data | turn: updated_turn}
-
-    {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}]}
   end
 
   def handle_event(
