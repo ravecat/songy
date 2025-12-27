@@ -69,7 +69,7 @@ defmodule Songy.MixProject do
       {:repatch, "~> 1.5", only: :test},
       {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false},
       {:recode, "~> 0.7.3", only: [:dev, :test], runtime: false},
-      {:faker, "~> 0.19.0-alpha.1"},
+      {:unique_names_generator, "~> 0.2"},
       {:polymorphic_embed, git: "https://github.com/mathieuprog/polymorphic_embed.git", tag: "v5.0.3"},
       {:spotify_ex, github: "jsncmgs1/spotify_ex", tag: "v2.4.0"},
       {:type_check, "~> 0.13.3"},

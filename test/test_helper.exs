@@ -6,4 +6,3 @@ ExUnit.start()
 Code.ensure_loaded(StreamData)
 
 Repatch.setup()
-Faker.start()

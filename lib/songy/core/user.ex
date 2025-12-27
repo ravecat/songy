@@ -25,7 +25,7 @@ defmodule Songy.Core.User do
 
   ## Examples
       iex> User.new()
-      %User{uuid: "a1b2c3d4", name: "Pikachu"}
+      %User{uuid: "a1b2c3d4", name: "Brave Lion"}
   """
   @spec new() :: t()
   def new() do
@@ -44,10 +44,10 @@ defmodule Songy.Core.User do
 
   ## Examples
       iex> User.get_user("abc123")
-      %User{uuid: "abc123", name: "Pikachu", avatar_url: "..."}
+      %User{uuid: "abc123", name: "Quick Fox", avatar_url: "..."}
 
       iex> User.get_user("abc123")
-      %User{uuid: "abc123", name: "Pikachu", avatar_url: "..."}  # Same name
+      %User{uuid: "abc123", name: "Quick Fox", avatar_url: "..."}  # Same name
   """
   @spec get_user(String.t()) :: t()
   def get_user(uuid) when is_binary(uuid) do
@@ -65,20 +65,10 @@ defmodule Songy.Core.User do
   end
 
   defp generate_name(uuid) do
-    <<a::32, b::32, c::32, _d::32, _rest::binary>> =
-      :crypto.hash(:md5, uuid) <> <<0, 0, 0, 0>>
-
-    old_state = :rand.export_seed()
-    :rand.seed(:exsss, {a, b, c})
-
-    name = Faker.Pokemon.name()
-
-    case old_state do
-      :undefined -> :ok
-      _ -> :rand.seed(old_state)
-    end
-
-    name
+    UniqueNamesGenerator.generate(
+      [:adjectives, :animals],
+      %{seed: uuid, style: :capital, separator: " "}
+    )
   end
 
   defp generate_avatar_url(uuid) do
