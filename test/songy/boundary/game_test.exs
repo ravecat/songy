@@ -210,10 +210,6 @@ defmodule Songy.Boundary.GameTest do
     test "rejects next_phase in waiting", %{game_id: game_id} do
       assert {:error, :invalid_action} = Game.next_phase(game_id)
     end
-
-    test "rejects increment_score in waiting", %{game_id: game_id} do
-      assert {:error, :invalid_action} = Game.increment_score(game_id, "user-1")
-    end
   end
 
   describe ":in_progress state - operations" do
@@ -240,21 +236,6 @@ defmodule Songy.Boundary.GameTest do
       assert {:ok, _} = Game.next_phase(game_id)
     end
 
-    test "can increment score", %{game_id: game_id, user1: user1} do
-      {:ok, game} = Game.increment_score(game_id, user1.uuid, 1)
-
-      assert game.scores[user1.uuid] == 1
-      assert game.status == :in_progress
-    end
-
-    test "transitions to :finished when max_score reached", %{game_id: game_id, user1: user1} do
-      {:ok, game} = Game.increment_score(game_id, user1.uuid, 9)
-      assert game.status == :in_progress
-
-      {:ok, game} = Game.increment_score(game_id, user1.uuid, 1)
-      assert game.status == :finished
-      assert game.scores[user1.uuid] == 10
-    end
   end
 
   describe ":in_progress state - invalid actions" do
@@ -274,43 +255,6 @@ defmodule Songy.Boundary.GameTest do
     end
   end
 
-  describe ":finished state" do
-    setup %{game_id: game_id} do
-      user1 = %User{uuid: "user-1", name: "Player1"}
-      user2 = %User{uuid: "user-2", name: "Player2"}
-
-      :ok = join_participant(game_id, user1.uuid)
-      :ok = join_participant(game_id, user2.uuid)
-      {:ok, _} = Game.start_game(game_id)
-
-      %{game_id: game_id, user1: user1}
-    end
-
-    test "terminates after timeout", %{game_id: game_id, user1: user1} do
-      assert {:ok, pid} = Game.lookup_game(game_id)
-      ref = Process.monitor(pid)
-
-      assert {:ok, %{status: :finished}} = Game.increment_score(game_id, user1.uuid, 10)
-
-      assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 200
-
-      refute Game.game_exists?(game_id)
-    end
-
-    test "rejects calls after termination", %{game_id: game_id, user1: user1} do
-      assert {:ok, pid} = Game.lookup_game(game_id)
-      ref = Process.monitor(pid)
-
-      {:ok, game} = Game.increment_score(game_id, user1.uuid, 10)
-      assert game.status == :finished
-
-      assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 200
-
-      assert {:error, :game_session_not_found} = Game.start_game(game_id)
-      assert {:error, :game_session_not_found} = Game.next_phase(game_id)
-      assert {:error, :game_session_not_found} = Game.increment_score(game_id, "user-1")
-    end
-  end
 
   describe "get_state" do
     test "returns game and turn data", %{game_id: game_id} do

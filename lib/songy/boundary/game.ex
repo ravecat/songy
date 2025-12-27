@@ -93,11 +93,6 @@ defmodule Songy.Boundary.Game do
     call_if_exists(game_id, {:reorder_timeline, user_id, position}, timeout)
   end
 
-  @doc "Increments a user's score by the provided points."
-  def increment_score(game_id, user_id, points \\ 1, timeout \\ 1_000) do
-    call_if_exists(game_id, {:increment_score, user_id, points}, timeout)
-  end
-
   @doc "Gets the active player UUID from the queue."
   def get_active_player(game_id, timeout \\ 1_000) do
     call_if_exists(game_id, :get_active_player, timeout)
@@ -207,7 +202,19 @@ defmodule Songy.Boundary.Game do
   def handle_event(:timeout, :auto_advance, {:in_progress, :challenging}, %{turn: turn} = data) do
     Logger.debug("Game #{data.id}: Challenging phase timeout - auto-advancing to results")
 
-    updated_game = apply_challenging_results(data, turn)
+    updated_game =
+      case Enum.find(turn.assumptions, &Core.Game.valid_assumption?(turn.timeline, &1.position)) do
+        %{user_id: user_id} ->
+          updated_scores = Map.update(data.scores, user_id, 1, &(&1 + 1))
+
+          data
+          |> Map.put(:scores, updated_scores)
+          |> extend_user_timeline(user_id, data.track)
+
+        nil ->
+          data
+      end
+
     updated_game = %{updated_game | turn: %{turn | phase: :results}}
 
     {:next_state, {:in_progress, :results}, updated_game}
@@ -224,7 +231,17 @@ defmodule Songy.Boundary.Game do
   def handle_event({:call, from}, :next_phase, {:in_progress, :waiting}, data) do
     Logger.debug("Game #{data.id}: Advancing turn phase")
 
-    updated_game = snapshot_active_user_timeline(data)
+    updated_game =
+      case Enum.at(data.queue, data.cursor) do
+        active_player when is_binary(active_player) ->
+          timeline = Map.get(data.timelines, active_player, [])
+          turn = data.turn
+          %{data | turn: %{turn | timeline: timeline}}
+
+        _ ->
+          data
+      end
+
     turn = updated_game.turn
     updated_game = %{updated_game | turn: %{turn | phase: :ready}}
 
@@ -247,17 +264,6 @@ defmodule Songy.Boundary.Game do
 
     {:next_state, {:in_progress, :challenging}, updated_game,
      [{:reply, from, {:ok, updated_game}}, {:timeout, timeout, :auto_advance}]}
-  end
-
-  def handle_event({:call, from}, :next_phase, {:in_progress, :challenging}, %{turn: turn} = data) do
-    Logger.debug("Game #{data.id}: Advancing turn phase")
-
-    updated_game = apply_challenging_results(data, turn)
-    updated_game = %{updated_game | turn: %{turn | phase: :results}}
-
-    reply = [{:reply, from, {:ok, updated_game}}]
-
-    {:next_state, {:in_progress, :results}, updated_game, reply}
   end
 
   def handle_event({:call, from}, :next_phase, {:in_progress, :results}, data) do
@@ -296,14 +302,10 @@ defmodule Songy.Boundary.Game do
       ) do
     Logger.debug("Game #{data.id}: Making assumption for #{user_id} at #{position}")
 
-    if is_nil(track) do
-      {:keep_state, data, [{:reply, from, {:error, :no_current_track}}]}
-    else
-      updated_turn = do_update_timeline(turn, track, user_id, position)
-      updated_game = %{data | turn: updated_turn}
+    updated_turn = do_update_timeline(turn, track, user_id, position)
+    updated_game = %{data | turn: updated_turn}
 
-      {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}]}
-    end
+    {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}]}
   end
 
   def handle_event(
@@ -314,7 +316,7 @@ defmodule Songy.Boundary.Game do
       ) do
     Logger.debug("Game #{data.id}: Reordering timeline for #{user_id} to #{position}")
 
-    case reorder_timeline_logic(turn, user_id, position) do
+    case do_reorder_timeline(turn, user_id, position) do
       {:ok, updated_turn} ->
         updated_game = %{data | turn: updated_turn}
 
@@ -335,27 +337,6 @@ defmodule Songy.Boundary.Game do
     updated_game = %{data | player: Core.Player.set_playback(data.player, false)}
 
     {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}]}
-  end
-
-  def handle_event({:call, from}, {:increment_score, user_id, points}, {:in_progress, _phase}, data) do
-    Logger.debug("Game #{data.id}: Incrementing score for #{user_id} by #{points}")
-
-    updated_scores = Map.update(data.scores, user_id, points, &(&1 + points))
-    updated_game = %{data | scores: updated_scores}
-
-    with {:winner, winner_uuid} <- Core.Game.check_winner(updated_game) do
-      Logger.info("Game #{data.id}: Game won by #{winner_uuid}")
-
-      finished_game = %{updated_game | status: :finished}
-
-      timeout = Application.fetch_env!(:songy, :game_session_termination_timeout)
-
-      {:next_state, {:finished, :none}, finished_game,
-       [{:reply, from, {:ok, finished_game}}, {:state_timeout, timeout, :shutdown}]}
-    else
-      :no_winner ->
-        {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}]}
-    end
   end
 
   def handle_event({:call, from}, :get_state, {:in_progress, _phase}, data) do
@@ -471,95 +452,62 @@ defmodule Songy.Boundary.Game do
     :ok
   end
 
-  defp snapshot_active_user_timeline(game) do
-    active_player = Enum.at(game.queue, game.cursor)
-
-    if is_binary(active_player) do
-      timeline = get_user_timeline(game, active_player)
-      turn = game.turn
-      %{game | turn: %{turn | timeline: timeline}}
+  defp do_update_timeline(
+         %Core.Turn{timeline: timeline, assumptions: assumptions} = turn,
+         track,
+         user_id,
+         position
+       ) do
+    if Enum.any?(timeline, &(&1.id == track.id)) do
+      turn
     else
-      game
+      new_assumptions =
+        assumptions
+        |> Enum.reject(&(&1.user_id == user_id))
+        |> Enum.map(fn
+          %{position: pos} = assumption when pos >= position ->
+            %{assumption | position: pos + 1}
+
+          assumption ->
+            assumption
+        end)
+        |> Enum.concat([%{position: position, user_id: user_id}])
+
+      %{turn | timeline: List.insert_at(timeline, position, track), assumptions: new_assumptions}
     end
   end
 
-  defp do_update_timeline(%Core.Turn{} = turn, track, user_id, position) do
-    case Enum.find_index(turn.timeline, fn t -> t.id == track.id end) do
-      nil ->
-        {before, after_items} = Enum.split(turn.timeline, position)
-        new_timeline = before ++ [track] ++ after_items
+  defp do_reorder_timeline(
+         %Core.Turn{timeline: timeline, assumptions: assumptions} = turn,
+         user_id,
+         new_position
+       ) do
+    with index when not is_nil(index) <- Enum.find_index(assumptions, &(&1.user_id == user_id)),
+         %{position: old_position} <- Enum.at(assumptions, index),
+         false <- old_position == new_position do
+      track = Enum.at(timeline, old_position)
+      new_timeline = timeline |> List.delete_at(old_position) |> List.insert_at(new_position, track)
 
-        new_assumptions =
-          turn.assumptions
-          |> Enum.reject(&(&1.user_id == user_id))
-          |> Enum.map(fn
-            %{position: pos} = assumption when pos >= position ->
-              %{assumption | position: pos + 1}
+      new_assumptions =
+        Enum.map(assumptions, fn
+          %{position: pos} = assumption when pos == old_position ->
+            %{assumption | position: new_position}
 
-            assumption ->
-              assumption
-          end)
-          |> Enum.concat([%{position: position, user_id: user_id}])
+          %{position: pos} = assumption when old_position < pos and pos <= new_position ->
+            %{assumption | position: pos - 1}
 
-        %{turn | timeline: new_timeline, assumptions: new_assumptions}
+          %{position: pos} = assumption when new_position <= pos and pos < old_position ->
+            %{assumption | position: pos + 1}
 
-      _index ->
-        turn
+          assumption ->
+            assumption
+        end)
+
+      {:ok, %{turn | timeline: new_timeline, assumptions: new_assumptions}}
+    else
+      nil -> {:error, :user_assumption_not_found}
+      true -> {:ok, turn}
     end
-  end
-
-  defp reorder_timeline_logic(%Core.Turn{} = turn, user_id, new_position) do
-    case Enum.find_index(turn.assumptions, fn %{user_id: uid} -> uid == user_id end) do
-      nil ->
-        {:error, :user_assumption_not_found}
-
-      index ->
-        assumption = Enum.at(turn.assumptions, index)
-        old_position = assumption.position
-
-        if old_position == new_position do
-          {:ok, turn}
-        else
-          track = Enum.at(turn.timeline, old_position)
-          new_timeline = List.delete_at(turn.timeline, old_position)
-          {before, after_items} = Enum.split(new_timeline, new_position)
-          new_timeline = before ++ [track] ++ after_items
-
-          new_assumptions =
-            Enum.map(turn.assumptions, fn
-              %{position: pos} = assumption when pos == old_position ->
-                %{assumption | position: new_position}
-
-              %{position: pos} = assumption when old_position < pos and pos <= new_position ->
-                %{assumption | position: pos - 1}
-
-              %{position: pos} = assumption when new_position <= pos and pos < old_position ->
-                %{assumption | position: pos + 1}
-
-              assumption ->
-                assumption
-            end)
-
-          {:ok, %{turn | timeline: new_timeline, assumptions: new_assumptions}}
-        end
-    end
-  end
-
-  defp apply_challenging_results(game, turn) do
-    track = game.track
-
-    game =
-      case Enum.find(turn.assumptions, &Core.Game.valid_assumption?(turn.timeline, &1.position)) do
-        %{user_id: user_id} ->
-          game
-          |> increment_user_score_local(user_id, 1)
-          |> extend_user_timeline(user_id, track)
-
-        nil ->
-          game
-      end
-
-    game
   end
 
   defp remove_player_from_queue(game, player_uuid) do
@@ -592,14 +540,10 @@ defmodule Songy.Boundary.Game do
     rem(cursor + 1, max(length(queue), 1))
   end
 
-  defp get_user_timeline(game, user_id) when is_binary(user_id) do
-    Map.get(game.timelines, user_id, [])
-  end
-
   defp extend_user_timeline(game, _user_id, nil), do: game
 
   defp extend_user_timeline(game, user_id, %Core.Track{} = track) when is_binary(user_id) do
-    current_timeline = get_user_timeline(game, user_id)
+    current_timeline = Map.get(game.timelines, user_id, [])
 
     position =
       Enum.find_index(current_timeline, &(&1.year > track.year)) || length(current_timeline)
@@ -607,11 +551,6 @@ defmodule Songy.Boundary.Game do
     updated_timeline = List.insert_at(current_timeline, position, track)
 
     %{game | timelines: Map.put(game.timelines, user_id, updated_timeline)}
-  end
-
-  defp increment_user_score_local(game, user_id, points) do
-    updated_scores = Map.update(game.scores, user_id, points, &(&1 + points))
-    %{game | scores: updated_scores}
   end
 
   defp call_if_exists(game_id, message, timeout) do
