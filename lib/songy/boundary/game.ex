@@ -262,11 +262,24 @@ defmodule Songy.Boundary.Game do
          {:ok, provider} <- Songy.Providers.lookup(:providers, data.owner_id),
          {:ok, %Core.Track{} = track} <- Playback.search_random_track(provider),
          {:ok, :playback_paused} <- Playback.pause_playback(provider) do
+      next_cursor =
+        1..length(data.queue)
+        |> Enum.reduce_while(rem(data.cursor + 1, max(length(data.queue), 1)), fn _, cursor ->
+          player_id = Enum.at(data.queue, cursor)
+          is_connected = Enum.any?(data.participants, &(&1.uuid == player_id))
+
+          if is_connected do
+            {:halt, cursor}
+          else
+            {:cont, rem(cursor + 1, max(length(data.queue), 1))}
+          end
+        end)
+
       updated_game = %{
         data
         | player: Core.Player.set_playback(data.player, false),
           track: track,
-          cursor: next_cursor(data.cursor, data.queue),
+          cursor: next_cursor,
           turn: %Core.Turn{phase: :waiting, timeline: [], assumptions: []}
       }
 
@@ -407,8 +420,7 @@ defmodule Songy.Boundary.Game do
       :rejoined ->
         updated_game = %{
           data
-          | participants: data.participants ++ [user],
-            queue: data.queue ++ [user_id]
+          | participants: data.participants ++ [user]
         }
 
         broadcast_game_state(updated_game)
@@ -430,15 +442,10 @@ defmodule Songy.Boundary.Game do
         {:keep_state, data}
 
       _index ->
-        updated_game =
-          remove_player_from_queue(
-            %{
-              data
-              | participants: Enum.reject(data.participants, &(&1.uuid == user_id)),
-                scores: Map.delete(data.scores, user_id)
-            },
-            user_id
-          )
+        updated_game = %{
+          data
+          | participants: Enum.reject(data.participants, &(&1.uuid == user_id))
+        }
 
         broadcast_game_state(updated_game)
 
@@ -514,36 +521,6 @@ defmodule Songy.Boundary.Game do
       nil -> {:error, :user_assumption_not_found}
       true -> {:ok, turn}
     end
-  end
-
-  defp remove_player_from_queue(game, player_uuid) do
-    case Enum.find_index(game.queue, &(&1 == player_uuid)) do
-      nil ->
-        game
-
-      player_index ->
-        new_queue = List.delete_at(game.queue, player_index)
-
-        new_cursor =
-          cond do
-            player_index < game.cursor -> game.cursor - 1
-            player_index == game.cursor -> game.cursor
-            player_index > game.cursor -> game.cursor
-          end
-
-        adjusted_cursor =
-          if length(new_queue) > 0 do
-            rem(new_cursor, length(new_queue))
-          else
-            0
-          end
-
-        %{game | queue: new_queue, cursor: adjusted_cursor}
-    end
-  end
-
-  defp next_cursor(cursor, queue) do
-    rem(cursor + 1, max(length(queue), 1))
   end
 
   defp extend_user_timeline(%{track: nil} = game, _user_id), do: game
