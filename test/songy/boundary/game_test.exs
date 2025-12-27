@@ -35,6 +35,7 @@ defmodule Songy.Boundary.GameTest do
     {:ok, _pid} = start_supervised({Game, id: game_id, owner_id: owner.uuid})
     {:ok, pid} = Game.lookup_game(game_id)
     :ok = Repatch.allow(self(), pid)
+    :ok = Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game_id}")
 
     %{game_id: game_id, owner: owner}
   end
@@ -42,47 +43,19 @@ defmodule Songy.Boundary.GameTest do
   defp join_participant(game_id, user_id) do
     {:ok, pid} = Game.lookup_game(game_id)
     send(pid, {:participant_joined, user_id})
-    await_participant(game_id, user_id)
+    assert_receive {:game_state_updated, game}
+
+    {:ok, game}
   end
 
   defp leave_participant(game_id, user_id) do
     {:ok, pid} = Game.lookup_game(game_id)
     send(pid, {:participant_left, user_id})
-    await_no_participant(game_id, user_id)
+    assert_receive {:game_state_updated, _game}
+    :ok
   end
 
-  defp await_participant(game_id, user_id) do
-    wait_until(fn ->
-      case Game.get_state(game_id) do
-        {:ok, game} -> Enum.any?(game.participants, &(&1.uuid == user_id))
-        _ -> false
-      end
-    end)
-  end
-
-  defp await_no_participant(game_id, user_id) do
-    wait_until(fn ->
-      case Game.get_state(game_id) do
-        {:ok, game} -> Enum.all?(game.participants, &(&1.uuid != user_id))
-        _ -> false
-      end
-    end)
-  end
-
-  defp wait_until(fun, attempts \\ 25) do
-    if fun.() do
-      :ok
-    else
-      if attempts <= 0 do
-        flunk("condition not met")
-      else
-        Process.sleep(5)
-        wait_until(fun, attempts - 1)
-      end
-    end
-  end
-
-  describe "initialization" do
+  describe ":waiting - :none - initialization" do
     test "starts in :waiting state with correct defaults", %{game_id: game_id, owner: owner} do
       {:ok, game} = Game.get_state(game_id)
 
@@ -113,11 +86,11 @@ defmodule Songy.Boundary.GameTest do
     end
   end
 
-  describe ":waiting state - join participant" do
+  describe ":waiting - :none - join participant" do
     test "adds participant successfully", %{game_id: game_id} do
       user1 = %User{uuid: "user-1", name: "Player1"}
 
-      :ok = join_participant(game_id, user1.uuid)
+      {:ok, _} = join_participant(game_id, user1.uuid)
       {:ok, game} = Game.get_state(game_id)
 
       assert length(game.participants) == 1
@@ -129,7 +102,7 @@ defmodule Songy.Boundary.GameTest do
     test "initializes timeline for new participant", %{game_id: game_id} do
       user1 = %User{uuid: "user-1", name: "Player1"}
 
-      :ok = join_participant(game_id, user1.uuid)
+      {:ok, _} = join_participant(game_id, user1.uuid)
       {:ok, game} = Game.get_state(game_id)
 
       assert length(Map.get(game.timelines, user1.uuid, [])) == 1
@@ -138,23 +111,23 @@ defmodule Songy.Boundary.GameTest do
     test "keeps stored timeline on reconnect", %{game_id: game_id} do
       user1 = %User{uuid: "user-1", name: "Player1"}
 
-      :ok = join_participant(game_id, user1.uuid)
+      {:ok, _} = join_participant(game_id, user1.uuid)
       {:ok, game} = Game.get_state(game_id)
-      [track] = Map.get(game.timelines, user1.uuid, [])
+      assert [track] = Map.get(game.timelines, user1.uuid, [])
 
       :ok = leave_participant(game_id, user1.uuid)
-      :ok = join_participant(game_id, user1.uuid)
+      {:ok, _} = join_participant(game_id, user1.uuid)
       {:ok, rejoined_game} = Game.get_state(game_id)
 
-      assert rejoined_game.timelines[user1.uuid] == [track]
+      assert [^track] = rejoined_game.timelines[user1.uuid]
     end
 
     test "adds multiple participants", %{game_id: game_id} do
       user1 = %User{uuid: "user-1", name: "Player1"}
       user2 = %User{uuid: "user-2", name: "Player2"}
 
-      :ok = join_participant(game_id, user1.uuid)
-      :ok = join_participant(game_id, user2.uuid)
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, _} = join_participant(game_id, user2.uuid)
 
       {:ok, game} = Game.get_state(game_id)
 
@@ -166,41 +139,39 @@ defmodule Songy.Boundary.GameTest do
     test "ignores duplicate participants", %{game_id: game_id} do
       user1 = %User{uuid: "user-1", name: "Player1"}
 
-      :ok = join_participant(game_id, user1.uuid)
+      {:ok, _} = join_participant(game_id, user1.uuid)
       {:ok, pid} = Game.lookup_game(game_id)
       send(pid, {:participant_joined, user1.uuid})
 
-      wait_until(fn ->
-        {:ok, game} = Game.get_state(game_id)
-        length(game.participants) == 1
-      end)
+      refute_receive {:game_state_updated, _game}
+      {:ok, game} = Game.get_state(game_id)
+      assert length(game.participants) == 1
     end
 
     test "ignores when game is full", %{game_id: game_id} do
       users = for i <- 1..10, do: %User{uuid: "user-#{i}", name: "Player#{i}"}
 
       Enum.each(users, fn user ->
-        :ok = join_participant(game_id, user.uuid)
+        {:ok, _} = join_participant(game_id, user.uuid)
       end)
 
       extra_user = %User{uuid: "user-11", name: "Player11"}
       {:ok, pid} = Game.lookup_game(game_id)
       send(pid, {:participant_joined, extra_user.uuid})
 
-      wait_until(fn ->
-        {:ok, game} = Game.get_state(game_id)
-        length(game.participants) == 10
-      end)
+      refute_receive {:game_state_updated, _game}
+      {:ok, game} = Game.get_state(game_id)
+      assert length(game.participants) == 10
     end
   end
 
-  describe ":waiting state - leave participant" do
+  describe ":waiting - :none - leave participant" do
     test "removes participant successfully", %{game_id: game_id} do
       user1 = %User{uuid: "user-1", name: "Player1"}
       user2 = %User{uuid: "user-2", name: "Player2"}
 
-      :ok = join_participant(game_id, user1.uuid)
-      :ok = join_participant(game_id, user2.uuid)
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, _} = join_participant(game_id, user2.uuid)
 
       :ok = leave_participant(game_id, user1.uuid)
       {:ok, game} = Game.get_state(game_id)
@@ -214,24 +185,22 @@ defmodule Songy.Boundary.GameTest do
     test "ignores unknown participant", %{game_id: game_id} do
       user1 = %User{uuid: "user-1", name: "Player1"}
 
-      :ok = join_participant(game_id, user1.uuid)
+      {:ok, _} = join_participant(game_id, user1.uuid)
       {:ok, pid} = Game.lookup_game(game_id)
       send(pid, {:participant_left, "missing"})
 
-      wait_until(fn ->
-        {:ok, game} = Game.get_state(game_id)
-        length(game.participants) == 1
-      end)
+      assert_receive {:game_state_updated, game}
+      assert length(game.participants) == 1
     end
   end
 
-  describe ":waiting state - start_game" do
+  describe ":waiting - :none - start game" do
     test "transitions to :in_progress when valid", %{game_id: game_id} do
       user1 = %User{uuid: "user-1", name: "Player1"}
       user2 = %User{uuid: "user-2", name: "Player2"}
 
-      :ok = join_participant(game_id, user1.uuid)
-      :ok = join_participant(game_id, user2.uuid)
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, _} = join_participant(game_id, user2.uuid)
 
       {:ok, game} = Game.start_game(game_id)
 
@@ -245,7 +214,7 @@ defmodule Songy.Boundary.GameTest do
     test "rejects start with insufficient participants", %{game_id: game_id} do
       user1 = %User{uuid: "user-1", name: "Player1"}
 
-      :ok = join_participant(game_id, user1.uuid)
+      {:ok, _} = join_participant(game_id, user1.uuid)
 
       assert {:error, :insufficient_participants} = Game.start_game(game_id)
     end
@@ -255,63 +224,338 @@ defmodule Songy.Boundary.GameTest do
     end
   end
 
-  describe ":waiting state - invalid actions" do
+  describe ":waiting - :none - invalid actions" do
     test "rejects next_phase in waiting", %{game_id: game_id} do
       assert {:error, :invalid_action} = Game.next_phase(game_id)
     end
   end
 
-  describe ":in_progress state - operations" do
+  describe ":waiting - :none - persistence across disconnects" do
+    test "preserves queue position on disconnect/reconnect", %{game_id: game_id} do
+      user1 = %User{uuid: "user-1", name: "Player1"}
+      user2 = %User{uuid: "user-2", name: "Player2"}
+
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, _} = join_participant(game_id, user2.uuid)
+
+      {:ok, game} = Game.get_state(game_id)
+      assert game.queue == [user1.uuid, user2.uuid]
+
+      # User1 disconnects
+      :ok = leave_participant(game_id, user1.uuid)
+      {:ok, game} = Game.get_state(game_id)
+
+      # Queue should still contain user1
+      assert game.queue == [user1.uuid, user2.uuid]
+      assert length(game.participants) == 1
+
+      # User1 reconnects
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, game} = Game.get_state(game_id)
+
+      # Queue and participants should be restored
+      assert game.queue == [user1.uuid, user2.uuid]
+      assert length(game.participants) == 2
+    end
+
+    test "restores score on reconnect", %{game_id: game_id} do
+      user1 = %User{uuid: "user-1", name: "Player1"}
+      user2 = %User{uuid: "user-2", name: "Player2"}
+
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, _} = join_participant(game_id, user2.uuid)
+
+      {:ok, game} = Game.get_state(game_id)
+      initial_score = game.scores[user1.uuid]
+
+      # User1 disconnects
+      :ok = leave_participant(game_id, user1.uuid)
+      {:ok, game} = Game.get_state(game_id)
+
+      # Score should be preserved even after disconnect
+      assert game.scores[user1.uuid] == initial_score
+      assert length(game.participants) == 1
+
+      # User1 reconnects
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, game} = Game.get_state(game_id)
+
+      # Score should be restored
+      assert game.scores[user1.uuid] == initial_score
+      assert length(game.participants) == 2
+    end
+
+    test "keeps stored timeline on reconnect", %{game_id: game_id} do
+      user1 = %User{uuid: "user-1", name: "Player1"}
+
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, game} = Game.get_state(game_id)
+      [track] = Map.get(game.timelines, user1.uuid, [])
+
+      :ok = leave_participant(game_id, user1.uuid)
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, rejoined_game} = Game.get_state(game_id)
+
+      assert rejoined_game.timelines[user1.uuid] == [track]
+    end
+  end
+
+  describe ":waiting - :none - get_state" do
+    test "returns nil turn when not started", %{game_id: game_id} do
+      {:ok, game} = Game.get_state(game_id)
+
+      assert game.turn == nil
+      assert game.status == :waiting
+    end
+  end
+
+  describe ":in_progress - :waiting - persistence across disconnects" do
     setup %{game_id: game_id} do
       user1 = %User{uuid: "user-1", name: "Player1"}
       user2 = %User{uuid: "user-2", name: "Player2"}
 
-      :ok = join_participant(game_id, user1.uuid)
-      :ok = join_participant(game_id, user2.uuid)
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, _} = join_participant(game_id, user2.uuid)
+      {:ok, _} = Game.start_game(game_id)
+
+      {:ok, game} = Game.get_state(game_id)
+      assert game.turn.phase == :waiting
+
+      %{user1: user1, user2: user2}
+    end
+
+    test "preserves queue position on disconnect/reconnect", %{game_id: game_id, user1: user1, user2: user2} do
+      {:ok, game} = Game.get_state(game_id)
+      assert game.queue == [user1.uuid, user2.uuid]
+
+      # User1 disconnects
+      :ok = leave_participant(game_id, user1.uuid)
+      {:ok, game} = Game.get_state(game_id)
+
+      # Queue should still contain user1
+      assert game.queue == [user1.uuid, user2.uuid]
+      assert length(game.participants) == 1
+
+      # User1 reconnects
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, game} = Game.get_state(game_id)
+
+      # Queue and participants should be restored
+      assert game.queue == [user1.uuid, user2.uuid]
+      assert length(game.participants) == 2
+    end
+
+    test "restores score on reconnect", %{game_id: game_id, user1: user1} do
+      {:ok, game} = Game.get_state(game_id)
+      initial_score = game.scores[user1.uuid]
+
+      # User1 disconnects
+      :ok = leave_participant(game_id, user1.uuid)
+      {:ok, game} = Game.get_state(game_id)
+
+      # Score should be preserved even after disconnect
+      assert game.scores[user1.uuid] == initial_score
+      assert length(game.participants) == 1
+
+      # User1 reconnects
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, game} = Game.get_state(game_id)
+
+      # Score should be restored
+      assert game.scores[user1.uuid] == initial_score
+      assert length(game.participants) == 2
+    end
+
+    test "keeps stored timeline on reconnect", %{game_id: game_id, user1: user1} do
+      {:ok, game} = Game.get_state(game_id)
+      assert [track] = Map.get(game.timelines, user1.uuid, [])
+
+      :ok = leave_participant(game_id, user1.uuid)
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, rejoined_game} = Game.get_state(game_id)
+
+      assert [^track] = rejoined_game.timelines[user1.uuid]
+    end
+  end
+
+  describe ":in_progress - :ready - persistence across disconnects" do
+    setup %{game_id: game_id} do
+      user1 = %User{uuid: "user-1", name: "Player1"}
+      user2 = %User{uuid: "user-2", name: "Player2"}
+
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, _} = join_participant(game_id, user2.uuid)
+      {:ok, _} = Game.start_game(game_id)
+      {:ok, _} = Game.next_phase(game_id)
+
+      {:ok, game} = Game.get_state(game_id)
+      assert game.turn.phase == :ready
+
+      %{user1: user1, user2: user2}
+    end
+
+    test "preserves queue position on disconnect/reconnect", %{game_id: game_id, user1: user1, user2: user2} do
+      {:ok, game} = Game.get_state(game_id)
+      assert game.queue == [user1.uuid, user2.uuid]
+
+      # User1 disconnects
+      :ok = leave_participant(game_id, user1.uuid)
+      {:ok, game} = Game.get_state(game_id)
+
+      # Queue should still contain user1
+      assert game.queue == [user1.uuid, user2.uuid]
+      assert length(game.participants) == 1
+
+      # User1 reconnects
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, game} = Game.get_state(game_id)
+
+      # Queue and participants should be restored
+      assert game.queue == [user1.uuid, user2.uuid]
+      assert length(game.participants) == 2
+    end
+
+    test "restores score on reconnect", %{game_id: game_id, user1: user1} do
+      {:ok, game} = Game.get_state(game_id)
+      initial_score = game.scores[user1.uuid]
+
+      # User1 disconnects
+      :ok = leave_participant(game_id, user1.uuid)
+      {:ok, game} = Game.get_state(game_id)
+
+      # Score should be preserved even after disconnect
+      assert game.scores[user1.uuid] == initial_score
+      assert length(game.participants) == 1
+
+      # User1 reconnects
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, game} = Game.get_state(game_id)
+
+      # Score should be restored
+      assert game.scores[user1.uuid] == initial_score
+      assert length(game.participants) == 2
+    end
+
+    test "keeps stored timeline on reconnect", %{game_id: game_id, user1: user1} do
+      {:ok, game} = Game.get_state(game_id)
+      assert [track] = Map.get(game.timelines, user1.uuid, [])
+
+      :ok = leave_participant(game_id, user1.uuid)
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, rejoined_game} = Game.get_state(game_id)
+
+      assert [^track] = rejoined_game.timelines[user1.uuid]
+    end
+  end
+
+  describe ":in_progress - :steady - persistence across disconnects" do
+    setup %{game_id: game_id} do
+      user1 = %User{uuid: "user-1", name: "Player1"}
+      user2 = %User{uuid: "user-2", name: "Player2"}
+
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, _} = join_participant(game_id, user2.uuid)
+      {:ok, _} = Game.start_game(game_id)
+      {:ok, _} = Game.next_phase(game_id)
+      {:ok, _} = Game.next_phase(game_id)
+
+      {:ok, game} = Game.get_state(game_id)
+      assert game.turn.phase == :steady
+
+      %{user1: user1, user2: user2}
+    end
+
+    test "preserves queue position on disconnect/reconnect", %{game_id: game_id, user1: user1, user2: user2} do
+      {:ok, game} = Game.get_state(game_id)
+      assert game.queue == [user1.uuid, user2.uuid]
+
+      # User1 disconnects
+      :ok = leave_participant(game_id, user1.uuid)
+      {:ok, game} = Game.get_state(game_id)
+
+      # Queue should still contain user1
+      assert game.queue == [user1.uuid, user2.uuid]
+      assert length(game.participants) == 1
+
+      # User1 reconnects
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, game} = Game.get_state(game_id)
+
+      # Queue and participants should be restored
+      assert game.queue == [user1.uuid, user2.uuid]
+      assert length(game.participants) == 2
+    end
+
+    test "restores score on reconnect", %{game_id: game_id, user1: user1} do
+      {:ok, game} = Game.get_state(game_id)
+      initial_score = game.scores[user1.uuid]
+
+      # User1 disconnects
+      :ok = leave_participant(game_id, user1.uuid)
+      {:ok, game} = Game.get_state(game_id)
+
+      # Score should be preserved even after disconnect
+      assert game.scores[user1.uuid] == initial_score
+      assert length(game.participants) == 1
+
+      # User1 reconnects
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, game} = Game.get_state(game_id)
+
+      # Score should be restored
+      assert game.scores[user1.uuid] == initial_score
+      assert length(game.participants) == 2
+    end
+
+    test "keeps stored timeline on reconnect", %{game_id: game_id, user1: user1} do
+      {:ok, game} = Game.get_state(game_id)
+      assert [track] = Map.get(game.timelines, user1.uuid, [])
+
+      :ok = leave_participant(game_id, user1.uuid)
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, rejoined_game} = Game.get_state(game_id)
+
+      assert [^track] = rejoined_game.timelines[user1.uuid]
+    end
+  end
+
+  describe ":in_progress - :waiting - operations" do
+    setup %{game_id: game_id} do
+      user1 = %User{uuid: "user-1", name: "Player1"}
+      user2 = %User{uuid: "user-2", name: "Player2"}
+
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, _} = join_participant(game_id, user2.uuid)
       {:ok, _} = Game.start_game(game_id)
 
       %{user1: user1, user2: user2}
     end
 
-    test "can remove participant during game", %{game_id: game_id, user1: user1} do
-      :ok = leave_participant(game_id, user1.uuid)
-      {:ok, game} = Game.get_state(game_id)
-
-      assert length(game.participants) == 1
-      assert game.scores[user1.uuid] == 0
-    end
-
     test "can advance turn phase", %{game_id: game_id} do
       assert {:ok, _} = Game.next_phase(game_id)
     end
-
   end
 
-  describe ":in_progress state - invalid actions" do
-    setup %{game_id: game_id} do
+  describe ":in_progress - :waiting - start game" do
+    test "rejects when already in progress", %{game_id: game_id} do
       user1 = %User{uuid: "user-1", name: "Player1"}
       user2 = %User{uuid: "user-2", name: "Player2"}
 
-      :ok = join_participant(game_id, user1.uuid)
-      :ok = join_participant(game_id, user2.uuid)
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, _} = join_participant(game_id, user2.uuid)
       {:ok, _} = Game.start_game(game_id)
 
-      :ok
-    end
-
-    test "rejects start_game when already in progress", %{game_id: game_id} do
       assert {:error, :game_already_started} = Game.start_game(game_id)
     end
   end
 
-
-  describe "get_state" do
+  describe ":in_progress - :waiting - get_state" do
     test "returns game and turn data", %{game_id: game_id} do
       user1 = %User{uuid: "user-1", name: "Player1"}
       user2 = %User{uuid: "user-2", name: "Player2"}
 
-      :ok = join_participant(game_id, user1.uuid)
-      :ok = join_participant(game_id, user2.uuid)
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, _} = join_participant(game_id, user2.uuid)
       {:ok, _} = Game.start_game(game_id)
 
       {:ok, game} = Game.get_state(game_id)
@@ -321,22 +565,15 @@ defmodule Songy.Boundary.GameTest do
       assert game.turn.phase == :waiting
       assert length(game.queue) == 2
     end
-
-    test "returns nil turn when not started", %{game_id: game_id} do
-      {:ok, game} = Game.get_state(game_id)
-
-      assert game.turn == nil
-      assert game.status == :waiting
-    end
   end
 
-  describe ":challenging" do
+  describe ":in_progress - :challenging - auto-advance" do
     setup %{game_id: game_id} do
       user1 = %User{uuid: "user-1", name: "Player1"}
       user2 = %User{uuid: "user-2", name: "Player2"}
 
-      :ok = join_participant(game_id, user1.uuid)
-      :ok = join_participant(game_id, user2.uuid)
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, _} = join_participant(game_id, user2.uuid)
       {:ok, _} = Game.start_game(game_id)
 
       # Advance to challenging phase
@@ -358,85 +595,15 @@ defmodule Songy.Boundary.GameTest do
     end
   end
 
-  describe "persistence across disconnects" do
-    test "preserves queue position on disconnect/reconnect", %{game_id: game_id} do
-      user1 = %User{uuid: "user-1", name: "Player1"}
-      user2 = %User{uuid: "user-2", name: "Player2"}
-
-      :ok = join_participant(game_id, user1.uuid)
-      :ok = join_participant(game_id, user2.uuid)
-
-      {:ok, game} = Game.get_state(game_id)
-      assert game.queue == [user1.uuid, user2.uuid]
-
-      # User1 disconnects
-      :ok = leave_participant(game_id, user1.uuid)
-      {:ok, game} = Game.get_state(game_id)
-
-      # Queue should still contain user1
-      assert game.queue == [user1.uuid, user2.uuid]
-      assert length(game.participants) == 1
-
-      # User1 reconnects
-      :ok = join_participant(game_id, user1.uuid)
-      {:ok, game} = Game.get_state(game_id)
-
-      # Queue and participants should be restored
-      assert game.queue == [user1.uuid, user2.uuid]
-      assert length(game.participants) == 2
-    end
-
-    test "restores score on reconnect", %{game_id: game_id} do
-      user1 = %User{uuid: "user-1", name: "Player1"}
-      user2 = %User{uuid: "user-2", name: "Player2"}
-
-      :ok = join_participant(game_id, user1.uuid)
-      :ok = join_participant(game_id, user2.uuid)
-
-      {:ok, game} = Game.get_state(game_id)
-      initial_score = game.scores[user1.uuid]
-
-      # User1 disconnects
-      :ok = leave_participant(game_id, user1.uuid)
-      {:ok, game} = Game.get_state(game_id)
-
-      # Score should be preserved even after disconnect
-      assert game.scores[user1.uuid] == initial_score
-      assert length(game.participants) == 1
-
-      # User1 reconnects
-      :ok = join_participant(game_id, user1.uuid)
-      {:ok, game} = Game.get_state(game_id)
-
-      # Score should be restored
-      assert game.scores[user1.uuid] == initial_score
-      assert length(game.participants) == 2
-    end
-
-    test "keeps stored timeline on reconnect", %{game_id: game_id} do
-      user1 = %User{uuid: "user-1", name: "Player1"}
-
-      :ok = join_participant(game_id, user1.uuid)
-      {:ok, game} = Game.get_state(game_id)
-      [track] = Map.get(game.timelines, user1.uuid, [])
-
-      :ok = leave_participant(game_id, user1.uuid)
-      :ok = join_participant(game_id, user1.uuid)
-      {:ok, rejoined_game} = Game.get_state(game_id)
-
-      assert rejoined_game.timelines[user1.uuid] == [track]
-    end
-  end
-
-  describe "skipping disconnected players" do
+  describe ":in_progress - :results - skip disconnected players" do
     test "skips disconnected player's turn automatically", %{game_id: game_id} do
       user1 = %User{uuid: "user-1", name: "Player1"}
       user2 = %User{uuid: "user-2", name: "Player2"}
       user3 = %User{uuid: "user-3", name: "Player3"}
 
-      :ok = join_participant(game_id, user1.uuid)
-      :ok = join_participant(game_id, user2.uuid)
-      :ok = join_participant(game_id, user3.uuid)
+      {:ok, _} = join_participant(game_id, user1.uuid)
+      {:ok, _} = join_participant(game_id, user2.uuid)
+      {:ok, _} = join_participant(game_id, user3.uuid)
 
       {:ok, _} = Game.start_game(game_id)
 
@@ -445,10 +612,12 @@ defmodule Songy.Boundary.GameTest do
       {:ok, _} = Game.next_phase(game_id)
       {:ok, _} = Game.next_phase(game_id)
 
-      wait_until(fn ->
-        {:ok, game} = Game.get_state(game_id)
-        game.turn.phase == :results
-      end)
+      timeout = Application.fetch_env!(:songy, :challenging_phase_timeout)
+      Process.send_after(self(), :auto_advance_tick, timeout + 20)
+      assert_receive :auto_advance_tick, timeout + 100
+
+      {:ok, game} = Game.get_state(game_id)
+      assert game.turn.phase == :results
 
       {:ok, game_before} = Game.get_state(game_id)
       current_cursor = game_before.cursor

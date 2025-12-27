@@ -424,6 +424,7 @@ defmodule Songy.Boundary.Game do
         }
 
         broadcast_game_state(updated_game)
+
         {:keep_state, updated_game}
 
       {:error, reason} ->
@@ -437,20 +438,14 @@ defmodule Songy.Boundary.Game do
   end
 
   defp handle_presence_left(data, user_id) do
-    case Enum.find_index(data.participants, &(&1.uuid == user_id)) do
-      nil ->
-        {:keep_state, data}
+    updated_game = %{
+      data
+      | participants: Enum.reject(data.participants, &(&1.uuid == user_id))
+    }
 
-      _index ->
-        updated_game = %{
-          data
-          | participants: Enum.reject(data.participants, &(&1.uuid == user_id))
-        }
+    broadcast_game_state(updated_game)
 
-        broadcast_game_state(updated_game)
-
-        {:keep_state, updated_game}
-    end
+    {:keep_state, updated_game}
   end
 
   defp broadcast_game_state(game) do
