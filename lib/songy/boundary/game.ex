@@ -10,7 +10,7 @@ defmodule Songy.Boundary.Game do
   The FSM manages game state transitions and validates operations based on current state.
   """
 
-  use GenStateMachine, callback_mode: :handle_event_function
+  use GenStateMachine, callback_mode: [:handle_event_function]
 
   alias Songy.Boundary.Player, as: Playback
   alias Songy.Core, as: Core
@@ -134,6 +134,13 @@ defmodule Songy.Boundary.Game do
     {:ok, {:waiting, :none}, game}
   end
 
+  # Internal broadcast event for state updates that don't change state
+  @impl true
+  def handle_event(:internal, :broadcast, _state, data) do
+    broadcast_game_state(data)
+    {:keep_state, data}
+  end
+
   # State: :waiting (lobby phase)
 
   @impl true
@@ -155,7 +162,7 @@ defmodule Songy.Boundary.Game do
           turn: %Core.Turn{phase: :waiting, timeline: [], assumptions: []}
       }
 
-      {:next_state, {:in_progress, :waiting}, game, [{:reply, from, {:ok, game}}]}
+      {:next_state, {:in_progress, :waiting}, game, [{:reply, from, {:ok, game}}, {:next_event, :internal, :broadcast}]}
     else
       {:error, reason} = error ->
         Logger.warning("Game #{data.id}: Failed to start - #{reason}")
@@ -215,7 +222,7 @@ defmodule Songy.Boundary.Game do
 
     updated_game = %{updated_game | turn: %{turn | phase: :results}}
 
-    {:next_state, {:in_progress, :results}, updated_game}
+    {:next_state, {:in_progress, :results}, updated_game, [{:next_event, :internal, :broadcast}]}
   end
 
   def handle_event(:info, _event, {:in_progress, _phase}, data) do
@@ -234,7 +241,7 @@ defmodule Songy.Boundary.Game do
 
     updated_game = %{data | turn: %{turn | timeline: timeline, phase: :ready}}
 
-    {:next_state, {:in_progress, :ready}, updated_game, [{:reply, from, {:ok, updated_game}}]}
+    {:next_state, {:in_progress, :ready}, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
   end
 
   def handle_event({:call, from}, :next_phase, {:in_progress, :ready}, %{turn: turn} = data) do
@@ -242,7 +249,7 @@ defmodule Songy.Boundary.Game do
 
     updated_game = %{data | turn: %{turn | phase: :steady}}
 
-    {:next_state, {:in_progress, :steady}, updated_game, [{:reply, from, {:ok, updated_game}}]}
+    {:next_state, {:in_progress, :steady}, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
   end
 
   def handle_event({:call, from}, :next_phase, {:in_progress, :steady}, %{turn: turn} = data) do
@@ -252,7 +259,7 @@ defmodule Songy.Boundary.Game do
     timeout = Application.fetch_env!(:songy, :challenging_phase_timeout)
 
     {:next_state, {:in_progress, :challenging}, updated_game,
-     [{:reply, from, {:ok, updated_game}}, {:timeout, timeout, :auto_advance}]}
+     [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}, {:timeout, timeout, :auto_advance}]}
   end
 
   def handle_event({:call, from}, :next_phase, {:in_progress, :results}, data) do
@@ -283,13 +290,13 @@ defmodule Songy.Boundary.Game do
           turn: %Core.Turn{phase: :waiting, timeline: [], assumptions: []}
       }
 
-      {:next_state, {:in_progress, :waiting}, updated_game, [{:reply, from, {:ok, updated_game}}]}
+      {:next_state, {:in_progress, :waiting}, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
     else
       {:winner, _winner_id} ->
         game = %{data | status: :finished}
         timeout = Application.fetch_env!(:songy, :game_session_termination_timeout)
 
-        {:next_state, {:finished, :none}, game, [{:reply, from, {:ok, game}}, {:state_timeout, timeout, :shutdown}]}
+        {:next_state, {:finished, :none}, game, [{:reply, from, {:ok, game}}, {:next_event, :internal, :broadcast}, {:state_timeout, timeout, :shutdown}]}
 
       {:error, reason} ->
         {:keep_state, data, [{:reply, from, {:error, reason}}]}
@@ -307,7 +314,7 @@ defmodule Songy.Boundary.Game do
     updated_turn = do_update_timeline(turn, track, user_id, position)
     updated_game = %{data | turn: updated_turn}
 
-    {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}]}
+    {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
   end
 
   def handle_event(
@@ -322,7 +329,7 @@ defmodule Songy.Boundary.Game do
       {:ok, updated_turn} ->
         updated_game = %{data | turn: updated_turn}
 
-        {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}]}
+        {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
 
       {:error, reason} ->
         {:keep_state, data, [{:reply, from, {:error, reason}}]}
@@ -332,13 +339,13 @@ defmodule Songy.Boundary.Game do
   def handle_event({:call, from}, :start_playback, {:in_progress, _phase}, data) do
     updated_game = %{data | player: Core.Player.set_playback(data.player, true)}
 
-    {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}]}
+    {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
   end
 
   def handle_event({:call, from}, :pause_playback, {:in_progress, _phase}, data) do
     updated_game = %{data | player: Core.Player.set_playback(data.player, false)}
 
-    {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}]}
+    {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
   end
 
   def handle_event({:call, from}, :get_state, {:in_progress, _phase}, data) do
@@ -352,7 +359,7 @@ defmodule Songy.Boundary.Game do
 
   def handle_event({:call, from}, {:set_track, track}, {:in_progress, _phase}, data) do
     new_data = %{data | track: track}
-    {:keep_state, new_data, [{:reply, from, {:ok, new_data}}]}
+    {:keep_state, new_data, [{:reply, from, {:ok, new_data}}, {:next_event, :internal, :broadcast}]}
   end
 
   def handle_event({:call, from}, :get_track, {:in_progress, _phase}, %{track: track} = data) do
@@ -414,8 +421,7 @@ defmodule Songy.Boundary.Game do
           timelines: Map.put(data.timelines, user.uuid, [track])
       }
 
-      broadcast_game_state(updated_game)
-      {:keep_state, updated_game}
+      {:keep_state, updated_game, [{:next_event, :internal, :broadcast}]}
     else
       :rejoined ->
         updated_game = %{
@@ -423,9 +429,7 @@ defmodule Songy.Boundary.Game do
           | participants: data.participants ++ [user]
         }
 
-        broadcast_game_state(updated_game)
-
-        {:keep_state, updated_game}
+        {:keep_state, updated_game, [{:next_event, :internal, :broadcast}]}
 
       {:error, reason} ->
         Logger.debug("Game #{data.id}: Skipping participant #{user_id} - #{reason}")
@@ -443,9 +447,7 @@ defmodule Songy.Boundary.Game do
       | participants: Enum.reject(data.participants, &(&1.uuid == user_id))
     }
 
-    broadcast_game_state(updated_game)
-
-    {:keep_state, updated_game}
+    {:keep_state, updated_game, [{:next_event, :internal, :broadcast}]}
   end
 
   defp broadcast_game_state(game) do
