@@ -100,7 +100,33 @@ defmodule Songy.Core.Provider.SpotifyTest do
       assert %DateTime{} = result.expires_at
     end
 
-    test "recalculates expires_at on update" do
+    test "preserves expires_at when updating non-token fields" do
+      initial_fixed_time = ~U[2024-01-01 12:00:00Z]
+      initial_expected_expires_at = DateTime.add(initial_fixed_time, 3600, :second)
+
+      Repatch.patch(DateTime, :utc_now, fn -> initial_fixed_time end)
+
+      provider =
+        Spotify.new(%{
+          access_token: "test_access_token",
+          refresh_token: "test_refresh_token"
+        })
+
+      assert provider.expires_at == initial_expected_expires_at
+
+      # Update at different time - repatch with force
+      update_fixed_time = ~U[2024-01-01 14:00:00Z]
+
+      Repatch.patch(DateTime, :utc_now, [force: true], fn -> update_fixed_time end)
+
+      result = Spotify.update(provider, %{device_id: "new_device"})
+
+      # expires_at should NOT change when updating device_id
+      assert result.expires_at == initial_expected_expires_at
+      assert result.device_id == "new_device"
+    end
+
+    test "recalculates expires_at when updating access_token" do
       initial_fixed_time = ~U[2024-01-01 12:00:00Z]
       initial_expected_expires_at = DateTime.add(initial_fixed_time, 3600, :second)
 
@@ -120,10 +146,11 @@ defmodule Songy.Core.Provider.SpotifyTest do
 
       Repatch.patch(DateTime, :utc_now, [force: true], fn -> update_fixed_time end)
 
-      result = Spotify.update(provider, %{device_id: "new_device"})
+      result = Spotify.update(provider, %{access_token: "new_access_token"})
 
       assert result.expires_at == update_expected_expires_at
       assert result.expires_at != provider.expires_at
+      assert result.access_token == "new_access_token"
     end
   end
 end

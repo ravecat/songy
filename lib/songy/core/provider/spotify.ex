@@ -32,9 +32,19 @@ defmodule Songy.Core.Provider.Spotify do
   @doc "Updates existing Spotify provider with new attributes"
   @spec update(t(), %{optional(atom) => any} | keyword) :: t()
   def update(%__MODULE__{} = provider, attrs) when is_map(attrs) or is_list(attrs) do
-    struct(provider, attrs)
-    |> with_expires_at()
+    updated = struct(provider, attrs)
+    attrs_map = to_attrs_map(attrs)
+
+    # Only reset expires_at if access_token is being updated
+    if Map.has_key?(attrs_map, :access_token) do
+      with_expires_at(updated)
+    else
+      updated
+    end
   end
+
+  defp to_attrs_map(map) when is_map(map), do: map
+  defp to_attrs_map(list) when is_list(list), do: Map.new(list)
 
   defp with_expires_at(%__MODULE__{} = provider, threshold_seconds \\ @token_refresh_threshold) do
     expires_at = DateTime.add(DateTime.utc_now(), threshold_seconds, :second)
