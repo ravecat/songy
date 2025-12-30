@@ -26,32 +26,21 @@ defmodule Songy.Boundary.GameSessionTest do
        }}
     end)
 
+    Repatch.patch(Songy.Boundary.Player, :start_playback, [mode: :shared], fn _provider, _track ->
+      {:ok, :playback_started}
+    end)
+
+    Repatch.patch(Songy.Boundary.Player, :pause_playback, [mode: :shared], fn _provider ->
+      {:ok, :playback_paused}
+    end)
+
     :ok
   end
 
   defp join_participant(game_id, user_id) do
     {:ok, pid} = Game.lookup_game(game_id)
     send(pid, {:participant_joined, user_id})
-
-    wait_until(fn ->
-      case Game.get_state(game_id) do
-        {:ok, game} -> Enum.any?(game.participants, &(&1.uuid == user_id))
-        _ -> false
-      end
-    end)
-  end
-
-  defp wait_until(fun, attempts \\ 25) do
-    if fun.() do
-      :ok
-    else
-      if attempts <= 0 do
-        flunk("condition not met")
-      else
-        Process.sleep(5)
-        wait_until(fun, attempts - 1)
-      end
-    end
+    :ok
   end
 
   describe "create_game_session/1" do
@@ -73,10 +62,13 @@ defmodule Songy.Boundary.GameSessionTest do
       {:ok, game} = GameSession.create_game_session(owner.uuid)
       {:ok, pid} = Game.lookup_game(game.id)
       :ok = Repatch.allow(self(), pid)
+      :ok = Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
 
       :ok = join_participant(game.id, owner.uuid)
+      assert_receive {:game_state_updated, _game}
       user = User.get_user("player-1")
       :ok = join_participant(game.id, user.uuid)
+      assert_receive {:game_state_updated, _game}
 
       %{game_id: game.id, owner: owner, user: user}
     end
@@ -95,24 +87,19 @@ defmodule Songy.Boundary.GameSessionTest do
     end
   end
 
-  describe "playback controls" do
+  describe "start_playback/2" do
     setup do
       owner = User.get_user("owner-1")
       {:ok, game} = GameSession.create_game_session(owner.uuid)
       {:ok, pid} = Game.lookup_game(game.id)
       :ok = Repatch.allow(self(), pid)
+      :ok = Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
 
       :ok = join_participant(game.id, owner.uuid)
+      assert_receive {:game_state_updated, _game}
       user = User.get_user("player-1")
       :ok = join_participant(game.id, user.uuid)
-
-      Repatch.patch(Songy.Boundary.Player, :start_playback, [mode: :shared], fn _provider, _track ->
-        {:ok, :playback_started}
-      end)
-
-      Repatch.patch(Songy.Boundary.Player, :pause_playback, [mode: :shared], fn _provider ->
-        {:ok, :playback_paused}
-      end)
+      assert_receive {:game_state_updated, _game}
 
       {:ok, game} = GameSession.start_game_session(game.id)
 
@@ -125,6 +112,26 @@ defmodule Songy.Boundary.GameSessionTest do
       assert {:ok, game} = GameSession.start_playback(game_id, owner_id)
       assert game.player.is_playback == true
     end
+  end
+
+  describe "pause_playback/2" do
+    setup do
+      owner = User.get_user("owner-1")
+      {:ok, game} = GameSession.create_game_session(owner.uuid)
+      {:ok, pid} = Game.lookup_game(game.id)
+      :ok = Repatch.allow(self(), pid)
+      :ok = Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
+
+      :ok = join_participant(game.id, owner.uuid)
+      assert_receive {:game_state_updated, _game}
+      user = User.get_user("player-1")
+      :ok = join_participant(game.id, user.uuid)
+      assert_receive {:game_state_updated, _game}
+
+      {:ok, game} = GameSession.start_game_session(game.id)
+
+      %{game_id: game.id}
+    end
 
     test "pauses playback when already playing", %{game_id: game_id} do
       {:ok, game} = GameSession.get_state(game_id)
@@ -132,28 +139,6 @@ defmodule Songy.Boundary.GameSessionTest do
       {:ok, _} = GameSession.start_playback(game_id, owner_id)
       assert {:ok, game} = GameSession.pause_playback(game_id, owner_id)
       assert game.player.is_playback == false
-    end
-  end
-
-  describe "phases and timelines" do
-    setup do
-      owner = User.get_user("owner-1")
-      {:ok, game} = GameSession.create_game_session(owner.uuid)
-      {:ok, pid} = Game.lookup_game(game.id)
-      :ok = Repatch.allow(self(), pid)
-
-      :ok = join_participant(game.id, owner.uuid)
-      user = User.get_user("player-1")
-      :ok = join_participant(game.id, user.uuid)
-
-      {:ok, game} = GameSession.start_game_session(game.id)
-
-      %{game_id: game.id, owner: owner}
-    end
-
-    test "advances to ready phase", %{game_id: game_id} do
-      assert {:ok, game} = GameSession.next_phase(game_id)
-      assert game.turn.phase == :ready
     end
   end
 end

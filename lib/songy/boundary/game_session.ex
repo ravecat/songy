@@ -28,7 +28,7 @@ defmodule Songy.Boundary.GameSession do
 
   @spec end_game_session(String.t(), term(), timeout()) :: :ok
   def end_game_session(game_id, reason \\ :normal, timeout \\ :infinity) do
-    case lookup_game(game_id) do
+    case Game.lookup_game(game_id) do
       {:ok, pid} -> :gen_statem.stop(pid, reason, timeout)
       {:error, _} -> :ok
     end
@@ -37,12 +37,12 @@ defmodule Songy.Boundary.GameSession do
   @spec lookup_game_session(String.t()) ::
           {:ok, pid()} | {:error, :game_session_not_found}
   def lookup_game_session(game_id) when is_binary(game_id) or is_atom(game_id) do
-    lookup_game(game_id)
+    Game.lookup_game(game_id)
   end
 
   @spec game_session_exists?(String.t()) :: boolean()
   def game_session_exists?(game_id) when is_binary(game_id) do
-    case lookup_game(game_id) do
+    case Game.lookup_game(game_id) do
       {:ok, _pid} -> true
       {:error, _} -> false
     end
@@ -101,9 +101,5 @@ defmodule Songy.Boundary.GameSession do
 
   defp generate_session_id do
     @id_size |> :crypto.strong_rand_bytes() |> Base.encode32(padding: false)
-  end
-
-  defp lookup_game(game_id) do
-    Game.lookup_game(game_id)
   end
 end
