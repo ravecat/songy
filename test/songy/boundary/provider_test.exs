@@ -4,7 +4,7 @@ defmodule Songy.Boundary.ProviderTest do
   alias Songy.Boundary.Provider
   alias Songy.Core.Provider.Spotify
 
-  describe "Provider protocol" do
+  describe "provider protocol / unknown" do
     test "ensure/1 returns error for unsupported provider types" do
       unsupported_provider = %{type: :unknown}
 
@@ -24,7 +24,7 @@ defmodule Songy.Boundary.ProviderTest do
     end
   end
 
-  describe "Spotify provider implementation" do
+  describe "provider protocol / spotify" do
     test "ensure/1 handles provider with missing refresh_token" do
       spotify_provider = %Spotify{
         access_token: "invalid_token",
@@ -83,23 +83,6 @@ defmodule Songy.Boundary.ProviderTest do
       assert result.access_token == original_provider.access_token
       assert result.refresh_token == original_provider.refresh_token
       assert result.device_id == original_provider.device_id
-    end
-  end
-
-  describe "Protocol pattern matching" do
-    test "ensure/1 dispatches correctly based on struct type" do
-      spotify_provider = %Spotify{access_token: "token", refresh_token: "refresh"}
-      unsupported_provider = %{custom: "provider"}
-
-      Repatch.patch(Songy.Boundary.Provider.Spotify, :ensure_provider_data, fn provider ->
-        {:ok, provider}
-      end)
-
-      # Spotify should use specific implementation
-      assert {:ok, %Spotify{}} = Provider.ensure(spotify_provider)
-
-      # Unsupported should use Any implementation
-      assert {:error, :not_supported} = Provider.ensure(unsupported_provider)
     end
   end
 end

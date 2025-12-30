@@ -34,9 +34,8 @@ defmodule Songy.Providers do
       :ok
   """
   @spec insert(GenServer.server(), String.t(), term()) :: :ok
-  def insert(server, user_id, data)
-      when (is_pid(server) or is_atom(server)) and is_binary(user_id) do
-    GenServer.call(server, {:insert, user_id, data})
+  def insert(registry, user_id, data) do
+    GenServer.call(registry, {:insert, user_id, data})
   end
 
   @doc """
@@ -48,9 +47,8 @@ defmodule Songy.Providers do
       :ok
   """
   @spec update(GenServer.server(), String.t(), term()) :: :ok
-  def update(server, user_id, attrs)
-      when (is_pid(server) or is_atom(server)) and is_binary(user_id) do
-    GenServer.call(server, {:update, user_id, attrs})
+  def update(registry, user_id, attrs) do
+    GenServer.call(registry, {:update, user_id, attrs})
   end
 
   @doc """
@@ -67,13 +65,13 @@ defmodule Songy.Providers do
   @spec lookup(term(), String.t()) :: {:ok, term()} | {:error, atom()}
   def lookup(registry, user_id) when is_binary(user_id) do
     with [{^user_id, data}] <- :ets.lookup(registry, user_id),
-         {:ok, updated_data} <- Songy.Boundary.Provider.ensure(data),
-         {:match, true, _} <- {:match, match?(^data, updated_data), updated_data} do
+         {:ok, actual_data} <- Songy.Boundary.Provider.ensure(data),
+         {:match, true, _} <- {:match, match?(^data, actual_data), actual_data} do
       {:ok, data}
     else
-      {:match, false, updated_data} ->
-        GenServer.call(registry, {:update, user_id, updated_data})
-        {:ok, updated_data}
+      {:match, false, actual_data} ->
+        GenServer.call(registry, {:update, user_id, actual_data})
+        {:ok, actual_data}
 
       [] ->
         {:error, :not_found}
@@ -86,9 +84,7 @@ defmodule Songy.Providers do
 
   @impl true
   def init(table) do
-    credentials = :ets.new(table, [:named_table, :set, :protected, read_concurrency: true])
-
-    {:ok, credentials}
+    {:ok, :ets.new(table, [:named_table, :set, :protected, read_concurrency: true])}
   end
 
   @impl true

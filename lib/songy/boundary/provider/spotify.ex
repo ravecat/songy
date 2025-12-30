@@ -10,23 +10,27 @@ defmodule Songy.Boundary.Provider.Spotify do
 
   require Logger
 
-  @spec authenticate(Plug.Conn.t() | term(), map()) ::
+  @spec authenticate(Plug.Conn.t() | Spotify.Credentials.t(), map()) ::
           {:ok, Provider.Spotify.t()} | {:error, term()}
   def authenticate(conn_or_credentials, params) do
-    case Spotify.Authentication.authenticate(conn_or_credentials, params) do
-      {:ok, credentials} ->
-        result =
-          credentials
-          |> Map.from_struct()
-          |> Provider.Spotify.new()
-
-        {:ok, result}
+    with {:ok, credentials} <- get_credentials(conn_or_credentials),
+         {:ok, new_credentials} <- Spotify.Authentication.authenticate(credentials, params),
+         result <- new_credentials |> Map.from_struct() |> Provider.Spotify.new() do
+      {:ok, result}
+    else
+      {:error, :invalid_credentials} ->
+        Logger.error("Invalid credentials provided to authenticate")
+        {:error, :invalid_credentials}
 
       {:error, reason} ->
         Logger.error("Failed to authenticate with Spotify: #{inspect(reason)}")
         {:error, reason}
     end
   end
+
+  defp get_credentials(%Plug.Conn{} = conn), do: {:ok, Spotify.Credentials.new(conn)}
+  defp get_credentials(%Spotify.Credentials{} = creds), do: {:ok, creds}
+  defp get_credentials(_), do: {:error, :invalid_credentials}
 
   @doc """
   Ensures that Spotify credentials are fresh and valid.
@@ -47,8 +51,8 @@ defmodule Songy.Boundary.Provider.Spotify do
   @spec ensure_provider_data(Provider.Spotify.t()) :: {:ok, Provider.Spotify.t()} | {:error, term()}
   def ensure_provider_data(%Provider.Spotify{access_token: access_token, refresh_token: refresh_token} = data) do
     with true <- refresh_token?(data),
-         spotify_creds <- Spotify.Credentials.new(access_token, refresh_token),
-         {:ok, new_data} <- Spotify.Authentication.refresh(spotify_creds) do
+         credentials <- Spotify.Credentials.new(access_token, refresh_token),
+         {:ok, new_data} <- Spotify.Authentication.refresh(credentials) do
       Logger.info("Spotify refresh response #{inspect(new_data)}")
 
       {:ok, Provider.Spotify.update(data, %{access_token: new_data.access_token})}

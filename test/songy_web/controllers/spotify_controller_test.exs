@@ -25,9 +25,7 @@ defmodule SongyWeb.SpotifyControllerTest do
     end
 
     test "redirects to home with success message on successful authentication", %{conn: conn} do
-      Repatch.patch(Spotify.Credentials, :new, fn _conn -> %{test: "credentials"} end)
-
-      Repatch.patch(Songy.Boundary.Provider.Spotify, :authenticate, fn _creds, _params ->
+      Repatch.patch(Songy.Boundary.Provider.Spotify, :authenticate, fn _conn, _params ->
         {:ok, %Songy.Core.Provider.Spotify{access_token: "token123", refresh_token: "refresh"}}
       end)
 
@@ -42,9 +40,7 @@ defmodule SongyWeb.SpotifyControllerTest do
     end
 
     test "redirects to home with error message on authentication failure", %{conn: conn} do
-      Repatch.patch(Spotify.Credentials, :new, fn _conn -> %{test: "credentials"} end)
-
-      Repatch.patch(Songy.Boundary.Provider.Spotify, :authenticate, fn _creds, _params ->
+      Repatch.patch(Songy.Boundary.Provider.Spotify, :authenticate, fn _conn, _params ->
         {:error, :invalid_grant}
       end)
 
@@ -57,9 +53,7 @@ defmodule SongyWeb.SpotifyControllerTest do
     end
 
     test "redirects to home with error message on ETS insert failure", %{conn: conn} do
-      Repatch.patch(Spotify.Credentials, :new, fn _conn -> %{test: "credentials"} end)
-
-      Repatch.patch(Songy.Boundary.Provider.Spotify, :authenticate, fn _creds, _params ->
+      Repatch.patch(Songy.Boundary.Provider.Spotify, :authenticate, fn _conn, _params ->
         {:ok, %Songy.Core.Provider.Spotify{access_token: "token123", refresh_token: "refresh"}}
       end)
 
@@ -82,9 +76,7 @@ defmodule SongyWeb.SpotifyControllerTest do
         expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
       }
 
-      Repatch.patch(Spotify.Credentials, :new, fn _conn -> %{test: "credentials"} end)
-
-      Repatch.patch(Songy.Boundary.Provider.Spotify, :authenticate, fn _creds, _params ->
+      Repatch.patch(Songy.Boundary.Provider.Spotify, :authenticate, fn _conn, _params ->
         {:ok, provider}
       end)
 

@@ -249,5 +249,110 @@ defmodule Songy.ProvidersTest do
       assert :ok = Providers.insert(table, user_id, new_data)
       assert {:ok, %Spotify{access_token: "soundcloud_token"}} = Providers.lookup(table, user_id)
     end
+
+    test "updates ETS when token has expired", %{table: table} do
+      user_id = "user_with_expired_token"
+      current_time = ~U[2025-07-15 12:00:00Z]
+      expired_at = DateTime.add(current_time, -3600, :second)
+
+      expired_data = %Spotify{
+        access_token: "expired_token",
+        refresh_token: "valid_refresh",
+        device_id: "device1",
+        expires_at: expired_at
+      }
+
+      refreshed_data = %Spotify{
+        access_token: "refreshed_token",
+        refresh_token: "valid_refresh",
+        device_id: "device1",
+        expires_at: DateTime.add(current_time, 3600, :second)
+      }
+
+      assert :ok = Providers.insert(table, user_id, expired_data)
+
+      Repatch.patch(DateTime, :utc_now, fn -> current_time end)
+
+      Repatch.patch(Songy.Boundary.Provider.Spotify, :ensure_provider_data, fn _provider ->
+        {:ok, refreshed_data}
+      end)
+
+      assert {:ok, result} = Providers.lookup(table, user_id)
+      assert result.access_token == "refreshed_token"
+
+      assert [{^user_id, stored_data}] = :ets.lookup(table, user_id)
+      assert stored_data.access_token == "refreshed_token"
+    end
+
+    test "does not update ETS when token is still valid", %{table: table} do
+      user_id = "user_with_valid_token"
+      current_time = ~U[2025-07-15 12:00:00Z]
+      future_expires_at = DateTime.add(current_time, 3600, :second)
+
+      valid_data = %Spotify{
+        access_token: "valid_token",
+        refresh_token: "valid_refresh",
+        device_id: "device2",
+        expires_at: future_expires_at
+      }
+
+      assert :ok = Providers.insert(table, user_id, valid_data)
+
+      Repatch.patch(DateTime, :utc_now, fn -> current_time end)
+
+      assert {:ok, result} = Providers.lookup(table, user_id)
+      assert result.access_token == "valid_token"
+
+      assert [{^user_id, stored_data}] = :ets.lookup(table, user_id)
+      assert stored_data.access_token == "valid_token"
+    end
+
+    test "returns refreshed token even when ETS not updated yet", %{table: table} do
+      user_id = "user_simultaneous_refresh"
+      current_time = ~U[2025-07-15 12:00:00Z]
+      expired_at = DateTime.add(current_time, -60, :second)
+
+      expired_data = %Spotify{
+        access_token: "expired_token",
+        refresh_token: "valid_refresh",
+        expires_at: expired_at
+      }
+
+      refreshed_data = %Spotify{
+        access_token: "fresh_token",
+        refresh_token: "valid_refresh",
+        expires_at: DateTime.add(current_time, 3600, :second)
+      }
+
+      assert :ok = Providers.insert(table, user_id, expired_data)
+
+      Repatch.patch(DateTime, :utc_now, fn -> current_time end)
+
+      Repatch.patch(Songy.Boundary.Provider.Spotify, :ensure_provider_data, fn _provider ->
+        {:ok, refreshed_data}
+      end)
+
+      assert {:ok, result} = Providers.lookup(table, user_id)
+      assert result.access_token == "fresh_token"
+    end
+
+    test "handles ensure error by removing from ETS", %{table: table} do
+      user_id = "user_with_invalid_refresh"
+
+      invalid_data = %Spotify{
+        access_token: "token",
+        refresh_token: nil
+      }
+
+      assert :ok = Providers.insert(table, user_id, invalid_data)
+
+      Repatch.patch(Songy.Boundary.Provider.Spotify, :ensure_provider_data, fn _provider ->
+        {:error, :authentication_failed}
+      end)
+
+      assert {:error, :authentication_failed} = Providers.lookup(table, user_id)
+
+      assert [] = :ets.lookup(table, user_id)
+    end
   end
 end

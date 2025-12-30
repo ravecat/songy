@@ -5,7 +5,7 @@ defmodule Songy.Boundary.Provider.SpotifyTest do
   alias Songy.Core.Provider
 
   describe "authenticate/2" do
-    test "returns provider data when authentication succeeds" do
+    test "returns provider data when authentication succeeds with Spotify.Credentials" do
       conn_credentials = %Spotify.Credentials{access_token: "existing_token"}
       params = %{"code" => "valid_auth_code"}
 
@@ -14,7 +14,7 @@ defmodule Songy.Boundary.Provider.SpotifyTest do
         refresh_token: "new_refresh_token"
       }
 
-      Repatch.patch(Spotify.Authentication, :authenticate, fn _conn, _params ->
+      Repatch.patch(Spotify.Authentication, :authenticate, fn _creds, _params ->
         {:ok, credentials}
       end)
 
@@ -24,15 +24,43 @@ defmodule Songy.Boundary.Provider.SpotifyTest do
       assert Map.has_key?(result, :expires_at)
     end
 
+    test "returns provider data when authentication succeeds with Plug.Conn" do
+      conn = %Plug.Conn{}
+      params = %{"code" => "valid_auth_code"}
+
+      credentials = %Spotify.Credentials{
+        access_token: "new_access_token",
+        refresh_token: "new_refresh_token"
+      }
+
+      Repatch.patch(Spotify.Credentials, :new, fn _conn -> credentials end)
+
+      Repatch.patch(Spotify.Authentication, :authenticate, fn _creds, _params ->
+        {:ok, credentials}
+      end)
+
+      assert {:ok, result} = BoundarySpotify.authenticate(conn, params)
+      assert result.access_token == "new_access_token"
+      assert result.refresh_token == "new_refresh_token"
+      assert Map.has_key?(result, :expires_at)
+    end
+
     test "handles errors when authentication fails" do
       conn_credentials = %Spotify.Credentials{access_token: "existing_token"}
       params = %{"code" => "valid_code"}
 
-      Repatch.patch(Spotify.Authentication, :authenticate, fn _conn, _params ->
+      Repatch.patch(Spotify.Authentication, :authenticate, fn _creds, _params ->
         {:error, :timeout}
       end)
 
       assert {:error, :timeout} = BoundarySpotify.authenticate(conn_credentials, params)
+    end
+
+    test "returns error when invalid credentials are provided" do
+      invalid_input = "not_credentials"
+      params = %{"code" => "valid_code"}
+
+      assert {:error, :invalid_credentials} = BoundarySpotify.authenticate(invalid_input, params)
     end
   end
 

@@ -22,8 +22,7 @@ defmodule SongyWeb.SpotifyController do
   def callback(conn, %{"code" => code}) do
     %{assigns: %{current_user: %{uuid: user_id}}} = conn
 
-    with credentials <- Spotify.Credentials.new(conn),
-         {:ok, provider} <- Songy.Boundary.Provider.Spotify.authenticate(credentials, %{"code" => code}),
+    with {:ok, provider} <- Songy.Boundary.Provider.Spotify.authenticate(conn, %{"code" => code}),
          :ok <- Songy.Providers.insert(:providers, user_id, provider) do
       conn
       |> put_flash(:info, "Successfully connected to Spotify!")
