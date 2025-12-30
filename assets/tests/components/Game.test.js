@@ -24,7 +24,7 @@ describe("Game", () => {
         queue: ["user-1"],
         cursor: 0,
         turn: {
-          phase: TURN_PHASE.STEADY,
+          phase: TURN_PHASE.READY,
         },
       },
     };
@@ -45,7 +45,7 @@ describe("Game", () => {
       },
     };
 
-    mockChannelContext.state.turn.phase = TURN_PHASE.STEADY;
+    mockChannelContext.state.turn.phase = TURN_PHASE.READY;
 
     getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockReturnValue(mockChannelContext);

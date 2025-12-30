@@ -16,10 +16,19 @@
   });
 
   const showReady = $derived.by(() => {
-    return (
-      turnPhase === TURN_PHASE.STEADY && activePlayerId === currentPlayer?.uuid
-    );
+    const isActivePlayer = activePlayerId === currentPlayer?.uuid;
+
+    // Show in READY phase if active player has made assumption
+    if (turnPhase === TURN_PHASE.READY && isActivePlayer) {
+      const hasAssumption = state?.turn?.assumptions?.some(
+        (a) => a.user_id === currentPlayer?.uuid
+      );
+      return hasAssumption;
+    }
+
+    return false;
   });
+
 
   const togglePlayback = () => {
     channel.push(
@@ -45,10 +54,10 @@
   {#if showReady}
     <button
       class="btn"
-      aria-label="Mark as ready to submit guess"
+      aria-label={turnPhase === TURN_PHASE.READY ? "Confirm assumption and continue to challenging" : "Ready"}
       onclick={handleReady}
     >
-      Ready
+      {turnPhase === TURN_PHASE.READY ? 'Confirm' : 'Ready'}
     </button>
   {/if}
 </div>

@@ -5,7 +5,6 @@
   import TurnChallenging from "~components/TurnChallenging.svelte";
   import TurnResults from "~components/TurnResults.svelte";
   import TurnReady from "~components/TurnReady.svelte";
-  import TurnSteady from "~components/TurnSteady.svelte";
 
   const { state } = $derived.by(getGameContext);
   const turnPhase = $derived(state?.turn?.phase);
@@ -15,10 +14,10 @@
   <TurnWaiting />
 {:else if turnPhase === TURN_PHASE.READY}
   <TurnReady />
-{:else if turnPhase === TURN_PHASE.STEADY}
-  <TurnSteady />
 {:else if turnPhase === TURN_PHASE.CHALLENGING}
   <TurnChallenging />
 {:else if turnPhase === TURN_PHASE.RESULTS}
   <TurnResults />
+{:else}
+  <div>Unknown phase: {turnPhase}</div>
 {/if}

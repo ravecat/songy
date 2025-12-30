@@ -12,7 +12,7 @@ defmodule Songy.Core.Turn do
   ]
 
   @typedoc "Turn phase"
-  @type phase :: :waiting | :ready | :steady | :challenging | :results
+  @type phase :: :waiting | :ready | :challenging | :results
 
   @typedoc "Timeline for challenging phase"
   @type timeline :: list(Songy.Core.Track.t())

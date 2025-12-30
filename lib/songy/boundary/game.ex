@@ -247,14 +247,6 @@ defmodule Songy.Boundary.Game do
   def handle_event({:call, from}, :next_phase, {:in_progress, :ready}, %{turn: turn} = data) do
     Logger.debug("Game #{data.id}: Advancing turn phase")
 
-    updated_game = %{data | turn: %{turn | phase: :steady}}
-
-    {:next_state, {:in_progress, :steady}, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
-  end
-
-  def handle_event({:call, from}, :next_phase, {:in_progress, :steady}, %{turn: turn} = data) do
-    Logger.debug("Game #{data.id}: Advancing turn phase")
-
     updated_game = %{data | turn: %{turn | phase: :challenging}}
     timeout = Application.fetch_env!(:songy, :challenging_phase_timeout)
 
@@ -306,6 +298,20 @@ defmodule Songy.Boundary.Game do
   def handle_event(
         {:call, from},
         {:make_assumption, user_id, position},
+        {:in_progress, :ready},
+        %{track: track, turn: turn} = data
+      ) do
+    Logger.debug("Game #{data.id}: Making assumption for #{user_id} at #{position} (READY phase)")
+
+    updated_turn = do_update_timeline(turn, track, user_id, position)
+    updated_game = %{data | turn: updated_turn}
+
+    {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
+  end
+
+  def handle_event(
+        {:call, from},
+        {:make_assumption, user_id, position},
         {:in_progress, :challenging},
         %{track: track, turn: turn} = data
       ) do
@@ -315,6 +321,25 @@ defmodule Songy.Boundary.Game do
     updated_game = %{data | turn: updated_turn}
 
     {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
+  end
+
+  def handle_event(
+        {:call, from},
+        {:reorder_timeline, user_id, position},
+        {:in_progress, :ready},
+        %{turn: turn} = data
+      ) do
+    Logger.debug("Game #{data.id}: Reordering timeline for #{user_id} to #{position} (READY phase)")
+
+    case do_reorder_timeline(turn, user_id, position) do
+      {:ok, updated_turn} ->
+        updated_game = %{data | turn: updated_turn}
+
+        {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
+
+      {:error, reason} ->
+        {:keep_state, data, [{:reply, from, {:error, reason}}]}
+    end
   end
 
   def handle_event(

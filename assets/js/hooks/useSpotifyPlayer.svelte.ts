@@ -75,7 +75,6 @@ export function useSpotifyPlayer(options: UseSpotifyPlayerOptions = {}): UseSpot
   const {
     name = "Web Playback SDK Player",
     getOAuthToken = (cb: (token: string) => void) => {
-      console.warn("getOAuthToken not provided, player will not work");
       cb("");
     },
     volume = 0.5,
@@ -83,20 +82,14 @@ export function useSpotifyPlayer(options: UseSpotifyPlayerOptions = {}): UseSpot
   } = options;
 
   const eventCallbacks: Required<UseSpotifyPlayerOptions['on']> = {
-    [SPOTIFY_EVENT.READY]: (data: Spotify.WebPlaybackInstance) => console.log("Ready with Device ID", data.device_id),
-    [SPOTIFY_EVENT.NOT_READY]: (data: Spotify.WebPlaybackInstance) =>
-      console.log("Device ID has gone offline", data.device_id),
+    [SPOTIFY_EVENT.READY]: () => { },
+    [SPOTIFY_EVENT.NOT_READY]: () => { },
     [SPOTIFY_EVENT.PLAYER_STATE_CHANGED]: () => { },
-    [SPOTIFY_EVENT.AUTOPLAY_FAILED]: () =>
-      console.log("Autoplay is not allowed by the browser autoplay rules"),
-    [SPOTIFY_EVENT.INITIALIZATION_ERROR]: (error: Spotify.Error) =>
-      console.error("Failed to initialize:", error.message),
-    [SPOTIFY_EVENT.AUTHENTICATION_ERROR]: (error: Spotify.Error) =>
-      console.error("Failed to authenticate:", error.message),
-    [SPOTIFY_EVENT.ACCOUNT_ERROR]: (error: Spotify.Error) =>
-      console.error("Failed to validate Spotify account:", error.message),
-    [SPOTIFY_EVENT.PLAYBACK_ERROR]: (error: Spotify.Error) =>
-      console.error("Failed to perform playback:", error.message),
+    [SPOTIFY_EVENT.AUTOPLAY_FAILED]: () => { },
+    [SPOTIFY_EVENT.INITIALIZATION_ERROR]: () => { },
+    [SPOTIFY_EVENT.AUTHENTICATION_ERROR]: () => { },
+    [SPOTIFY_EVENT.ACCOUNT_ERROR]: () => { },
+    [SPOTIFY_EVENT.PLAYBACK_ERROR]: () => { },
     ...on,
   };
 
@@ -109,7 +102,7 @@ export function useSpotifyPlayer(options: UseSpotifyPlayerOptions = {}): UseSpot
     script.async = true;
 
     script.onerror = () => {
-      console.error("Failed to load Spotify SDK script");
+      // Failed to load Spotify SDK script
     };
 
     document.body.appendChild(script);

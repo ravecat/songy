@@ -10,7 +10,6 @@ import type { Track } from './track';
 export enum TURN_PHASE {
   WAITING = 'waiting',
   READY = 'ready',
-  STEADY = 'steady',
   CHALLENGING = 'challenging',
   RESULTS = 'results'
 }
