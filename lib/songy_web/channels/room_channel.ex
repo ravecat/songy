@@ -64,13 +64,13 @@ defmodule SongyWeb.RoomChannel do
     @room_prefix <> room_id = socket.topic
     current_user_id = socket.assigns.current_user_id
 
-    with true <- GameSession.owner?(room_id, current_user_id),
-         {:ok, game} <- GameSession.start_playback(room_id) do
-      broadcast(socket, "state_updated", game)
-      {:reply, :ok, socket}
-    else
-      other ->
-        Logger.warning("Start playback failed with: #{inspect(other)}")
+    case GameSession.start_playback(room_id, current_user_id) do
+      {:ok, game} ->
+        broadcast(socket, "state_updated", game)
+        {:reply, :ok, socket}
+
+      {:error, reason} ->
+        Logger.warning("Start playback failed with: #{inspect(reason)}")
         {:noreply, socket}
     end
   end
@@ -80,17 +80,13 @@ defmodule SongyWeb.RoomChannel do
     @room_prefix <> room_id = socket.topic
     current_user_id = socket.assigns.current_user_id
 
-    with true <- GameSession.owner?(room_id, current_user_id),
-         {:ok, game} <- GameSession.pause_playback(room_id) do
-      broadcast(socket, "state_updated", game)
-      {:reply, :ok, socket}
-    else
+    case GameSession.pause_playback(room_id, current_user_id) do
+      {:ok, game} ->
+        broadcast(socket, "state_updated", game)
+        {:reply, :ok, socket}
+
       {:error, reason} ->
         Logger.warning("Pause playback failed: #{inspect(reason)}")
-        {:noreply, socket}
-
-      other ->
-        Logger.warning("Pause playback failed with: #{inspect(other)}")
         {:noreply, socket}
     end
   end

@@ -120,13 +120,17 @@ defmodule Songy.Boundary.GameSessionTest do
     end
 
     test "starts playback when game in progress", %{game_id: game_id} do
-      assert {:ok, game} = GameSession.start_playback(game_id)
+      {:ok, game} = GameSession.get_state(game_id)
+      owner_id = game.owner_id
+      assert {:ok, game} = GameSession.start_playback(game_id, owner_id)
       assert game.player.is_playback == true
     end
 
     test "pauses playback when already playing", %{game_id: game_id} do
-      {:ok, _} = GameSession.start_playback(game_id)
-      assert {:ok, game} = GameSession.pause_playback(game_id)
+      {:ok, game} = GameSession.get_state(game_id)
+      owner_id = game.owner_id
+      {:ok, _} = GameSession.start_playback(game_id, owner_id)
+      assert {:ok, game} = GameSession.pause_playback(game_id, owner_id)
       assert game.player.is_playback == false
     end
   end

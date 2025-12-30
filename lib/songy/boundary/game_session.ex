@@ -61,25 +61,25 @@ defmodule Songy.Boundary.GameSession do
     end
   end
 
-  @spec start_playback(String.t()) :: {:ok, Core.Game.t()} | {:error, term()}
-  def start_playback(game_id) when is_binary(game_id) do
+  @spec start_playback(String.t(), String.t() | nil) :: {:ok, Core.Game.t()} | {:error, term()}
+  def start_playback(game_id, user_id \\ nil) when is_binary(game_id) do
     with {:ok, game} <- Game.get_state(game_id),
          {:ok, provider} <- Providers.lookup(:providers, game.owner_id),
          {:ok, track} <- Game.get_track(game_id),
          {:ok, :playback_started} <- Player.start_playback(provider, track),
-         {:ok, game} <- Game.start_playback(game_id) do
+         {:ok, game} <- Game.start_playback(game_id, user_id) do
       {:ok, game}
     else
       {:error, reason} -> {:error, reason}
     end
   end
 
-  @spec pause_playback(String.t()) :: {:ok, Core.Game.t()} | {:error, term()}
-  def pause_playback(game_id) when is_binary(game_id) do
+  @spec pause_playback(String.t(), String.t() | nil) :: {:ok, Core.Game.t()} | {:error, term()}
+  def pause_playback(game_id, user_id \\ nil) when is_binary(game_id) do
     with {:ok, game} <- Game.get_state(game_id),
          {:ok, provider} <- Providers.lookup(:providers, game.owner_id),
          {:ok, :playback_paused} <- Player.pause_playback(provider),
-         {:ok, game} <- Game.pause_playback(game_id) do
+         {:ok, game} <- Game.pause_playback(game_id, user_id) do
       {:ok, game}
     else
       {:error, reason} -> {:error, reason}

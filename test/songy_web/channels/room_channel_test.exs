@@ -120,11 +120,7 @@ defmodule SongyWeb.RoomChannelTest do
         {:ok, %{status: :in_progress}}
       end)
 
-      Repatch.patch(GameSession, :owner?, [mode: :shared], fn ^game_id, ^owner_id ->
-        true
-      end)
-
-      Repatch.patch(GameSession, :start_playback, [mode: :shared], fn ^game_id ->
+      Repatch.patch(GameSession, :start_playback, [mode: :shared], fn ^game_id, ^owner_id ->
         {:ok, new_state}
       end)
 
@@ -138,16 +134,17 @@ defmodule SongyWeb.RoomChannelTest do
       assert_broadcast("state_updated", ^new_state)
     end
 
-    test "non-owner cannot start playback", %{current_user: current_user} do
+    test "active player can start playback", %{current_user: current_user} do
       game_id = "game-123"
-      user_id = current_user.uuid
+      active_player_id = current_user.uuid
+      new_state = %{player: %{is_playback: true}}
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
         {:ok, %{status: :in_progress}}
       end)
 
-      Repatch.patch(GameSession, :owner?, [mode: :shared], fn ^game_id, ^user_id ->
-        false
+      Repatch.patch(GameSession, :start_playback, [mode: :shared], fn ^game_id, ^active_player_id ->
+        {:ok, new_state}
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
@@ -156,7 +153,29 @@ defmodule SongyWeb.RoomChannelTest do
 
       ref = push(socket, "start_playback", %{})
 
-      # Non-owner gets no reply (noreply)
+      assert_reply(ref, :ok)
+      assert_broadcast("state_updated", ^new_state)
+    end
+
+    test "non-owner and non-active player cannot start playback", %{current_user: current_user} do
+      game_id = "game-123"
+      user_id = current_user.uuid
+
+      Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
+        {:ok, %{status: :in_progress}}
+      end)
+
+      Repatch.patch(GameSession, :start_playback, [mode: :shared], fn ^game_id, ^user_id ->
+        {:error, :unauthorized}
+      end)
+
+      {:ok, _, socket} = join_room_channel(current_user, game_id)
+      # Consume push from join
+      assert_push("state_updated", %{status: :in_progress})
+
+      ref = push(socket, "start_playback", %{})
+
+      # Should not get reply on error
       refute_reply(ref, :ok)
       # No broadcast should happen
       refute_broadcast("state_updated", %{player: %{is_playback: true}})
@@ -170,11 +189,7 @@ defmodule SongyWeb.RoomChannelTest do
         {:ok, %{status: :in_progress}}
       end)
 
-      Repatch.patch(GameSession, :owner?, [mode: :shared], fn ^game_id, ^owner_id ->
-        true
-      end)
-
-      Repatch.patch(GameSession, :start_playback, [mode: :shared], fn ^game_id ->
+      Repatch.patch(GameSession, :start_playback, [mode: :shared], fn ^game_id, ^owner_id ->
         {:error, :playback_failed}
       end)
 
@@ -201,11 +216,7 @@ defmodule SongyWeb.RoomChannelTest do
         {:ok, %{status: :in_progress}}
       end)
 
-      Repatch.patch(GameSession, :owner?, [mode: :shared], fn ^game_id, ^owner_id ->
-        true
-      end)
-
-      Repatch.patch(GameSession, :pause_playback, [mode: :shared], fn ^game_id ->
+      Repatch.patch(GameSession, :pause_playback, [mode: :shared], fn ^game_id, ^owner_id ->
         {:ok, new_state}
       end)
 
@@ -219,7 +230,30 @@ defmodule SongyWeb.RoomChannelTest do
       assert_broadcast("state_updated", ^new_state)
     end
 
-    test "non-owner cannot pause playback", %{current_user: current_user} do
+    test "active player can pause playback", %{current_user: current_user} do
+      game_id = "game-123"
+      active_player_id = current_user.uuid
+      new_state = %{player: %{is_playback: false}}
+
+      Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
+        {:ok, %{status: :in_progress}}
+      end)
+
+      Repatch.patch(GameSession, :pause_playback, [mode: :shared], fn ^game_id, ^active_player_id ->
+        {:ok, new_state}
+      end)
+
+      {:ok, _, socket} = join_room_channel(current_user, game_id)
+      # Consume push from join
+      assert_push("state_updated", %{status: :in_progress})
+
+      ref = push(socket, "pause_playback", %{})
+
+      assert_reply(ref, :ok)
+      assert_broadcast("state_updated", ^new_state)
+    end
+
+    test "non-owner and non-active player cannot pause playback", %{current_user: current_user} do
       game_id = "game-123"
       user_id = current_user.uuid
 
@@ -227,8 +261,8 @@ defmodule SongyWeb.RoomChannelTest do
         {:ok, %{status: :in_progress}}
       end)
 
-      Repatch.patch(GameSession, :owner?, [mode: :shared], fn ^game_id, ^user_id ->
-        false
+      Repatch.patch(GameSession, :pause_playback, [mode: :shared], fn ^game_id, ^user_id ->
+        {:error, :unauthorized}
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
@@ -237,7 +271,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       ref = push(socket, "pause_playback", %{})
 
-      # Non-owner gets no reply (noreply)
+      # Should not get reply on error
       refute_reply(ref, :ok)
       # No broadcast should happen
       refute_broadcast("state_updated", %{player: %{is_playback: false}})
@@ -251,11 +285,7 @@ defmodule SongyWeb.RoomChannelTest do
         {:ok, %{status: :in_progress}}
       end)
 
-      Repatch.patch(GameSession, :owner?, [mode: :shared], fn ^game_id, ^owner_id ->
-        true
-      end)
-
-      Repatch.patch(GameSession, :pause_playback, [mode: :shared], fn ^game_id ->
+      Repatch.patch(GameSession, :pause_playback, [mode: :shared], fn ^game_id, ^owner_id ->
         {:error, :pause_failed}
       end)
 

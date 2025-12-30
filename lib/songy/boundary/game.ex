@@ -59,6 +59,7 @@ defmodule Songy.Boundary.Game do
   def owner?(game_id, user_id) do
     case get_state(game_id) do
       {:ok, %{owner_id: ^user_id}} -> true
+      {:ok, _} -> false
       {:error, _} -> false
     end
   end
@@ -69,13 +70,13 @@ defmodule Songy.Boundary.Game do
   end
 
   @doc "Starts playback."
-  def start_playback(game_id, timeout \\ 1_000) do
-    call_if_exists(game_id, :start_playback, timeout)
+  def start_playback(game_id, user_id \\ nil, timeout \\ 1_000) do
+    call_if_exists(game_id, {:start_playback, user_id}, timeout)
   end
 
   @doc "Pauses playback."
-  def pause_playback(game_id, timeout \\ 1_000) do
-    call_if_exists(game_id, :pause_playback, timeout)
+  def pause_playback(game_id, user_id \\ nil, timeout \\ 1_000) do
+    call_if_exists(game_id, {:pause_playback, user_id}, timeout)
   end
 
   @doc "Advances to the next phase."
@@ -368,16 +369,24 @@ defmodule Songy.Boundary.Game do
     end
   end
 
-  def handle_event({:call, from}, :start_playback, {:in_progress, _phase}, data) do
-    updated_game = %{data | player: Core.Player.set_playback(data.player, true)}
-
-    {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
+  def handle_event({:call, from}, {:start_playback, user_id}, {:in_progress, _phase}, data) do
+    with :ok <- Core.Game.validate_playback_permission(data, user_id) do
+      updated_game = %{data | player: Core.Player.set_playback(data.player, true)}
+      {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
+    else
+      {:error, reason} ->
+        {:keep_state, data, [{:reply, from, {:error, reason}}]}
+    end
   end
 
-  def handle_event({:call, from}, :pause_playback, {:in_progress, _phase}, data) do
-    updated_game = %{data | player: Core.Player.set_playback(data.player, false)}
-
-    {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
+  def handle_event({:call, from}, {:pause_playback, user_id}, {:in_progress, _phase}, data) do
+    with :ok <- Core.Game.validate_playback_permission(data, user_id) do
+      updated_game = %{data | player: Core.Player.set_playback(data.player, false)}
+      {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
+    else
+      {:error, reason} ->
+        {:keep_state, data, [{:reply, from, {:error, reason}}]}
+    end
   end
 
   def handle_event({:call, from}, :get_state, {:in_progress, _phase}, data) do

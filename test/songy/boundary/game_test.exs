@@ -25,6 +25,10 @@ defmodule Songy.Boundary.GameTest do
        }}
     end)
 
+    Repatch.patch(Songy.Boundary.Player, :start_playback, [mode: :shared], fn _provider, _track ->
+      {:ok, :playback_started}
+    end)
+
     Repatch.patch(Songy.Boundary.Player, :pause_playback, [mode: :shared], fn _provider ->
       {:ok, :playback_paused}
     end)
@@ -567,12 +571,13 @@ defmodule Songy.Boundary.GameTest do
       assert_receive {:game_state_updated, _game}
       join_participant(game_id, user2.uuid)
       assert_receive {:game_state_updated, _game}
-      {:ok, _} = Game.start_game(game_id)
+      {:ok, game} = Game.start_game(game_id)
+      owner_id = game.owner_id
 
       # Drain message from start_game
       assert_receive {:game_state_updated, _}
 
-      {:ok, _} = Game.start_playback(game_id)
+      {:ok, _} = Game.start_playback(game_id, owner_id)
 
       assert_receive {:game_state_updated, game}
       assert game.player.is_playback == true
@@ -586,17 +591,292 @@ defmodule Songy.Boundary.GameTest do
       assert_receive {:game_state_updated, _game}
       join_participant(game_id, user2.uuid)
       assert_receive {:game_state_updated, _game}
-      {:ok, _} = Game.start_game(game_id)
+      {:ok, game} = Game.start_game(game_id)
+      owner_id = game.owner_id
       assert_receive {:game_state_updated, _}
-      {:ok, _} = Game.start_playback(game_id)
+      {:ok, _} = Game.start_playback(game_id, owner_id)
 
       # Drain message from start_playback
       assert_receive {:game_state_updated, _}
 
-      {:ok, _} = Game.pause_playback(game_id)
+      {:ok, _} = Game.pause_playback(game_id, owner_id)
 
       assert_receive {:game_state_updated, game}
       assert game.player.is_playback == false
+    end
+  end
+
+  describe ":in_progress - :ready - playback control" do
+    setup %{game_id: game_id} do
+      user1 = %User{uuid: "user-1", name: "Player1"}
+      user2 = %User{uuid: "user-2", name: "Player2"}
+
+      join_participant(game_id, user1.uuid)
+      assert_receive {:game_state_updated, _}
+      join_participant(game_id, user2.uuid)
+      assert_receive {:game_state_updated, _}
+      {:ok, _} = Game.start_game(game_id)
+      # waiting phase
+      assert_receive {:game_state_updated, _}
+      # waiting -> ready
+      {:ok, _} = Game.next_phase(game_id)
+      # ready phase
+      assert_receive {:game_state_updated, _}
+
+      # Set a track for playback tests
+      track = %Track{id: "track-1", title: "Song", artist: "Artist", year: 2020}
+      {:ok, _} = Game.set_track(game_id, track)
+      assert_receive {:game_state_updated, _}
+
+      %{user1: user1, user2: user2}
+    end
+
+    test "owner can start playback during ready phase", %{game_id: game_id, owner: owner} do
+      {:ok, _} = Game.start_playback(game_id, owner.uuid)
+
+      assert_receive {:game_state_updated, game}
+      assert game.player.is_playback == true
+    end
+
+    test "owner can pause playback during ready phase", %{game_id: game_id, owner: owner} do
+      {:ok, _} = Game.start_playback(game_id, owner.uuid)
+      assert_receive {:game_state_updated, game}
+      assert game.player.is_playback == true
+
+      {:ok, _} = Game.pause_playback(game_id, owner.uuid)
+
+      assert_receive {:game_state_updated, game}
+      assert game.player.is_playback == false
+    end
+
+    test "active player can start playback during ready phase", %{game_id: game_id, user1: user1} do
+      {:ok, _} = Game.start_playback(game_id, user1.uuid)
+
+      assert_receive {:game_state_updated, game}
+      assert game.player.is_playback == true
+    end
+
+    test "active player can pause playback during ready phase", %{game_id: game_id, user1: user1} do
+      {:ok, _} = Game.start_playback(game_id, user1.uuid)
+      assert_receive {:game_state_updated, game}
+      assert game.player.is_playback == true
+
+      {:ok, _} = Game.pause_playback(game_id, user1.uuid)
+
+      assert_receive {:game_state_updated, game}
+      assert game.player.is_playback == false
+    end
+
+    test "non-owner and non-active player cannot start playback", %{game_id: game_id, user2: user2} do
+      {:error, :unauthorized} = Game.start_playback(game_id, user2.uuid)
+
+      # No broadcast should happen
+      refute_receive {:game_state_updated, %{player: %{is_playback: true}}}
+    end
+
+    test "non-owner and non-active player cannot pause playback", %{game_id: game_id, owner: owner, user2: user2} do
+      {:ok, _} = Game.start_playback(game_id, owner.uuid)
+      assert_receive {:game_state_updated, _}
+
+      {:error, :unauthorized} = Game.pause_playback(game_id, user2.uuid)
+
+      # No pause broadcast should happen
+      refute_receive {:game_state_updated, %{player: %{is_playback: false}}}
+    end
+  end
+
+  describe ":in_progress - :challenging phase - playback control" do
+    setup %{game_id: game_id} do
+      # Temporarily increase challenging_phase_timeout to 50ms for these tests
+      original_timeout = Application.get_env(:songy, :challenging_phase_timeout)
+      Application.put_env(:songy, :challenging_phase_timeout, 50)
+
+      user1 = %User{uuid: "user-1", name: "Player1"}
+      user2 = %User{uuid: "user-2", name: "Player2"}
+
+      join_participant(game_id, user1.uuid)
+      assert_receive {:game_state_updated, _}
+      join_participant(game_id, user2.uuid)
+      assert_receive {:game_state_updated, _}
+      {:ok, _} = Game.start_game(game_id)
+      # waiting phase
+      assert_receive {:game_state_updated, _}
+      # waiting -> ready
+      {:ok, _} = Game.next_phase(game_id)
+      # ready phase
+      assert_receive {:game_state_updated, _}
+
+      # Set a track for playback tests
+      track = %Track{id: "track-1", title: "Song", artist: "Artist", year: 2020}
+      {:ok, _} = Game.set_track(game_id, track)
+      assert_receive {:game_state_updated, _}
+
+      # ready -> challenging (this triggers a timer for auto-advance)
+      {:ok, _} = Game.next_phase(game_id)
+      # challenging phase
+      assert_receive {:game_state_updated, _}
+
+      on_exit(fn ->
+        Application.put_env(:songy, :challenging_phase_timeout, original_timeout)
+      end)
+
+      %{user1: user1, user2: user2}
+    end
+
+    test "owner can start playback during challenging phase", %{game_id: game_id, owner: owner} do
+      {:ok, _} = Game.start_playback(game_id, owner.uuid)
+      # Use short timeout to catch the message before auto-advance to results
+      assert_receive {:game_state_updated, game}, 25
+      assert game.player.is_playback == true
+    end
+
+    test "owner can pause playback during challenging phase", %{game_id: game_id, owner: owner} do
+      {:ok, _} = Game.start_playback(game_id, owner.uuid)
+      assert_receive {:game_state_updated, game}, 25
+      assert game.player.is_playback == true
+
+      {:ok, _} = Game.pause_playback(game_id, owner.uuid)
+      assert_receive {:game_state_updated, game}, 25
+      assert game.player.is_playback == false
+    end
+
+    test "active player can start playback during challenging phase", %{game_id: game_id, user1: user1} do
+      {:ok, _} = Game.start_playback(game_id, user1.uuid)
+      assert_receive {:game_state_updated, game}, 25
+      assert game.player.is_playback == true
+    end
+
+    test "active player can pause playback during challenging phase", %{game_id: game_id, user1: user1} do
+      {:ok, _} = Game.start_playback(game_id, user1.uuid)
+      assert_receive {:game_state_updated, game}, 25
+      assert game.player.is_playback == true
+
+      {:ok, _} = Game.pause_playback(game_id, user1.uuid)
+      assert_receive {:game_state_updated, game}, 25
+      assert game.player.is_playback == false
+    end
+
+    test "non-owner and non-active player cannot start playback during challenging phase", %{
+      game_id: game_id,
+      user2: user2
+    } do
+      {:error, :unauthorized} = Game.start_playback(game_id, user2.uuid)
+      # No broadcast should happen
+      refute_receive {:game_state_updated, %{player: %{is_playback: true}}}
+    end
+
+    test "non-owner and non-active player cannot pause playback during challenging phase", %{
+      game_id: game_id,
+      owner: owner,
+      user2: user2
+    } do
+      {:ok, _} = Game.start_playback(game_id, owner.uuid)
+      assert_receive {:game_state_updated, _}, 25
+
+      {:error, :unauthorized} = Game.pause_playback(game_id, user2.uuid)
+      # No pause broadcast should happen
+      refute_receive {:game_state_updated, %{player: %{is_playback: false}}}
+    end
+  end
+
+  describe ":in_progress - :challenging - additional playback control tests" do
+    setup %{game_id: game_id} do
+      # Temporarily increase challenging_phase_timeout to 50ms for these tests
+      original_timeout = Application.get_env(:songy, :challenging_phase_timeout)
+      Application.put_env(:songy, :challenging_phase_timeout, 50)
+
+      user1 = %User{uuid: "user-1", name: "Player1"}
+      user2 = %User{uuid: "user-2", name: "Player2"}
+
+      join_participant(game_id, user1.uuid)
+      assert_receive {:game_state_updated, _}
+      join_participant(game_id, user2.uuid)
+      assert_receive {:game_state_updated, _}
+      {:ok, _} = Game.start_game(game_id)
+      # waiting phase
+      assert_receive {:game_state_updated, _}
+      # waiting -> ready
+      {:ok, _} = Game.next_phase(game_id)
+      # ready phase
+      assert_receive {:game_state_updated, _}
+
+      # Set a track for playback tests
+      track = %Track{id: "track-1", title: "Song", artist: "Artist", year: 2020}
+      {:ok, _} = Game.set_track(game_id, track)
+      assert_receive {:game_state_updated, _}
+
+      # ready -> challenging
+      {:ok, _} = Game.next_phase(game_id)
+      # challenging phase
+      assert_receive {:game_state_updated, _}
+
+      on_exit(fn ->
+        # Restore original timeout after tests complete
+        Application.put_env(:songy, :challenging_phase_timeout, original_timeout)
+      end)
+
+      %{user1: user1, user2: user2}
+    end
+
+    test "owner can start and then pause playback in challenging phase", %{game_id: game_id, owner: owner} do
+      # Start playback
+      {:ok, _} = Game.start_playback(game_id, owner.uuid)
+
+      assert_receive {:game_state_updated, game}, 25
+      assert game.player.is_playback == true
+    end
+
+    test "owner can pause playback during challenging phase", %{game_id: game_id, owner: owner} do
+      {:ok, _} = Game.start_playback(game_id, owner.uuid)
+      assert_receive {:game_state_updated, game}, 25
+      assert game.player.is_playback == true
+
+      {:ok, _} = Game.pause_playback(game_id, owner.uuid)
+
+      assert_receive {:game_state_updated, game}, 25
+      assert game.player.is_playback == false
+    end
+
+    test "active player can start playback during challenging phase", %{game_id: game_id, user1: user1} do
+      {:ok, _} = Game.start_playback(game_id, user1.uuid)
+
+      assert_receive {:game_state_updated, game}, 25
+      assert game.player.is_playback == true
+    end
+
+    test "active player can pause playback during challenging phase", %{game_id: game_id, user1: user1} do
+      {:ok, _} = Game.start_playback(game_id, user1.uuid)
+      assert_receive {:game_state_updated, game}, 25
+      assert game.player.is_playback == true
+
+      {:ok, _} = Game.pause_playback(game_id, user1.uuid)
+
+      assert_receive {:game_state_updated, game}, 25
+      assert game.player.is_playback == false
+    end
+
+    test "non-owner and non-active player cannot start playback during challenging phase", %{
+      game_id: game_id,
+      user2: user2
+    } do
+      {:error, :unauthorized} = Game.start_playback(game_id, user2.uuid)
+
+      # No broadcast should happen
+      refute_receive {:game_state_updated, %{player: %{is_playback: true}}}
+    end
+
+    test "non-owner and non-active player cannot pause playback during challenging phase", %{
+      game_id: game_id,
+      owner: owner,
+      user2: user2
+    } do
+      {:ok, _} = Game.start_playback(game_id, owner.uuid)
+      assert_receive {:game_state_updated, _}, 25
+
+      {:error, :unauthorized} = Game.pause_playback(game_id, user2.uuid)
+
+      # No pause broadcast should happen
+      refute_receive {:game_state_updated, %{player: %{is_playback: false}}}
     end
   end
 
