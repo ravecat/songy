@@ -206,7 +206,7 @@ defmodule Songy.Boundary.Game do
     handle_presence_left(data, user_id)
   end
 
-  def handle_event(:timeout, :auto_advance, {:in_progress, :challenging}, %{turn: turn} = data) do
+  def handle_event({:timeout, :challenging}, :auto_advance, {:in_progress, :challenging}, %{turn: turn} = data) do
     Logger.debug("Game #{data.id}: Challenging phase timeout - auto-advancing to results")
 
     updated_game =
@@ -241,7 +241,8 @@ defmodule Songy.Boundary.Game do
 
     updated_game = %{data | turn: %{turn | timeline: timeline, phase: :ready}}
 
-    {:next_state, {:in_progress, :ready}, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
+    {:next_state, {:in_progress, :ready}, updated_game,
+     [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
   end
 
   def handle_event({:call, from}, :next_phase, {:in_progress, :ready}, %{turn: turn} = data) do
@@ -251,7 +252,11 @@ defmodule Songy.Boundary.Game do
     timeout = Application.fetch_env!(:songy, :challenging_phase_timeout)
 
     {:next_state, {:in_progress, :challenging}, updated_game,
-     [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}, {:timeout, timeout, :auto_advance}]}
+     [
+       {:reply, from, {:ok, updated_game}},
+       {:next_event, :internal, :broadcast},
+       {{:timeout, :challenging}, timeout, :auto_advance}
+     ]}
   end
 
   def handle_event({:call, from}, :next_phase, {:in_progress, :results}, data) do
@@ -282,13 +287,15 @@ defmodule Songy.Boundary.Game do
           turn: %Core.Turn{phase: :waiting, timeline: [], assumptions: []}
       }
 
-      {:next_state, {:in_progress, :waiting}, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
+      {:next_state, {:in_progress, :waiting}, updated_game,
+       [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
     else
       {:winner, _winner_id} ->
         game = %{data | status: :finished}
         timeout = Application.fetch_env!(:songy, :game_session_termination_timeout)
 
-        {:next_state, {:finished, :none}, game, [{:reply, from, {:ok, game}}, {:next_event, :internal, :broadcast}, {:state_timeout, timeout, :shutdown}]}
+        {:next_state, {:finished, :none}, game,
+         [{:reply, from, {:ok, game}}, {:next_event, :internal, :broadcast}, {:state_timeout, timeout, :shutdown}]}
 
       {:error, reason} ->
         {:keep_state, data, [{:reply, from, {:error, reason}}]}

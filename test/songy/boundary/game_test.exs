@@ -223,8 +223,8 @@ defmodule Songy.Boundary.GameTest do
     end
   end
 
-  describe ":waiting - :none - invalid actions" do
-    test "rejects next_phase in waiting", %{game_id: game_id} do
+  describe ":waiting - :none - advance phase" do
+    test "rejects by game", %{game_id: game_id} do
       assert {:error, :invalid_action} = Game.next_phase(game_id)
     end
   end
@@ -600,4 +600,33 @@ defmodule Songy.Boundary.GameTest do
     end
   end
 
+  describe ":in_progress - :challenging - auto advance" do
+    setup %{game_id: game_id} do
+      user1 = %User{uuid: "user-1", name: "Player1"}
+      user2 = %User{uuid: "user-2", name: "Player2"}
+
+      join_participant(game_id, user1.uuid)
+      assert_receive {:game_state_updated, _}
+      join_participant(game_id, user2.uuid)
+      assert_receive {:game_state_updated, _}
+      {:ok, _} = Game.start_game(game_id)
+      # waiting phase
+      assert_receive {:game_state_updated, _}
+      # waiting -> ready
+      {:ok, _} = Game.next_phase(game_id)
+      # ready phase
+      assert_receive {:game_state_updated, _}
+
+      %{user1: user1, user2: user2}
+    end
+
+    test "auto-advances to results phase after timeout", %{game_id: game_id} do
+      {:ok, _} = Game.next_phase(game_id)
+      assert_receive {:game_state_updated, game}
+      assert game.turn.phase == :challenging
+
+      assert_receive {:game_state_updated, game}
+      assert game.turn.phase == :results
+    end
+  end
 end
