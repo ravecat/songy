@@ -3,8 +3,7 @@
   import { getScopeContext } from "~components/Scope.svelte";
   import { PUSH_EVENT } from "~shared/types/channel";
   import { TURN_PHASE } from "~shared/types/turn";
-  import playIcon from "~icons/play.svg?raw";
-  import pauseIcon from "~icons/pause.svg?raw";
+  import { Play, Pause, SkipForward } from "lucide-svelte";
 
   const { state, channel } = $derived.by(getGameContext);
   const { user: currentPlayer } = $derived.by(getScopeContext);
@@ -29,7 +28,6 @@
     return false;
   });
 
-
   const togglePlayback = () => {
     channel.push(
       isPlayback ? PUSH_EVENT.PAUSE_PLAYBACK : PUSH_EVENT.START_PLAYBACK,
@@ -44,20 +42,34 @@
 
 <div class="panel">
   <button
-    class="btn"
+    class="btn player-btn"
     aria-label={isPlayback ? "Pause track" : "Play track"}
     onclick={togglePlayback}
   >
-    {@html isPlayback ? pauseIcon : playIcon}
+    <span class="player-btn-icon">
+      {#if isPlayback}
+        <Pause />
+      {:else}
+        <Play />
+      {/if}
+    </span>
+    <span class="player-btn-label">
+      {isPlayback ? 'pause' : 'play'}
+    </span>
   </button>
 
   {#if showReady}
     <button
-      class="btn"
-      aria-label={turnPhase === TURN_PHASE.READY ? "Confirm assumption and continue to challenging" : "Ready"}
+      class="btn player-btn"
+      aria-label="Next phase"
       onclick={handleReady}
     >
-      {turnPhase === TURN_PHASE.READY ? 'Confirm' : 'Ready'}
+      <span class="player-btn-icon">
+        <SkipForward />
+      </span>
+      <span class="player-btn-label">
+        next
+      </span>
     </button>
   {/if}
 </div>
@@ -71,6 +83,40 @@
     padding: 1rem;
     display: flex;
     align-items: center;
-    gap: 1rem;
+    justify-content: center;
+    gap: 2rem;
+  }
+
+  .player-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    width: 5.5rem;
+    height: 5.5rem;
+  }
+
+  .player-btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: currentColor;
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .player-btn-icon :global(svg) {
+    width: 100%;
+    height: 100%;
+  }
+
+  .player-btn-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: lowercase;
+    letter-spacing: 0.5px;
+    line-height: 1;
   }
 </style>

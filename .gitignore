@@ -37,6 +37,7 @@ npm-debug.log
 /assets/node_modules/
 /assets/.vite/
 /assets/coverage/
+/assets/package-lock.json
 
 # Ignore tools artifacts.
 /.elixir_ls/

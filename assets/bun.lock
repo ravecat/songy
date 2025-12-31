@@ -11,7 +11,7 @@
         "phoenix_live_view": "workspace:*",
         "svelte": "^5.33.19",
         "svelte-dnd-action": "^0.9.64",
-        "topbar": "^3.0.0",
+        "topbar": "^3.0.0"
       },
       "devDependencies": {
         "@sveltejs/vite-plugin-svelte": "^5.1.0",

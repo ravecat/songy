@@ -18,6 +18,7 @@ describe("Turn results view", () => {
   beforeEach(() => {
     mockChannelContext = {
       state: {
+        owner_id: "user-1",
         participants: [
           {
             uuid: "user-1",
@@ -51,13 +52,13 @@ describe("Turn results view", () => {
   test("renders participants", () => {
     const mockScopeContext = {
       user: {
-        uuid: "test-user-uuid",
-        name: "Test User",
+        uuid: "user-1",
+        name: "Alice",
       },
     };
-    
+
     getScopeContextSpy.mockReturnValue(mockScopeContext);
-    
+
     getGameContextSpy.mockReturnValue(mockChannelContext);
         render(TurnResults);
 
@@ -68,13 +69,13 @@ describe("Turn results view", () => {
   test("renders active timeline", () => {
     const mockScopeContext = {
       user: {
-        uuid: "test-user-uuid",
-        name: "Test User",
+        uuid: "user-1",
+        name: "Alice",
       },
     };
-    
+
     getScopeContextSpy.mockReturnValue(mockScopeContext);
-    
+
     getGameContextSpy.mockReturnValue(mockChannelContext);
         render(TurnResults);
 
@@ -89,13 +90,13 @@ describe("Turn results view", () => {
     test("displays play again button", () => {
       const mockScopeContext = {
         user: {
-          uuid: "test-user-uuid",
-          name: "Test User",
+          uuid: "user-1",
+          name: "Alice",
         },
       };
-      
+
       getScopeContextSpy.mockReturnValue(mockScopeContext);
-      
+
       getGameContextSpy.mockReturnValue(mockChannelContext);
         render(TurnResults);
 
@@ -112,13 +113,13 @@ describe("Turn results view", () => {
     test("does not display next turn button", () => {
       const mockScopeContext = {
         user: {
-          uuid: "test-user-uuid",
-          name: "Test User",
+          uuid: "user-1",
+          name: "Alice",
         },
       };
-      
+
       getScopeContextSpy.mockReturnValue(mockScopeContext);
-      
+
       getGameContextSpy.mockReturnValue(mockChannelContext);
         render(TurnResults);
 
@@ -127,60 +128,148 @@ describe("Turn results view", () => {
   });
 
   describe("when game is not finished", () => {
-    test("displays next turn button", () => {
-      const mockScopeContext = {
-        user: {
-          uuid: "test-user-uuid",
-          name: "Test User",
-        },
-      };
-      
-      getScopeContextSpy.mockReturnValue(mockScopeContext);
-      
-      getGameContextSpy.mockReturnValue(mockChannelContext);
-        render(TurnResults);
+    describe("when user is the active player", () => {
+      test("displays next turn button", () => {
+        const mockScopeContext = {
+          user: {
+            uuid: "user-1",
+            name: "Alice",
+          },
+        };
 
-      expect(screen.getByText("Next Turn")).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: "Next Turn" })
-      ).toBeInTheDocument();
+        getScopeContextSpy.mockReturnValue(mockScopeContext);
+
+        getGameContextSpy.mockReturnValue(mockChannelContext);
+          render(TurnResults);
+
+        expect(screen.getByText("Next Turn")).toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: "Next Turn" })
+        ).toBeInTheDocument();
+      });
+
+      test("does not display play again button", () => {
+        const mockScopeContext = {
+          user: {
+            uuid: "user-1",
+            name: "Alice",
+          },
+        };
+
+        getScopeContextSpy.mockReturnValue(mockScopeContext);
+
+        getGameContextSpy.mockReturnValue(mockChannelContext);
+          render(TurnResults);
+
+        expect(screen.queryByText("Play again")).not.toBeInTheDocument();
+      });
+
+      test("sends next phase event when next turn button is clicked", async () => {
+        const mockScopeContext = {
+          user: {
+            uuid: "user-1",
+            name: "Alice",
+          },
+        };
+
+        getScopeContextSpy.mockReturnValue(mockScopeContext);
+
+        getGameContextSpy.mockReturnValue(mockChannelContext);
+          render(TurnResults);
+
+        await fireEvent.click(screen.getByText("Next Turn"));
+
+        expect(mockChannelContext.channel.push).toHaveBeenCalledWith(
+          PUSH_EVENT.NEXT_PHASE,
+          {}
+        );
+      });
     });
 
-    test("does not display play again button", () => {
-      const mockScopeContext = {
-        user: {
-          uuid: "test-user-uuid",
-          name: "Test User",
-        },
-      };
-      
-      getScopeContextSpy.mockReturnValue(mockScopeContext);
-      
-      getGameContextSpy.mockReturnValue(mockChannelContext);
-        render(TurnResults);
+    describe("when user is the owner but not the active player", () => {
+      beforeEach(() => {
+        mockChannelContext.state.queue = ["user-2", "user-1"];
+        mockChannelContext.state.cursor = 0;
+      });
 
-      expect(screen.queryByText("Play again")).not.toBeInTheDocument();
+      test("displays next turn button", () => {
+        const mockScopeContext = {
+          user: {
+            uuid: "user-1",
+            name: "Alice",
+          },
+        };
+
+        getScopeContextSpy.mockReturnValue(mockScopeContext);
+
+        getGameContextSpy.mockReturnValue(mockChannelContext);
+          render(TurnResults);
+
+        expect(screen.getByText("Next Turn")).toBeInTheDocument();
+      });
+
+      test("sends next phase event when next turn button is clicked", async () => {
+        const mockScopeContext = {
+          user: {
+            uuid: "user-1",
+            name: "Alice",
+          },
+        };
+
+        getScopeContextSpy.mockReturnValue(mockScopeContext);
+
+        getGameContextSpy.mockReturnValue(mockChannelContext);
+          render(TurnResults);
+
+        await fireEvent.click(screen.getByText("Next Turn"));
+
+        expect(mockChannelContext.channel.push).toHaveBeenCalledWith(
+          PUSH_EVENT.NEXT_PHASE,
+          {}
+        );
+      });
     });
 
-    test("sends next phase event when next turn button is clicked", async () => {
-      const mockScopeContext = {
-        user: {
-          uuid: "test-user-uuid",
-          name: "Test User",
-        },
-      };
-      
-      getScopeContextSpy.mockReturnValue(mockScopeContext);
-      
-      getGameContextSpy.mockReturnValue(mockChannelContext);
-        render(TurnResults);
+    describe("when user is not the active player and not the owner", () => {
+      beforeEach(() => {
+        mockChannelContext.state.owner_id = "user-3";
+      });
 
-      await fireEvent.click(screen.getByText("Next Turn"));
+      test("does not display next turn button", () => {
+        const mockScopeContext = {
+          user: {
+            uuid: "user-2",
+            name: "Bob",
+          },
+        };
 
-      expect(mockChannelContext.channel.push).toHaveBeenCalledWith(
-        PUSH_EVENT.NEXT_PHASE,
-        {}
-      );
+        getScopeContextSpy.mockReturnValue(mockScopeContext);
+
+        getGameContextSpy.mockReturnValue(mockChannelContext);
+          render(TurnResults);
+
+        expect(screen.queryByText("Next Turn")).not.toBeInTheDocument();
+      });
+
+      test("does not send next phase event when trying to click button", async () => {
+        const mockScopeContext = {
+          user: {
+            uuid: "user-2",
+            name: "Bob",
+          },
+        };
+
+        getScopeContextSpy.mockReturnValue(mockScopeContext);
+
+        getGameContextSpy.mockReturnValue(mockChannelContext);
+          render(TurnResults);
+
+        expect(screen.queryByText("Next Turn")).not.toBeInTheDocument();
+        expect(mockChannelContext.channel.push).not.toHaveBeenCalledWith(
+          PUSH_EVENT.NEXT_PHASE,
+          {}
+        );
+      });
     });
   });
 });
