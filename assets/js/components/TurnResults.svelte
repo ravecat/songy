@@ -2,7 +2,7 @@
   import Participants from "~components/Participants.svelte";
   import ActiveTimeline from "~components/ActiveTimeline.svelte";
   import { PUSH_EVENT } from "~shared/types/channel";
-  import { getGameContext } from "~components/GameContext.svelte";
+  import { getGameContext } from "~components/GameChannel.svelte";
   import { getScopeContext } from "~components/Scope.svelte";
   import { inertia } from "@inertiajs/svelte";
   import { GAME_STATUS } from "~shared/types/game";

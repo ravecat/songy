@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getScopeContext } from "~components/Scope.svelte";
-  import { getGameContext } from "~components/GameContext.svelte";
+  import { getGameContext } from "~components/GameChannel.svelte";
   import TrackCard from "~components/TrackCard.svelte";
   import Timeline from "~components/Timeline.svelte";
   import Draggable from "~components/Draggable.svelte";

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
 import { TURN_PHASE } from "~shared/types/turn";
-import * as GameContext from "~components/GameContext.svelte";
+import * as GameContext from "~components/GameChannel.svelte";
 import * as Scope from "~components/Scope.svelte";
 
 import Game from "~components/Game.svelte";

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getGameContext } from "~components/GameContext.svelte";
+  import { getGameContext } from "~components/GameChannel.svelte";
   import { TURN_PHASE } from "~shared/types/turn";
   import TurnWaiting from "~components/TurnWaiting.svelte";
   import TurnChallenging from "~components/TurnChallenging.svelte";

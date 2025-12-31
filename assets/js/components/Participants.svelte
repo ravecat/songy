@@ -1,6 +1,6 @@
 <script>
   import { slide } from "svelte/transition";
-  import { getGameContext } from "~components/GameContext.svelte";
+  import { getGameContext } from "~components/GameChannel.svelte";
   import { getScopeContext } from "~components/Scope.svelte";
   import star from "~icons/star.svg?raw";
 

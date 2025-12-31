@@ -1,5 +1,5 @@
 <script>
-  import { getGameContext } from "~components/GameContext.svelte";
+  import { getGameContext } from "~components/GameChannel.svelte";
   import Lobby from "~components/Lobby.svelte";
   import Game from "~components/Game.svelte";
   import Logo from "~components/Logo.svelte";

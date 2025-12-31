@@ -1,6 +1,6 @@
 <script>
   import { slide, fly } from "svelte/transition";
-  import { getGameContext } from "~components/GameContext.svelte";
+  import { getGameContext } from "~components/GameChannel.svelte";
   import { PUSH_EVENT } from "~/shared/types/channel";
 
   const { state, channel } = $derived.by(getGameContext);

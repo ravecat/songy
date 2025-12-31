@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi } from "vitest";
 import { Channel } from "phoenix";
-import * as GameContext from "~components/GameContext.svelte";
+import * as GameContext from "~components/GameChannel.svelte";
 import Scope from "~components/Scope.svelte";
 
 vi.mock("phoenix");

@@ -1,6 +1,6 @@
 import { render } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi } from "vitest";
-import * as GameContext from "~components/GameContext.svelte";
+import * as GameContext from "~components/GameChannel.svelte";
 import AppleMusic from "~components/AppleMusic.svelte";
 
 describe("AppleMusic component", () => {

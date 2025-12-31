@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getGameContext } from "~components/GameContext.svelte";
+  import { getGameContext } from "~components/GameChannel.svelte";
   import { getScopeContext } from "~components/Scope.svelte";
   import Participants from "~components/Participants.svelte";
   import Player from "~components/Player.svelte";

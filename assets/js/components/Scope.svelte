@@ -7,14 +7,15 @@
    */
   export interface ScopeContext {
     /** Current authenticated user */
-    user: User;
+    user: User | null;
   }
 
-  export const [getScopeContext, setScopeContext] = createContext<ScopeContext>();
+  export const [getScopeContext, setScopeContext] =
+    createContext<ScopeContext>();
 </script>
 
 <script lang="ts">
-  import { getGameContext } from "~components/GameContext.svelte";
+  import { getGameContext } from "~components/GameChannel.svelte";
   import Logo from "~components/Logo.svelte";
   import { PUSH_EVENT } from "~shared/types/channel";
   import type { Snippet } from "svelte";
@@ -23,12 +24,14 @@
 
   const { channel } = $derived.by(getGameContext);
 
-  let context = $state<ScopeContext>({ user: null! });
+  let context = $state<ScopeContext>({ user: null });
 
   $effect(() => {
-    channel.push(PUSH_EVENT.GET_CURRENT_USER, {}).receive("ok", (response: User) => {
-      context.user = response;
-    });
+    channel
+      .push(PUSH_EVENT.GET_CURRENT_USER, {})
+      .receive("ok", (response: User) => {
+        context.user = response;
+      });
   });
 
   setScopeContext(context);

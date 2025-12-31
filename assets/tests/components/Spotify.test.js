@@ -1,7 +1,7 @@
 import { render } from "@testing-library/svelte";
 import { afterEach, beforeEach, expect, test, describe, vi } from "vitest";
 import { Channel } from "phoenix";
-import * as GameContext from "~components/GameContext.svelte";
+import * as GameContext from "~components/GameChannel.svelte";
 import Spotify from "~components/Spotify.svelte";
 import SpotifyMock from "~mocks/spotify";
 
