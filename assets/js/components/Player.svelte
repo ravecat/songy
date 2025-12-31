@@ -19,7 +19,7 @@
 
     // Show in READY phase if active player has made assumption
     if (turnPhase === TURN_PHASE.READY && isActivePlayer) {
-      const hasAssumption = state?.turn?.assumptions?.some(
+      const hasAssumption = game?.turn?.assumptions?.some(
         (a) => a.user_id === currentPlayer?.uuid
       );
       return hasAssumption;

@@ -8,19 +8,19 @@
   import { dragOriginZone } from "~shared/stores/dragOrigin";
   import { TURN_PHASE } from "~shared/types/turn";
 
-  const { state } = $derived.by(getGameContext);
+  const { game } = $derived.by(getGameContext);
   const { user } = $derived.by(getScopeContext);
   const zoneId = $derived(`current-track-${user.uuid}`);
 
   const shouldShow = $derived.by(() => {
-    const phase = state?.turn?.phase;
-    const currentTrack = state?.track;
-    const assumptions = state?.turn?.assumptions || [];
+    const phase = game?.turn?.phase;
+    const currentTrack = game?.track;
+    const assumptions = game?.turn?.assumptions || [];
     const userHasAssumption = assumptions.some(
       (assumption) => assumption.user_id === user.uuid
     );
 
-    const activePlayerUuid = state?.queue?.[state?.cursor];
+    const activePlayerUuid = game?.queue?.[game?.cursor];
     const isActivePlayer = activePlayerUuid === user.uuid;
 
     if (!currentTrack) return false;
@@ -36,7 +36,7 @@
   });
 
   let timeline = $derived.by(() => {
-    const currentTrack = state?.track;
+    const currentTrack = game?.track;
 
     return currentTrack
       ? [

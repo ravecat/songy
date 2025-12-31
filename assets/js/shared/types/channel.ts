@@ -19,7 +19,7 @@ export enum PUSH_EVENT {
  * Server-to-client broadcast events
  */
 export enum BROADCAST_EVENT {
-  STATE_UPDATED = "state_updated",
+  STATE = "state",
 }
 
 interface PushEventPayloads {
@@ -32,10 +32,6 @@ interface PushEventPayloads {
   [PUSH_EVENT.UPDATE_PROVIDER]: { device_id: string };
   [PUSH_EVENT.GET_PROVIDER]: Record<string, never>;
   [PUSH_EVENT.GET_CURRENT_USER]: Record<string, never>;
-}
-
-interface BroadcastEventPayloads {
-  [BROADCAST_EVENT.STATE_UPDATED]: Game;
 }
 
 declare module "phoenix" {

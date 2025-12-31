@@ -49,7 +49,7 @@
   });
 
   // Register event handler for state updates
-  channel.on(BROADCAST_EVENT.STATE_UPDATED, (response: Game) => {
+  channel.on(BROADCAST_EVENT.STATE, (response: Game) => {
     context.state = response;
   });
 

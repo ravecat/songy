@@ -141,11 +141,11 @@ defmodule Songy.Boundary.GameTest do
       user1 = %User{uuid: "user-1", name: "Player1"}
 
       join_participant(game_id, user1.uuid)
-      assert_receive {:game_state_updated, _game}
+      assert_receive {:state, _game}
       {:ok, pid} = Game.lookup_game(game_id)
       send(pid, {:participant_joined, user1.uuid})
 
-      refute_receive {:game_state_updated, _game}
+      refute_receive {:state, _game}
       {:ok, game} = Game.get_state(game_id)
       assert length(game.participants) == 1
     end
@@ -155,14 +155,14 @@ defmodule Songy.Boundary.GameTest do
 
       Enum.each(users, fn user ->
         join_participant(game_id, user.uuid)
-        assert_receive {:game_state_updated, _game}
+        assert_receive {:state, _game}
       end)
 
       extra_user = %User{uuid: "user-11", name: "Player11"}
       {:ok, pid} = Game.lookup_game(game_id)
       send(pid, {:participant_joined, extra_user.uuid})
 
-      refute_receive {:game_state_updated, _game}
+      refute_receive {:state, _game}
       {:ok, game} = Game.get_state(game_id)
       assert length(game.participants) == 10
     end
@@ -192,7 +192,7 @@ defmodule Songy.Boundary.GameTest do
       {:ok, pid} = Game.lookup_game(game_id)
       send(pid, {:participant_left, "missing"})
 
-      assert_receive {:game_state_updated, game}
+      assert_receive {:state, game}
       assert length(game.participants) == 1
     end
   end
@@ -506,7 +506,7 @@ defmodule Songy.Boundary.GameTest do
       {:ok, pid} = Game.lookup_game(game_id)
       send(pid, {:participant_joined, user1.uuid})
 
-      assert_receive {:game_state_updated, game}
+      assert_receive {:state, game}
       assert length(game.participants) == 1
       assert hd(game.participants).uuid == user1.uuid
     end
@@ -516,14 +516,14 @@ defmodule Songy.Boundary.GameTest do
       user2 = %User{uuid: "user-2", name: "Player2"}
 
       join_participant(game_id, user1.uuid)
-      assert_receive {:game_state_updated, _game}
+      assert_receive {:state, _game}
       join_participant(game_id, user2.uuid)
-      assert_receive {:game_state_updated, _game}
+      assert_receive {:state, _game}
 
       {:ok, pid} = Game.lookup_game(game_id)
       send(pid, {:participant_left, user1.uuid})
 
-      assert_receive {:game_state_updated, game}
+      assert_receive {:state, game}
       assert length(game.participants) == 1
       assert hd(game.participants).uuid == user2.uuid
     end
@@ -533,13 +533,13 @@ defmodule Songy.Boundary.GameTest do
       user2 = %User{uuid: "user-2", name: "Player2"}
 
       join_participant(game_id, user1.uuid)
-      assert_receive {:game_state_updated, _game}
+      assert_receive {:state, _game}
       join_participant(game_id, user2.uuid)
-      assert_receive {:game_state_updated, _game}
+      assert_receive {:state, _game}
 
       {:ok, _} = Game.start_game(game_id)
 
-      assert_receive {:game_state_updated, game}
+      assert_receive {:state, game}
       assert game.status == :in_progress
       assert game.turn.phase == :waiting
     end
@@ -549,17 +549,17 @@ defmodule Songy.Boundary.GameTest do
       user2 = %User{uuid: "user-2", name: "Player2"}
 
       join_participant(game_id, user1.uuid)
-      assert_receive {:game_state_updated, _game}
+      assert_receive {:state, _game}
       join_participant(game_id, user2.uuid)
-      assert_receive {:game_state_updated, _game}
+      assert_receive {:state, _game}
       {:ok, _} = Game.start_game(game_id)
 
       # Drain message from start_game
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
 
       # Test transition to ready
       {:ok, _} = Game.next_phase(game_id)
-      assert_receive {:game_state_updated, game}
+      assert_receive {:state, game}
       assert game.turn.phase == :ready
     end
 
@@ -568,18 +568,18 @@ defmodule Songy.Boundary.GameTest do
       user2 = %User{uuid: "user-2", name: "Player2"}
 
       join_participant(game_id, user1.uuid)
-      assert_receive {:game_state_updated, _game}
+      assert_receive {:state, _game}
       join_participant(game_id, user2.uuid)
-      assert_receive {:game_state_updated, _game}
+      assert_receive {:state, _game}
       {:ok, game} = Game.start_game(game_id)
       owner_id = game.owner_id
 
       # Drain message from start_game
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
 
       {:ok, _} = Game.start_playback(game_id, owner_id)
 
-      assert_receive {:game_state_updated, game}
+      assert_receive {:state, game}
       assert game.player.is_playback == true
     end
 
@@ -588,20 +588,20 @@ defmodule Songy.Boundary.GameTest do
       user2 = %User{uuid: "user-2", name: "Player2"}
 
       join_participant(game_id, user1.uuid)
-      assert_receive {:game_state_updated, _game}
+      assert_receive {:state, _game}
       join_participant(game_id, user2.uuid)
-      assert_receive {:game_state_updated, _game}
+      assert_receive {:state, _game}
       {:ok, game} = Game.start_game(game_id)
       owner_id = game.owner_id
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
       {:ok, _} = Game.start_playback(game_id, owner_id)
 
       # Drain message from start_playback
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
 
       {:ok, _} = Game.pause_playback(game_id, owner_id)
 
-      assert_receive {:game_state_updated, game}
+      assert_receive {:state, game}
       assert game.player.is_playback == false
     end
   end
@@ -612,21 +612,21 @@ defmodule Songy.Boundary.GameTest do
       user2 = %User{uuid: "user-2", name: "Player2"}
 
       join_participant(game_id, user1.uuid)
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
       join_participant(game_id, user2.uuid)
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
       {:ok, _} = Game.start_game(game_id)
       # waiting phase
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
       # waiting -> ready
       {:ok, _} = Game.next_phase(game_id)
       # ready phase
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
 
       # Set a track for playback tests
       track = %Track{id: "track-1", title: "Song", artist: "Artist", year: 2020}
       {:ok, _} = Game.set_track(game_id, track)
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
 
       %{user1: user1, user2: user2}
     end
@@ -634,36 +634,36 @@ defmodule Songy.Boundary.GameTest do
     test "owner can start playback during ready phase", %{game_id: game_id, owner: owner} do
       {:ok, _} = Game.start_playback(game_id, owner.uuid)
 
-      assert_receive {:game_state_updated, game}
+      assert_receive {:state, game}
       assert game.player.is_playback == true
     end
 
     test "owner can pause playback during ready phase", %{game_id: game_id, owner: owner} do
       {:ok, _} = Game.start_playback(game_id, owner.uuid)
-      assert_receive {:game_state_updated, game}
+      assert_receive {:state, game}
       assert game.player.is_playback == true
 
       {:ok, _} = Game.pause_playback(game_id, owner.uuid)
 
-      assert_receive {:game_state_updated, game}
+      assert_receive {:state, game}
       assert game.player.is_playback == false
     end
 
     test "active player can start playback during ready phase", %{game_id: game_id, user1: user1} do
       {:ok, _} = Game.start_playback(game_id, user1.uuid)
 
-      assert_receive {:game_state_updated, game}
+      assert_receive {:state, game}
       assert game.player.is_playback == true
     end
 
     test "active player can pause playback during ready phase", %{game_id: game_id, user1: user1} do
       {:ok, _} = Game.start_playback(game_id, user1.uuid)
-      assert_receive {:game_state_updated, game}
+      assert_receive {:state, game}
       assert game.player.is_playback == true
 
       {:ok, _} = Game.pause_playback(game_id, user1.uuid)
 
-      assert_receive {:game_state_updated, game}
+      assert_receive {:state, game}
       assert game.player.is_playback == false
     end
 
@@ -671,17 +671,17 @@ defmodule Songy.Boundary.GameTest do
       {:error, :unauthorized} = Game.start_playback(game_id, user2.uuid)
 
       # No broadcast should happen
-      refute_receive {:game_state_updated, %{player: %{is_playback: true}}}
+      refute_receive {:state, %{player: %{is_playback: true}}}
     end
 
     test "non-owner and non-active player cannot pause playback", %{game_id: game_id, owner: owner, user2: user2} do
       {:ok, _} = Game.start_playback(game_id, owner.uuid)
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
 
       {:error, :unauthorized} = Game.pause_playback(game_id, user2.uuid)
 
       # No pause broadcast should happen
-      refute_receive {:game_state_updated, %{player: %{is_playback: false}}}
+      refute_receive {:state, %{player: %{is_playback: false}}}
     end
   end
 
@@ -695,26 +695,26 @@ defmodule Songy.Boundary.GameTest do
       user2 = %User{uuid: "user-2", name: "Player2"}
 
       join_participant(game_id, user1.uuid)
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
       join_participant(game_id, user2.uuid)
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
       {:ok, _} = Game.start_game(game_id)
       # waiting phase
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
       # waiting -> ready
       {:ok, _} = Game.next_phase(game_id)
       # ready phase
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
 
       # Set a track for playback tests
       track = %Track{id: "track-1", title: "Song", artist: "Artist", year: 2020}
       {:ok, _} = Game.set_track(game_id, track)
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
 
       # ready -> challenging (this triggers a timer for auto-advance)
       {:ok, _} = Game.next_phase(game_id)
       # challenging phase
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
 
       on_exit(fn ->
         Application.put_env(:songy, :challenging_phase_timeout, original_timeout)
@@ -726,33 +726,33 @@ defmodule Songy.Boundary.GameTest do
     test "owner can start playback during challenging phase", %{game_id: game_id, owner: owner} do
       {:ok, _} = Game.start_playback(game_id, owner.uuid)
       # Use short timeout to catch the message before auto-advance to results
-      assert_receive {:game_state_updated, game}, 25
+      assert_receive {:state, game}, 25
       assert game.player.is_playback == true
     end
 
     test "owner can pause playback during challenging phase", %{game_id: game_id, owner: owner} do
       {:ok, _} = Game.start_playback(game_id, owner.uuid)
-      assert_receive {:game_state_updated, game}, 25
+      assert_receive {:state, game}, 25
       assert game.player.is_playback == true
 
       {:ok, _} = Game.pause_playback(game_id, owner.uuid)
-      assert_receive {:game_state_updated, game}, 25
+      assert_receive {:state, game}, 25
       assert game.player.is_playback == false
     end
 
     test "active player can start playback during challenging phase", %{game_id: game_id, user1: user1} do
       {:ok, _} = Game.start_playback(game_id, user1.uuid)
-      assert_receive {:game_state_updated, game}, 25
+      assert_receive {:state, game}, 25
       assert game.player.is_playback == true
     end
 
     test "active player can pause playback during challenging phase", %{game_id: game_id, user1: user1} do
       {:ok, _} = Game.start_playback(game_id, user1.uuid)
-      assert_receive {:game_state_updated, game}, 25
+      assert_receive {:state, game}, 25
       assert game.player.is_playback == true
 
       {:ok, _} = Game.pause_playback(game_id, user1.uuid)
-      assert_receive {:game_state_updated, game}, 25
+      assert_receive {:state, game}, 25
       assert game.player.is_playback == false
     end
 
@@ -762,7 +762,7 @@ defmodule Songy.Boundary.GameTest do
     } do
       {:error, :unauthorized} = Game.start_playback(game_id, user2.uuid)
       # No broadcast should happen
-      refute_receive {:game_state_updated, %{player: %{is_playback: true}}}
+      refute_receive {:state, %{player: %{is_playback: true}}}
     end
 
     test "non-owner and non-active player cannot pause playback during challenging phase", %{
@@ -771,11 +771,11 @@ defmodule Songy.Boundary.GameTest do
       user2: user2
     } do
       {:ok, _} = Game.start_playback(game_id, owner.uuid)
-      assert_receive {:game_state_updated, _}, 25
+      assert_receive {:state, _}, 25
 
       {:error, :unauthorized} = Game.pause_playback(game_id, user2.uuid)
       # No pause broadcast should happen
-      refute_receive {:game_state_updated, %{player: %{is_playback: false}}}
+      refute_receive {:state, %{player: %{is_playback: false}}}
     end
   end
 
@@ -789,26 +789,26 @@ defmodule Songy.Boundary.GameTest do
       user2 = %User{uuid: "user-2", name: "Player2"}
 
       join_participant(game_id, user1.uuid)
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
       join_participant(game_id, user2.uuid)
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
       {:ok, _} = Game.start_game(game_id)
       # waiting phase
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
       # waiting -> ready
       {:ok, _} = Game.next_phase(game_id)
       # ready phase
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
 
       # Set a track for playback tests
       track = %Track{id: "track-1", title: "Song", artist: "Artist", year: 2020}
       {:ok, _} = Game.set_track(game_id, track)
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
 
       # ready -> challenging
       {:ok, _} = Game.next_phase(game_id)
       # challenging phase
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
 
       on_exit(fn ->
         # Restore original timeout after tests complete
@@ -822,36 +822,36 @@ defmodule Songy.Boundary.GameTest do
       # Start playback
       {:ok, _} = Game.start_playback(game_id, owner.uuid)
 
-      assert_receive {:game_state_updated, game}, 25
+      assert_receive {:state, game}, 25
       assert game.player.is_playback == true
     end
 
     test "owner can pause playback during challenging phase", %{game_id: game_id, owner: owner} do
       {:ok, _} = Game.start_playback(game_id, owner.uuid)
-      assert_receive {:game_state_updated, game}, 25
+      assert_receive {:state, game}, 25
       assert game.player.is_playback == true
 
       {:ok, _} = Game.pause_playback(game_id, owner.uuid)
 
-      assert_receive {:game_state_updated, game}, 25
+      assert_receive {:state, game}, 25
       assert game.player.is_playback == false
     end
 
     test "active player can start playback during challenging phase", %{game_id: game_id, user1: user1} do
       {:ok, _} = Game.start_playback(game_id, user1.uuid)
 
-      assert_receive {:game_state_updated, game}, 25
+      assert_receive {:state, game}, 25
       assert game.player.is_playback == true
     end
 
     test "active player can pause playback during challenging phase", %{game_id: game_id, user1: user1} do
       {:ok, _} = Game.start_playback(game_id, user1.uuid)
-      assert_receive {:game_state_updated, game}, 25
+      assert_receive {:state, game}, 25
       assert game.player.is_playback == true
 
       {:ok, _} = Game.pause_playback(game_id, user1.uuid)
 
-      assert_receive {:game_state_updated, game}, 25
+      assert_receive {:state, game}, 25
       assert game.player.is_playback == false
     end
 
@@ -862,7 +862,7 @@ defmodule Songy.Boundary.GameTest do
       {:error, :unauthorized} = Game.start_playback(game_id, user2.uuid)
 
       # No broadcast should happen
-      refute_receive {:game_state_updated, %{player: %{is_playback: true}}}
+      refute_receive {:state, %{player: %{is_playback: true}}}
     end
 
     test "non-owner and non-active player cannot pause playback during challenging phase", %{
@@ -871,12 +871,12 @@ defmodule Songy.Boundary.GameTest do
       user2: user2
     } do
       {:ok, _} = Game.start_playback(game_id, owner.uuid)
-      assert_receive {:game_state_updated, _}, 25
+      assert_receive {:state, _}, 25
 
       {:error, :unauthorized} = Game.pause_playback(game_id, user2.uuid)
 
       # No pause broadcast should happen
-      refute_receive {:game_state_updated, %{player: %{is_playback: false}}}
+      refute_receive {:state, %{player: %{is_playback: false}}}
     end
   end
 
@@ -886,26 +886,26 @@ defmodule Songy.Boundary.GameTest do
       user2 = %User{uuid: "user-2", name: "Player2"}
 
       join_participant(game_id, user1.uuid)
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
       join_participant(game_id, user2.uuid)
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
       {:ok, _} = Game.start_game(game_id)
       # waiting phase
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
       # waiting -> ready
       {:ok, _} = Game.next_phase(game_id)
       # ready phase
-      assert_receive {:game_state_updated, _}
+      assert_receive {:state, _}
 
       %{user1: user1, user2: user2}
     end
 
     test "auto-advances to results phase after timeout", %{game_id: game_id} do
       {:ok, _} = Game.next_phase(game_id)
-      assert_receive {:game_state_updated, game}
+      assert_receive {:state, game}
       assert game.turn.phase == :challenging
 
-      assert_receive {:game_state_updated, game}
+      assert_receive {:state, game}
       assert game.turn.phase == :results
     end
   end

@@ -1,7 +1,10 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import { getGameContext } from "~components/GameChannel.svelte";
-  import { useSpotifyPlayer, SPOTIFY_EVENT } from "~hooks/useSpotifyPlayer.svelte";
+  import {
+    useSpotifyPlayer,
+    SPOTIFY_EVENT,
+  } from "~hooks/useSpotifyPlayer.svelte";
   import { PUSH_EVENT } from "~shared/types/channel";
 
   interface Props {
@@ -16,7 +19,7 @@
     name: "Songy room",
     getOAuthToken: (cb) => {
       channel
-        ?.push(PUSH_EVENT.GET_PROVIDER, {})
+        .push(PUSH_EVENT.GET_PROVIDER, {})
         .receive("ok", ({ token }: { token: string }) => {
           cb(token);
         });

@@ -11,18 +11,18 @@
   import { PUSH_EVENT } from "~shared/types/channel";
   import type { User } from "~shared/types/user";
 
-  const { state, channel } = $derived.by(getGameContext);
+  const { game, channel } = $derived.by(getGameContext);
   const { user: currentPlayer } = $derived.by(getScopeContext);
-  const currentTrack = $derived(state?.track);
-  const zoneId = $derived(`participant-timeline-${currentPlayer.uuid}`);
-  const turnPhase = $derived(state?.turn?.phase);
+  const currentTrack = $derived(game?.track);
+  const zoneId = $derived(`participant-timeline-${currentPlayer?.uuid}`);
+  const turnPhase = $derived(game?.turn?.phase);
 
   const participants = $derived(
-    new Map(state?.participants?.map((user) => [user.uuid, user]) ?? [])
+    new Map(game?.participants?.map((user) => [user.uuid, user]) ?? [])
   );
 
   const assumptions = $derived.by(() => {
-    const assumptions = state?.turn?.assumptions || [];
+    const assumptions = game?.turn?.assumptions || [];
 
     return assumptions.reduce((acc, { position, user_id }) => {
       acc.set(position, participants.get(user_id));
@@ -32,7 +32,7 @@
   });
 
   let timeline = $derived.by(() => {
-    const timeline = state?.turn?.timeline || [];
+    const timeline = game?.turn?.timeline || [];
 
     return timeline.map((track, index) => ({
       id: `${track.id}-${assumptions.get(index)?.uuid}`,
@@ -45,7 +45,7 @@
   type TimelineItem = (typeof timeline)[number];
 
   const activePlayerId = $derived.by(() => {
-    return state?.queue?.[state?.cursor];
+    return game?.queue?.[game?.cursor];
   });
 
   const canUserDragItem = (item: TimelineItem): boolean => {

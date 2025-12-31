@@ -496,7 +496,7 @@ defmodule Songy.Boundary.Game do
       Phoenix.PubSub.local_broadcast(
         Songy.PubSub,
         "room:#{game.id}",
-        {:game_state_updated, game}
+        {:state, game}
       )
     end
 

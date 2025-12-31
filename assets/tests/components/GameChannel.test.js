@@ -22,13 +22,13 @@ describe("GameChannel", () => {
     expect(socket.channel).toHaveBeenCalledWith("room:test-room", {});
   });
 
-  test("listens state_updated event", () => {
+  test("listens state event", () => {
     render(GameChannel, { socket, topic: "room:test-room" });
 
     const channel = socket.channel.mock.results[0].value;
 
     expect(channel.on).toHaveBeenCalledWith(
-      "state_updated",
+      "state",
       expect.any(Function)
     );
   });

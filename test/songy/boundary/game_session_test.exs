@@ -65,10 +65,10 @@ defmodule Songy.Boundary.GameSessionTest do
       :ok = Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
 
       :ok = join_participant(game.id, owner.uuid)
-      assert_receive {:game_state_updated, _game}
+      assert_receive {:state, _game}
       user = User.get_user("player-1")
       :ok = join_participant(game.id, user.uuid)
-      assert_receive {:game_state_updated, _game}
+      assert_receive {:state, _game}
 
       %{game_id: game.id, owner: owner, user: user}
     end
@@ -96,10 +96,10 @@ defmodule Songy.Boundary.GameSessionTest do
       :ok = Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
 
       :ok = join_participant(game.id, owner.uuid)
-      assert_receive {:game_state_updated, _game}
+      assert_receive {:state, _game}
       user = User.get_user("player-1")
       :ok = join_participant(game.id, user.uuid)
-      assert_receive {:game_state_updated, _game}
+      assert_receive {:state, _game}
 
       {:ok, game} = GameSession.start_game_session(game.id)
 
@@ -123,10 +123,10 @@ defmodule Songy.Boundary.GameSessionTest do
       :ok = Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
 
       :ok = join_participant(game.id, owner.uuid)
-      assert_receive {:game_state_updated, _game}
+      assert_receive {:state, _game}
       user = User.get_user("player-1")
       :ok = join_participant(game.id, user.uuid)
-      assert_receive {:game_state_updated, _game}
+      assert_receive {:state, _game}
 
       {:ok, game} = GameSession.start_game_session(game.id)
 

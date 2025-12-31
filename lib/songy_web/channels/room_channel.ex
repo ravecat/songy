@@ -25,7 +25,7 @@ defmodule SongyWeb.RoomChannel do
 
     case GameSession.get_state(room_id) do
       {:ok, game} ->
-        push(socket, "state_updated", game)
+        push(socket, "state", game)
 
       {:error, _} ->
         Logger.warning("Game session not found for room #{room_id}")
@@ -34,8 +34,8 @@ defmodule SongyWeb.RoomChannel do
     {:noreply, socket}
   end
 
-  def handle_info({:game_state_updated, game}, socket) do
-    broadcast(socket, "state_updated", game)
+  def handle_info({:state, game}, socket) do
+    broadcast(socket, "state", game)
 
     {:noreply, socket}
   end
@@ -51,7 +51,7 @@ defmodule SongyWeb.RoomChannel do
 
     case GameSession.start_game_session(room_id) do
       {:ok, game} ->
-        broadcast(socket, "state_updated", game)
+        broadcast(socket, "state", game)
         {:noreply, socket}
 
       {:error, _} ->
@@ -66,7 +66,7 @@ defmodule SongyWeb.RoomChannel do
 
     case GameSession.start_playback(room_id, current_user_id) do
       {:ok, game} ->
-        broadcast(socket, "state_updated", game)
+        broadcast(socket, "state", game)
         {:reply, :ok, socket}
 
       {:error, reason} ->
@@ -82,7 +82,7 @@ defmodule SongyWeb.RoomChannel do
 
     case GameSession.pause_playback(room_id, current_user_id) do
       {:ok, game} ->
-        broadcast(socket, "state_updated", game)
+        broadcast(socket, "state", game)
         {:reply, :ok, socket}
 
       {:error, reason} ->
@@ -139,7 +139,7 @@ defmodule SongyWeb.RoomChannel do
 
     case GameSession.next_phase(room_id) do
       {:ok, game} ->
-        broadcast(socket, "state_updated", game)
+        broadcast(socket, "state", game)
         {:reply, :ok, socket}
 
       {:error, _} ->
@@ -154,7 +154,7 @@ defmodule SongyWeb.RoomChannel do
 
     case GameSession.make_assumption(room_id, current_user_id, position) do
       {:ok, game} ->
-        broadcast(socket, "state_updated", game)
+        broadcast(socket, "state", game)
 
         {:reply, :ok, socket}
 
@@ -170,7 +170,7 @@ defmodule SongyWeb.RoomChannel do
 
     case GameSession.reorder_timeline(room_id, user_id, position) do
       {:ok, game} ->
-        broadcast(socket, "state_updated", game)
+        broadcast(socket, "state", game)
 
         {:reply, :ok, socket}
 

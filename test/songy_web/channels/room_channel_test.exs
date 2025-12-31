@@ -46,7 +46,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _reply, _socket} = join_room_channel(current_user, game_id)
 
-      assert_push("state_updated", ^game_state)
+      assert_push("state", ^game_state)
     end
 
     test "handles missing game session gracefully", %{current_user: current_user} do
@@ -58,7 +58,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _reply, _socket} = join_room_channel(current_user, game_id)
 
-      refute_push("state_updated", _)
+      refute_push("state", _)
     end
   end
 
@@ -79,11 +79,11 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state_updated", %{status: :waiting})
+      assert_push("state", %{status: :waiting})
 
       push(socket, "start_game", %{})
 
-      assert_broadcast("state_updated", ^new_game_state)
+      assert_broadcast("state", ^new_game_state)
     end
 
     test "silently handles start_game errors", %{current_user: current_user} do
@@ -99,12 +99,12 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state_updated", %{status: :waiting})
+      assert_push("state", %{status: :waiting})
 
       push(socket, "start_game", %{})
 
       # Should not broadcast state on error
-      refute_broadcast("state_updated", %{status: :in_progress})
+      refute_broadcast("state", %{status: :in_progress})
     end
   end
 
@@ -126,12 +126,12 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(owner, game_id)
       # Consume push from join
-      assert_push("state_updated", %{status: :in_progress})
+      assert_push("state", %{status: :in_progress})
 
       ref = push(socket, "start_playback", %{})
 
       assert_reply(ref, :ok)
-      assert_broadcast("state_updated", ^new_state)
+      assert_broadcast("state", ^new_state)
     end
 
     test "active player can start playback", %{current_user: current_user} do
@@ -149,12 +149,12 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state_updated", %{status: :in_progress})
+      assert_push("state", %{status: :in_progress})
 
       ref = push(socket, "start_playback", %{})
 
       assert_reply(ref, :ok)
-      assert_broadcast("state_updated", ^new_state)
+      assert_broadcast("state", ^new_state)
     end
 
     test "non-owner and non-active player cannot start playback", %{current_user: current_user} do
@@ -171,14 +171,14 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state_updated", %{status: :in_progress})
+      assert_push("state", %{status: :in_progress})
 
       ref = push(socket, "start_playback", %{})
 
       # Should not get reply on error
       refute_reply(ref, :ok)
       # No broadcast should happen
-      refute_broadcast("state_updated", %{player: %{is_playback: true}})
+      refute_broadcast("state", %{player: %{is_playback: true}})
     end
 
     test "handles start_playback errors silently", %{owner: owner} do
@@ -195,14 +195,14 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(owner, game_id)
       # Consume push from join
-      assert_push("state_updated", %{status: :in_progress})
+      assert_push("state", %{status: :in_progress})
 
       ref = push(socket, "start_playback", %{})
 
       # On error, no reply should be sent
       refute_reply(ref, :ok)
       # No broadcast should happen
-      refute_broadcast("state_updated", %{player: %{is_playback: true}})
+      refute_broadcast("state", %{player: %{is_playback: true}})
     end
   end
 
@@ -222,12 +222,12 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(owner, game_id)
       # Consume push from join
-      assert_push("state_updated", %{status: :in_progress})
+      assert_push("state", %{status: :in_progress})
 
       ref = push(socket, "pause_playback", %{})
 
       assert_reply(ref, :ok)
-      assert_broadcast("state_updated", ^new_state)
+      assert_broadcast("state", ^new_state)
     end
 
     test "active player can pause playback", %{current_user: current_user} do
@@ -245,12 +245,12 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state_updated", %{status: :in_progress})
+      assert_push("state", %{status: :in_progress})
 
       ref = push(socket, "pause_playback", %{})
 
       assert_reply(ref, :ok)
-      assert_broadcast("state_updated", ^new_state)
+      assert_broadcast("state", ^new_state)
     end
 
     test "non-owner and non-active player cannot pause playback", %{current_user: current_user} do
@@ -267,14 +267,14 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state_updated", _)
+      assert_push("state", _)
 
       ref = push(socket, "pause_playback", %{})
 
       # Should not get reply on error
       refute_reply(ref, :ok)
       # No broadcast should happen
-      refute_broadcast("state_updated", %{player: %{is_playback: false}})
+      refute_broadcast("state", %{player: %{is_playback: false}})
     end
 
     test "handles pause_playback errors silently", %{owner: owner} do
@@ -291,14 +291,14 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(owner, game_id)
       # Consume push from join
-      assert_push("state_updated", _)
+      assert_push("state", _)
 
       ref = push(socket, "pause_playback", %{})
 
       # On error, no reply should be sent
       refute_reply(ref, :ok)
       # No broadcast should happen
-      refute_broadcast("state_updated", %{player: %{is_playback: false}})
+      refute_broadcast("state", %{player: %{is_playback: false}})
     end
   end
 
@@ -319,12 +319,12 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state_updated", _)
+      assert_push("state", _)
 
       ref = push(socket, "next_phase", %{})
 
       assert_reply(ref, :ok)
-      assert_broadcast("state_updated", ^new_state)
+      assert_broadcast("state", ^new_state)
     end
 
     test "handles next_phase errors silently", %{current_user: current_user} do
@@ -340,14 +340,14 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state_updated", _)
+      assert_push("state", _)
 
       ref = push(socket, "next_phase", %{})
 
       # On error, no reply should be sent
       refute_reply(ref, :ok)
       # No broadcast should happen
-      refute_broadcast("state_updated", %{turn: %{phase: :ready}})
+      refute_broadcast("state", %{turn: %{phase: :ready}})
     end
   end
 
@@ -374,7 +374,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state_updated", _)
+      assert_push("state", _)
 
       ref = push(socket, "get_provider", %{})
 
@@ -395,7 +395,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state_updated", _)
+      assert_push("state", _)
 
       ref = push(socket, "get_provider", %{})
 
@@ -422,7 +422,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state_updated", _)
+      assert_push("state", _)
 
       ref = push(socket, "get_provider", %{})
 
@@ -457,7 +457,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state_updated", _)
+      assert_push("state", _)
 
       ref = push(socket, "update_provider", %{"access_token" => "new-token"})
 
@@ -478,7 +478,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state_updated", _)
+      assert_push("state", _)
 
       ref = push(socket, "update_provider", %{"access_token" => "new-token"})
 
@@ -496,7 +496,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state_updated", _)
+      assert_push("state", _)
 
       ref = push(socket, "get_current_user", %{})
       assert_reply(ref, :ok, %{uuid: user_uuid})
@@ -522,12 +522,12 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state_updated", _)
+      assert_push("state", _)
 
       ref = push(socket, "make_assumption", %{"position" => 0})
 
       assert_reply(ref, :ok)
-      assert_broadcast("state_updated", ^new_state)
+      assert_broadcast("state", ^new_state)
     end
 
     test "handles make_assumption errors silently", %{current_user: current_user} do
@@ -544,14 +544,14 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state_updated", _)
+      assert_push("state", _)
 
       ref = push(socket, "make_assumption", %{"position" => 0})
 
       # On error, no reply should be sent
       refute_reply(ref, :ok)
       # No broadcast should happen
-      refute_broadcast("state_updated", %{turn: %{assumptions: [_ | _]}})
+      refute_broadcast("state", %{turn: %{assumptions: [_ | _]}})
     end
 
     test "returns error for missing position in payload", %{current_user: current_user} do
@@ -563,7 +563,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state_updated", _)
+      assert_push("state", _)
 
       # Push with empty payload - pattern match fails, goes to generic handle_in
       ref = push(socket, "make_assumption", %{})
@@ -588,12 +588,12 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state_updated", _)
+      assert_push("state", _)
 
       ref = push(socket, "reorder_timeline", %{"position" => 1})
 
       assert_reply(ref, :ok)
-      assert_broadcast("state_updated", ^new_state)
+      assert_broadcast("state", ^new_state)
     end
 
     test "handles reorder_timeline errors silently", %{current_user: current_user} do
@@ -610,14 +610,14 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state_updated", _)
+      assert_push("state", _)
 
       ref = push(socket, "reorder_timeline", %{"position" => 0})
 
       # On error, no reply should be sent
       refute_reply(ref, :ok)
       # No broadcast should happen
-      refute_broadcast("state_updated", %{turn: %{assumptions: [%{position: 0}]}})
+      refute_broadcast("state", %{turn: %{assumptions: [%{position: 0}]}})
     end
 
     test "returns error for missing position in payload", %{current_user: current_user} do
@@ -629,7 +629,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state_updated", _)
+      assert_push("state", _)
 
       # Push with empty payload - pattern match fails, goes to generic handle_in
       ref = push(socket, "reorder_timeline", %{})
@@ -650,7 +650,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state_updated", _)
+      assert_push("state", _)
 
       ref = push(socket, "unknown_event", %{})
       assert_reply(ref, :error, %{reason: "unknown_event", event: "unknown_event"})
@@ -665,13 +665,13 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume the initial push from join
-      assert_push("state_updated", _)
+      assert_push("state", _)
 
       # Now push unknown event
       push(socket, "unknown_event", %{})
 
       # Should not broadcast any state change
-      refute_broadcast("state_updated", _)
+      refute_broadcast("state", _)
     end
   end
 end
