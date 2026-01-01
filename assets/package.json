@@ -16,6 +16,7 @@
     "@inertiajs/svelte": "^2.0.14",
     "@types/spotify-web-playback-sdk": "^0.1.19",
     "axios": "^1.9.0",
+    "clsx": "^2.1.1",
     "lucide-svelte": "^0.562.0",
     "phoenix": "workspace:*",
     "phoenix_html": "workspace:*",
@@ -23,6 +24,7 @@
     "pixi.js": "^8.14.3",
     "svelte": "^5.41.0",
     "svelte-dnd-action": "^0.9.64",
+    "tailwind-merge": "^2.6.0",
     "topbar": "^3.0.0"
   },
   "devDependencies": {

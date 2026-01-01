@@ -20,11 +20,26 @@ describe("Game", () => {
             name: "Alice",
             avatar_url: "https://example.com/alice.jpg",
           },
+          {
+            uuid: "user-2",
+            name: "Bob",
+            avatar_url: "https://example.com/bob.jpg",
+          },
         ],
-        queue: ["user-1"],
+        queue: ["user-1", "user-2"],
         cursor: 0,
+        track: null,
         turn: {
           phase: TURN_PHASE.READY,
+          timeline: [
+            {
+              id: "timeline-track",
+              title: "Timeline Track",
+              artist: "Timeline Artist",
+              year: 2019,
+            },
+          ],
+          assumptions: [],
         },
       },
     };
@@ -37,11 +52,11 @@ describe("Game", () => {
     vi.restoreAllMocks();
   });
 
-  test("displays game interface on ready phase", () => {
+  test("renders timeline details for active player in ready phase", () => {
     const mockScopeContext = {
       user: {
-        uuid: "test-user-uuid",
-        name: "Test User",
+        uuid: "user-1",
+        name: "Alice",
       },
     };
 
@@ -52,7 +67,29 @@ describe("Game", () => {
 
     render(Game);
 
-    expect(screen.getByText("Alice")).toBeInTheDocument();
+    expect(screen.getAllByText("Timeline Track")).toHaveLength(2);
+    expect(screen.getAllByText("Timeline Artist")).toHaveLength(2);
+    expect(screen.getByText("2019")).toBeInTheDocument();
+  });
+
+  test("renders timeline details for passive player in ready phase", () => {
+    const mockScopeContext = {
+      user: {
+        uuid: "user-2",
+        name: "Bob",
+      },
+    };
+
+    mockChannelContext.game.turn.phase = TURN_PHASE.READY;
+
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
+    getGameContextSpy.mockReturnValue(mockChannelContext);
+
+    render(Game);
+
+    expect(screen.getAllByText("Timeline Track")).toHaveLength(2);
+    expect(screen.getAllByText("Timeline Artist")).toHaveLength(2);
+    expect(screen.getByText("2019")).toBeInTheDocument();
   });
 
   test("displays waiting view on waiting phase", () => {
@@ -71,7 +108,6 @@ describe("Game", () => {
     render(Game);
 
     expect(screen.getByText("It's your turn")).toBeInTheDocument();
-    expect(screen.getByText("Ready?")).toBeInTheDocument();
   });
 
   test("displays results view on results phase", () => {
@@ -89,7 +125,9 @@ describe("Game", () => {
 
     render(Game);
 
-    expect(screen.getByText("Alice")).toBeInTheDocument();
+    expect(screen.getAllByText("Timeline Track")).toHaveLength(2);
+    expect(screen.getAllByText("Timeline Artist")).toHaveLength(2);
+    expect(screen.getByText("2019")).toBeInTheDocument();
   });
 
   test("renders nothing when turn phase is undefined", () => {

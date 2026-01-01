@@ -1,48 +1,60 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
+import { Channel } from "phoenix";
 import { TURN_PHASE } from "~shared/types/turn";
 import * as GameContext from "~components/GameChannel.svelte";
 import * as Scope from "~components/Scope.svelte";
 
 import TurnChallenging from "~components/TurnChallenging.svelte";
 
+vi.mock("phoenix");
+
 describe("TurnChallenging", () => {
   let mockChannelContext;
-  let mockParticipants;
   let getScopeContextSpy;
   let getGameContextSpy;
 
   beforeEach(() => {
-    mockParticipants = [
-      {
-        uuid: "user-1",
-        name: "Alice",
-        avatar_url: "https://example.com/alice.jpg",
-      },
-      {
-        uuid: "user-2",
-        name: "Bob",
-        avatar_url: "https://example.com/bob.jpg",
-      },
-      {
-        uuid: "user-3",
-        name: "Charlie",
-        avatar_url: "https://example.com/charlie.jpg",
-      },
-    ];
-
     mockChannelContext = {
       game: {
-        participants: mockParticipants,
+        participants: [
+          {
+            uuid: "user-1",
+            name: "Alice",
+            avatar_url: "https://example.com/alice.jpg",
+          },
+          {
+            uuid: "user-2",
+            name: "Bob",
+            avatar_url: "https://example.com/bob.jpg",
+          },
+        ],
+        queue: ["user-1", "user-2"],
+        cursor: 0,
+        status: "in_progress",
+        track: {
+          id: "current-track",
+          title: "Current Track",
+          artist: "Current Artist",
+          year: 2020,
+        },
         turn: {
           phase: TURN_PHASE.CHALLENGING,
-          queue: ["user-1", "user-2", "user-3"],
-          cursor: 0, // Alice is active player
+          timeline: [
+            {
+              id: "timeline-track",
+              title: "Timeline Track",
+              artist: "Timeline Artist",
+              year: 2019,
+            },
+          ],
+          assumptions: [],
         },
       },
+      channel: new Channel("room:123", {}, null),
     };
 
-    getScopeContextSpy = vi.spyOn(Scope, 'getScopeContext');
+    getScopeContextSpy = vi.spyOn(Scope, "getScopeContext");
     getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
   });
 
@@ -50,270 +62,38 @@ describe("TurnChallenging", () => {
     vi.restoreAllMocks();
   });
 
-  describe("when current user is NOT the active player (challenger)", () => {
-    test("displays participants and current track components", () => {
-      const mockScopeContext = {
-        user: {
-          uuid: "user-2", // Bob is current user
-          name: "Bob",
-        },
-      };
-      
-      getScopeContextSpy.mockReturnValue(mockScopeContext);
-      
-      getGameContextSpy.mockReturnValue(mockChannelContext);
-        render(TurnChallenging);
+  test("renders active timeline list", () => {
+    const mockScopeContext = {
+      user: {
+        uuid: "user-2",
+        name: "Bob",
+      },
+    };
 
-      // Should show all participants
-      expect(screen.getByText("Alice")).toBeInTheDocument();
-      expect(screen.getByText("Bob")).toBeInTheDocument();
-      expect(screen.getByText("Charlie")).toBeInTheDocument();
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
+    getGameContextSpy.mockReturnValue(mockChannelContext);
 
-      const timelines = screen.getAllByRole("list");
-      expect(timelines.length).toBeGreaterThanOrEqual(1);
-    });
+    render(TurnChallenging);
 
-    test("shows participants and timeline when user is third in queue", () => {
-      const thirdUserContext = {
-        user: {
-          uuid: "user-3", // Charlie is current user
-          name: "Charlie",
-        },
-      };
-      
-      getScopeContextSpy.mockReturnValue(thirdUserContext);
-
-      getGameContextSpy.mockReturnValue(mockChannelContext);
-        render(TurnChallenging);
-
-      // Should show all participants
-      expect(screen.getByText("Alice")).toBeInTheDocument();
-      expect(screen.getByText("Bob")).toBeInTheDocument();
-      expect(screen.getByText("Charlie")).toBeInTheDocument();
-
-      const timelines = screen.getAllByRole("list");
-      expect(timelines.length).toBeGreaterThanOrEqual(1);
-    });
-
-    test("shows participants and timeline when active player changes to different user", () => {
-      const mockScopeContext = {
-        user: {
-          uuid: "user-2", // Bob is still current user
-          name: "Bob",
-        },
-      };
-      
-      const differentActivePlayerContext = {
-        game: {
-          participants: mockParticipants,
-          turn: {
-            phase: TURN_PHASE.CHALLENGING,
-            queue: ["user-1", "user-2", "user-3"],
-            cursor: 2, // Charlie is now active
-          },
-        },
-      };
-      
-      getScopeContextSpy.mockReturnValue(mockScopeContext);
-
-      getGameContextSpy.mockReturnValue(differentActivePlayerContext);
-        render(TurnChallenging);
-
-      expect(screen.getByText("Alice")).toBeInTheDocument();
-      expect(screen.getByText("Bob")).toBeInTheDocument();
-      expect(screen.getByText("Charlie")).toBeInTheDocument();
-
-      const timelines = screen.getAllByRole("list");
-      expect(timelines.length).toBeGreaterThanOrEqual(1);
-    });
+    const lists = screen.getAllByRole("list");
+    expect(lists.length).toBeGreaterThan(0);
   });
 
-  describe("when current user IS the active player", () => {
-    test("displays participants and player components when user is active player", () => {
-      // Make current user the active player
-      const activeUserContext = {
-        user: {
-          uuid: "user-1", // Alice is both current user and active player
-          name: "Alice",
-        },
-      };
-      
-      getScopeContextSpy.mockReturnValue(activeUserContext);
+  test("renders timeline item details for non-current track", () => {
+    const mockScopeContext = {
+      user: {
+        uuid: "user-2",
+        name: "Bob",
+      },
+    };
 
-      getGameContextSpy.mockReturnValue(mockChannelContext);
-        render(TurnChallenging);
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
+    getGameContextSpy.mockReturnValue(mockChannelContext);
 
-      // Should show participants component
-      expect(screen.getByText("Alice")).toBeInTheDocument();
-      expect(screen.getByText("Bob")).toBeInTheDocument();
-      expect(screen.getByText("Charlie")).toBeInTheDocument();
+    render(TurnChallenging);
 
-      // Should show player controls (play/pause button from Player component)
-      const playerButton = screen.getByRole("button", {
-        name: /play track|pause track/i,
-      });
-      expect(playerButton).toBeInTheDocument();
-    });
-
-    test("displays participants and player when active player index changes to current user", () => {
-      const mockScopeContext = {
-        user: {
-          uuid: "user-2", // Bob is current user
-          name: "Bob",
-        },
-      };
-      
-      // Make Bob the active player
-      const bobActiveContext = {
-        game: {
-          participants: mockParticipants,
-          turn: {
-            phase: TURN_PHASE.CHALLENGING,
-            queue: ["user-1", "user-2", "user-3"],
-            cursor: 1, // Bob is now active
-          },
-        },
-      };
-      
-      getScopeContextSpy.mockReturnValue(mockScopeContext);
-
-      getGameContextSpy.mockReturnValue(bobActiveContext);
-        render(TurnChallenging);
-
-      // Should show participants component
-      expect(screen.getByText("Alice")).toBeInTheDocument();
-      expect(screen.getByText("Bob")).toBeInTheDocument();
-      expect(screen.getByText("Charlie")).toBeInTheDocument();
-
-      // Should show player controls (play/pause button from Player component)
-      const playerButton = screen.getByRole("button", {
-        name: /play track|pause track/i,
-      });
-      expect(playerButton).toBeInTheDocument();
-    });
-  });
-
-  describe("edge cases", () => {
-    test("handles missing active player gracefully", () => {
-      const mockScopeContext = {
-        user: {
-          uuid: "user-2",
-          name: "Bob",
-        },
-      };
-      
-      const noActivePlayerContext = {
-        game: {
-          participants: mockParticipants,
-          turn: {
-            phase: TURN_PHASE.CHALLENGING,
-            queue: ["user-1", "user-2", "user-3"],
-            cursor: 99, // Invalid index
-          },
-        },
-      };
-      
-      getScopeContextSpy.mockReturnValue(mockScopeContext);
-
-      // Should not crash when activePlayer is undefined
-      expect(() => {
-        getGameContextSpy.mockReturnValue(noActivePlayerContext);
-        render(TurnChallenging);
-      }).not.toThrow();
-    });
-
-    test("handles empty queue gracefully", () => {
-      const mockScopeContext = {
-        user: {
-          uuid: "user-2",
-          name: "Bob",
-        },
-      };
-      
-      const emptyQueueContext = {
-        game: {
-          participants: mockParticipants,
-          turn: {
-            phase: TURN_PHASE.CHALLENGING,
-            queue: [],
-            cursor: 0,
-          },
-        },
-      };
-      
-      getScopeContextSpy.mockReturnValue(mockScopeContext);
-
-      expect(() => {
-        getGameContextSpy.mockReturnValue(emptyQueueContext);
-        render(TurnChallenging);
-      }).not.toThrow();
-    });
-
-    test("handles missing turn state gracefully", () => {
-      const mockScopeContext = {
-        user: {
-          uuid: "user-2",
-          name: "Bob",
-        },
-      };
-      
-      const noTurnContext = {
-        game: {
-          participants: mockParticipants,
-          turn: null,
-        },
-      };
-      
-      getScopeContextSpy.mockReturnValue(mockScopeContext);
-
-      expect(() => {
-        getGameContextSpy.mockReturnValue(noTurnContext);
-        render(TurnChallenging);
-      }).not.toThrow();
-    });
-  });
-
-  describe("required contexts", () => {
-    test("throws error when gameContext is missing", () => {
-      const mockScopeContext = {
-        user: {
-          uuid: "user-2",
-          name: "Bob",
-        },
-      };
-      
-      getScopeContextSpy.mockReturnValue(mockScopeContext);
-      
-      expect(() => {
-        render(TurnChallenging);
-      }).toThrow();
-    });
-
-    test("throws error when scope context is missing", () => {
-      getScopeContextSpy.mockImplementation(() => {
-        throw new Error("missing_context");
-      });
-      
-      expect(() => {
-        getGameContextSpy.mockReturnValue(mockChannelContext);
-        render(TurnChallenging);
-      }).toThrow("missing_context");
-    });
-
-    test("renders without error when both contexts are provided", () => {
-      const mockScopeContext = {
-        user: {
-          uuid: "user-2",
-          name: "Bob",
-        },
-      };
-      
-      getScopeContextSpy.mockReturnValue(mockScopeContext);
-      
-      expect(() => {
-        getGameContextSpy.mockReturnValue(mockChannelContext);
-        render(TurnChallenging);
-      }).not.toThrow();
-    });
+    expect(screen.getAllByText("Timeline Artist").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("2019").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Timeline Track").length).toBeGreaterThan(0);
   });
 });

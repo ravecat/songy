@@ -7,7 +7,7 @@ export default mergeConfig(
   viteConfig,
   defineConfig({
     resolve: {
-      conditions: ['browser'],
+      conditions: ['svelte', 'browser', 'import', 'default'],
       alias: {
         'phoenix': path.resolve(__dirname, '__mocks__/phoenix.js'),
       },

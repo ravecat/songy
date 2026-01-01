@@ -3,7 +3,7 @@
   import { getScopeContext } from "~components/Scope.svelte";
   import { PUSH_EVENT } from "~shared/types/channel";
 
-  const { game, channel } = $derived.by(getGameContext);
+  const { game } = $derived.by(getGameContext);
   const { user: currentPlayer } = $derived.by(getScopeContext);
 
   const activePlayer = $derived.by(() => {
@@ -15,10 +15,6 @@
   const isCurrentPlayerActive = $derived.by(() => {
     return currentPlayer?.uuid === activePlayer?.uuid;
   });
-
-  const handleReady = () => {
-    channel.push(PUSH_EVENT.NEXT_PHASE, {});
-  };
 </script>
 
 {#if activePlayer}
@@ -34,9 +30,6 @@
       <h2 class="mb-0">
         {isCurrentPlayerActive ? "It's your turn" : `${activePlayer.name} turn`}
       </h2>
-      {#if isCurrentPlayerActive}
-        <button class="btn btn-primary w-full" onclick={handleReady}>Ready?</button>
-      {/if}
     </div>
   </div>
 {/if}

@@ -14,3 +14,21 @@ if (typeof HTMLDialogElement !== 'undefined') {
     this.setAttribute('open', '');
   };
 }
+
+if (typeof Element !== 'undefined' && !Element.prototype.animate) {
+  Element.prototype.animate = function () {
+    return {
+      cancel: () => {},
+      finish: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      finished: Promise.resolve(),
+    };
+  };
+}
+
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = '.btn { display: flex; }';
+  document.head.appendChild(style);
+}

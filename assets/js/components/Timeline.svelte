@@ -28,8 +28,13 @@
     items = e.detail.items;
   }
 
-  const handleConsider = onconsider || defaultHandleConsider;
-  const handleFinalize = onfinalize || defaultHandleFinalize;
+  const handleConsider = (event: CustomEvent<DndEvent<TimelineItem>>) => {
+    (onconsider ?? defaultHandleConsider)(event);
+  };
+
+  const handleFinalize = (event: CustomEvent<DndEvent<TimelineItem>>) => {
+    (onfinalize ?? defaultHandleFinalize)(event);
+  };
 </script>
 
 <div

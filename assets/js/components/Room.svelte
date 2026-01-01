@@ -4,7 +4,6 @@
   import Logo from "~components/Logo.svelte";
   import Player from "~components/Player.svelte";
   import Participants from "~components/Participants.svelte";
-  import GameButton from "~components/GameButton.svelte";
 
   const { game } = $derived.by(getGameContext);
 
@@ -17,11 +16,7 @@
   <Logo loading={!game}>
     <Participants />
     <div class="flex flex-1 items-center justify-center">
-      {#if isWaiting}
-        <GameButton />
-      {:else}
-        <Game />
-      {/if}
+      <Game />
     </div>
     <Player />
   </Logo>

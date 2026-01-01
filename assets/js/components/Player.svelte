@@ -6,6 +6,8 @@
   import { GAME_STATUS } from "~shared/types/game";
   import { Play, Pause, SkipForward, RotateCcw } from "lucide-svelte";
   import { inertia } from "@inertiajs/svelte";
+  import { slide, fly } from "svelte/transition";
+  import { cn } from "~shared/utils/cn";
 
   const { game, channel } = $derived.by(getGameContext);
   const { user: currentPlayer } = $derived.by(getScopeContext);
@@ -15,109 +17,117 @@
   const activePlayerId = $derived(game?.queue?.[game?.cursor]);
   const isActivePlayer = $derived(activePlayerId === currentPlayer?.uuid);
   const isOwner = $derived(game?.owner_id === currentPlayer?.uuid);
-
-  const showAdvanceTurn = $derived.by(() => {
-    // READY phase: Only active player, after making assumption
-    if (turnPhase === TURN_PHASE.READY && isActivePlayer) {
-      const hasAssumption = game?.turn?.assumptions?.some(
-        (a) => a.user_id === currentPlayer?.uuid
-      );
-      return hasAssumption;
-    }
-
-    // RESULTS phase: Active player OR owner (but not if game is finished)
-    if (
-      turnPhase === TURN_PHASE.RESULTS &&
-      gameStatus !== GAME_STATUS.FINISHED
-    ) {
-      return isActivePlayer || isOwner;
-    }
-
-    return false;
-  });
-
+  const hasMinPlayers = $derived(game?.participants?.length > 1);
+  const isWaitingPhase = $derived(turnPhase === TURN_PHASE.WAITING);
+  const canControlPlayback = $derived(isOwner || isActivePlayer);
+  const canAdvanceTurn = $derived(isOwner || isActivePlayer);
+  const canStartGame = $derived(
+    isActivePlayer && gameStatus === GAME_STATUS.WAITING
+  );
+  const canAdvanceFromWaiting = $derived(
+    isActivePlayer && gameStatus === GAME_STATUS.IN_PROGRESS && isWaitingPhase
+  );
   const showPlayAgain = $derived(gameStatus === GAME_STATUS.FINISHED);
 
-  const playbackLabel = $derived(isPlayback ? "pause" : "play");
-  const playbackAriaLabel = $derived(isPlayback ? "Pause track" : "Play track");
-
-  const advanceTurnLabel = $derived(
-    turnPhase === TURN_PHASE.READY ? "next" : "next turn"
-  );
-  const advanceTurnAriaLabel = $derived(
-    turnPhase === TURN_PHASE.READY ? "Next phase" : "Next turn"
-  );
-
-  const togglePlayback = () => {
+  const handlePlayback = () => {
     channel.push(
       isPlayback ? PUSH_EVENT.PAUSE_PLAYBACK : PUSH_EVENT.START_PLAYBACK,
       {}
     );
   };
 
-  const handleAdvanceTurn = () => {
+  const handleStartGame = () => {
+    channel.push(PUSH_EVENT.START_GAME, {});
+  };
+
+  const handleNextPhase = () => {
     channel.push(PUSH_EVENT.NEXT_PHASE, {});
   };
 </script>
 
-<div class="flex items-center justify-center gap-8 p-4">
-  <!-- Playback button (always visible) -->
-  <button
-    type="button"
-    class="btn h-24 w-24 flex flex-col items-center justify-center gap-1"
-    aria-label={playbackAriaLabel}
-    onclick={togglePlayback}
-  >
-    <span
-      class="flex h-12 w-12 flex-shrink-0 items-center justify-center text-current"
-    >
-      {#if isPlayback}
-        <Pause class="h-full w-full" />
-      {:else}
-        <Play class="h-full w-full" />
-      {/if}
-    </span>
-    <span class="text-xs font-bold uppercase tracking-wider leading-none">
-      {playbackLabel}
-    </span>
-  </button>
-
-  <!-- Advance turn button (READY or RESULTS phase) -->
-  {#if showAdvanceTurn}
+{#snippet button({ label, icon: Icon, text, visible = true, ...props })}
+  {#if visible}
     <button
-      type="button"
-      class="btn h-24 w-24 flex flex-col items-center justify-center gap-1"
-      aria-label={advanceTurnAriaLabel}
-      onclick={handleAdvanceTurn}
+      in:slide={{ duration: 400 }}
+      out:fly={{ y: 400, duration: 400 }}
+      type={props.type ?? "button"}
+      {...props}
+      class={cn(
+        "btn h-16 w-16 flex flex-col items-center justify-between py-2",
+        props.class
+      )}
+      aria-label={label}
     >
-      <span
-        class="flex h-12 w-12 flex-shrink-0 items-center justify-center text-current"
-      >
-        <SkipForward class="h-full w-full" />
+      <span class="flex h-6 w-6 items-center justify-center text-current">
+        <Icon />
       </span>
       <span class="text-xs font-bold uppercase tracking-wider leading-none">
-        {advanceTurnLabel}
+        {text}
       </span>
     </button>
   {/if}
+{/snippet}
 
-  <!-- Play again button (game finished) -->
-  {#if showPlayAgain}
-    <form use:inertia={{ href: "/create", method: "post" }} class="contents">
-      <button
-        type="submit"
-        class="btn h-24 w-24 flex flex-col items-center justify-center gap-1"
-        aria-label="Play again"
-      >
-        <span
-          class="flex h-12 w-12 flex-shrink-0 items-center justify-center text-current"
-        >
-          <RotateCcw class="h-full w-full" />
-        </span>
-        <span class="text-xs font-bold uppercase tracking-wider leading-none">
-          play again
-        </span>
-      </button>
-    </form>
-  {/if}
+{#snippet play()}
+  {@render button({
+    label: isPlayback ? "Pause track" : "Play track",
+    icon: isPlayback ? Pause : Play,
+    text: isPlayback ? "stop" : "play",
+    onclick: handlePlayback,
+    disabled:
+      !hasMinPlayers || turnPhase !== TURN_PHASE.READY || !canControlPlayback,
+  })}
+{/snippet}
+
+{#snippet start()}
+  {@render button({
+    label: "Ready",
+    icon: SkipForward,
+    text: "start",
+    onclick: handleStartGame,
+    class: "btn-primary",
+    visible: canStartGame,
+  })}
+{/snippet}
+
+{#snippet ready()}
+  {@render button({
+    label: "Ready",
+    icon: SkipForward,
+    text: "ready",
+    onclick: handleNextPhase,
+    class: "btn-primary",
+    visible: canAdvanceFromWaiting,
+  })}
+{/snippet}
+
+{#snippet forward()}
+  {@render button({
+    label: turnPhase === TURN_PHASE.READY ? "Next phase" : "Next turn",
+    icon: SkipForward,
+    text: turnPhase === TURN_PHASE.READY ? "forward" : "next turn",
+    onclick: handleNextPhase,
+    class: "btn-primary",
+    visible: canAdvanceTurn && !canStartGame && !canAdvanceFromWaiting,
+  })}
+{/snippet}
+
+{#snippet rewind()}
+  <form use:inertia={{ href: "/create", method: "post" }} class="contents">
+    {@render button({
+      label: "Play again",
+      icon: RotateCcw,
+      text: "rewind",
+      type: "submit",
+      visible: showPlayAgain,
+    })}
+  </form>
+{/snippet}
+
+<div class="flex items-center justify-center gap-4 p-4">
+  {@render rewind()}
+  {@render play()}
+  {@render start()}
+  {@render ready()}
+  {@render forward()}
 </div>
