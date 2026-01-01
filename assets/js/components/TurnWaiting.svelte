@@ -47,7 +47,6 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    min-height: 60vh;
     text-align: center;
     padding: 2rem;
   }

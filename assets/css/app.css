@@ -100,3 +100,10 @@
 [data-phx-session] {
   display: contents;
 }
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}

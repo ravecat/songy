@@ -10,14 +10,14 @@
   const turnPhase = $derived(game?.turn?.phase);
 </script>
 
-{#if turnPhase === TURN_PHASE.WAITING}
-  <TurnWaiting />
-{:else if turnPhase === TURN_PHASE.READY}
-  <TurnReady />
-{:else if turnPhase === TURN_PHASE.CHALLENGING}
-  <TurnChallenging />
-{:else if turnPhase === TURN_PHASE.RESULTS}
-  <TurnResults />
-{:else}
-  <div>Unknown phase: {turnPhase}</div>
-{/if}
+<div>
+  {#if turnPhase === TURN_PHASE.WAITING}
+    <TurnWaiting />
+  {:else if turnPhase === TURN_PHASE.READY}
+    <TurnReady />
+  {:else if turnPhase === TURN_PHASE.CHALLENGING}
+    <TurnChallenging />
+  {:else if turnPhase === TURN_PHASE.RESULTS}
+    <TurnResults />
+  {/if}
+</div>

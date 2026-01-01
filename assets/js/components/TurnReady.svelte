@@ -1,11 +1,37 @@
 <script lang="ts">
-  import Participants from "~components/Participants.svelte";
-  import Player from "~components/Player.svelte";
   import CurrentTrack from "~components/CurrentTrack.svelte";
   import ActiveTimeline from "~components/ActiveTimeline.svelte";
 </script>
 
-<Participants />
-<ActiveTimeline />
-<CurrentTrack />
-<Player />
+<div class="turn-layout">
+  <div class="turn-timeline">
+    <ActiveTimeline />
+  </div>
+  <div class="turn-current">
+    <CurrentTrack />
+  </div>
+</div>
+
+<style>
+  .turn-layout {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .turn-timeline {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .turn-timeline :global(.timeline) {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .turn-current {
+    flex-shrink: 0;
+  }
+</style>

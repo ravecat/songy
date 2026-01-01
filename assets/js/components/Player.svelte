@@ -3,21 +3,21 @@
   import { getScopeContext } from "~components/Scope.svelte";
   import { PUSH_EVENT } from "~shared/types/channel";
   import { TURN_PHASE } from "~shared/types/turn";
-  import { Play, Pause, SkipForward } from "lucide-svelte";
+  import { GAME_STATUS } from "~shared/types/game";
+  import { Play, Pause, SkipForward, RotateCcw } from "lucide-svelte";
+  import { inertia } from "@inertiajs/svelte";
 
   const { game, channel } = $derived.by(getGameContext);
   const { user: currentPlayer } = $derived.by(getScopeContext);
-
-  let isPlayback = $derived(game?.player?.is_playback ?? false);
+  const isPlayback = $derived(game?.player?.is_playback);
   const turnPhase = $derived(game?.turn?.phase);
-  const activePlayerId = $derived.by(() => {
-    return game?.queue?.[game?.cursor];
-  });
+  const gameStatus = $derived(game?.status);
+  const activePlayerId = $derived(game?.queue?.[game?.cursor]);
+  const isActivePlayer = $derived(activePlayerId === currentPlayer?.uuid);
+  const isOwner = $derived(game?.owner_id === currentPlayer?.uuid);
 
-  const showReady = $derived.by(() => {
-    const isActivePlayer = activePlayerId === currentPlayer?.uuid;
-
-    // Show in READY phase if active player has made assumption
+  const showAdvanceTurn = $derived.by(() => {
+    // READY phase: Only active player, after making assumption
     if (turnPhase === TURN_PHASE.READY && isActivePlayer) {
       const hasAssumption = game?.turn?.assumptions?.some(
         (a) => a.user_id === currentPlayer?.uuid
@@ -25,8 +25,28 @@
       return hasAssumption;
     }
 
+    // RESULTS phase: Active player OR owner (but not if game is finished)
+    if (
+      turnPhase === TURN_PHASE.RESULTS &&
+      gameStatus !== GAME_STATUS.FINISHED
+    ) {
+      return isActivePlayer || isOwner;
+    }
+
     return false;
   });
+
+  const showPlayAgain = $derived(gameStatus === GAME_STATUS.FINISHED);
+
+  const playbackLabel = $derived(isPlayback ? "pause" : "play");
+  const playbackAriaLabel = $derived(isPlayback ? "Pause track" : "Play track");
+
+  const advanceTurnLabel = $derived(
+    turnPhase === TURN_PHASE.READY ? "next" : "next turn"
+  );
+  const advanceTurnAriaLabel = $derived(
+    turnPhase === TURN_PHASE.READY ? "Next phase" : "Next turn"
+  );
 
   const togglePlayback = () => {
     channel.push(
@@ -35,88 +55,69 @@
     );
   };
 
-  const handleReady = () => {
+  const handleAdvanceTurn = () => {
     channel.push(PUSH_EVENT.NEXT_PHASE, {});
   };
 </script>
 
-<div class="panel">
+<div class="flex items-center justify-center gap-8 p-4">
+  <!-- Playback button (always visible) -->
   <button
-    class="btn player-btn"
-    aria-label={isPlayback ? "Pause track" : "Play track"}
+    type="button"
+    class="btn h-24 w-24 flex flex-col items-center justify-center gap-1"
+    aria-label={playbackAriaLabel}
     onclick={togglePlayback}
   >
-    <span class="player-btn-icon">
+    <span
+      class="flex h-12 w-12 flex-shrink-0 items-center justify-center text-current"
+    >
       {#if isPlayback}
-        <Pause />
+        <Pause class="h-full w-full" />
       {:else}
-        <Play />
+        <Play class="h-full w-full" />
       {/if}
     </span>
-    <span class="player-btn-label">
-      {isPlayback ? 'pause' : 'play'}
+    <span class="text-xs font-bold uppercase tracking-wider leading-none">
+      {playbackLabel}
     </span>
   </button>
 
-  {#if showReady}
+  <!-- Advance turn button (READY or RESULTS phase) -->
+  {#if showAdvanceTurn}
     <button
-      class="btn player-btn"
-      aria-label="Next phase"
-      onclick={handleReady}
+      type="button"
+      class="btn h-24 w-24 flex flex-col items-center justify-center gap-1"
+      aria-label={advanceTurnAriaLabel}
+      onclick={handleAdvanceTurn}
     >
-      <span class="player-btn-icon">
-        <SkipForward />
+      <span
+        class="flex h-12 w-12 flex-shrink-0 items-center justify-center text-current"
+      >
+        <SkipForward class="h-full w-full" />
       </span>
-      <span class="player-btn-label">
-        next
+      <span class="text-xs font-bold uppercase tracking-wider leading-none">
+        {advanceTurnLabel}
       </span>
     </button>
   {/if}
+
+  <!-- Play again button (game finished) -->
+  {#if showPlayAgain}
+    <form use:inertia={{ href: "/create", method: "post" }} class="contents">
+      <button
+        type="submit"
+        class="btn h-24 w-24 flex flex-col items-center justify-center gap-1"
+        aria-label="Play again"
+      >
+        <span
+          class="flex h-12 w-12 flex-shrink-0 items-center justify-center text-current"
+        >
+          <RotateCcw class="h-full w-full" />
+        </span>
+        <span class="text-xs font-bold uppercase tracking-wider leading-none">
+          play again
+        </span>
+      </button>
+    </form>
+  {/if}
 </div>
-
-<style>
-  .panel {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 2rem;
-  }
-
-  .player-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-    width: 5.5rem;
-    height: 5.5rem;
-  }
-
-  .player-btn-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    color: currentColor;
-    width: 3rem;
-    height: 3rem;
-  }
-
-  .player-btn-icon :global(svg) {
-    width: 100%;
-    height: 100%;
-  }
-
-  .player-btn-label {
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: lowercase;
-    letter-spacing: 0.5px;
-    line-height: 1;
-  }
-</style>
