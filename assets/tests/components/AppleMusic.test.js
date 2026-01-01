@@ -9,7 +9,7 @@ describe("AppleMusic component", () => {
 
   beforeEach(() => {
     mockGameContext = {
-      state: {
+      game: {
         track: {
           id: "1440783454",
           title: "Firestarter",
@@ -59,7 +59,7 @@ describe("AppleMusic component", () => {
   });
 
   test("handles missing preview_url gracefully", () => {
-    mockGameContext.state.track.meta = {};
+    mockGameContext.game.track.meta = {};
 
     getGameContextSpy.mockReturnValue(mockGameContext);
 

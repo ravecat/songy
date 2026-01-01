@@ -4,14 +4,14 @@
   import Game from "~components/Game.svelte";
   import Logo from "~components/Logo.svelte";
 
-  const { state } = $derived.by(getGameContext);
+  const { game } = $derived.by(getGameContext);
 
-  let isWaiting = $derived(state?.status === "waiting");
+  let isWaiting = $derived(game?.status === "waiting");
 </script>
 
 <div class="wrapper">
   <div class="content">
-    <Logo loading={!state}>
+    <Logo loading={!game}>
       {#if isWaiting}
         <Lobby />
       {:else}

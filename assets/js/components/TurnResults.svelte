@@ -7,13 +7,13 @@
   import { inertia } from "@inertiajs/svelte";
   import { GAME_STATUS } from "~shared/types/game";
 
-  const { channel, state } = $derived.by(getGameContext);
+  const { channel, game } = $derived.by(getGameContext);
   const { user } = $derived.by(getScopeContext);
-  const status = $derived(state?.status);
+  const status = $derived(game?.status);
 
-  const activePlayerUuid = $derived(state?.queue?.[state?.cursor]);
+  const activePlayerUuid = $derived(game?.queue?.[game?.cursor]);
   const isActivePlayer = $derived(activePlayerUuid === user?.uuid);
-  const isOwner = $derived(state?.owner_id === user?.uuid);
+  const isOwner = $derived(game?.owner_id === user?.uuid);
   const canAdvanceTurn = $derived(isActivePlayer || isOwner);
 
   const handleNextTurn = () => {

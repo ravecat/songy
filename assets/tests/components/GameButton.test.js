@@ -14,7 +14,7 @@ describe("GameButton component", () => {
   beforeEach(() => {
     mockChannel = new Channel("room:123", {}, null);
     mockChannelContext = {
-      state: {
+      game: {
         participants: [
           {
             uuid: "user-1",
@@ -50,7 +50,7 @@ describe("GameButton component", () => {
   });
 
   test("displays start button when there are more than 2 players", () => {
-    mockChannelContext.state.participants = [
+    mockChannelContext.game.participants = [
       {
         uuid: "user-1",
         name: "Alice",
@@ -79,7 +79,7 @@ describe("GameButton component", () => {
   });
 
   test("displays waiting message when there is only 1 player", () => {
-    mockChannelContext.state.participants = [
+    mockChannelContext.game.participants = [
       {
         uuid: "user-1",
         name: "Alice",
@@ -98,7 +98,7 @@ describe("GameButton component", () => {
   });
 
   test("displays waiting message when there are no players", () => {
-    mockChannelContext.state.participants = [];
+    mockChannelContext.game.participants = [];
 
     getGameContextSpy.mockReturnValue(mockChannelContext);
 
@@ -169,7 +169,7 @@ describe("GameButton component", () => {
   });
 
   test("handles null state gracefully", () => {
-    mockChannelContext.state = null;
+    mockChannelContext.game = null;
 
     getGameContextSpy.mockReturnValue(mockChannelContext);
 
@@ -182,7 +182,7 @@ describe("GameButton component", () => {
   });
 
   test("handles undefined participants gracefully", () => {
-    mockChannelContext.state.participants = undefined;
+    mockChannelContext.game.participants = undefined;
 
     getGameContextSpy.mockReturnValue(mockChannelContext);
 

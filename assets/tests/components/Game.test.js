@@ -13,7 +13,7 @@ describe("Game", () => {
 
   beforeEach(() => {
     mockChannelContext = {
-      state: {
+      game: {
         participants: [
           {
             uuid: "user-1",
@@ -45,7 +45,7 @@ describe("Game", () => {
       },
     };
 
-    mockChannelContext.state.turn.phase = TURN_PHASE.READY;
+    mockChannelContext.game.turn.phase = TURN_PHASE.READY;
 
     getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockReturnValue(mockChannelContext);
@@ -63,7 +63,7 @@ describe("Game", () => {
       },
     };
 
-    mockChannelContext.state.turn.phase = TURN_PHASE.WAITING;
+    mockChannelContext.game.turn.phase = TURN_PHASE.WAITING;
 
     getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockReturnValue(mockChannelContext);
@@ -82,7 +82,7 @@ describe("Game", () => {
       },
     };
 
-    mockChannelContext.state.turn.phase = TURN_PHASE.RESULTS;
+    mockChannelContext.game.turn.phase = TURN_PHASE.RESULTS;
 
     getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockReturnValue(mockChannelContext);
@@ -100,7 +100,7 @@ describe("Game", () => {
       },
     };
 
-    mockChannelContext.state.turn = undefined;
+    mockChannelContext.game.turn = undefined;
 
     getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockReturnValue(mockChannelContext);
@@ -118,7 +118,7 @@ describe("Game", () => {
       },
     };
 
-    mockChannelContext.state = {
+    mockChannelContext.game = {
       participants: [],
       turn: undefined,
     };
@@ -140,7 +140,7 @@ describe("Game", () => {
       },
     };
 
-    mockChannelContext.state.turn.phase = null;
+    mockChannelContext.game.turn.phase = null;
 
     getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockReturnValue(mockChannelContext);
@@ -170,7 +170,7 @@ describe("Game", () => {
         },
       };
 
-      mockChannelContext.state.turn.phase = phase;
+      mockChannelContext.game.turn.phase = phase;
 
       getScopeContextSpy.mockReturnValue(mockScopeContext);
       getGameContextSpy.mockReturnValue(mockChannelContext);

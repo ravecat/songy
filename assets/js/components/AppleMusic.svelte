@@ -12,9 +12,9 @@
   let currentTime = $state(0);
   let duration = $state(0);
 
-  const { state: gameState } = $derived.by(getGameContext);
+  const { game } = $derived.by(getGameContext);
 
-  const src = $derived(gameState?.track?.meta?.preview_url);
+  const src = $derived(game?.track?.meta?.preview_url);
 </script>
 
 <audio

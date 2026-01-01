@@ -16,7 +16,7 @@ describe("Turn waiting view", () => {
 
   beforeEach(() => {
     mockChannelContext = {
-      state: {
+      game: {
         participants: [
           {
             uuid: "user-1",
@@ -110,7 +110,7 @@ describe("Turn waiting view", () => {
       },
     };
 
-    mockChannelContext.state.cursor = 1;
+    mockChannelContext.game.cursor = 1;
 
     getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockReturnValue(mockChannelContext);
@@ -130,7 +130,7 @@ describe("Turn waiting view", () => {
       },
     };
 
-    mockChannelContext.state.cursor = 1;
+    mockChannelContext.game.cursor = 1;
 
     getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockReturnValue(mockChannelContext);

@@ -3,10 +3,10 @@
   import { getGameContext } from "~components/GameChannel.svelte";
   import { PUSH_EVENT } from "~/shared/types/channel";
 
-  const { state, channel } = $derived.by(getGameContext);
+  const { game, channel } = $derived.by(getGameContext);
   let isLoading = $state(false);
 
-  const hasMinPlayers = $derived(state?.participants?.length >= 2);
+  const hasMinPlayers = $derived(game?.participants?.length >= 2);
 
   const handleStartGame = () => {
     isLoading = true;

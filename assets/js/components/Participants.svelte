@@ -4,13 +4,13 @@
   import { getScopeContext } from "~components/Scope.svelte";
   import star from "~icons/star.svg?raw";
 
-  const { state } = $derived.by(getGameContext);
+  const { game } = $derived.by(getGameContext);
   const { user } = $derived.by(getScopeContext);
 </script>
 
-{#if state.participants && state.participants.length > 0}
+{#if game.participants && game.participants.length > 0}
   <div class="participants-header">
-    {#each state.participants as participant}
+    {#each game.participants as participant}
       <div
         in:slide={{ duration: 400, axis: "y" }}
         out:slide={{ duration: 400, axis: "y" }}
@@ -30,9 +30,9 @@
           </div>
         {/if}
 
-        {#if state?.scores && participant.uuid in state.scores}
+        {#if game?.scores && participant.uuid in game.scores}
           <div class="score-indicator">
-            {state.scores[participant.uuid]}
+            {game.scores[participant.uuid]}
           </div>
         {/if}
 

@@ -32,7 +32,7 @@ describe("TurnChallenging", () => {
     ];
 
     mockChannelContext = {
-      state: {
+      game: {
         participants: mockParticipants,
         turn: {
           phase: TURN_PHASE.CHALLENGING,
@@ -104,7 +104,7 @@ describe("TurnChallenging", () => {
       };
       
       const differentActivePlayerContext = {
-        state: {
+        game: {
           participants: mockParticipants,
           turn: {
             phase: TURN_PHASE.CHALLENGING,
@@ -165,7 +165,7 @@ describe("TurnChallenging", () => {
       
       // Make Bob the active player
       const bobActiveContext = {
-        state: {
+        game: {
           participants: mockParticipants,
           turn: {
             phase: TURN_PHASE.CHALLENGING,
@@ -203,7 +203,7 @@ describe("TurnChallenging", () => {
       };
       
       const noActivePlayerContext = {
-        state: {
+        game: {
           participants: mockParticipants,
           turn: {
             phase: TURN_PHASE.CHALLENGING,
@@ -231,7 +231,7 @@ describe("TurnChallenging", () => {
       };
       
       const emptyQueueContext = {
-        state: {
+        game: {
           participants: mockParticipants,
           turn: {
             phase: TURN_PHASE.CHALLENGING,
@@ -258,7 +258,7 @@ describe("TurnChallenging", () => {
       };
       
       const noTurnContext = {
-        state: {
+        game: {
           participants: mockParticipants,
           turn: null,
         },

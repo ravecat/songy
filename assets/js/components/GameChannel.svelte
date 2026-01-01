@@ -7,8 +7,8 @@
    * Game context interface providing game state and Phoenix channel access
    */
   export interface GameContext {
-    /** Current game state received from the channel */
-    state: Game | null;
+    /** Current game received from the channel */
+    game: Game | null;
     /** Phoenix channel instance for real-time communication */
     channel: Channel;
   }
@@ -21,36 +21,19 @@
   import { BROADCAST_EVENT } from "~shared/types/channel";
   import type { Snippet } from "svelte";
 
-  let {
-    socket,
-    topic,
-    payload,
-    on,
-    join,
-    onError,
-    onClose,
-    children,
-  }: ChannelProps & { children?: Snippet } = $props();
+  let { children, ...rest}: ChannelProps & { children?: Snippet } = $props();
 
-  const { channel } = useChannel({
-    socket,
-    topic,
-    payload,
-    on,
-    join,
-    onError,
-    onClose,
-  });
+  const { channel } = useChannel(rest);
 
   // Create game context with channel
   let context = $state<GameContext>({
-    state: null,
+    game: null,
     channel,
   });
 
   // Register event handler for state updates
   channel.on(BROADCAST_EVENT.STATE, (response: Game) => {
-    context.state = response;
+    context.game = response;
   });
 
   // Make context available to child components

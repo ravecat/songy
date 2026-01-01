@@ -17,7 +17,7 @@ describe("Turn results view", () => {
 
   beforeEach(() => {
     mockChannelContext = {
-      state: {
+      game: {
         owner_id: "user-1",
         participants: [
           {
@@ -84,7 +84,7 @@ describe("Turn results view", () => {
 
   describe("when game is finished", () => {
     beforeEach(() => {
-      mockChannelContext.state.status = GAME_STATUS.FINISHED;
+      mockChannelContext.game.status = GAME_STATUS.FINISHED;
     });
 
     test("displays play again button", () => {
@@ -188,8 +188,8 @@ describe("Turn results view", () => {
 
     describe("when user is the owner but not the active player", () => {
       beforeEach(() => {
-        mockChannelContext.state.queue = ["user-2", "user-1"];
-        mockChannelContext.state.cursor = 0;
+        mockChannelContext.game.queue = ["user-2", "user-1"];
+        mockChannelContext.game.cursor = 0;
       });
 
       test("displays next turn button", () => {
@@ -232,7 +232,7 @@ describe("Turn results view", () => {
 
     describe("when user is not the active player and not the owner", () => {
       beforeEach(() => {
-        mockChannelContext.state.owner_id = "user-3";
+        mockChannelContext.game.owner_id = "user-3";
       });
 
       test("does not display next turn button", () => {

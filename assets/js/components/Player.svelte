@@ -5,13 +5,13 @@
   import { TURN_PHASE } from "~shared/types/turn";
   import { Play, Pause, SkipForward } from "lucide-svelte";
 
-  const { state, channel } = $derived.by(getGameContext);
+  const { game, channel } = $derived.by(getGameContext);
   const { user: currentPlayer } = $derived.by(getScopeContext);
 
-  let isPlayback = $derived(state?.player?.is_playback ?? false);
-  const turnPhase = $derived(state?.turn?.phase);
+  let isPlayback = $derived(game?.player?.is_playback ?? false);
+  const turnPhase = $derived(game?.turn?.phase);
   const activePlayerId = $derived.by(() => {
-    return state?.queue?.[state?.cursor];
+    return game?.queue?.[game?.cursor];
   });
 
   const showReady = $derived.by(() => {

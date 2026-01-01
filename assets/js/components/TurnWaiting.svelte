@@ -3,13 +3,13 @@
   import { getScopeContext } from "~components/Scope.svelte";
   import { PUSH_EVENT } from "~shared/types/channel";
 
-  const { state, channel } = $derived.by(getGameContext);
+  const { game, channel } = $derived.by(getGameContext);
   const { user: currentPlayer } = $derived.by(getScopeContext);
 
   const activePlayer = $derived.by(() => {
-    const activePlayerUuid = state?.queue?.[state?.cursor];
+    const activePlayerUuid = game?.queue?.[game?.cursor];
 
-    return state?.participants?.find(({ uuid }) => uuid === activePlayerUuid);
+    return game?.participants?.find(({ uuid }) => uuid === activePlayerUuid);
   });
 
   const isCurrentPlayerActive = $derived.by(() => {

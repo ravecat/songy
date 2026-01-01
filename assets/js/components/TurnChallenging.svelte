@@ -6,11 +6,11 @@
   import ActiveTimeline from "~components/ActiveTimeline.svelte";
   import CurrentTrack from "~components/CurrentTrack.svelte";
 
-  const { state } = $derived.by(getGameContext);
+  const { game } = $derived.by(getGameContext);
   const { user: currentPlayer } = $derived.by(getScopeContext);
 
   const activePlayerId = $derived.by(() => {
-    return state?.queue?.[state?.cursor];
+    return game?.queue?.[game?.cursor];
   });
 </script>
 

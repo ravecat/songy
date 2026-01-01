@@ -27,7 +27,7 @@ describe("Participants component", () => {
   ];
 
   const mockChannelContext = {
-    state: {
+    game: {
       participants: mockParticipants,
       scores: {
         "user-1": 42,
@@ -118,7 +118,7 @@ describe("Participants component", () => {
     };
     
     const emptyChannelContext = {
-      state: {
+      game: {
         participants: [],
         scores: {},
       },
@@ -190,7 +190,7 @@ describe("Participants component", () => {
     };
     
     const contextWithoutScores = {
-      state: {
+      game: {
         participants: mockParticipants,
         scores: {},
       },
@@ -213,7 +213,7 @@ describe("Participants component", () => {
     };
     
     const contextWithoutScoresField = {
-      state: {
+      game: {
         participants: mockParticipants,
       },
     };
@@ -235,7 +235,7 @@ describe("Participants component", () => {
     };
     
     const contextWithPartialScores = {
-      state: {
+      game: {
         participants: mockParticipants,
         scores: {
           "user-1": 25,

@@ -6,8 +6,8 @@
   import TurnResults from "~components/TurnResults.svelte";
   import TurnReady from "~components/TurnReady.svelte";
 
-  const { state } = $derived.by(getGameContext);
-  const turnPhase = $derived(state?.turn?.phase);
+  const { game } = $derived.by(getGameContext);
+  const turnPhase = $derived(game?.turn?.phase);
 </script>
 
 {#if turnPhase === TURN_PHASE.WAITING}
