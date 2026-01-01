@@ -54,7 +54,8 @@ defmodule SongyWeb.RoomChannel do
         broadcast(socket, "state", game)
         {:noreply, socket}
 
-      {:error, _} ->
+      {:error, reason} ->
+        Logger.warning("Failed to start game session #{room_id}: #{inspect(reason)}")
         {:noreply, socket}
     end
   end
@@ -142,7 +143,8 @@ defmodule SongyWeb.RoomChannel do
         broadcast(socket, "state", game)
         {:reply, :ok, socket}
 
-      {:error, _} ->
+      {:error, reason} ->
+        Logger.warning("Failed to advance phase for game #{room_id}: #{inspect(reason)}")
         {:noreply, socket}
     end
   end
@@ -158,7 +160,8 @@ defmodule SongyWeb.RoomChannel do
 
         {:reply, :ok, socket}
 
-      {:error, _} ->
+      {:error, reason} ->
+        Logger.warning("Failed to make assumption in game #{room_id}: #{inspect(reason)}")
         {:noreply, socket}
     end
   end
@@ -174,7 +177,8 @@ defmodule SongyWeb.RoomChannel do
 
         {:reply, :ok, socket}
 
-      {:error, _} ->
+      {:error, reason} ->
+        Logger.warning("Failed to reorder timeline in game #{room_id}: #{inspect(reason)}")
         {:noreply, socket}
     end
   end

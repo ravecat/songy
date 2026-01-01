@@ -390,7 +390,7 @@ defmodule SongyWeb.RoomChannelTest do
       end)
 
       Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn :providers, ^user_id ->
-        {:error, :not_found}
+        {:error, :provider_not_found}
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
@@ -473,7 +473,7 @@ defmodule SongyWeb.RoomChannelTest do
       end)
 
       Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn :providers, ^user_id ->
-        {:error, :not_found}
+        {:error, :provider_not_found}
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)

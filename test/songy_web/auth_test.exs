@@ -145,7 +145,7 @@ defmodule SongyWeb.AuthTest do
       user = User.new()
 
       Repatch.patch(Songy.Providers, :lookup, fn :providers, _user_uuid ->
-        {:error, :not_found}
+        {:error, :provider_not_found}
       end)
 
       conn =

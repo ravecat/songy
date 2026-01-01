@@ -60,7 +60,7 @@ defmodule Songy.Providers do
       {:ok, %Songy.Core.Provider.Spotify{access_token: "fresh_token", refresh_token: "refresh"}}
 
       iex> Songy.Providers.lookup(:providers, "unknown_user")
-      {:error, :not_found}
+      {:error, :provider_not_found}
   """
   @spec lookup(term(), String.t()) :: {:ok, term()} | {:error, atom()}
   def lookup(registry, user_id) when is_binary(user_id) do
@@ -70,13 +70,16 @@ defmodule Songy.Providers do
       {:ok, data}
     else
       {:match, false, actual_data} ->
+        Logger.debug("Provider token refreshed for user #{user_id}")
         GenServer.call(registry, {:update, user_id, actual_data})
         {:ok, actual_data}
 
       [] ->
-        {:error, :not_found}
+        Logger.warning("No provider found for user #{user_id}")
+        {:error, :provider_not_found}
 
       {:error, reason} ->
+        Logger.error("Provider error for user #{user_id}: #{inspect(reason)}")
         GenServer.call(registry, {:remove, user_id})
         {:error, reason}
     end

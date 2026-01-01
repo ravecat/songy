@@ -4,6 +4,8 @@ defmodule Songy.Boundary.GameSession do
   alias Songy.Core
   alias Songy.Providers
 
+  require Logger
+
   @id_size 2
 
   @default_opts [max_participants: 8, max_score: 10]
@@ -55,9 +57,12 @@ defmodule Songy.Boundary.GameSession do
          {:ok, track} <- Player.search_random_track(provider),
          {:ok, _game} <- Game.set_track(game_id, track),
          {:ok, game} <- Game.start_game(game_id) do
+      Logger.debug("Started game session #{game_id}, owner: #{game.owner_id}")
       {:ok, game}
     else
-      {:error, reason} -> {:error, reason}
+      {:error, reason} ->
+        Logger.error("Failed to start game session #{game_id}: #{inspect(reason)}")
+        {:error, reason}
     end
   end
 
@@ -70,7 +75,9 @@ defmodule Songy.Boundary.GameSession do
          {:ok, game} <- Game.start_playback(game_id, user_id) do
       {:ok, game}
     else
-      {:error, reason} -> {:error, reason}
+      {:error, reason} ->
+        Logger.error("Failed to start playback for game #{game_id}: #{inspect(reason)}")
+        {:error, reason}
     end
   end
 
@@ -82,7 +89,9 @@ defmodule Songy.Boundary.GameSession do
          {:ok, game} <- Game.pause_playback(game_id, user_id) do
       {:ok, game}
     else
-      {:error, reason} -> {:error, reason}
+      {:error, reason} ->
+        Logger.error("Failed to pause playback for game #{game_id}: #{inspect(reason)}")
+        {:error, reason}
     end
   end
 

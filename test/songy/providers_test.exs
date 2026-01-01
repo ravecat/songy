@@ -184,7 +184,7 @@ defmodule Songy.ProvidersTest do
 
   describe "lookup/2" do
     test "returns not_found for non-existent data", %{table: table} do
-      assert {:error, :not_found} = Providers.lookup(table, "user123")
+      assert {:error, :provider_not_found} = Providers.lookup(table, "user123")
     end
 
     test "returns data for existing providers", %{table: table} do
@@ -223,7 +223,7 @@ defmodule Songy.ProvidersTest do
 
       assert {:ok, %Spotify{access_token: "token1"}} = Providers.lookup(table, "user1")
       assert {:ok, %Spotify{access_token: "token2"}} = Providers.lookup(table, "user2")
-      assert {:error, :not_found} = Providers.lookup(table, "unknown_user")
+      assert {:error, :provider_not_found} = Providers.lookup(table, "unknown_user")
     end
 
     test "returns current provider regardless of which was inserted", %{table: table} do
