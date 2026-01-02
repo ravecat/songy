@@ -214,16 +214,15 @@ defmodule Songy.Boundary.GameTest do
       assert length(response.queue) == 2
     end
 
-    test "rejects start with insufficient participants", %{game_id: game_id} do
+    test "starts with a single participant", %{game_id: game_id} do
       user1 = %User{uuid: "user-1", name: "Player1"}
 
       join_participant(game_id, user1.uuid)
 
-      assert {:error, :insufficient_participants} = Game.start_game(game_id)
-    end
-
-    test "rejects start with no participants", %{game_id: game_id} do
-      assert {:error, :insufficient_participants} = Game.start_game(game_id)
+      assert {:ok, game} = Game.start_game(game_id)
+      assert game.status == :in_progress
+      assert length(game.queue) == 1
+      assert game.turn.phase == :waiting
     end
   end
 

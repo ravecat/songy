@@ -94,7 +94,7 @@ defmodule SongyWeb.RoomChannelTest do
       end)
 
       Repatch.patch(GameSession, :start_game_session, [mode: :shared], fn ^game_id ->
-        {:error, :insufficient_participants}
+        {:error, :start_game_failed}
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)

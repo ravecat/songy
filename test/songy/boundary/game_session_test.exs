@@ -73,12 +73,6 @@ defmodule Songy.Boundary.GameSessionTest do
       %{game_id: game.id, owner: owner, user: user}
     end
 
-    test "fails when not enough participants", %{owner: owner} do
-      {:ok, game} = GameSession.create_game_session(owner.uuid)
-
-      assert {:error, :insufficient_participants} = GameSession.start_game_session(game.id)
-    end
-
     test "starts game and sets turn track", %{game_id: game_id} do
       assert {:ok, game} = GameSession.start_game_session(game_id)
 

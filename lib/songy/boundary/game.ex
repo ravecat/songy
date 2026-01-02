@@ -156,19 +156,13 @@ defmodule Songy.Boundary.Game do
   def handle_event({:call, from}, :start_game, {:waiting, :none}, data) do
     Logger.info("Game #{data.id}: Starting game")
 
-    with :ok <- Core.Game.validate_min_participants(data) do
-      game = %{
-        data
-        | status: :in_progress,
-          turn: %Core.Turn{phase: :waiting, timeline: [], assumptions: []}
-      }
+    game = %{
+      data
+      | status: :in_progress,
+        turn: %Core.Turn{phase: :waiting, timeline: [], assumptions: []}
+    }
 
-      {:next_state, {:in_progress, :waiting}, game, [{:reply, from, {:ok, game}}, {:next_event, :internal, :broadcast}]}
-    else
-      {:error, reason} = error ->
-        Logger.warning("Game #{data.id}: Failed to start - #{reason}")
-        {:keep_state, data, [{:reply, from, error}]}
-    end
+    {:next_state, {:in_progress, :waiting}, game, [{:reply, from, {:ok, game}}, {:next_event, :internal, :broadcast}]}
   end
 
   def handle_event({:call, from}, :get_state, {:waiting, :none}, data) do

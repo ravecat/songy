@@ -10,7 +10,6 @@
   const { game } = $derived.by(getGameContext);
   const turnPhase = $derived(game?.turn?.phase);
   const gameStatus = $derived(game?.status);
-  const hasMoreThanOnePlayer = $derived((game?.participants?.length ?? 0) > 1);
 </script>
 
 {#if turnPhase === TURN_PHASE.WAITING}
@@ -21,6 +20,6 @@
   <TurnChallenging />
 {:else if turnPhase === TURN_PHASE.RESULTS}
   <TurnResults />
-{:else if gameStatus === GAME_STATUS.WAITING && !hasMoreThanOnePlayer}
+{:else if gameStatus === GAME_STATUS.WAITING}
   waiting for players...
 {/if}

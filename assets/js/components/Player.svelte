@@ -17,7 +17,6 @@
   const activePlayerId = $derived(game?.queue?.[game?.cursor]);
   const isActivePlayer = $derived(activePlayerId === currentPlayer?.uuid);
   const isOwner = $derived(game?.owner_id === currentPlayer?.uuid);
-  const hasMinPlayers = $derived(game?.participants?.length > 1);
   const isWaitingPhase = $derived(turnPhase === TURN_PHASE.WAITING);
   const canControlPlayback = $derived(isOwner || isActivePlayer);
   const canAdvanceTurn = $derived(isOwner || isActivePlayer);
@@ -49,7 +48,7 @@
   {#if visible}
     <button
       in:slide={{ duration: 400 }}
-      out:fly={{ y: 400, duration: 400 }}
+      out:fly={{ x: 400, duration: 400 }}
       type={props.type ?? "button"}
       {...props}
       class={cn(
@@ -74,8 +73,7 @@
     icon: isPlayback ? Pause : Play,
     text: isPlayback ? "stop" : "play",
     onclick: handlePlayback,
-    disabled:
-      !hasMinPlayers || turnPhase !== TURN_PHASE.READY || !canControlPlayback,
+    disabled: turnPhase !== TURN_PHASE.READY || !canControlPlayback,
   })}
 {/snippet}
 
