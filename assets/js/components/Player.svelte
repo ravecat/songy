@@ -1,32 +1,19 @@
 <script>
   import { getGameContext } from "~components/GameChannel.svelte";
   import { getScopeContext } from "~components/Scope.svelte";
+  import { computeGamePermissions } from "~/shared/permissions";
   import { PUSH_EVENT } from "~shared/types/channel";
   import { TURN_PHASE } from "~shared/types/turn";
-  import { GAME_STATUS } from "~shared/types/game";
   import { Play, Pause, SkipForward, RotateCcw } from "lucide-svelte";
   import { inertia } from "@inertiajs/svelte";
   import { slide, fly } from "svelte/transition";
   import { cn } from "~shared/utils/cn";
 
   const { game, channel } = $derived.by(getGameContext);
-  const { user: currentPlayer } = $derived.by(getScopeContext);
+  const { user } = $derived.by(getScopeContext);
+  const permissions = $derived(computeGamePermissions(game, user));
   const isPlayback = $derived(game?.player?.is_playback);
   const turnPhase = $derived(game?.turn?.phase);
-  const gameStatus = $derived(game?.status);
-  const activePlayerId = $derived(game?.queue?.[game?.cursor]);
-  const isActivePlayer = $derived(activePlayerId === currentPlayer?.uuid);
-  const isOwner = $derived(game?.owner_id === currentPlayer?.uuid);
-  const isWaitingPhase = $derived(turnPhase === TURN_PHASE.WAITING);
-  const canControlPlayback = $derived(isOwner || isActivePlayer);
-  const canAdvanceTurn = $derived(isOwner || isActivePlayer);
-  const canStartGame = $derived(
-    isActivePlayer && gameStatus === GAME_STATUS.WAITING
-  );
-  const canAdvanceFromWaiting = $derived(
-    isActivePlayer && gameStatus === GAME_STATUS.IN_PROGRESS && isWaitingPhase
-  );
-  const showPlayAgain = $derived(gameStatus === GAME_STATUS.FINISHED);
 
   const handlePlayback = () => {
     channel.push(
@@ -48,7 +35,7 @@
   {#if visible}
     <button
       in:slide={{ duration: 400 }}
-      out:fly={{ x: 400, duration: 400 }}
+      out:slide={{ x: 400, duration: 400 }}
       type={props.type ?? "button"}
       {...props}
       class={cn(
@@ -73,7 +60,7 @@
     icon: isPlayback ? Pause : Play,
     text: isPlayback ? "stop" : "play",
     onclick: handlePlayback,
-    disabled: turnPhase !== TURN_PHASE.READY || !canControlPlayback,
+    disabled: !permissions.canControlPlayback,
   })}
 {/snippet}
 
@@ -84,7 +71,7 @@
     text: "start",
     onclick: handleStartGame,
     class: "btn-primary",
-    visible: canStartGame,
+    visible: permissions.canStartGame,
   })}
 {/snippet}
 
@@ -95,7 +82,7 @@
     text: "ready",
     onclick: handleNextPhase,
     class: "btn-primary",
-    visible: canAdvanceFromWaiting,
+    visible: permissions.canAdvanceFromWaiting,
   })}
 {/snippet}
 
@@ -106,7 +93,10 @@
     text: turnPhase === TURN_PHASE.READY ? "forward" : "next turn",
     onclick: handleNextPhase,
     class: "btn-primary",
-    visible: canAdvanceTurn && !canStartGame && !canAdvanceFromWaiting,
+    visible:
+      permissions.canAdvanceTurn &&
+      !permissions.canStartGame &&
+      !permissions.canAdvanceFromWaiting,
   })}
 {/snippet}
 
@@ -117,7 +107,7 @@
       icon: RotateCcw,
       text: "rewind",
       type: "submit",
-      visible: showPlayAgain,
+      visible: permissions.showPlayAgain,
     })}
   </form>
 {/snippet}
