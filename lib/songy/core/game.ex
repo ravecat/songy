@@ -162,20 +162,4 @@ defmodule Songy.Core.Game do
     end)
   end
 
-  @doc false
-  @spec validate_playback_permission(t(), String.t() | nil) :: :ok | {:error, :unauthorized}
-  def validate_playback_permission(%__MODULE__{} = game, user_id) do
-    active_player = Enum.at(game.queue, game.cursor)
-
-    cond do
-      is_nil(user_id) ->
-        {:error, :unauthorized}
-
-      user_id == game.owner_id or user_id == active_player ->
-        :ok
-
-      true ->
-        {:error, :unauthorized}
-    end
-  end
 end

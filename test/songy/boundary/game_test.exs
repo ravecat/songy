@@ -739,42 +739,44 @@ defmodule Songy.Boundary.GameTest do
       assert game.player.is_playback == false
     end
 
-    test "active player can start playback during challenging phase", %{game_id: game_id, user1: user1} do
-      {:ok, _} = Game.start_playback(game_id, user1.uuid)
-      assert_receive {:state, game}, 25
-      assert game.player.is_playback == true
+    test "active player cannot start playback during challenging phase", %{game_id: game_id, user1: user1} do
+      {:error, :unauthorized} = Game.start_playback(game_id, user1.uuid)
     end
 
-    test "active player can pause playback during challenging phase", %{game_id: game_id, user1: user1} do
-      {:ok, _} = Game.start_playback(game_id, user1.uuid)
+    test "active player cannot pause playback during challenging phase", %{game_id: game_id, user1: user1, owner: owner} do
+      # First, activate playback via owner (owner can control in challenging phase)
+      {:ok, _} = Game.start_playback(game_id, owner.uuid)
       assert_receive {:state, game}, 25
       assert game.player.is_playback == true
 
-      {:ok, _} = Game.pause_playback(game_id, user1.uuid)
-      assert_receive {:state, game}, 25
-      assert game.player.is_playback == false
+      # Active player cannot pause
+      {:error, :unauthorized} = Game.pause_playback(game_id, user1.uuid)
     end
 
-    test "non-owner and non-active player cannot start playback during challenging phase", %{
+    test "challenger (non-owner and non-active player) can start playback during challenging phase", %{
       game_id: game_id,
       user2: user2
     } do
-      {:error, :unauthorized} = Game.start_playback(game_id, user2.uuid)
-      # No broadcast should happen
-      refute_receive {:state, %{player: %{is_playback: true}}}
+      # user2 is a challenger (not owner, not active player)
+      # Challengers can play music during challenging phase
+      {:ok, _} = Game.start_playback(game_id, user2.uuid)
+      assert_receive {:state, game}, 25
+      assert game.player.is_playback == true
     end
 
-    test "non-owner and non-active player cannot pause playback during challenging phase", %{
+    test "challenger (non-owner and non-active player) can pause playback during challenging phase", %{
       game_id: game_id,
       owner: owner,
       user2: user2
     } do
+      # user2 is a challenger (not owner, not active player)
       {:ok, _} = Game.start_playback(game_id, owner.uuid)
       assert_receive {:state, _}, 25
 
-      {:error, :unauthorized} = Game.pause_playback(game_id, user2.uuid)
-      # No pause broadcast should happen
-      refute_receive {:state, %{player: %{is_playback: false}}}
+      # Challengers can pause music during challenging phase
+      {:ok, _} = Game.pause_playback(game_id, user2.uuid)
+      assert_receive {:state, game}, 25
+      assert game.player.is_playback == false
     end
   end
 
@@ -836,46 +838,44 @@ defmodule Songy.Boundary.GameTest do
       assert game.player.is_playback == false
     end
 
-    test "active player can start playback during challenging phase", %{game_id: game_id, user1: user1} do
-      {:ok, _} = Game.start_playback(game_id, user1.uuid)
-
-      assert_receive {:state, game}, 25
-      assert game.player.is_playback == true
+    test "active player cannot start playback during challenging phase", %{game_id: game_id, user1: user1} do
+      {:error, :unauthorized} = Game.start_playback(game_id, user1.uuid)
     end
 
-    test "active player can pause playback during challenging phase", %{game_id: game_id, user1: user1} do
-      {:ok, _} = Game.start_playback(game_id, user1.uuid)
+    test "active player cannot pause playback during challenging phase", %{game_id: game_id, user1: user1, owner: owner} do
+      # First, activate playback via owner (owner can control in challenging phase)
+      {:ok, _} = Game.start_playback(game_id, owner.uuid)
       assert_receive {:state, game}, 25
       assert game.player.is_playback == true
 
-      {:ok, _} = Game.pause_playback(game_id, user1.uuid)
-
-      assert_receive {:state, game}, 25
-      assert game.player.is_playback == false
+      # Active player cannot pause
+      {:error, :unauthorized} = Game.pause_playback(game_id, user1.uuid)
     end
 
-    test "non-owner and non-active player cannot start playback during challenging phase", %{
+    test "challenger (non-owner and non-active player) can start playback during challenging phase", %{
       game_id: game_id,
       user2: user2
     } do
-      {:error, :unauthorized} = Game.start_playback(game_id, user2.uuid)
-
-      # No broadcast should happen
-      refute_receive {:state, %{player: %{is_playback: true}}}
+      # user2 is a challenger (not owner, not active player)
+      # Challengers can play music during challenging phase
+      {:ok, _} = Game.start_playback(game_id, user2.uuid)
+      assert_receive {:state, game}, 25
+      assert game.player.is_playback == true
     end
 
-    test "non-owner and non-active player cannot pause playback during challenging phase", %{
+    test "challenger (non-owner and non-active player) can pause playback during challenging phase", %{
       game_id: game_id,
       owner: owner,
       user2: user2
     } do
+      # user2 is a challenger (not owner, not active player)
       {:ok, _} = Game.start_playback(game_id, owner.uuid)
       assert_receive {:state, _}, 25
 
-      {:error, :unauthorized} = Game.pause_playback(game_id, user2.uuid)
-
-      # No pause broadcast should happen
-      refute_receive {:state, %{player: %{is_playback: false}}}
+      # Challengers can pause music during challenging phase
+      {:ok, _} = Game.pause_playback(game_id, user2.uuid)
+      assert_receive {:state, game}, 25
+      assert game.player.is_playback == false
     end
   end
 

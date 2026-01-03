@@ -29,6 +29,9 @@ songy-*.tar
 /priv/ssr.js
 /priv/static/*
 
+# Ignore generated policy files for frontend (copied at build time)
+/assets/public/policy/
+
 # Ignore digested assets cache.
 /priv/static/cache_manifest.json
 

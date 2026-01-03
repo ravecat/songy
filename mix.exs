@@ -72,7 +72,8 @@ defmodule Songy.MixProject do
       {:unique_names_generator, "~> 0.2"},
       {:polymorphic_embed, git: "https://github.com/mathieuprog/polymorphic_embed.git", tag: "v5.0.3"},
       {:spotify_ex, github: "jsncmgs1/spotify_ex", tag: "v2.4.0"},
-      {:stream_data, "~> 1.2"}
+      {:stream_data, "~> 1.2"},
+      {:casbin, "~> 1.1"}
     ]
   end
 
@@ -91,15 +92,21 @@ defmodule Songy.MixProject do
       "test.only": ["test --only only"],
       "test.watch": ["test.watch"],
       "assets.setup": ["bun.install --if-missing", "bun assets install"],
-      "assets.build": ["bun vite build"],
+      "assets.build": ["policy.copy", "bun vite build"],
       "assets.test": ["bun assets run test:run"],
       "assets.test.watch": ["bun assets run test:watch"],
       "assets.test.ui": ["bun assets run test:ui"],
       "assets.test.coverage": ["bun assets run test:coverage"],
       "assets.test.typecheck": ["bun assets run typecheck"],
       "assets.deploy": [
-        "assets.build",
+        "policy.copy",
+        "bun vite build",
         "phx.digest"
+      ],
+      "policy.copy": [
+        "cmd mkdir -p assets/public/policy",
+        "cmd cp priv/policy/model.conf assets/public/policy/",
+        "cmd cp priv/policy/rules.csv assets/public/policy/"
       ],
       deploy: [
         "deps.get --only prod",

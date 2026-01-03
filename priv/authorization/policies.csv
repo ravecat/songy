@@ -1,0 +1,26 @@
+p, owner, waiting, *, start_game
+
+p, player, in_progress, waiting, start_playback
+p, player, in_progress, waiting, pause_playback
+p, player, in_progress, waiting, next_phase
+p, owner, in_progress, waiting, start_playback
+p, owner, in_progress, waiting, pause_playback
+p, owner, in_progress, waiting, next_phase
+
+p, player, in_progress, ready, start_playback
+p, player, in_progress, ready, pause_playback
+p, player, in_progress, ready, next_phase
+p, owner, in_progress, ready, start_playback
+p, owner, in_progress, ready, pause_playback
+p, owner, in_progress, ready, make_assumption
+p, owner, in_progress, ready, reorder_timeline
+
+p, challenger, in_progress, challenging, start_playback
+p, challenger, in_progress, challenging, pause_playback
+p, owner, in_progress, challenging, start_playback
+p, owner, in_progress, challenging, pause_playback
+p, owner, in_progress, challenging, make_assumption
+p, owner, in_progress, challenging, reorder_timeline
+
+p, player, in_progress, results, next_phase
+p, owner, in_progress, results, next_phase
