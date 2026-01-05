@@ -90,7 +90,31 @@ describe("Player", () => {
     expect(screen.getByRole("button", { name: "Play track" })).toBeDisabled();
   });
 
-  test("shows disabled Next and enabled Play for active player in ready phase", () => {
+  test("shows Next and enabled Play for active non-owner in ready phase", () => {
+    const mockScopeContext = {
+      user: {
+        uuid: "user-2",
+        name: "Bob",
+      },
+    };
+
+    mockChannelContext.game.status = GAME_STATUS.IN_PROGRESS;
+    mockChannelContext.game.turn = {
+      phase: TURN_PHASE.READY,
+      assumptions: [],
+    };
+    mockChannelContext.game.cursor = 1;
+
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
+    getGameContextSpy.mockReturnValue(mockChannelContext);
+
+    render(Player);
+
+    expect(screen.getByRole("button", { name: "Play track" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Next phase" })).toBeEnabled();
+  });
+
+  test("hides Next for owner in ready phase", () => {
     const mockScopeContext = {
       user: {
         uuid: "user-1",
@@ -110,7 +134,9 @@ describe("Player", () => {
     render(Player);
 
     expect(screen.getByRole("button", { name: "Play track" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Next phase" })).toBeEnabled();
+    expect(
+      screen.queryByRole("button", { name: "Next phase" })
+    ).not.toBeInTheDocument();
   });
 
   test("disables Play for non-active player in ready phase", () => {

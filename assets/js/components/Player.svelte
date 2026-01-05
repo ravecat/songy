@@ -1,7 +1,7 @@
 <script>
   import { getGameContext } from "~components/GameChannel.svelte";
   import { getScopeContext } from "~components/Scope.svelte";
-  import { computeGamePermissions } from "~/shared/permissions";
+  import { computePermissions } from "~/shared/authorization";
   import { PUSH_EVENT } from "~shared/types/channel";
   import { TURN_PHASE } from "~shared/types/turn";
   import { Play, Pause, SkipForward, RotateCcw } from "lucide-svelte";
@@ -11,7 +11,7 @@
 
   const { game, channel } = $derived.by(getGameContext);
   const { user } = $derived.by(getScopeContext);
-  const permissions = $derived(computeGamePermissions(game, user));
+  const permissions = $derived(computePermissions(game, user));
   const isPlayback = $derived(game?.player?.is_playback);
   const turnPhase = $derived(game?.turn?.phase);
 
@@ -107,7 +107,7 @@
       icon: RotateCcw,
       text: "rewind",
       type: "submit",
-      visible: permissions.showPlayAgain,
+      visible: permissions.canRestartGame,
     })}
   </form>
 {/snippet}
