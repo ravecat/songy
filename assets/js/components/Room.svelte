@@ -6,8 +6,6 @@
   import Participants from "~components/Participants.svelte";
 
   const { game } = $derived.by(getGameContext);
-
-  let isWaiting = $derived(game?.status === "waiting");
 </script>
 
 <div

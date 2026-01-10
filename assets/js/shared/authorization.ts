@@ -1,6 +1,9 @@
-import { MemoryAdapter, Model, newEnforcer } from 'casbin-core';
-import casbinModel from '~priv/authorization/model.conf?raw';
-import casbinPolicy from '~priv/authorization/policies.csv?raw';
+/**
+ * @deprecated This module is deprecated. Permissions are now computed on the server
+ * and sent via the "permissions" channel event. This file is kept for reference only.
+ * Use the permissions received from the GameContext instead.
+ */
+
 import type { Game } from '~shared/types/game';
 import type { User } from '~shared/types/user';
 import { GAME_STATUS } from '~shared/types/game';
@@ -8,27 +11,14 @@ import { TURN_PHASE } from '~shared/types/turn';
 
 /**
  * Role represents the user's subject in the authorization model.
- * The subject resolution mirrors Songy.Authorization.subject/2.
  */
-type Role = 'owner' | 'player' | 'challenger';
-
-/**
- * Actions defined in priv/authorization/policies.csv.
- */
-type Action =
-  | 'start_game'
-  | 'start_playback'
-  | 'pause_playback'
-  | 'next_phase'
-  | 'make_assumption'
-  | 'reorder_timeline'
-  | 'spectate';
+export type Role = 'owner' | 'player' | 'challenger';
 
 /**
  * Computed permissions for a user in a specific game context.
  * These permissions determine what actions the UI should allow.
  */
-interface Permissions {
+export interface Permissions {
   /** Whether user can control Spotify playback */
   canControlPlayback: boolean;
   /** Whether user can advance to next turn/phase */
@@ -41,71 +31,129 @@ interface Permissions {
   canRestartGame: boolean;
 }
 
-// Casbin enforcer initialized once from raw model and policy files (no role lookups in matcher).
-const enforcer = await (async () => {
-  const m = new Model(casbinModel);
-  const adapter = new MemoryAdapter(casbinPolicy);
-  return newEnforcer(m, adapter);
-})();
+/**
+ * Default empty permissions (no access)
+ */
+export const defaultPermissions: Permissions = {
+  canControlPlayback: false,
+  canAdvanceTurn: false,
+  canStartGame: false,
+  canAdvanceFromWaiting: false,
+  canRestartGame: false,
+};
 
-function resolveSubject(game: Game | null, user: User | null): Role | null {
-  if (!game || !user) return null;
-
-  if (game.owner_id === user.uuid) return 'owner';
-
-  const activePlayerId = game.queue[game.cursor];
-  if (activePlayerId === user.uuid) return 'player';
-
-  return 'challenger';
-}
-
-function resolveState(game: Game | null): string {
-  return game?.status ?? 'nil';
-}
-
-function resolvePhase(game: Game | null): string {
-  return game?.turn?.phase ?? 'nil';
+/**
+ * Determines if the user is the game owner
+ */
+function isOwner(game: Game | null, user: User | null): boolean {
+  return !!(game && user && game.owner_id === user.uuid);
 }
 
 /**
- * Checks if a user can perform an action using authorization policies.
- * Mirrors Songy.Authorization.can?/3.
+ * Determines if the user is the active player
  */
-function can(
-  game: Game | null,
-  user: User | null,
-  action: Action
-): boolean {
-  const subject = resolveSubject(game, user);
-
-  if (!subject) return false;
-
-  const state = resolveState(game);
-  const phase = resolvePhase(game);
-
-  return enforcer.enforceSync(subject, state, phase, action);
+function isPlayer(game: Game | null, user: User | null): boolean {
+  return !!(
+    game &&
+    user &&
+    game.queue[game.cursor] === user.uuid &&
+    !isOwner(game, user)
+  );
 }
 
 /**
- * Main permission computation function.
- * Pure function: takes game state and user info, returns permissions.
+ * Determines if the user is a challenger (not owner, not active player)
  */
-export function computePermissions(
+function isChallenger(game: Game | null, user: User | null): boolean {
+  if (!game || !user) {
+    return false;
+  }
+
+  return !isOwner(game, user) && !isPlayer(game, user);
+}
+
+/**
+ * Computes permissions based on user role and game state
+ */
+function computePermissions(
   game: Game | null,
-  currentUser: User | null
+  user: User | null
 ): Permissions {
-  const canStartGame = can(game, currentUser, 'start_game');
-  const canStartPlayback = can(game, currentUser, 'start_playback');
-  const canPausePlayback = can(game, currentUser, 'pause_playback');
-  const canControlPlayback = canStartPlayback || canPausePlayback;
-  const canNextPhase = can(game, currentUser, 'next_phase');
+  if (!game || !user) {
+    return defaultPermissions;
+  }
 
-  const isInProgress = game?.status === GAME_STATUS.IN_PROGRESS;
-  const isWaitingPhase = isInProgress && game?.turn?.phase === TURN_PHASE.WAITING;
+  const status = game.status;
+  const phase = game.turn?.phase ?? TURN_PHASE.WAITING;
+  const isInProgress = status === GAME_STATUS.IN_PROGRESS;
+  const isFinished = status === GAME_STATUS.FINISHED;
+  const isWaitingPhase = phase === TURN_PHASE.WAITING;
+  const isReadyPhase = phase === TURN_PHASE.READY;
+  const isChallengingPhase = phase === TURN_PHASE.CHALLENGING;
+  const isResultsPhase = phase === TURN_PHASE.RESULTS;
 
-  const canAdvanceFromWaiting = canNextPhase && isWaitingPhase;
-  const canAdvanceTurn = canNextPhase && isInProgress && !isWaitingPhase;
-  const canRestartGame = Boolean(game && currentUser && game.status === GAME_STATUS.FINISHED);
+  // Default permissions for all roles
+  let canControlPlayback = false;
+  let canAdvanceTurn = false;
+  let canStartGame = false;
+  let canAdvanceFromWaiting = false;
+  let canRestartGame = false;
+
+  // Owner permissions
+  if (isOwner(game, user)) {
+    if (status === GAME_STATUS.WAITING) {
+      canStartGame = true;
+    }
+
+    if (isInProgress) {
+      if (isWaitingPhase) {
+        canControlPlayback = true;
+        canAdvanceFromWaiting = true;
+      } else if (isReadyPhase) {
+        canControlPlayback = true;
+      } else if (isChallengingPhase) {
+        canControlPlayback = true;
+      } else if (isResultsPhase) {
+        canAdvanceTurn = true;
+      }
+    }
+
+    if (isFinished) {
+      canRestartGame = true;
+    }
+  }
+
+  // Player (active player) permissions
+  if (isPlayer(game, user)) {
+    if (isInProgress) {
+      if (isWaitingPhase) {
+        canControlPlayback = true;
+        canAdvanceFromWaiting = true;
+      } else if (isReadyPhase) {
+        canControlPlayback = true;
+        canAdvanceTurn = true;
+      } else if (isResultsPhase) {
+        canAdvanceTurn = true;
+      }
+    }
+
+    if (isFinished) {
+      canRestartGame = true;
+    }
+  }
+
+  // Challenger permissions
+  if (isChallenger(game, user)) {
+    // Can only control playback during challenging phase
+    if (isInProgress && isChallengingPhase) {
+      canControlPlayback = true;
+    }
+
+    // Can always restart finished game
+    if (isFinished) {
+      canRestartGame = true;
+    }
+  }
 
   return {
     canControlPlayback,
@@ -114,4 +162,18 @@ export function computePermissions(
     canAdvanceFromWaiting,
     canRestartGame,
   };
+}
+
+/**
+ * Computes permissions for a user in a game context
+ * Use with $derived in Svelte components for reactivity
+ *
+ * Example:
+ * const permissions = $derived(getPermissions(game, user));
+ */
+export function getPermissions(
+  game: Game | null,
+  user: User | null
+): Permissions {
+  return computePermissions(game, user);
 }

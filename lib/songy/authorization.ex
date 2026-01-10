@@ -1,112 +1,89 @@
 defmodule Songy.Authorization do
   @moduledoc """
-  Authorization system using Casbin for role-based access control (RBAC).
+  Authorization checks for game actions.
 
-  This module starts the Casbin enforcer and provides functions to check permissions
-  based on game state. The permission rules are defined in priv/authorization/policies.csv
-  with the model in priv/authorization/model.conf.
-
+  This module delegates to `Songy.Policy` and provides helper functions for
+  computing UI permissions.
   """
 
-  use GenServer
-
-  require Logger
-
-  alias Casbin.EnforcerServer
-  alias Casbin.EnforcerSupervisor
   alias Songy.Core.Game
-
-  @enforcer_name :songy_authorization_enforcer
-  @model_path "priv/authorization/model.conf"
-  @policy_path "priv/authorization/policies.csv"
-
-  # Client API
-
-  def start_link(opts) do
-    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
-  end
+  alias Songy.Policy
 
   @doc """
   Checks if a user can perform an action in a game context.
 
   Returns :ok if authorized, {:error, :unauthorized} otherwise.
-
-  Each user resolves to a single subject (`owner`, `player`, or `challenger`)
-  based on the current game state.
-
-  ## Examples
-
-      iex> Authorization.can?(game, user_id, :start_playback)
-      :ok
-
-      iex> Authorization.can?(game, user_id, :start_game)
-      {:error, :unauthorized}
   """
-  @spec can?(Game.t(), String.t() | nil, atom()) :: :ok | {:error, :unauthorized}
+  @spec can?(Game.t() | nil, String.t() | nil, atom()) :: :ok | {:error, :unauthorized}
   def can?(game, user_id, action) do
-    subject = subject(game, user_id)
-    state = state(game)
+    Bodyguard.permit(Policy, action, user_id, game)
+  end
+
+  @doc """
+  Computes permissions for a user in a game context.
+  """
+  @spec permissions(Game.t() | nil, String.t() | nil) :: %{
+          can_control_playback: boolean(),
+          can_advance_turn: boolean(),
+          can_start_game: boolean(),
+          can_ready: boolean(),
+          can_restart_game: boolean()
+        }
+  def permissions(nil, _user_id), do: default_permissions()
+  def permissions(_game, nil), do: default_permissions()
+
+  def permissions(%Game{} = game, user_id) do
+    status = game.status
     phase = phase(game)
 
-    authorized = allow?(subject, state, phase, action)
-
-    if authorized do
-      :ok
-    else
-      {:error, :unauthorized}
-    end
+    %{
+      can_control_playback: can_control_playback?(game, user_id),
+      can_advance_turn: can_advance_turn?(game, user_id, status, phase),
+      can_start_game: can_start_game?(game, user_id, status, phase),
+      can_ready: can_ready?(game, user_id, status, phase),
+      can_restart_game: can_restart_game?(game, user_id, status)
+    }
   end
 
-  @impl true
-  def init(_opts) do
-    with {:ok, _pid} <- EnforcerSupervisor.start_enforcer(@enforcer_name, @model_path),
-         :ok <- EnforcerServer.load_policies(@enforcer_name, @policy_path) do
-      Logger.info("Casbin enforcer initialized")
-      {:ok, %{}}
-    else
-      {:error, {:already_started, _pid}} ->
-        :ok = EnforcerServer.load_policies(@enforcer_name, @policy_path)
-        Logger.info("Casbin enforcer initialized")
-        {:ok, %{}}
-
-      {:error, reason} ->
-        Logger.error("Failed to start Casbin enforcer: #{inspect(reason)}")
-        {:stop, reason}
-    end
+  defp default_permissions do
+    %{
+      can_control_playback: false,
+      can_advance_turn: false,
+      can_start_game: false,
+      can_ready: false,
+      can_restart_game: false
+    }
   end
 
-  # Private functions
-
-  @doc false
-  @spec subject(Game.t(), String.t() | nil) :: String.t() | nil
-  defp subject(_game, nil) do
-    nil
+  defp can_control_playback?(game, user_id) do
+    Bodyguard.permit?(Policy, :start_playback, user_id, game) or
+      Bodyguard.permit?(Policy, :pause_playback, user_id, game)
   end
 
-  defp subject(game, user_id) do
-    is_owner = game.owner_id == user_id
-    active_player = Enum.at(game.queue, game.cursor)
-    is_active = active_player == user_id
-
-    cond do
-      is_owner -> "owner"
-      is_active -> "player"
-      true -> "challenger"
-    end
+  defp can_advance_turn?(game, user_id, :in_progress, phase) when phase in [:ready, :results] do
+    Bodyguard.permit?(Policy, :next_phase, user_id, game)
   end
 
-  defp allow?(nil, _state, _phase, _action), do: false
+  defp can_advance_turn?(_game, _user_id, _status, _phase), do: false
 
-  defp allow?(subject, state, phase, action) when is_atom(action) do
-    EnforcerServer.allow?(@enforcer_name, [subject, state, phase, Atom.to_string(action)])
+  defp can_ready?(game, user_id, :in_progress, :waiting) do
+    Bodyguard.permit?(Policy, :next_phase, user_id, game)
   end
 
-  @doc false
-  @spec state(Game.t()) :: String.t()
-  defp state(%Game{status: status}), do: to_string(status)
+  defp can_ready?(_game, _user_id, _status, _phase), do: false
 
-  @doc false
-  @spec phase(Game.t()) :: String.t()
-  defp phase(%Game{turn: %{phase: phase}}), do: to_string(phase)
-  defp phase(_), do: to_string(nil)
+  defp can_start_game?(game, user_id, :waiting, _phase) do
+    Bodyguard.permit?(Policy, :start_game, user_id, game)
+  end
+
+  defp can_start_game?(_game, _user_id, _status, _phase), do: false
+
+  defp can_restart_game?(%Game{owner_id: owner_id}, user_id, :finished) do
+    owner_id == user_id
+  end
+
+  defp can_restart_game?(_game, _user_id, _status), do: false
+
+  defp phase(%Game{turn: %{phase: phase}}), do: phase
+  defp phase(_), do: nil
 end

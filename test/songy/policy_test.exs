@@ -1,7 +1,6 @@
-defmodule Songy.AuthorizationTest do
-  use ExUnit.Case, async: false
+defmodule Songy.PolicyTest do
+  use ExUnit.Case, async: true
 
-  alias Songy.Authorization
   alias Songy.Core.{Game, Turn}
 
   @all_actions [
@@ -44,34 +43,12 @@ defmodule Songy.AuthorizationTest do
     %{state: :finished, phase: nil, allowed: []}
   ]
 
-  setup_all do
-    case start_supervised(Authorization) do
-      {:ok, _pid} -> :ok
-      {:error, {:already_started, _pid}} -> :ok
-    end
-
-    :ok
-  end
-
   describe "owner policies" do
     for %{state: state, phase: phase, allowed: allowed} <- @owner_cases do
       test "#{state}/#{inspect(phase)}" do
         owner_id = "owner"
         queue = ["player", "challenger", owner_id]
-        game = %Game{
-          status: unquote(state),
-          owner_id: owner_id,
-          queue: queue,
-          cursor: 0,
-          turn:
-            case unquote(state) do
-              :in_progress ->
-                %Turn{phase: unquote(phase), timeline: [], assumptions: []}
-
-              _ ->
-                nil
-            end
-        }
+        game = game(unquote(state), unquote(phase), owner_id, queue)
         user_id = owner_id
         allowed = unquote(allowed)
 
@@ -87,20 +64,7 @@ defmodule Songy.AuthorizationTest do
         owner_id = "owner"
         player_id = "player"
         queue = [player_id, "challenger"]
-        game = %Game{
-          status: unquote(state),
-          owner_id: owner_id,
-          queue: queue,
-          cursor: 0,
-          turn:
-            case unquote(state) do
-              :in_progress ->
-                %Turn{phase: unquote(phase), timeline: [], assumptions: []}
-
-              _ ->
-                nil
-            end
-        }
+        game = game(unquote(state), unquote(phase), owner_id, queue)
         user_id = player_id
         allowed = unquote(allowed)
 
@@ -116,20 +80,7 @@ defmodule Songy.AuthorizationTest do
         owner_id = "owner"
         challenger_id = "challenger"
         queue = ["player", challenger_id]
-        game = %Game{
-          status: unquote(state),
-          owner_id: owner_id,
-          queue: queue,
-          cursor: 0,
-          turn:
-            case unquote(state) do
-              :in_progress ->
-                %Turn{phase: unquote(phase), timeline: [], assumptions: []}
-
-              _ ->
-                nil
-            end
-        }
+        game = game(unquote(state), unquote(phase), owner_id, queue)
         user_id = challenger_id
         allowed = unquote(allowed)
 
@@ -139,15 +90,29 @@ defmodule Songy.AuthorizationTest do
     end
   end
 
+  defp game(state, phase, owner_id, queue) do
+    %Game{
+      status: state,
+      owner_id: owner_id,
+      queue: queue,
+      cursor: 0,
+      turn:
+        case state do
+          :in_progress -> %Turn{phase: phase, timeline: [], assumptions: []}
+          _ -> nil
+        end
+    }
+  end
+
   defp assert_allowed(game, user_id, actions) do
     Enum.each(actions, fn action ->
-      assert :ok == Authorization.can?(game, user_id, action)
+      assert :ok == Bodyguard.permit(Songy.Policy, action, user_id, game)
     end)
   end
 
   defp assert_denied(game, user_id, actions) do
     Enum.each(actions, fn action ->
-      assert {:error, :unauthorized} == Authorization.can?(game, user_id, action)
+      assert {:error, :unauthorized} == Bodyguard.permit(Songy.Policy, action, user_id, game)
     end)
   end
 end

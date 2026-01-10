@@ -2,6 +2,8 @@ defmodule SongyWeb.RoomChannelTest do
   use SongyWeb.ChannelCase
 
   alias Songy.Boundary.GameSession
+  alias Songy.Core.Game
+  alias Songy.Core.Turn
   alias Songy.Core.User
   alias SongyWeb.Presence
 
@@ -27,7 +29,15 @@ defmodule SongyWeb.RoomChannelTest do
       game_id = "game-123"
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :waiting, participants: [], timelines: %{}}}
+        {:ok,
+         %Game{
+           id: game_id,
+           owner_id: "owner123",
+           status: :waiting,
+           queue: [],
+           cursor: 0,
+           turn: nil
+         }}
       end)
 
       {:ok, _reply, socket} = join_room_channel(current_user, game_id)
@@ -38,7 +48,15 @@ defmodule SongyWeb.RoomChannelTest do
 
     test "pushes state to client on join", %{current_user: current_user} do
       game_id = "game-123"
-      game_state = %{status: :waiting, participants: [], timelines: %{}}
+
+      game_state = %Game{
+        id: game_id,
+        owner_id: "owner123",
+        status: :waiting,
+        queue: [],
+        cursor: 0,
+        turn: nil
+      }
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
         {:ok, game_state}
@@ -46,7 +64,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _reply, _socket} = join_room_channel(current_user, game_id)
 
-      assert_push("state", ^game_state)
+      assert_push("state", %{game: ^game_state, permissions: _permissions})
     end
 
     test "handles missing game session gracefully", %{current_user: current_user} do
@@ -62,35 +80,85 @@ defmodule SongyWeb.RoomChannelTest do
     end
   end
 
+  describe "state updates" do
+    test "push state when channel receives a state message", %{current_user: current_user} do
+      game_id = "game-123"
+
+      initial_game = %Game{
+        id: game_id,
+        owner_id: "owner123",
+        status: :waiting,
+        queue: [],
+        cursor: 0,
+        turn: nil
+      }
+
+      updated_game = %Game{
+        id: game_id,
+        owner_id: "owner123",
+        status: :in_progress,
+        queue: [current_user.uuid],
+        cursor: 0,
+        turn: %Turn{phase: :waiting}
+      }
+
+      Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
+        {:ok, initial_game}
+      end)
+
+      {:ok, _, socket} = join_room_channel(current_user, game_id)
+      assert_push("state", %{game: ^initial_game, permissions: _permissions})
+
+      send(socket.channel_pid, {:state, updated_game})
+
+      assert_push("state", %{game: ^updated_game, permissions: _permissions})
+    end
+  end
+
   # === START_GAME EVENT ===
 
   describe "start_game" do
-    test "broadcasts state when start_game succeeds", %{current_user: current_user} do
+    test "does not reply when start_game succeeds", %{current_user: current_user} do
       game_id = "game-123"
-      new_game_state = %{status: :in_progress, turn: %{phase: :waiting}}
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :waiting}}
+        {:ok,
+         %Game{
+           id: game_id,
+           owner_id: "owner123",
+           status: :waiting,
+           queue: [],
+           cursor: 0,
+           turn: nil
+         }}
       end)
 
       Repatch.patch(GameSession, :start_game_session, [mode: :shared], fn ^game_id ->
-        {:ok, new_game_state}
+        {:ok, %{status: :in_progress}}
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", %{status: :waiting})
+      assert_push("state", %{game: %{status: :waiting}})
 
-      push(socket, "start_game", %{})
+      ref = push(socket, "start_game", %{})
 
-      assert_broadcast("state", ^new_game_state)
+      refute_reply(ref, :ok)
     end
 
-    test "silently handles start_game errors", %{current_user: current_user} do
+    test "does not reply when start_game fails", %{current_user: current_user} do
       game_id = "game-123"
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :waiting}}
+        {:ok,
+         %Game{
+           id: game_id,
+           owner_id: "owner123",
+           status: :waiting,
+           queue: [],
+           cursor: 0,
+           turn: nil
+         }}
       end)
 
       Repatch.patch(GameSession, :start_game_session, [mode: :shared], fn ^game_id ->
@@ -99,70 +167,61 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", %{status: :waiting})
+      assert_push("state", %{game: %{status: :waiting}})
 
-      push(socket, "start_game", %{})
+      ref = push(socket, "start_game", %{})
 
-      # Should not broadcast state on error
-      refute_broadcast("state", %{status: :in_progress})
+      refute_reply(ref, :ok)
     end
   end
 
   # === PLAYBACK EVENTS ===
 
   describe "start_playback" do
-    test "owner can start playback", %{owner: owner} do
+    test "replies :ok when start_playback succeeds", %{current_user: current_user} do
       game_id = "game-123"
-      owner_id = owner.uuid
+      user_id = current_user.uuid
       new_state = %{player: %{is_playback: true}}
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :in_progress}}
+        {:ok,
+         %Game{
+           id: game_id,
+           owner_id: "owner123",
+           status: :in_progress,
+           queue: [],
+           cursor: 0,
+           turn: %Turn{phase: :waiting}
+         }}
       end)
 
-      Repatch.patch(GameSession, :start_playback, [mode: :shared], fn ^game_id, ^owner_id ->
-        {:ok, new_state}
-      end)
-
-      {:ok, _, socket} = join_room_channel(owner, game_id)
-      # Consume push from join
-      assert_push("state", %{status: :in_progress})
-
-      ref = push(socket, "start_playback", %{})
-
-      assert_reply(ref, :ok)
-      assert_broadcast("state", ^new_state)
-    end
-
-    test "active player can start playback", %{current_user: current_user} do
-      game_id = "game-123"
-      active_player_id = current_user.uuid
-      new_state = %{player: %{is_playback: true}}
-
-      Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :in_progress}}
-      end)
-
-      Repatch.patch(GameSession, :start_playback, [mode: :shared], fn ^game_id, ^active_player_id ->
+      Repatch.patch(GameSession, :start_playback, [mode: :shared], fn ^game_id, ^user_id ->
         {:ok, new_state}
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", %{status: :in_progress})
+      assert_push("state", %{game: %{status: :in_progress}})
 
       ref = push(socket, "start_playback", %{})
 
       assert_reply(ref, :ok)
-      assert_broadcast("state", ^new_state)
     end
 
-    test "non-owner and non-active player cannot start playback", %{current_user: current_user} do
+    test "does not reply when start_playback fails", %{current_user: current_user} do
       game_id = "game-123"
       user_id = current_user.uuid
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :in_progress}}
+        {:ok,
+         %Game{
+           id: game_id,
+           owner_id: "owner123",
+           status: :in_progress,
+           queue: [],
+           cursor: 0,
+           turn: %Turn{phase: :waiting}
+         }}
       end)
 
       Repatch.patch(GameSession, :start_playback, [mode: :shared], fn ^game_id, ^user_id ->
@@ -171,94 +230,59 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", %{status: :in_progress})
+      assert_push("state", %{game: %{status: :in_progress}})
 
       ref = push(socket, "start_playback", %{})
 
-      # Should not get reply on error
       refute_reply(ref, :ok)
-      # No broadcast should happen
-      refute_broadcast("state", %{player: %{is_playback: true}})
-    end
-
-    test "handles start_playback errors silently", %{owner: owner} do
-      game_id = "game-123"
-      owner_id = owner.uuid
-
-      Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :in_progress}}
-      end)
-
-      Repatch.patch(GameSession, :start_playback, [mode: :shared], fn ^game_id, ^owner_id ->
-        {:error, :playback_failed}
-      end)
-
-      {:ok, _, socket} = join_room_channel(owner, game_id)
-      # Consume push from join
-      assert_push("state", %{status: :in_progress})
-
-      ref = push(socket, "start_playback", %{})
-
-      # On error, no reply should be sent
-      refute_reply(ref, :ok)
-      # No broadcast should happen
-      refute_broadcast("state", %{player: %{is_playback: true}})
     end
   end
 
   describe "pause_playback" do
-    test "owner can pause playback", %{owner: owner} do
+    test "replies :ok when pause_playback succeeds", %{current_user: current_user} do
       game_id = "game-123"
-      owner_id = owner.uuid
+      user_id = current_user.uuid
       new_state = %{player: %{is_playback: false}}
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :in_progress}}
+        {:ok,
+         %Game{
+           id: game_id,
+           owner_id: "owner123",
+           status: :in_progress,
+           queue: [],
+           cursor: 0,
+           turn: %Turn{phase: :waiting}
+         }}
       end)
 
-      Repatch.patch(GameSession, :pause_playback, [mode: :shared], fn ^game_id, ^owner_id ->
-        {:ok, new_state}
-      end)
-
-      {:ok, _, socket} = join_room_channel(owner, game_id)
-      # Consume push from join
-      assert_push("state", %{status: :in_progress})
-
-      ref = push(socket, "pause_playback", %{})
-
-      assert_reply(ref, :ok)
-      assert_broadcast("state", ^new_state)
-    end
-
-    test "active player can pause playback", %{current_user: current_user} do
-      game_id = "game-123"
-      active_player_id = current_user.uuid
-      new_state = %{player: %{is_playback: false}}
-
-      Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :in_progress}}
-      end)
-
-      Repatch.patch(GameSession, :pause_playback, [mode: :shared], fn ^game_id, ^active_player_id ->
+      Repatch.patch(GameSession, :pause_playback, [mode: :shared], fn ^game_id, ^user_id ->
         {:ok, new_state}
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", %{status: :in_progress})
+      assert_push("state", %{game: %{status: :in_progress}})
 
       ref = push(socket, "pause_playback", %{})
 
       assert_reply(ref, :ok)
-      assert_broadcast("state", ^new_state)
     end
 
-    test "non-owner and non-active player cannot pause playback", %{current_user: current_user} do
+    test "does not reply when pause_playback fails", %{current_user: current_user} do
       game_id = "game-123"
       user_id = current_user.uuid
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :in_progress}}
+        {:ok,
+         %Game{
+           id: game_id,
+           owner_id: "owner123",
+           status: :in_progress,
+           queue: [],
+           cursor: 0,
+           turn: %Turn{phase: :waiting}
+         }}
       end)
 
       Repatch.patch(GameSession, :pause_playback, [mode: :shared], fn ^game_id, ^user_id ->
@@ -267,50 +291,31 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", _)
+      assert_push("state", %{game: _})
 
       ref = push(socket, "pause_playback", %{})
 
-      # Should not get reply on error
       refute_reply(ref, :ok)
-      # No broadcast should happen
-      refute_broadcast("state", %{player: %{is_playback: false}})
-    end
-
-    test "handles pause_playback errors silently", %{owner: owner} do
-      game_id = "game-123"
-      owner_id = owner.uuid
-
-      Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :in_progress}}
-      end)
-
-      Repatch.patch(GameSession, :pause_playback, [mode: :shared], fn ^game_id, ^owner_id ->
-        {:error, :pause_failed}
-      end)
-
-      {:ok, _, socket} = join_room_channel(owner, game_id)
-      # Consume push from join
-      assert_push("state", _)
-
-      ref = push(socket, "pause_playback", %{})
-
-      # On error, no reply should be sent
-      refute_reply(ref, :ok)
-      # No broadcast should happen
-      refute_broadcast("state", %{player: %{is_playback: false}})
     end
   end
 
   # === NEXT_PHASE EVENT ===
 
   describe "next_phase" do
-    test "advances phase when next_phase succeeds", %{current_user: current_user} do
+    test "replies :ok when next_phase succeeds", %{current_user: current_user} do
       game_id = "game-123"
       new_state = %{turn: %{phase: :ready}}
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :in_progress}}
+        {:ok,
+         %Game{
+           id: game_id,
+           owner_id: "owner123",
+           status: :in_progress,
+           queue: [],
+           cursor: 0,
+           turn: %Turn{phase: :waiting}
+         }}
       end)
 
       Repatch.patch(GameSession, :next_phase, [mode: :shared], fn ^game_id ->
@@ -319,19 +324,26 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", _)
+      assert_push("state", %{game: _})
 
       ref = push(socket, "next_phase", %{})
 
       assert_reply(ref, :ok)
-      assert_broadcast("state", ^new_state)
     end
 
-    test "handles next_phase errors silently", %{current_user: current_user} do
+    test "does not reply when next_phase fails", %{current_user: current_user} do
       game_id = "game-123"
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :waiting}}
+        {:ok,
+         %Game{
+           id: game_id,
+           owner_id: "owner123",
+           status: :waiting,
+           queue: [],
+           cursor: 0,
+           turn: nil
+         }}
       end)
 
       Repatch.patch(GameSession, :next_phase, [mode: :shared], fn ^game_id ->
@@ -340,18 +352,13 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", _)
+      assert_push("state", %{game: _})
 
       ref = push(socket, "next_phase", %{})
 
-      # On error, no reply should be sent
       refute_reply(ref, :ok)
-      # No broadcast should happen
-      refute_broadcast("state", %{turn: %{phase: :ready}})
     end
   end
-
-  # === PROVIDER EVENTS ===
 
   describe "get_provider" do
     test "returns token when provider found", %{current_user: current_user} do
@@ -359,7 +366,15 @@ defmodule SongyWeb.RoomChannelTest do
       user_id = current_user.uuid
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :waiting}}
+        {:ok,
+         %Game{
+           id: game_id,
+           owner_id: "owner123",
+           status: :waiting,
+           queue: [],
+           cursor: 0,
+           turn: nil
+         }}
       end)
 
       Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn :providers, ^user_id ->
@@ -374,7 +389,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", _)
+      assert_push("state", %{game: _})
 
       ref = push(socket, "get_provider", %{})
 
@@ -386,7 +401,15 @@ defmodule SongyWeb.RoomChannelTest do
       user_id = current_user.uuid
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :waiting}}
+        {:ok,
+         %Game{
+           id: game_id,
+           owner_id: "owner123",
+           status: :waiting,
+           queue: [],
+           cursor: 0,
+           turn: nil
+         }}
       end)
 
       Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn :providers, ^user_id ->
@@ -395,7 +418,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", _)
+      assert_push("state", %{game: _})
 
       ref = push(socket, "get_provider", %{})
 
@@ -407,7 +430,15 @@ defmodule SongyWeb.RoomChannelTest do
       user_id = current_user.uuid
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :waiting}}
+        {:ok,
+         %Game{
+           id: game_id,
+           owner_id: "owner123",
+           status: :waiting,
+           queue: [],
+           cursor: 0,
+           turn: nil
+         }}
       end)
 
       Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn :providers, ^user_id ->
@@ -422,7 +453,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", _)
+      assert_push("state", %{game: _})
 
       ref = push(socket, "get_provider", %{})
 
@@ -436,7 +467,15 @@ defmodule SongyWeb.RoomChannelTest do
       user_id = current_user.uuid
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :waiting}}
+        {:ok,
+         %Game{
+           id: game_id,
+           owner_id: "owner123",
+           status: :waiting,
+           queue: [],
+           cursor: 0,
+           turn: nil
+         }}
       end)
 
       Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn :providers, ^user_id ->
@@ -457,7 +496,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", _)
+      assert_push("state", %{game: _})
 
       ref = push(socket, "update_provider", %{"access_token" => "new-token"})
 
@@ -469,7 +508,15 @@ defmodule SongyWeb.RoomChannelTest do
       user_id = current_user.uuid
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :waiting}}
+        {:ok,
+         %Game{
+           id: game_id,
+           owner_id: "owner123",
+           status: :waiting,
+           queue: [],
+           cursor: 0,
+           turn: nil
+         }}
       end)
 
       Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn :providers, ^user_id ->
@@ -478,7 +525,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", _)
+      assert_push("state", %{game: _})
 
       ref = push(socket, "update_provider", %{"access_token" => "new-token"})
 
@@ -491,12 +538,20 @@ defmodule SongyWeb.RoomChannelTest do
       game_id = "game-123"
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :waiting}}
+        {:ok,
+         %Game{
+           id: game_id,
+           owner_id: "owner123",
+           status: :waiting,
+           queue: [],
+           cursor: 0,
+           turn: nil
+         }}
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", _)
+      assert_push("state", %{game: _})
 
       ref = push(socket, "get_current_user", %{})
       assert_reply(ref, :ok, %{uuid: user_uuid})
@@ -507,13 +562,21 @@ defmodule SongyWeb.RoomChannelTest do
   # === GAME ACTION EVENTS ===
 
   describe "make_assumption" do
-    test "adds assumption when successful", %{current_user: current_user} do
+    test "replies :ok when make_assumption succeeds", %{current_user: current_user} do
       game_id = "game-123"
       user_id = current_user.uuid
       new_state = %{turn: %{assumptions: [%{position: 0, user_id: user_id}]}}
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :in_progress, turn: %{phase: :challenging}}}
+        {:ok,
+         %Game{
+           id: game_id,
+           owner_id: "owner123",
+           status: :in_progress,
+           queue: [],
+           cursor: 0,
+           turn: %Turn{phase: :challenging}
+         }}
       end)
 
       Repatch.patch(GameSession, :make_assumption, [mode: :shared], fn ^game_id, ^user_id, 0 ->
@@ -522,20 +585,27 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", _)
+      assert_push("state", %{game: _})
 
       ref = push(socket, "make_assumption", %{"position" => 0})
 
       assert_reply(ref, :ok)
-      assert_broadcast("state", ^new_state)
     end
 
-    test "handles make_assumption errors silently", %{current_user: current_user} do
+    test "does not reply when make_assumption fails", %{current_user: current_user} do
       game_id = "game-123"
       user_id = current_user.uuid
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :waiting}}
+        {:ok,
+         %Game{
+           id: game_id,
+           owner_id: "owner123",
+           status: :waiting,
+           queue: [],
+           cursor: 0,
+           turn: nil
+         }}
       end)
 
       Repatch.patch(GameSession, :make_assumption, [mode: :shared], fn ^game_id, ^user_id, 0 ->
@@ -544,26 +614,31 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", _)
+      assert_push("state", %{game: _})
 
       ref = push(socket, "make_assumption", %{"position" => 0})
 
-      # On error, no reply should be sent
       refute_reply(ref, :ok)
-      # No broadcast should happen
-      refute_broadcast("state", %{turn: %{assumptions: [_ | _]}})
     end
 
     test "returns error for missing position in payload", %{current_user: current_user} do
       game_id = "game-123"
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :in_progress}}
+        {:ok,
+         %Game{
+           id: game_id,
+           owner_id: "owner123",
+           status: :in_progress,
+           queue: [],
+           cursor: 0,
+           turn: %Turn{phase: :waiting}
+         }}
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", _)
+      assert_push("state", %{game: _})
 
       # Push with empty payload - pattern match fails, goes to generic handle_in
       ref = push(socket, "make_assumption", %{})
@@ -573,13 +648,21 @@ defmodule SongyWeb.RoomChannelTest do
   end
 
   describe "reorder_timeline" do
-    test "reorders timeline when successful", %{current_user: current_user} do
+    test "replies :ok when reorder_timeline succeeds", %{current_user: current_user} do
       game_id = "game-123"
       user_id = current_user.uuid
       new_state = %{turn: %{assumptions: [%{position: 1}]}}
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :in_progress, turn: %{phase: :challenging}}}
+        {:ok,
+         %Game{
+           id: game_id,
+           owner_id: "owner123",
+           status: :in_progress,
+           queue: [],
+           cursor: 0,
+           turn: %Turn{phase: :challenging}
+         }}
       end)
 
       Repatch.patch(GameSession, :reorder_timeline, [mode: :shared], fn ^game_id, ^user_id, 1 ->
@@ -588,20 +671,27 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", _)
+      assert_push("state", %{game: _})
 
       ref = push(socket, "reorder_timeline", %{"position" => 1})
 
       assert_reply(ref, :ok)
-      assert_broadcast("state", ^new_state)
     end
 
-    test "handles reorder_timeline errors silently", %{current_user: current_user} do
+    test "does not reply when reorder_timeline fails", %{current_user: current_user} do
       game_id = "game-123"
       user_id = current_user.uuid
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :waiting}}
+        {:ok,
+         %Game{
+           id: game_id,
+           owner_id: "owner123",
+           status: :waiting,
+           queue: [],
+           cursor: 0,
+           turn: nil
+         }}
       end)
 
       Repatch.patch(GameSession, :reorder_timeline, [mode: :shared], fn ^game_id, ^user_id, 0 ->
@@ -610,26 +700,31 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", _)
+      assert_push("state", %{game: _})
 
       ref = push(socket, "reorder_timeline", %{"position" => 0})
 
-      # On error, no reply should be sent
       refute_reply(ref, :ok)
-      # No broadcast should happen
-      refute_broadcast("state", %{turn: %{assumptions: [%{position: 0}]}})
     end
 
     test "returns error for missing position in payload", %{current_user: current_user} do
       game_id = "game-123"
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :in_progress}}
+        {:ok,
+         %Game{
+           id: game_id,
+           owner_id: "owner123",
+           status: :in_progress,
+           queue: [],
+           cursor: 0,
+           turn: %Turn{phase: :waiting}
+         }}
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", _)
+      assert_push("state", %{game: _})
 
       # Push with empty payload - pattern match fails, goes to generic handle_in
       ref = push(socket, "reorder_timeline", %{})
@@ -645,33 +740,24 @@ defmodule SongyWeb.RoomChannelTest do
       game_id = "game-123"
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :waiting}}
+        {:ok,
+         %Game{
+           id: game_id,
+           owner_id: "owner123",
+           status: :waiting,
+           queue: [],
+           cursor: 0,
+           turn: nil
+         }}
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", _)
+      assert_push("state", %{game: _})
 
       ref = push(socket, "unknown_event", %{})
+
       assert_reply(ref, :error, %{reason: "unknown_event", event: "unknown_event"})
-    end
-
-    test "does not broadcast for unknown event", %{current_user: current_user} do
-      game_id = "game-123"
-
-      Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, %{status: :waiting}}
-      end)
-
-      {:ok, _, socket} = join_room_channel(current_user, game_id)
-      # Consume the initial push from join
-      assert_push("state", _)
-
-      # Now push unknown event
-      push(socket, "unknown_event", %{})
-
-      # Should not broadcast any state change
-      refute_broadcast("state", _)
     end
   end
 end

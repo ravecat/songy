@@ -137,9 +137,14 @@ defmodule Songy.Boundary.Game do
 
   # Internal broadcast event for state updates that don't change state
   @impl true
-  def handle_event(:internal, :broadcast, _state, data) do
-    broadcast_game_state(data)
-    {:keep_state, data}
+  def handle_event(:internal, :broadcast, _state, game) do
+    Phoenix.PubSub.local_broadcast(
+      Songy.PubSub,
+      "room:#{game.id}",
+      {:state, game}
+    )
+
+    {:keep_state, game}
   end
 
   # State: :waiting (lobby phase)
@@ -483,18 +488,6 @@ defmodule Songy.Boundary.Game do
     }
 
     {:keep_state, updated_game, [{:next_event, :internal, :broadcast}]}
-  end
-
-  defp broadcast_game_state(game) do
-    if Process.whereis(Songy.PubSub) do
-      Phoenix.PubSub.local_broadcast(
-        Songy.PubSub,
-        "room:#{game.id}",
-        {:state, game}
-      )
-    end
-
-    :ok
   end
 
   defp do_update_timeline(

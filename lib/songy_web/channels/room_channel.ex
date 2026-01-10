@@ -22,20 +22,24 @@ defmodule SongyWeb.RoomChannel do
   @impl true
   def handle_info(:init_client_state, socket) do
     @room_prefix <> room_id = socket.topic
+    current_user_id = socket.assigns.current_user_id
 
     case GameSession.get_state(room_id) do
       {:ok, game} ->
-        push(socket, "state", game)
+        permissions = Songy.Authorization.permissions(game, current_user_id)
+        push(socket, "state", %{game: game, permissions: permissions})
 
-      {:error, _} ->
-        Logger.warning("Game session not found for room #{room_id}")
+      {:error, reason} ->
+        Logger.warning("Failed to join #{room_id}: #{inspect(reason)}")
     end
 
     {:noreply, socket}
   end
 
   def handle_info({:state, game}, socket) do
-    broadcast(socket, "state", game)
+    current_user_id = socket.assigns.current_user_id
+    permissions = Songy.Authorization.permissions(game, current_user_id)
+    push(socket, "state", %{game: game, permissions: permissions})
 
     {:noreply, socket}
   end
@@ -50,8 +54,7 @@ defmodule SongyWeb.RoomChannel do
     @room_prefix <> room_id = socket.topic
 
     case GameSession.start_game_session(room_id) do
-      {:ok, game} ->
-        broadcast(socket, "state", game)
+      {:ok, _game} ->
         {:noreply, socket}
 
       {:error, reason} ->
@@ -66,8 +69,7 @@ defmodule SongyWeb.RoomChannel do
     current_user_id = socket.assigns.current_user_id
 
     case GameSession.start_playback(room_id, current_user_id) do
-      {:ok, game} ->
-        broadcast(socket, "state", game)
+      {:ok, _game} ->
         {:reply, :ok, socket}
 
       {:error, reason} ->
@@ -82,8 +84,7 @@ defmodule SongyWeb.RoomChannel do
     current_user_id = socket.assigns.current_user_id
 
     case GameSession.pause_playback(room_id, current_user_id) do
-      {:ok, game} ->
-        broadcast(socket, "state", game)
+      {:ok, _game} ->
         {:reply, :ok, socket}
 
       {:error, reason} ->
@@ -139,8 +140,7 @@ defmodule SongyWeb.RoomChannel do
     @room_prefix <> room_id = socket.topic
 
     case GameSession.next_phase(room_id) do
-      {:ok, game} ->
-        broadcast(socket, "state", game)
+      {:ok, _game} ->
         {:reply, :ok, socket}
 
       {:error, reason} ->
@@ -155,9 +155,7 @@ defmodule SongyWeb.RoomChannel do
     current_user_id = socket.assigns.current_user_id
 
     case GameSession.make_assumption(room_id, current_user_id, position) do
-      {:ok, game} ->
-        broadcast(socket, "state", game)
-
+      {:ok, _game} ->
         {:reply, :ok, socket}
 
       {:error, reason} ->
@@ -172,9 +170,7 @@ defmodule SongyWeb.RoomChannel do
     user_id = socket.assigns.current_user_id
 
     case GameSession.reorder_timeline(room_id, user_id, position) do
-      {:ok, game} ->
-        broadcast(socket, "state", game)
-
+      {:ok, _game} ->
         {:reply, :ok, socket}
 
       {:error, reason} ->

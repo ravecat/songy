@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { computePermissions } from '~shared/authorization';
+import { getPermissions, defaultPermissions } from '~shared/authorization';
 import type { Game } from '~shared/types/game';
 import type { User } from '~shared/types/user';
 import { GAME_STATUS } from '~shared/types/game';
@@ -236,6 +236,17 @@ const challengerCases: PermissionsFixture[] = [
     },
   },
   {
+    state: GAME_STATUS.IN_PROGRESS,
+    phase: TURN_PHASE.RESULTS,
+    expected: {
+      canControlPlayback: false,
+      canAdvanceTurn: false,
+      canStartGame: false,
+      canAdvanceFromWaiting: false,
+      canRestartGame: false,
+    },
+  },
+  {
     state: GAME_STATUS.FINISHED,
     phase: null,
     expected: {
@@ -248,59 +259,26 @@ const challengerCases: PermissionsFixture[] = [
   },
 ];
 
-const buildGame = ({
-  state,
-  phase,
-  ownerId,
-  queue,
-  cursor,
-}: {
-  state: GAME_STATUS;
-  phase: TURN_PHASE | null;
-  ownerId: string;
-  queue: string[];
-  cursor: number;
-}): Game => ({
-  ...baseGame,
-  status: state,
-  owner_id: ownerId,
-  queue,
-  cursor,
-  turn:
-    state === GAME_STATUS.IN_PROGRESS && phase
-      ? { phase, timeline: [], assumptions: [] }
-      : null,
-});
-
-const ownerGame = (state: GAME_STATUS, phase: TURN_PHASE | null): Game =>
-  buildGame({
-    state,
-    phase,
-    ownerId: ownerUser.uuid,
-    queue: [playerUser.uuid, challengerUser.uuid, ownerUser.uuid],
-    cursor: 0,
-  });
-
-const playerGame = (state: GAME_STATUS, phase: TURN_PHASE | null): Game =>
-  buildGame({
-    state,
-    phase,
-    ownerId: ownerUser.uuid,
-    queue: [playerUser.uuid, challengerUser.uuid],
-    cursor: 0,
-  });
-
-const challengerGame = (state: GAME_STATUS, phase: TURN_PHASE | null): Game =>
-  buildGame({
-    state,
-    phase,
-    ownerId: ownerUser.uuid,
-    queue: [playerUser.uuid, challengerUser.uuid],
-    cursor: 0,
-  });
+// Helper to create a game with specific state
+function createGame(
+  state: GAME_STATUS,
+  phase: TURN_PHASE | null,
+  ownerId: string,
+  queue: string[],
+  cursor: number
+): Game {
+  return {
+    ...baseGame,
+    owner_id: ownerId,
+    status: state,
+    queue,
+    cursor,
+    turn: phase ? { phase } : null,
+  };
+}
 
 const expectFlags = (
-  permissions: ReturnType<typeof computePermissions>,
+  permissions: ReturnType<typeof getPermissions>,
   expected: {
     canControlPlayback: boolean;
     canAdvanceTurn: boolean;
@@ -320,8 +298,8 @@ describe('permissions', () => {
   describe('owner permissions', () => {
     ownerCases.forEach(({ state, phase, expected }) => {
       test(`${state}/${phase ?? 'nil'}`, () => {
-        const game = ownerGame(state, phase);
-        const permissions = computePermissions(game, ownerUser);
+        const game = createGame(state, phase, ownerUser.uuid, [ownerUser.uuid, playerUser.uuid, challengerUser.uuid], 0);
+        const permissions = getPermissions(game, ownerUser);
         expectFlags(permissions, expected);
       });
     });
@@ -330,8 +308,8 @@ describe('permissions', () => {
   describe('player permissions', () => {
     playerCases.forEach(({ state, phase, expected }) => {
       test(`${state}/${phase ?? 'nil'}`, () => {
-        const game = playerGame(state, phase);
-        const permissions = computePermissions(game, playerUser);
+        const game = createGame(state, phase, ownerUser.uuid, [playerUser.uuid, challengerUser.uuid], 0);
+        const permissions = getPermissions(game, playerUser);
         expectFlags(permissions, expected);
       });
     });
@@ -340,262 +318,128 @@ describe('permissions', () => {
   describe('challenger permissions', () => {
     challengerCases.forEach(({ state, phase, expected }) => {
       test(`${state}/${phase ?? 'nil'}`, () => {
-        const game = challengerGame(state, phase);
-        const permissions = computePermissions(game, challengerUser);
+        const game = createGame(state, phase, ownerUser.uuid, [playerUser.uuid, challengerUser.uuid], 0);
+        const permissions = getPermissions(game, challengerUser);
         expectFlags(permissions, expected);
       });
     });
   });
 
   describe('waiting phase', () => {
-    const waitingGame = buildGame({
-      state: GAME_STATUS.IN_PROGRESS,
-      phase: TURN_PHASE.WAITING,
-      ownerId: ownerUser.uuid,
-      queue: [playerUser.uuid, ownerUser.uuid, challengerUser.uuid],
-      cursor: 0,
-    });
-
     test('active player can control playback and advance from waiting', () => {
-      const permissions = computePermissions(waitingGame, playerUser);
-
-      expectFlags(permissions, {
-        canControlPlayback: true,
-        canAdvanceTurn: false,
-        canStartGame: false,
-        canAdvanceFromWaiting: true,
-        canRestartGame: false,
-      });
+      const game = createGame(GAME_STATUS.IN_PROGRESS, TURN_PHASE.WAITING, ownerUser.uuid, [playerUser.uuid, challengerUser.uuid], 0);
+      const permissions = getPermissions(game, playerUser);
+      expect(permissions.canControlPlayback).toBe(true);
+      expect(permissions.canAdvanceFromWaiting).toBe(true);
+      expect(permissions.canAdvanceTurn).toBe(false);
     });
 
     test('owner can control playback and advance from waiting', () => {
-      const permissions = computePermissions(waitingGame, ownerUser);
-
-      expectFlags(permissions, {
-        canControlPlayback: true,
-        canAdvanceTurn: false,
-        canStartGame: false,
-        canAdvanceFromWaiting: true,
-        canRestartGame: false,
-      });
+      const game = createGame(GAME_STATUS.IN_PROGRESS, TURN_PHASE.WAITING, ownerUser.uuid, [playerUser.uuid, challengerUser.uuid], 0);
+      const permissions = getPermissions(game, ownerUser);
+      expect(permissions.canControlPlayback).toBe(true);
+      expect(permissions.canAdvanceFromWaiting).toBe(true);
+      expect(permissions.canAdvanceTurn).toBe(false);
     });
 
     test('challenger cannot control playback or advance', () => {
-      const permissions = computePermissions(waitingGame, challengerUser);
-
-      expectFlags(permissions, {
-        canControlPlayback: false,
-        canAdvanceTurn: false,
-        canStartGame: false,
-        canAdvanceFromWaiting: false,
-        canRestartGame: false,
-      });
+      const game = createGame(GAME_STATUS.IN_PROGRESS, TURN_PHASE.WAITING, ownerUser.uuid, [playerUser.uuid, challengerUser.uuid], 0);
+      const permissions = getPermissions(game, challengerUser);
+      expect(permissions.canControlPlayback).toBe(false);
+      expect(permissions.canAdvanceFromWaiting).toBe(false);
     });
   });
 
   describe('ready phase', () => {
-    const readyGame = buildGame({
-      state: GAME_STATUS.IN_PROGRESS,
-      phase: TURN_PHASE.READY,
-      ownerId: ownerUser.uuid,
-      queue: [playerUser.uuid, ownerUser.uuid, challengerUser.uuid],
-      cursor: 0,
-    });
-
     test('active player can control playback and advance', () => {
-      const permissions = computePermissions(readyGame, playerUser);
-
-      expectFlags(permissions, {
-        canControlPlayback: true,
-        canAdvanceTurn: true,
-        canStartGame: false,
-        canAdvanceFromWaiting: false,
-        canRestartGame: false,
-      });
+      const game = createGame(GAME_STATUS.IN_PROGRESS, TURN_PHASE.READY, ownerUser.uuid, [playerUser.uuid, challengerUser.uuid], 0);
+      const permissions = getPermissions(game, playerUser);
+      expect(permissions.canControlPlayback).toBe(true);
+      expect(permissions.canAdvanceTurn).toBe(true);
     });
 
     test('owner cannot advance in ready phase', () => {
-      const permissions = computePermissions(readyGame, ownerUser);
-
-      expectFlags(permissions, {
-        canControlPlayback: true,
-        canAdvanceTurn: false,
-        canStartGame: false,
-        canAdvanceFromWaiting: false,
-        canRestartGame: false,
-      });
+      const game = createGame(GAME_STATUS.IN_PROGRESS, TURN_PHASE.READY, ownerUser.uuid, [playerUser.uuid, challengerUser.uuid], 0);
+      const permissions = getPermissions(game, ownerUser);
+      expect(permissions.canControlPlayback).toBe(true);
+      expect(permissions.canAdvanceTurn).toBe(false);
     });
 
     test('challenger cannot control playback or advance', () => {
-      const permissions = computePermissions(readyGame, challengerUser);
-
-      expectFlags(permissions, {
-        canControlPlayback: false,
-        canAdvanceTurn: false,
-        canStartGame: false,
-        canAdvanceFromWaiting: false,
-        canRestartGame: false,
-      });
+      const game = createGame(GAME_STATUS.IN_PROGRESS, TURN_PHASE.READY, ownerUser.uuid, [playerUser.uuid, challengerUser.uuid], 0);
+      const permissions = getPermissions(game, challengerUser);
+      expect(permissions.canControlPlayback).toBe(false);
+      expect(permissions.canAdvanceTurn).toBe(false);
     });
   });
 
   describe('challenging phase', () => {
-    const playerActiveGame = buildGame({
-      state: GAME_STATUS.IN_PROGRESS,
-      phase: TURN_PHASE.CHALLENGING,
-      ownerId: ownerUser.uuid,
-      queue: [playerUser.uuid, ownerUser.uuid, challengerUser.uuid],
-      cursor: 0,
-    });
-
     test('active player cannot control playback', () => {
-      const permissions = computePermissions(playerActiveGame, playerUser);
-
-      expectFlags(permissions, {
-        canControlPlayback: false,
-        canAdvanceTurn: false,
-        canStartGame: false,
-        canAdvanceFromWaiting: false,
-        canRestartGame: false,
-      });
+      const game = createGame(GAME_STATUS.IN_PROGRESS, TURN_PHASE.CHALLENGING, ownerUser.uuid, [playerUser.uuid, challengerUser.uuid], 0);
+      const permissions = getPermissions(game, playerUser);
+      expect(permissions.canControlPlayback).toBe(false);
     });
 
     test('owner can control playback', () => {
-      const permissions = computePermissions(playerActiveGame, ownerUser);
-
-      expectFlags(permissions, {
-        canControlPlayback: true,
-        canAdvanceTurn: false,
-        canStartGame: false,
-        canAdvanceFromWaiting: false,
-        canRestartGame: false,
-      });
+      const game = createGame(GAME_STATUS.IN_PROGRESS, TURN_PHASE.CHALLENGING, ownerUser.uuid, [playerUser.uuid, challengerUser.uuid], 0);
+      const permissions = getPermissions(game, ownerUser);
+      expect(permissions.canControlPlayback).toBe(true);
     });
 
     test('challenger can control playback', () => {
-      const permissions = computePermissions(playerActiveGame, challengerUser);
-
-      expectFlags(permissions, {
-        canControlPlayback: true,
-        canAdvanceTurn: false,
-        canStartGame: false,
-        canAdvanceFromWaiting: false,
-        canRestartGame: false,
-      });
+      const game = createGame(GAME_STATUS.IN_PROGRESS, TURN_PHASE.CHALLENGING, ownerUser.uuid, [playerUser.uuid, challengerUser.uuid], 0);
+      const permissions = getPermissions(game, challengerUser);
+      expect(permissions.canControlPlayback).toBe(true);
     });
   });
 
   describe('results phase', () => {
-    const resultsGame = buildGame({
-      state: GAME_STATUS.IN_PROGRESS,
-      phase: TURN_PHASE.RESULTS,
-      ownerId: ownerUser.uuid,
-      queue: [playerUser.uuid, ownerUser.uuid, challengerUser.uuid],
-      cursor: 0,
-    });
-
     test('active player can advance to next turn', () => {
-      const permissions = computePermissions(resultsGame, playerUser);
-
-      expectFlags(permissions, {
-        canControlPlayback: false,
-        canAdvanceTurn: true,
-        canStartGame: false,
-        canAdvanceFromWaiting: false,
-        canRestartGame: false,
-      });
+      const game = createGame(GAME_STATUS.IN_PROGRESS, TURN_PHASE.RESULTS, ownerUser.uuid, [playerUser.uuid, challengerUser.uuid], 0);
+      const permissions = getPermissions(game, playerUser);
+      expect(permissions.canAdvanceTurn).toBe(true);
     });
 
     test('owner can advance to next turn', () => {
-      const permissions = computePermissions(resultsGame, ownerUser);
-
-      expectFlags(permissions, {
-        canControlPlayback: false,
-        canAdvanceTurn: true,
-        canStartGame: false,
-        canAdvanceFromWaiting: false,
-        canRestartGame: false,
-      });
+      const game = createGame(GAME_STATUS.IN_PROGRESS, TURN_PHASE.RESULTS, ownerUser.uuid, [playerUser.uuid, challengerUser.uuid], 0);
+      const permissions = getPermissions(game, ownerUser);
+      expect(permissions.canAdvanceTurn).toBe(true);
     });
 
     test('challenger cannot advance', () => {
-      const permissions = computePermissions(resultsGame, challengerUser);
-
-      expectFlags(permissions, {
-        canControlPlayback: false,
-        canAdvanceTurn: false,
-        canStartGame: false,
-        canAdvanceFromWaiting: false,
-        canRestartGame: false,
-      });
+      const game = createGame(GAME_STATUS.IN_PROGRESS, TURN_PHASE.RESULTS, ownerUser.uuid, [playerUser.uuid, challengerUser.uuid], 0);
+      const permissions = getPermissions(game, challengerUser);
+      expect(permissions.canAdvanceTurn).toBe(false);
     });
-  });
-
-  test('game finished shows play again', () => {
-    const game = { ...baseGame, status: GAME_STATUS.FINISHED as const };
-
-    const ownerPermissions = computePermissions(game, ownerUser);
-    expectFlags(ownerPermissions, {
-      canControlPlayback: false,
-      canAdvanceTurn: false,
-      canStartGame: false,
-      canAdvanceFromWaiting: false,
-      canRestartGame: true,
-    });
-
-    const playerPermissions = computePermissions(game, playerUser);
-    expect(playerPermissions.canRestartGame).toBe(true);
   });
 
   describe('edge cases', () => {
     test('handles null game gracefully', () => {
-      const permissions = computePermissions(null, ownerUser);
-
-      expectFlags(permissions, {
-        canControlPlayback: false,
-        canAdvanceTurn: false,
-        canStartGame: false,
-        canAdvanceFromWaiting: false,
-        canRestartGame: false,
-      });
+      const permissions = getPermissions(null, ownerUser);
+      expect(permissions).toEqual(defaultPermissions);
     });
 
     test('handles null user gracefully', () => {
-      const permissions = computePermissions(baseGame, null);
-
-      expectFlags(permissions, {
-        canControlPlayback: false,
-        canAdvanceTurn: false,
-        canStartGame: false,
-        canAdvanceFromWaiting: false,
-        canRestartGame: false,
-      });
+      const game = createGame(GAME_STATUS.WAITING, null, ownerUser.uuid, [ownerUser.uuid], 0);
+      const permissions = getPermissions(game, null);
+      expect(permissions).toEqual(defaultPermissions);
     });
 
     test('handles both null game and user', () => {
-      const permissions = computePermissions(null, null);
-
-      expectFlags(permissions, {
-        canControlPlayback: false,
-        canAdvanceTurn: false,
-        canStartGame: false,
-        canAdvanceFromWaiting: false,
-        canRestartGame: false,
-      });
+      const permissions = getPermissions(null, null);
+      expect(permissions).toEqual(defaultPermissions);
     });
   });
 
+  test('game finished shows play again', () => {
+    const game = createGame(GAME_STATUS.FINISHED, null, ownerUser.uuid, [ownerUser.uuid, playerUser.uuid], 0);
+    const permissions = getPermissions(game, ownerUser);
+    expect(permissions.canRestartGame).toBe(true);
+  });
+
   test('all permission objects have required fields', () => {
-    const game = buildGame({
-      state: GAME_STATUS.IN_PROGRESS,
-      phase: TURN_PHASE.READY,
-      ownerId: ownerUser.uuid,
-      queue: [ownerUser.uuid, playerUser.uuid],
-      cursor: 0,
-    });
-
-    const permissions = computePermissions(game, ownerUser);
-
+    const game = createGame(GAME_STATUS.IN_PROGRESS, TURN_PHASE.WAITING, ownerUser.uuid, [ownerUser.uuid], 0);
+    const permissions = getPermissions(game, ownerUser);
     expect(permissions).toHaveProperty('canControlPlayback');
     expect(permissions).toHaveProperty('canAdvanceTurn');
     expect(permissions).toHaveProperty('canStartGame');

@@ -17,8 +17,6 @@ defmodule Songy.Application do
       # {Songy.Worker, arg},
       # Provider credentials storage with ETS
       {Songy.Providers, name: :providers},
-      # Authorization system with Casbin enforcer
-      Songy.Authorization,
       # Registry for game session process registration
       {Registry, [name: Songy.Registry, keys: :unique]},
       # Dynamic supervisor for game sessions

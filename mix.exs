@@ -73,7 +73,7 @@ defmodule Songy.MixProject do
       {:polymorphic_embed, git: "https://github.com/mathieuprog/polymorphic_embed.git", tag: "v5.0.3"},
       {:spotify_ex, github: "jsncmgs1/spotify_ex", tag: "v2.4.0"},
       {:stream_data, "~> 1.2"},
-      {:casbin, "~> 1.1"}
+      {:bodyguard, "~> 2.4"}
     ]
   end
 

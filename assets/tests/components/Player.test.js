@@ -1,6 +1,5 @@
 import { render, screen, fireEvent } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
-import { Channel } from "phoenix";
 import { GAME_STATUS } from "~shared/types/game";
 import { TURN_PHASE } from "~shared/types/turn";
 import { PUSH_EVENT } from "~shared/types/channel";
@@ -9,12 +8,18 @@ import * as Scope from "~components/Scope.svelte";
 
 import Player from "~components/Player.svelte";
 
-vi.mock("phoenix");
-
 describe("Player", () => {
   let mockChannelContext;
   let getScopeContextSpy;
   let getGameContextSpy;
+  const ownerUser = { uuid: "user-1", name: "Alice" };
+  const playerUser = { uuid: "user-2", name: "Bob" };
+
+  const renderForUser = (user) => {
+    getScopeContextSpy.mockReturnValue({ user });
+    getGameContextSpy.mockReturnValue(mockChannelContext);
+    render(Player);
+  };
 
   beforeEach(() => {
     mockChannelContext = {
@@ -40,7 +45,16 @@ describe("Player", () => {
           is_playback: false,
         },
       },
-      channel: new Channel("room:123", {}, null),
+      permissions: {
+        can_control_playback: false,
+        can_advance_turn: false,
+        can_start_game: false,
+        can_ready: false,
+        can_restart_game: false,
+      },
+      channel: {
+        push: vi.fn(),
+      },
     };
 
     getScopeContextSpy = vi.spyOn(Scope, "getScopeContext");
@@ -51,164 +65,139 @@ describe("Player", () => {
     vi.restoreAllMocks();
   });
 
-  test("shows Ready button for active player and disables Play during waiting", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "user-1",
-        name: "Alice",
-      },
-    };
+  describe("waiting game | none turn", () => {
+    beforeEach(() => {
+      mockChannelContext.game.status = GAME_STATUS.WAITING;
+      mockChannelContext.game.turn = null;
+    });
 
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
-    getGameContextSpy.mockReturnValue(mockChannelContext);
+    describe("owner", () => {
+      test("shows Ready button", () => {
+        mockChannelContext.permissions.can_start_game = true;
 
-    render(Player);
+        renderForUser(ownerUser);
 
-    const readyButton = screen.getByRole("button", { name: "Ready" });
-    const playButton = screen.getByRole("button", { name: "Play track" });
+        const readyButton = screen.getByRole("button", { name: "Ready" });
 
-    expect(readyButton).toBeEnabled();
-    expect(playButton).toBeDisabled();
+        expect(readyButton).toBeEnabled();
+      });
+
+      test("disables Play button", () => {
+        renderForUser(ownerUser);
+
+        const playButton = screen.getByRole("button", { name: "Play track" });
+
+        expect(playButton).toBeDisabled();
+      });
+
+      test("starts game when Ready is clicked", async () => {
+        mockChannelContext.permissions.can_start_game = true;
+
+        renderForUser(ownerUser);
+
+        await fireEvent.click(screen.getByRole("button", { name: "Ready" }));
+
+        expect(mockChannelContext.channel.push).toHaveBeenCalledWith(
+          PUSH_EVENT.START_GAME,
+          {}
+        );
+      });
+    });
+
+    describe("challenger", () => {
+      test("hides Ready button", () => {
+        renderForUser(playerUser);
+
+        expect(
+          screen.queryByRole("button", { name: "Ready" })
+        ).not.toBeInTheDocument();
+      });
+    });
   });
 
-  test("disables Play and hides Ready for non-active player during waiting", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "user-2",
-        name: "Bob",
-      },
-    };
+  describe("in progress game | waiting turn", () => {
+    beforeEach(() => {
+      mockChannelContext.game.status = GAME_STATUS.IN_PROGRESS;
+      mockChannelContext.game.turn = {
+        phase: TURN_PHASE.WAITING,
+        assumptions: [],
+      };
+    });
 
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
-    getGameContextSpy.mockReturnValue(mockChannelContext);
+    describe("owner", () => {
+      test("advances turn when Ready is clicked", async () => {
+        mockChannelContext.permissions.can_ready = true;
 
-    render(Player);
+        renderForUser(ownerUser);
 
-    expect(
-      screen.queryByRole("button", { name: "Ready" })
-    ).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Play track" })).toBeDisabled();
+        await fireEvent.click(screen.getByRole("button", { name: "Ready" }));
+
+        expect(mockChannelContext.channel.push).toHaveBeenCalledWith(
+          PUSH_EVENT.NEXT_PHASE,
+          {}
+        );
+      });
+    });
   });
 
-  test("shows Next and enabled Play for active non-owner in ready phase", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "user-2",
-        name: "Bob",
-      },
-    };
+  describe("in progress game | ready turn", () => {
+    beforeEach(() => {
+      mockChannelContext.game.status = GAME_STATUS.IN_PROGRESS;
+      mockChannelContext.game.turn = {
+        phase: TURN_PHASE.READY,
+        assumptions: [],
+      };
+    });
 
-    mockChannelContext.game.status = GAME_STATUS.IN_PROGRESS;
-    mockChannelContext.game.turn = {
-      phase: TURN_PHASE.READY,
-      assumptions: [],
-    };
-    mockChannelContext.game.cursor = 1;
+    describe("owner", () => {
+      test("hides Next", () => {
+        mockChannelContext.permissions.can_control_playback = true;
 
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
-    getGameContextSpy.mockReturnValue(mockChannelContext);
+        renderForUser(ownerUser);
 
-    render(Player);
+        expect(
+          screen.getByRole("button", { name: "Play track" })
+        ).toBeEnabled();
+        expect(
+          screen.queryByRole("button", { name: "Next phase" })
+        ).not.toBeInTheDocument();
+      });
+    });
 
-    expect(screen.getByRole("button", { name: "Play track" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Next phase" })).toBeEnabled();
-  });
+    describe("player", () => {
+      beforeEach(() => {
+        mockChannelContext.game.cursor = 1;
+      });
 
-  test("hides Next for owner in ready phase", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "user-1",
-        name: "Alice",
-      },
-    };
+      test("shows Next and enables Play", () => {
+        mockChannelContext.permissions.can_control_playback = true;
+        mockChannelContext.permissions.can_advance_turn = true;
 
-    mockChannelContext.game.status = GAME_STATUS.IN_PROGRESS;
-    mockChannelContext.game.turn = {
-      phase: TURN_PHASE.READY,
-      assumptions: [],
-    };
+        renderForUser(playerUser);
 
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
-    getGameContextSpy.mockReturnValue(mockChannelContext);
+        expect(
+          screen.getByRole("button", { name: "Play track" })
+        ).toBeEnabled();
+        expect(
+          screen.getByRole("button", { name: "Next phase" })
+        ).toBeEnabled();
+      });
+    });
 
-    render(Player);
+    describe("challenger", () => {
+      test("disables Play button", () => {
+        mockChannelContext.permissions.can_control_playback = false;
+        mockChannelContext.permissions.can_advance_turn = false;
 
-    expect(screen.getByRole("button", { name: "Play track" })).toBeEnabled();
-    expect(
-      screen.queryByRole("button", { name: "Next phase" })
-    ).not.toBeInTheDocument();
-  });
+        renderForUser(playerUser);
 
-  test("disables Play for non-active player in ready phase", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "user-2",
-        name: "Bob",
-      },
-    };
-
-    mockChannelContext.game.status = GAME_STATUS.IN_PROGRESS;
-    mockChannelContext.game.turn = {
-      phase: TURN_PHASE.READY,
-      assumptions: [],
-    };
-
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
-    getGameContextSpy.mockReturnValue(mockChannelContext);
-
-    render(Player);
-
-    expect(screen.getByRole("button", { name: "Play track" })).toBeDisabled();
-    expect(
-      screen.queryByRole("button", { name: "Next phase" })
-    ).not.toBeInTheDocument();
-  });
-
-  test("starts game when Ready is clicked while game is waiting", async () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "user-1",
-        name: "Alice",
-      },
-    };
-
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
-    getGameContextSpy.mockReturnValue(mockChannelContext);
-
-    render(Player);
-
-    await fireEvent.click(screen.getByRole("button", { name: "Ready" }));
-
-    expect(mockChannelContext.channel.push).toHaveBeenCalledWith(
-      PUSH_EVENT.START_GAME,
-      {}
-    );
-  });
-
-  test("advances turn when Ready is clicked during waiting phase", async () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "user-1",
-        name: "Alice",
-      },
-    };
-
-    mockChannelContext.game.status = GAME_STATUS.IN_PROGRESS;
-    mockChannelContext.game.turn = {
-      phase: TURN_PHASE.WAITING,
-      assumptions: [],
-    };
-
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
-    getGameContextSpy.mockReturnValue(mockChannelContext);
-
-    render(Player);
-
-    await fireEvent.click(screen.getByRole("button", { name: "Ready" }));
-
-    expect(mockChannelContext.channel.push).toHaveBeenCalledWith(
-      PUSH_EVENT.NEXT_PHASE,
-      {}
-    );
+        expect(
+          screen.getByRole("button", { name: "Play track" })
+        ).toBeDisabled();
+        expect(
+          screen.queryByRole("button", { name: "Next phase" })
+        ).not.toBeInTheDocument();
+      });
+    });
   });
 });

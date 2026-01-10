@@ -1,17 +1,13 @@
 <script>
   import { getGameContext } from "~components/GameChannel.svelte";
-  import { getScopeContext } from "~components/Scope.svelte";
-  import { computePermissions } from "~/shared/authorization";
   import { PUSH_EVENT } from "~shared/types/channel";
   import { TURN_PHASE } from "~shared/types/turn";
   import { Play, Pause, SkipForward, RotateCcw } from "lucide-svelte";
   import { inertia } from "@inertiajs/svelte";
-  import { slide, fly } from "svelte/transition";
+  import { slide } from "svelte/transition";
   import { cn } from "~shared/utils/cn";
 
-  const { game, channel } = $derived.by(getGameContext);
-  const { user } = $derived.by(getScopeContext);
-  const permissions = $derived(computePermissions(game, user));
+  const { game, channel, permissions } = $derived.by(getGameContext);
   const isPlayback = $derived(game?.player?.is_playback);
   const turnPhase = $derived(game?.turn?.phase);
 
@@ -60,7 +56,7 @@
     icon: isPlayback ? Pause : Play,
     text: isPlayback ? "stop" : "play",
     onclick: handlePlayback,
-    disabled: !permissions.canControlPlayback,
+    disabled: !(permissions?.can_control_playback ?? false),
   })}
 {/snippet}
 
@@ -71,7 +67,7 @@
     text: "start",
     onclick: handleStartGame,
     class: "btn-primary",
-    visible: permissions.canStartGame,
+    visible: permissions?.can_start_game ?? false,
   })}
 {/snippet}
 
@@ -82,7 +78,7 @@
     text: "ready",
     onclick: handleNextPhase,
     class: "btn-primary",
-    visible: permissions.canAdvanceFromWaiting,
+    visible: permissions?.can_ready,
   })}
 {/snippet}
 
@@ -94,9 +90,9 @@
     onclick: handleNextPhase,
     class: "btn-primary",
     visible:
-      permissions.canAdvanceTurn &&
-      !permissions.canStartGame &&
-      !permissions.canAdvanceFromWaiting,
+      (permissions?.can_advance_turn ?? false) &&
+      !(permissions?.can_start_game ?? false) &&
+      !(permissions?.can_ready ?? false),
   })}
 {/snippet}
 
@@ -107,7 +103,7 @@
       icon: RotateCcw,
       text: "rewind",
       type: "submit",
-      visible: permissions.canRestartGame,
+      visible: permissions?.can_restart_game ?? false,
     })}
   </form>
 {/snippet}
