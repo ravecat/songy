@@ -82,6 +82,8 @@
 </script>
 
 <script lang="ts">
+  import { untrack } from "svelte";
+
   let {
     socket,
     topic,
@@ -93,15 +95,17 @@
     children,
   }: ChannelProps & { children?: Snippet } = $props();
 
-  const { channel } = useChannel({
-    socket,
-    topic,
-    payload,
-    on,
-    join,
-    onError,
-    onClose,
-  });
+  const { channel } = untrack(() =>
+    useChannel({
+      socket,
+      topic,
+      payload,
+      on,
+      join,
+      onError,
+      onClose,
+    })
+  );
 
   // Make context available to child components
   setChannelContext({ channel });
