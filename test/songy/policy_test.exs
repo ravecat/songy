@@ -2,16 +2,7 @@ defmodule Songy.PolicyTest do
   use ExUnit.Case, async: true
 
   alias Songy.Core.{Game, Turn}
-
-  @all_actions [
-    :start_game,
-    :start_playback,
-    :pause_playback,
-    :next_phase,
-    :make_assumption,
-    :reorder_timeline,
-    :spectate
-  ]
+  alias Songy.Policy
 
   @owner_cases [
     %{state: :waiting, phase: nil, allowed: [:start_game]},
@@ -53,7 +44,7 @@ defmodule Songy.PolicyTest do
         allowed = unquote(allowed)
 
         assert_allowed(game, user_id, allowed)
-        assert_denied(game, user_id, @all_actions -- allowed)
+        assert_denied(game, user_id, Policy.acts() -- allowed)
       end
     end
   end
@@ -69,7 +60,7 @@ defmodule Songy.PolicyTest do
         allowed = unquote(allowed)
 
         assert_allowed(game, user_id, allowed)
-        assert_denied(game, user_id, @all_actions -- allowed)
+        assert_denied(game, user_id, Policy.acts() -- allowed)
       end
     end
   end
@@ -85,7 +76,7 @@ defmodule Songy.PolicyTest do
         allowed = unquote(allowed)
 
         assert_allowed(game, user_id, allowed)
-        assert_denied(game, user_id, @all_actions -- allowed)
+        assert_denied(game, user_id, Policy.acts() -- allowed)
       end
     end
   end

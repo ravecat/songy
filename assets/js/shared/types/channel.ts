@@ -1,9 +1,3 @@
-import type { Game } from "./game";
-import type { Permissions } from "./permissions";
-
-/**
- * Client-to-server push events
- */
 export enum PUSH_EVENT {
   START_GAME = "start_game",
   NEXT_PHASE = "next_phase",
@@ -16,19 +10,8 @@ export enum PUSH_EVENT {
   GET_CURRENT_USER = "get_current_user",
 }
 
-/**
- * Server-to-client broadcast events
- */
 export enum BROADCAST_EVENT {
   STATE = "state",
-}
-
-/**
- * State event payload containing game state and user permissions
- */
-export interface StateEventPayload {
-  game: Game;
-  permissions: Permissions;
 }
 
 interface PushEventPayloads {

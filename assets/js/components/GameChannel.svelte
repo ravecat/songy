@@ -21,25 +21,26 @@
 
 <script lang="ts">
   import { useChannel, type ChannelProps } from "~components/Channel.svelte";
-  import { BROADCAST_EVENT, type StateEventPayload } from "~shared/types/channel";
+  import { BROADCAST_EVENT } from "~shared/types/channel";
   import type { Snippet } from "svelte";
 
-  let { children, ...rest}: ChannelProps & { children?: Snippet } = $props();
+  let { children, ...rest }: ChannelProps & { children?: Snippet } = $props();
 
   const { channel } = useChannel(rest);
 
-  // Create game context with channel
   let context = $state<GameContext>({
     game: null,
     permissions: null,
     channel,
   });
 
-  // Register event handler for state updates with permissions
-  channel.on(BROADCAST_EVENT.STATE, (response: StateEventPayload) => {
-    context.game = response.game;
-    context.permissions = response.permissions;
-  });
+  channel.on(
+    BROADCAST_EVENT.STATE,
+    (response: { game: Game; permissions: Permissions }) => {
+      context.game = response.game;
+      context.permissions = response.permissions;
+    }
+  );
 
   // Make context available to child components
   setGameContext(context);
