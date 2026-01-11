@@ -38,7 +38,7 @@
 </script>
 
 <div
-  class="timeline"
+  class="flex min-h-0 flex-1 flex-wrap items-center justify-center gap-4 content-center p-4"
   use:dragHandleZone={{
     items,
     flipDurationMs,
@@ -54,17 +54,3 @@
     </div>
   {/each}
 </div>
-
-<style>
-  .timeline {
-    display: flex;
-    flex: 1;
-    min-height: 0;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: center;
-    align-content: center;
-    gap: 1rem;
-    padding: 1rem;
-  }
-</style>

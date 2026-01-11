@@ -5,8 +5,6 @@
   import Timeline from "~components/Timeline.svelte";
   import Draggable from "~components/Draggable.svelte";
   import { type DndEvent, TRIGGERS } from "svelte-dnd-action";
-  import { dragOriginZone } from "~shared/stores/dragOrigin";
-  import { get } from "svelte/store";
   import { TURN_PHASE } from "~shared/types/turn";
   import { PUSH_EVENT } from "~shared/types/channel";
   import type { User } from "~shared/types/user";
@@ -14,7 +12,6 @@
   const { game, channel } = $derived.by(getGameContext);
   const { user: currentPlayer } = $derived.by(getScopeContext);
   const currentTrack = $derived(game?.track);
-  const zoneId = $derived(`participant-timeline-${currentPlayer?.uuid}`);
   const turnPhase = $derived(game?.turn?.phase);
 
   const participants = $derived(
@@ -42,17 +39,23 @@
     }));
   });
 
-  type TimelineItem = (typeof timeline)[number];
+  type Card = (typeof timeline)[number];
 
-  const canUserDragItem = (item: TimelineItem): boolean => {
+  const canUserDragItem = (item: Card): boolean => {
     return item.user?.uuid === currentPlayer?.uuid;
   };
 
+  let dragStartedHere = $state(false);
+
   function handleConsider({
     detail: { items, info },
-  }: CustomEvent<DndEvent<TimelineItem>>) {
+  }: CustomEvent<DndEvent<Card>>) {
     if (info.trigger === TRIGGERS.DRAG_STARTED) {
-      dragOriginZone.set(zoneId);
+      dragStartedHere = true;
+    }
+
+    if (info.trigger === TRIGGERS.DRAG_STOPPED) {
+      dragStartedHere = false;
     }
 
     timeline = items;
@@ -60,14 +63,20 @@
 
   function handleFinalize({
     detail: { items, info },
-  }: CustomEvent<DndEvent<TimelineItem>>) {
-    const originZone = get(dragOriginZone);
-
+  }: CustomEvent<DndEvent<Card>>) {
     timeline = items;
+
+    if (
+      info.trigger === TRIGGERS.DROPPED_INTO_ANOTHER ||
+      info.trigger === TRIGGERS.DROPPED_OUTSIDE_OF_ANY
+    ) {
+      dragStartedHere = false;
+      return;
+    }
 
     const newPosition = items.findIndex((item) => item.id === info.id);
 
-    if (originZone === zoneId) {
+    if (dragStartedHere) {
       channel.push(PUSH_EVENT.REORDER_TIMELINE, {
         position: newPosition,
       });
@@ -76,6 +85,8 @@
         position: newPosition,
       });
     }
+
+    dragStartedHere = false;
   }
 </script>
 

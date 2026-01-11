@@ -5,24 +5,21 @@
   import Timeline from "~components/Timeline.svelte";
   import Draggable from "~components/Draggable.svelte";
   import { type DndEvent, TRIGGERS } from "svelte-dnd-action";
-  import { dragOriginZone } from "~shared/stores/dragOrigin";
   import { TURN_PHASE } from "~shared/types/turn";
 
   const { game } = $derived.by(getGameContext);
   const { user } = $derived.by(getScopeContext);
-  const zoneId = $derived(`current-track-${user.uuid}`);
 
   const shouldShow = $derived.by(() => {
     const phase = game?.turn?.phase;
     const currentTrack = game?.track;
     const assumptions = game?.turn?.assumptions || [];
     const userHasAssumption = assumptions.some(
-      (assumption) => assumption.user_id === user.uuid
+      (assumption) => assumption.user_id === user?.uuid
     );
 
     const activePlayerUuid = game?.queue?.[game?.cursor];
-    const isActivePlayer = activePlayerUuid === user.uuid;
-
+    const isActivePlayer = activePlayerUuid === user?.uuid;
     if (!currentTrack) return false;
 
     switch (phase) {
@@ -41,7 +38,7 @@
     return currentTrack
       ? [
           {
-            id: `${currentTrack.id}-${user.uuid}`,
+            id: `${currentTrack.id}-${user?.uuid}`,
             track: currentTrack,
             current: true,
           },
@@ -52,12 +49,8 @@
   type TimelineItem = (typeof timeline)[number];
 
   function handleConsider({
-    detail: { items, info },
+    detail: { items },
   }: CustomEvent<DndEvent<TimelineItem>>) {
-    if (info.trigger === TRIGGERS.DRAG_STARTED) {
-      dragOriginZone.set(zoneId);
-    }
-
     timeline = items;
   }
 
@@ -69,8 +62,6 @@
     } else {
       timeline = items;
     }
-
-    dragOriginZone.set(null);
   }
 </script>
 
