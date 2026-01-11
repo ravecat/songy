@@ -56,7 +56,7 @@
     icon: isPlayback ? Pause : Play,
     text: isPlayback ? "stop" : "play",
     onclick: handlePlayback,
-    disabled: !(permissions?.can_control_playback ?? false) || turnPhase === TURN_PHASE.WAITING,
+    disabled: !permissions?.can_control_playback,
   })}
 {/snippet}
 
@@ -67,7 +67,7 @@
     text: "start",
     onclick: handleStartGame,
     class: "btn-primary",
-    visible: permissions?.can_start_game ?? false,
+    visible: permissions?.can_start_game,
   })}
 {/snippet}
 
@@ -90,9 +90,9 @@
     onclick: handleNextPhase,
     class: "btn-primary",
     visible:
-      (permissions?.can_advance_turn ?? false) &&
-      !(permissions?.can_start_game ?? false) &&
-      !(permissions?.can_start_turn ?? false),
+      permissions?.can_advance_turn &&
+      !permissions?.can_start_game &&
+      !permissions?.can_start_turn,
   })}
 {/snippet}
 
@@ -103,7 +103,7 @@
       icon: RotateCcw,
       text: "rewind",
       type: "submit",
-      visible: permissions?.can_restart_game ?? false,
+      visible: permissions?.can_restart_game,
     })}
   </form>
 {/snippet}

@@ -72,7 +72,7 @@ describe("Player", () => {
     });
 
     describe("owner", () => {
-      test("shows Ready button", () => {
+      test("shows ready button", () => {
         mockChannelContext.permissions.can_start_game = true;
 
         renderForUser(ownerUser);
@@ -82,7 +82,7 @@ describe("Player", () => {
         expect(readyButton).toBeEnabled();
       });
 
-      test("disables Play button", () => {
+      test("disables play button", () => {
         renderForUser(ownerUser);
 
         const playButton = screen.getByRole("button", { name: "Play track" });
@@ -90,7 +90,7 @@ describe("Player", () => {
         expect(playButton).toBeDisabled();
       });
 
-      test("starts game when Ready is clicked", async () => {
+      test("starts game when ready is clicked", async () => {
         mockChannelContext.permissions.can_start_game = true;
 
         renderForUser(ownerUser);
@@ -105,7 +105,7 @@ describe("Player", () => {
     });
 
     describe("challenger", () => {
-      test("hides Ready button", () => {
+      test("hides ready button", () => {
         renderForUser(playerUser);
 
         expect(
@@ -125,7 +125,7 @@ describe("Player", () => {
     });
 
     describe("owner", () => {
-      test("advances turn when Ready is clicked", async () => {
+      test("advances turn when ready is clicked", async () => {
         mockChannelContext.permissions.can_start_turn = true;
 
         renderForUser(ownerUser);
@@ -138,8 +138,8 @@ describe("Player", () => {
         );
       });
 
-      test("disables Play button during waiting phase", () => {
-        mockChannelContext.permissions.can_control_playback = true;
+      test("disables play button during waiting phase", () => {
+        mockChannelContext.permissions.can_control_playback = false;
 
         renderForUser(ownerUser);
 
@@ -153,8 +153,8 @@ describe("Player", () => {
         mockChannelContext.game.cursor = 1;
       });
 
-      test("disables Play button during waiting phase", () => {
-        mockChannelContext.permissions.can_control_playback = true;
+      test("disables play button during waiting phase", () => {
+        mockChannelContext.permissions.can_control_playback = false;
 
         renderForUser(playerUser);
 
@@ -174,7 +174,7 @@ describe("Player", () => {
     });
 
     describe("owner", () => {
-      test("hides Next", () => {
+      test("hides next", () => {
         mockChannelContext.permissions.can_control_playback = true;
 
         renderForUser(ownerUser);
@@ -193,7 +193,7 @@ describe("Player", () => {
         mockChannelContext.game.cursor = 1;
       });
 
-      test("shows Next and enables Play", () => {
+      test("shows next and enables play", () => {
         mockChannelContext.permissions.can_control_playback = true;
         mockChannelContext.permissions.can_advance_turn = true;
 
@@ -209,7 +209,7 @@ describe("Player", () => {
     });
 
     describe("challenger", () => {
-      test("disables Play button", () => {
+      test("disables play button", () => {
         mockChannelContext.permissions.can_control_playback = false;
         mockChannelContext.permissions.can_advance_turn = false;
 
