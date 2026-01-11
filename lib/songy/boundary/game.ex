@@ -225,6 +225,32 @@ defmodule Songy.Boundary.Game do
     {:next_state, {:in_progress, :results}, updated_game, [{:next_event, :internal, :broadcast}]}
   end
 
+  def handle_event(
+        {:timeout, :timer},
+        {:tick, deadline_ms},
+        {:in_progress, :challenging},
+        data
+      ) do
+    now_ms = System.system_time(:millisecond)
+    remaining = max(0, div(deadline_ms - now_ms + 999, 1_000))
+
+    Phoenix.PubSub.local_broadcast(
+      Songy.PubSub,
+      "room:#{data.id}",
+      {:timer, remaining}
+    )
+
+    if remaining > 0 do
+      {:keep_state, data, [{{:timeout, :timer}, 1_000, {:tick, deadline_ms}}]}
+    else
+      {:keep_state, data}
+    end
+  end
+
+  def handle_event({:timeout, :timer}, _payload, _state, data) do
+    {:keep_state, data}
+  end
+
   def handle_event(:info, _event, {:in_progress, _phase}, data) do
     {:keep_state, data}
   end
@@ -249,13 +275,15 @@ defmodule Songy.Boundary.Game do
     Logger.debug("Game #{data.id}: Advancing turn phase")
 
     updated_game = %{data | turn: %{turn | phase: :challenging}}
-    timeout = Application.fetch_env!(:songy, :challenging_phase_timeout)
+    timeout_ms = Application.fetch_env!(:songy, :challenging_phase_timeout)
+    deadline_ms = System.system_time(:millisecond) + timeout_ms
 
     {:next_state, {:in_progress, :challenging}, updated_game,
      [
        {:reply, from, {:ok, updated_game}},
        {:next_event, :internal, :broadcast},
-       {{:timeout, :challenging}, timeout, :auto_advance}
+       {{:timeout, :timer}, 0, {:tick, deadline_ms}},
+       {{:timeout, :challenging}, timeout_ms, :auto_advance}
      ]}
   end
 

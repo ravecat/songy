@@ -44,10 +44,6 @@
 
   type TimelineItem = (typeof timeline)[number];
 
-  const activePlayerId = $derived.by(() => {
-    return game?.queue?.[game?.cursor];
-  });
-
   const canUserDragItem = (item: TimelineItem): boolean => {
     return item.user?.uuid === currentPlayer?.uuid;
   };

@@ -26,11 +26,6 @@
     min-height: 0;
   }
 
-  .turn-timeline :global(.timeline) {
-    flex: 1;
-    min-height: 0;
-  }
-
   .turn-current {
     flex-shrink: 0;
   }

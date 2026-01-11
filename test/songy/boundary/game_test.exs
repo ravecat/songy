@@ -888,6 +888,42 @@ defmodule Songy.Boundary.GameTest do
     end
   end
 
+  describe ":in_progress - :challenging - timer broadcast" do
+    setup %{game_id: game_id} do
+      original_timeout = Application.get_env(:songy, :challenging_phase_timeout)
+      Application.put_env(:songy, :challenging_phase_timeout, 50)
+
+      user1 = %User{uuid: "user-1", name: "Player1"}
+      user2 = %User{uuid: "user-2", name: "Player2"}
+
+      join_participant(game_id, user1.uuid)
+      assert_receive {:state, _}
+      join_participant(game_id, user2.uuid)
+      assert_receive {:state, _}
+      {:ok, _} = Game.start_game(game_id)
+      # waiting phase
+      assert_receive {:state, _}
+      # waiting -> ready
+      {:ok, _} = Game.next_phase(game_id)
+      # ready phase
+      assert_receive {:state, _}
+
+      on_exit(fn ->
+        Application.put_env(:songy, :challenging_phase_timeout, original_timeout)
+      end)
+
+      :ok
+    end
+
+    test "broadcasts at least one timer tick", %{game_id: game_id} do
+      {:ok, _} = Game.next_phase(game_id)
+
+      assert_receive {:timer, remaining}, 100
+      assert is_integer(remaining)
+      assert remaining >= 0
+    end
+  end
+
   describe ":in_progress - :challenging - auto advance" do
     setup %{game_id: game_id} do
       user1 = %User{uuid: "user-1", name: "Player1"}

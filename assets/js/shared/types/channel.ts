@@ -15,6 +15,7 @@ export enum PUSH_EVENT {
 
 export enum BROADCAST_EVENT {
   STATE = "state",
+  TIMER = "timer",
 }
 
 interface PushEventPayloads {
@@ -31,11 +32,13 @@ interface PushEventPayloads {
 
 interface OnEventPayloads {
   [BROADCAST_EVENT.STATE]: { game: Game; permissions: Permissions };
+  [BROADCAST_EVENT.TIMER]: { remaining: number };
 }
 
 declare module "phoenix" {
   interface Channel {
     push<T extends PUSH_EVENT>(event: T, payload: PushEventPayloads[T], timeout?: number): Push;
-    on<T extends BROADCAST_EVENT>(event: T, callback: (payload: OnEventPayloads[T]) => void): void;
+    on<T extends BROADCAST_EVENT>(event: T, callback: (payload: OnEventPayloads[T]) => void): number;
+    off(event: BROADCAST_EVENT, ref?: number): void;
   }
 }

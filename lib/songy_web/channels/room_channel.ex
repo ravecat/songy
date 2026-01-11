@@ -44,6 +44,11 @@ defmodule SongyWeb.RoomChannel do
     {:noreply, socket}
   end
 
+  def handle_info({:timer, remaining}, socket) do
+    push(socket, "timer", %{remaining: remaining})
+    {:noreply, socket}
+  end
+
   @impl true
   def handle_info(_, socket) do
     {:noreply, socket}

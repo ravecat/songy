@@ -58,6 +58,8 @@
 <style>
   .timeline {
     display: flex;
+    flex: 1;
+    min-height: 0;
     flex-wrap: wrap;
     justify-content: center;
     align-items: center;
