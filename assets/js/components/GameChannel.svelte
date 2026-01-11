@@ -34,13 +34,10 @@
     channel,
   });
 
-  channel.on(
-    BROADCAST_EVENT.STATE,
-    (response: { game: Game; permissions: Permissions }) => {
-      context.game = response.game;
-      context.permissions = response.permissions;
-    }
-  );
+  channel.on(BROADCAST_EVENT.STATE, ({ game, permissions }) => {
+    context.game = game;
+    context.permissions = permissions;
+  });
 
   // Make context available to child components
   setGameContext(context);

@@ -1,3 +1,6 @@
+import type { Game } from "~shared/types/game";
+import type { Permissions } from "~shared/types/permissions";
+
 export enum PUSH_EVENT {
   START_GAME = "start_game",
   NEXT_PHASE = "next_phase",
@@ -26,8 +29,13 @@ interface PushEventPayloads {
   [PUSH_EVENT.GET_CURRENT_USER]: Record<string, never>;
 }
 
+interface OnEventPayloads {
+  [BROADCAST_EVENT.STATE]: { game: Game; permissions: Permissions };
+}
+
 declare module "phoenix" {
   interface Channel {
     push<T extends PUSH_EVENT>(event: T, payload: PushEventPayloads[T], timeout?: number): Push;
+    on<T extends BROADCAST_EVENT>(event: T, callback: (payload: OnEventPayloads[T]) => void): void;
   }
 }
