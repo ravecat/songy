@@ -9,9 +9,10 @@ defmodule Songy.Policy do
 
   @acts [
     :start_game,
-    :start_playback,
-    :pause_playback,
-    :next_phase,
+    :control_playback,
+    :advance_turn,
+    :start_turn,
+    :restart_game,
     :make_assumption,
     :reorder_timeline,
     :spectate
@@ -39,27 +40,24 @@ defmodule Songy.Policy do
 
   defp can(:start_game, :owner, :waiting, _phase), do: :ok
 
-  defp can(:start_playback, :owner, :in_progress, :waiting), do: :ok
-  defp can(:start_playback, :player, :in_progress, :waiting), do: :ok
-  defp can(:start_playback, :owner, :in_progress, :ready), do: :ok
-  defp can(:start_playback, :player, :in_progress, :ready), do: :ok
+  defp can(:control_playback, :player, :in_progress, :ready), do: :ok
+  defp can(:control_playback, :player, :in_progress, :results), do: :ok
+  defp can(:control_playback, :owner, :in_progress, :results), do: :ok
+  defp can(:control_playback, :owner, :in_progress, :ready), do: :ok
+  defp can(:control_playback, :challenger, :in_progress, :challenging), do: :ok
+  defp can(:control_playback, :owner, :in_progress, :challenging), do: :ok
 
-  defp can(:pause_playback, :owner, :in_progress, :waiting), do: :ok
-  defp can(:pause_playback, :player, :in_progress, :waiting), do: :ok
-  defp can(:pause_playback, :owner, :in_progress, :ready), do: :ok
-  defp can(:pause_playback, :player, :in_progress, :ready), do: :ok
+  defp can(:advance_turn, :player, :in_progress, :waiting), do: :ok
+  defp can(:advance_turn, :player, :in_progress, :ready), do: :ok
+  defp can(:advance_turn, :player, :in_progress, :results), do: :ok
+  defp can(:advance_turn, :owner, :in_progress, :waiting), do: :ok
+  defp can(:advance_turn, :owner, :in_progress, :ready), do: :ok
+  defp can(:advance_turn, :owner, :in_progress, :results), do: :ok
 
-  defp can(:start_playback, :owner, :in_progress, :challenging), do: :ok
-  defp can(:start_playback, :challenger, :in_progress, :challenging), do: :ok
+  defp can(:start_turn, :player, :in_progress, :waiting), do: :ok
+  defp can(:start_turn, :owner, :in_progress, :waiting), do: :ok
 
-  defp can(:pause_playback, :owner, :in_progress, :challenging), do: :ok
-  defp can(:pause_playback, :challenger, :in_progress, :challenging), do: :ok
-
-  defp can(:next_phase, :owner, :in_progress, :waiting), do: :ok
-  defp can(:next_phase, :player, :in_progress, :waiting), do: :ok
-  defp can(:next_phase, :player, :in_progress, :ready), do: :ok
-  defp can(:next_phase, :owner, :in_progress, :results), do: :ok
-  defp can(:next_phase, :player, :in_progress, :results), do: :ok
+  defp can(:restart_game, :owner, :finished, _phase), do: :ok
 
   defp can(:make_assumption, :owner, :in_progress, :ready), do: :ok
   defp can(:make_assumption, :owner, :in_progress, :challenging), do: :ok

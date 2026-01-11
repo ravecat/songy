@@ -1,28 +1,33 @@
 defmodule Songy.PolicyTest do
   use ExUnit.Case, async: true
 
-  alias Songy.Core.{Game, Turn}
+  alias Songy.Core.Game
+  alias Songy.Core.Turn
   alias Songy.Policy
 
   @owner_cases [
     %{state: :waiting, phase: nil, allowed: [:start_game]},
-    %{state: :in_progress, phase: :waiting, allowed: [:start_playback, :pause_playback, :next_phase]},
-    %{state: :in_progress, phase: :ready, allowed: [:start_playback, :pause_playback, :make_assumption, :reorder_timeline]},
+    %{state: :in_progress, phase: :waiting, allowed: [:advance_turn, :start_turn]},
+    %{
+      state: :in_progress,
+      phase: :ready,
+      allowed: [:control_playback, :make_assumption, :reorder_timeline, :advance_turn]
+    },
     %{
       state: :in_progress,
       phase: :challenging,
-      allowed: [:start_playback, :pause_playback, :make_assumption, :reorder_timeline]
+      allowed: [:control_playback, :make_assumption, :reorder_timeline]
     },
-    %{state: :in_progress, phase: :results, allowed: [:next_phase]},
-    %{state: :finished, phase: nil, allowed: []}
+    %{state: :in_progress, phase: :results, allowed: [:control_playback, :advance_turn]},
+    %{state: :finished, phase: nil, allowed: [:restart_game]}
   ]
 
   @player_cases [
     %{state: :waiting, phase: nil, allowed: []},
-    %{state: :in_progress, phase: :waiting, allowed: [:start_playback, :pause_playback, :next_phase]},
-    %{state: :in_progress, phase: :ready, allowed: [:start_playback, :pause_playback, :next_phase]},
+    %{state: :in_progress, phase: :waiting, allowed: [:advance_turn, :start_turn]},
+    %{state: :in_progress, phase: :ready, allowed: [:control_playback, :advance_turn]},
     %{state: :in_progress, phase: :challenging, allowed: []},
-    %{state: :in_progress, phase: :results, allowed: [:next_phase]},
+    %{state: :in_progress, phase: :results, allowed: [:advance_turn, :control_playback]},
     %{state: :finished, phase: nil, allowed: []}
   ]
 
@@ -30,13 +35,13 @@ defmodule Songy.PolicyTest do
     %{state: :waiting, phase: nil, allowed: []},
     %{state: :in_progress, phase: :waiting, allowed: []},
     %{state: :in_progress, phase: :ready, allowed: []},
-    %{state: :in_progress, phase: :challenging, allowed: [:start_playback, :pause_playback]},
+    %{state: :in_progress, phase: :challenging, allowed: [:control_playback]},
     %{state: :finished, phase: nil, allowed: []}
   ]
 
   describe "owner policies" do
     for %{state: state, phase: phase, allowed: allowed} <- @owner_cases do
-      test "#{state}/#{inspect(phase)}" do
+      test "#{state} | #{inspect(phase)} | #{inspect(allowed)}" do
         owner_id = "owner"
         queue = ["player", "challenger", owner_id]
         game = game(unquote(state), unquote(phase), owner_id, queue)
@@ -51,7 +56,7 @@ defmodule Songy.PolicyTest do
 
   describe "player policies" do
     for %{state: state, phase: phase, allowed: allowed} <- @player_cases do
-      test "#{state}/#{inspect(phase)}" do
+      test "#{state} | #{inspect(phase)} | #{inspect(allowed)}" do
         owner_id = "owner"
         player_id = "player"
         queue = [player_id, "challenger"]
@@ -67,7 +72,7 @@ defmodule Songy.PolicyTest do
 
   describe "challenger policies" do
     for %{state: state, phase: phase, allowed: allowed} <- @challenger_cases do
-      test "#{state}/#{inspect(phase)}" do
+      test "#{state} | #{inspect(phase)} | #{inspect(allowed)}" do
         owner_id = "owner"
         challenger_id = "challenger"
         queue = ["player", challenger_id]

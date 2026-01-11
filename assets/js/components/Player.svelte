@@ -56,7 +56,7 @@
     icon: isPlayback ? Pause : Play,
     text: isPlayback ? "stop" : "play",
     onclick: handlePlayback,
-    disabled: !(permissions?.can_control_playback ?? false),
+    disabled: !(permissions?.can_control_playback ?? false) || turnPhase === TURN_PHASE.WAITING,
   })}
 {/snippet}
 
@@ -78,7 +78,7 @@
     text: "ready",
     onclick: handleNextPhase,
     class: "btn-primary",
-    visible: permissions?.can_ready,
+    visible: permissions.can_start_turn,
   })}
 {/snippet}
 
@@ -92,7 +92,7 @@
     visible:
       (permissions?.can_advance_turn ?? false) &&
       !(permissions?.can_start_game ?? false) &&
-      !(permissions?.can_ready ?? false),
+      !(permissions?.can_start_turn ?? false),
   })}
 {/snippet}
 

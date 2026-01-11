@@ -369,7 +369,7 @@ defmodule Songy.Boundary.Game do
   end
 
   def handle_event({:call, from}, {:start_playback, user_id}, {:in_progress, _phase}, data) do
-    with :ok <- Songy.Authorization.can?(data, user_id, :start_playback) do
+    with :ok <- Songy.Authorization.can?(data, user_id, :control_playback) do
       updated_game = %{data | player: Core.Player.set_playback(data.player, true)}
       {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
     else
@@ -379,7 +379,7 @@ defmodule Songy.Boundary.Game do
   end
 
   def handle_event({:call, from}, {:pause_playback, user_id}, {:in_progress, _phase}, data) do
-    with :ok <- Songy.Authorization.can?(data, user_id, :pause_playback) do
+    with :ok <- Songy.Authorization.can?(data, user_id, :control_playback) do
       updated_game = %{data | player: Core.Player.set_playback(data.player, false)}
       {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
     else

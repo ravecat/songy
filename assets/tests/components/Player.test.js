@@ -49,7 +49,7 @@ describe("Player", () => {
         can_control_playback: false,
         can_advance_turn: false,
         can_start_game: false,
-        can_ready: false,
+        can_start_turn: false,
         can_restart_game: false,
       },
       channel: {
@@ -126,7 +126,7 @@ describe("Player", () => {
 
     describe("owner", () => {
       test("advances turn when Ready is clicked", async () => {
-        mockChannelContext.permissions.can_ready = true;
+        mockChannelContext.permissions.can_start_turn = true;
 
         renderForUser(ownerUser);
 
@@ -136,6 +136,30 @@ describe("Player", () => {
           PUSH_EVENT.NEXT_PHASE,
           {}
         );
+      });
+
+      test("disables Play button during waiting phase", () => {
+        mockChannelContext.permissions.can_control_playback = true;
+
+        renderForUser(ownerUser);
+
+        const playButton = screen.getByRole("button", { name: "Play track" });
+        expect(playButton).toBeDisabled();
+      });
+    });
+
+    describe("player", () => {
+      beforeEach(() => {
+        mockChannelContext.game.cursor = 1;
+      });
+
+      test("disables Play button during waiting phase", () => {
+        mockChannelContext.permissions.can_control_playback = true;
+
+        renderForUser(playerUser);
+
+        const playButton = screen.getByRole("button", { name: "Play track" });
+        expect(playButton).toBeDisabled();
       });
     });
   });

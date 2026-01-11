@@ -576,6 +576,10 @@ defmodule Songy.Boundary.GameTest do
       # Drain message from start_game
       assert_receive {:state, _}
 
+      # Transition to ready phase
+      {:ok, _} = Game.next_phase(game_id)
+      assert_receive {:state, _}
+
       {:ok, _} = Game.start_playback(game_id, owner_id)
 
       assert_receive {:state, game}
@@ -593,6 +597,11 @@ defmodule Songy.Boundary.GameTest do
       {:ok, game} = Game.start_game(game_id)
       owner_id = game.owner_id
       assert_receive {:state, _}
+
+      # Transition to ready phase
+      {:ok, _} = Game.next_phase(game_id)
+      assert_receive {:state, _}
+
       {:ok, _} = Game.start_playback(game_id, owner_id)
 
       # Drain message from start_playback
