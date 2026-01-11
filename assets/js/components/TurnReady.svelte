@@ -3,30 +3,11 @@
   import ActiveTimeline from "~components/ActiveTimeline.svelte";
 </script>
 
-<div class="turn-layout">
-  <div class="turn-timeline">
+<div class="flex flex-col flex-1 min-h-0">
+  <div class="flex flex-1 min-h-0">
     <ActiveTimeline />
   </div>
-  <div class="turn-current">
+  <div class="flex-shrink-0">
     <CurrentTrack />
   </div>
 </div>
-
-<style>
-  .turn-layout {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-  }
-
-  .turn-timeline {
-    display: flex;
-    flex: 1;
-    min-height: 0;
-  }
-
-  .turn-current {
-    flex-shrink: 0;
-  }
-</style>
