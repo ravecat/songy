@@ -1,7 +1,6 @@
 <script lang="ts">
-  import ActiveTimeline from "~components/ActiveTimeline.svelte";
+  import ScrollableTimeline from "~components/ScrollableTimeline.svelte";
   import Timer from "~components/Timer.svelte";
-  import CurrentTrack from "~components/CurrentTrack.svelte";
   import { getGameContext } from "~components/GameChannel.svelte";
   import { BROADCAST_EVENT } from "~shared/types/channel";
 
@@ -19,12 +18,5 @@
   });
 </script>
 
-<div class="relative flex min-h-0 flex-1 flex-col">
-  <Timer {seconds} />
-  <div class="flex min-h-0 flex-1">
-    <ActiveTimeline />
-  </div>
-  <div class="shrink-0">
-    <CurrentTrack />
-  </div>
-</div>
+<Timer {seconds} />
+<ScrollableTimeline />
