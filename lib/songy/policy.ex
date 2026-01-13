@@ -26,51 +26,49 @@ defmodule Songy.Policy do
   def authorize(_action, nil, _game), do: {:error, :unauthorized}
 
   def authorize(action, user, game) do
-    status = status(game)
     subjects = subjects(game, user)
-    phase = phase(game)
 
-    if Enum.any?(subjects, fn subj -> can(action, subj, status, phase) == :ok end) do
+    if Enum.any?(subjects, fn subj -> can(action, subj, game) == :ok end) do
       :ok
     else
       {:error, :unauthorized}
     end
   end
 
-  defp can(_action, nil, _status, _phase), do: {:error, :unauthorized}
+  defp can(_action, nil, _game), do: {:error, :unauthorized}
 
-  defp can(:start_game, :owner, :waiting, _phase), do: :ok
+  defp can(:start_game, :owner, %Game{status: :waiting}), do: :ok
 
-  defp can(:control_playback, :player, :in_progress, :ready), do: :ok
-  defp can(:control_playback, :player, :in_progress, :results), do: :ok
-  defp can(:control_playback, :owner, :in_progress, :results), do: :ok
-  defp can(:control_playback, :owner, :in_progress, :ready), do: :ok
-  defp can(:control_playback, :challenger, :in_progress, :challenging), do: :ok
-  defp can(:control_playback, :owner, :in_progress, :challenging), do: :ok
+  defp can(:control_playback, :player, %Game{status: :in_progress, turn: %{phase: :ready}}), do: :ok
+  defp can(:control_playback, :player, %Game{status: :in_progress, turn: %{phase: :results}}), do: :ok
+  defp can(:control_playback, :owner, %Game{status: :in_progress, turn: %{phase: :results}}), do: :ok
+  defp can(:control_playback, :owner, %Game{status: :in_progress, turn: %{phase: :ready}}), do: :ok
+  defp can(:control_playback, :challenger, %Game{status: :in_progress, turn: %{phase: :challenging}}), do: :ok
+  defp can(:control_playback, :owner, %Game{status: :in_progress, turn: %{phase: :challenging}}), do: :ok
 
-  defp can(:advance_turn, :player, :in_progress, :waiting), do: :ok
-  defp can(:advance_turn, :player, :in_progress, :ready), do: :ok
-  defp can(:advance_turn, :player, :in_progress, :results), do: :ok
-  defp can(:advance_turn, :owner, :in_progress, :waiting), do: :ok
-  defp can(:advance_turn, :owner, :in_progress, :ready), do: :ok
-  defp can(:advance_turn, :owner, :in_progress, :results), do: :ok
+  defp can(:advance_turn, :player, %Game{status: :in_progress, turn: %{phase: :waiting}}), do: :ok
+  defp can(:advance_turn, :player, %Game{status: :in_progress, turn: %{phase: :ready}}), do: :ok
+  defp can(:advance_turn, :player, %Game{status: :in_progress, turn: %{phase: :results}}), do: :ok
+  defp can(:advance_turn, :owner, %Game{status: :in_progress, turn: %{phase: :waiting}}), do: :ok
+  defp can(:advance_turn, :owner, %Game{status: :in_progress, turn: %{phase: :ready}}), do: :ok
+  defp can(:advance_turn, :owner, %Game{status: :in_progress, turn: %{phase: :results}}), do: :ok
 
-  defp can(:start_turn, :player, :in_progress, :waiting), do: :ok
-  defp can(:start_turn, :owner, :in_progress, :waiting), do: :ok
+  defp can(:start_turn, :player, %Game{status: :in_progress, turn: %{phase: :waiting}}), do: :ok
+  defp can(:start_turn, :owner, %Game{status: :in_progress, turn: %{phase: :waiting}}), do: :ok
 
-  defp can(:restart_game, :owner, :finished, _phase), do: :ok
+  defp can(:restart_game, :owner, %Game{status: :finished}), do: :ok
 
-  defp can(:make_assumption, :owner, :in_progress, :ready), do: :ok
-  defp can(:make_assumption, :owner, :in_progress, :challenging), do: :ok
+  defp can(:make_assumption, :owner, %Game{status: :in_progress, turn: %{phase: :ready}}), do: :ok
+  defp can(:make_assumption, :owner, %Game{status: :in_progress, turn: %{phase: :challenging}}), do: :ok
 
-  defp can(:see_assumptions, _, :in_progress, :results), do: :ok
+  defp can(:see_assumptions, _, %Game{status: :in_progress, turn: %{phase: :results}}), do: :ok
 
-  defp can(:reorder_timeline, :owner, :in_progress, :ready), do: :ok
-  defp can(:reorder_timeline, :owner, :in_progress, :challenging), do: :ok
+  defp can(:reorder_timeline, :owner, %Game{status: :in_progress, turn: %{phase: :ready}}), do: :ok
+  defp can(:reorder_timeline, :owner, %Game{status: :in_progress, turn: %{phase: :challenging}}), do: :ok
 
-  defp can(_action, _subject, _status, _phase), do: {:error, :unauthorized}
+  defp can(_action, _subject, %Game{}), do: {:error, :unauthorized}
 
-  defp subjects(_game, nil), do: []
+  defp subjects(%Game{}, nil), do: []
 
   defp subjects(game, user_id) do
     active_player = Enum.at(game.queue, game.cursor)
@@ -84,10 +82,4 @@ defmodule Songy.Policy do
       true -> [:challenger]
     end
   end
-
-  defp status(%Game{status: status}), do: status
-  defp status(_), do: nil
-
-  defp phase(%Game{turn: %{phase: phase}}), do: phase
-  defp phase(_), do: nil
 end

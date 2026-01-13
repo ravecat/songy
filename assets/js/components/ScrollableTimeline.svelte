@@ -2,8 +2,9 @@
   import TrackCard from "~components/TrackCard.svelte";
   import { getGameContext } from "~components/GameChannel.svelte";
   import type { User } from "~shared/types/user";
+  import { PUSH_EVENT } from "~shared/types/channel";
 
-  const { game, permissions } = $derived.by(getGameContext);
+  const { game, permissions, channel } = $derived.by(getGameContext);
   const currentTrack = $derived(game?.track);
 
   const participants = $derived(
@@ -46,7 +47,13 @@
       rect.top + rect.height / 2
     ) as HTMLElement;
 
-    console.log("Snap:", el?.dataset.index);
+    const position = el?.dataset?.index;
+
+    if (true) {
+      channel?.push(PUSH_EVENT.MAKE_ASSUMPTION, { position });
+    } else {
+      channel?.push(PUSH_EVENT.REORDER_TIMELINE, { position });
+    }
   }
 </script>
 
@@ -67,7 +74,7 @@
           {user}
         />
       </div>
-      <span class="snap" data-index={i + 1}></span>
+      <span class="snap" data-index={Math.min(i + 1, tracks.length)}></span>
     {/each}
   </div>
   <TrackCard revealed={false} track={currentTrack} />
