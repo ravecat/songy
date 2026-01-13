@@ -8,17 +8,9 @@ defmodule Songy.PolicyTest do
   @owner_cases [
     %{state: :waiting, phase: nil, allowed: [:start_game]},
     %{state: :in_progress, phase: :waiting, allowed: [:advance_turn, :start_turn]},
-    %{
-      state: :in_progress,
-      phase: :ready,
-      allowed: [:control_playback, :make_assumption, :reorder_timeline, :advance_turn]
-    },
-    %{
-      state: :in_progress,
-      phase: :challenging,
-      allowed: [:control_playback, :make_assumption, :reorder_timeline]
-    },
-    %{state: :in_progress, phase: :results, allowed: [:control_playback, :advance_turn]},
+    %{state: :in_progress, phase: :ready, allowed: [:control_playback, :make_assumption, :reorder_timeline, :advance_turn]},
+    %{state: :in_progress, phase: :challenging, allowed: [:control_playback, :make_assumption, :reorder_timeline]},
+    %{state: :in_progress, phase: :results, allowed: [:control_playback, :advance_turn, :see_assumptions]},
     %{state: :finished, phase: nil, allowed: [:restart_game]}
   ]
 
@@ -27,7 +19,7 @@ defmodule Songy.PolicyTest do
     %{state: :in_progress, phase: :waiting, allowed: [:advance_turn, :start_turn]},
     %{state: :in_progress, phase: :ready, allowed: [:control_playback, :advance_turn]},
     %{state: :in_progress, phase: :challenging, allowed: []},
-    %{state: :in_progress, phase: :results, allowed: [:advance_turn, :control_playback]},
+    %{state: :in_progress, phase: :results, allowed: [:advance_turn, :control_playback, :see_assumptions]},
     %{state: :finished, phase: nil, allowed: []}
   ]
 
@@ -41,47 +33,54 @@ defmodule Songy.PolicyTest do
 
   describe "owner policies" do
     for %{state: state, phase: phase, allowed: allowed} <- @owner_cases do
-      test "#{state} | #{inspect(phase)} | #{inspect(allowed)}" do
-        owner_id = "owner"
-        queue = ["player", "challenger", owner_id]
-        game = game(unquote(state), unquote(phase), owner_id, queue)
-        user_id = owner_id
-        allowed = unquote(allowed)
+      for action <- allowed do
+        test "allow #{action} in #{state} #{phase}" do
+          game = game(unquote(state), unquote(phase), "owner", ["player", "owner"])
+          assert :ok == Bodyguard.permit(Policy, unquote(action), "owner", game)
+        end
+      end
 
-        assert_allowed(game, user_id, allowed)
-        assert_denied(game, user_id, Policy.acts() -- allowed)
+      for action <- Policy.acts() -- allowed do
+        test "deny #{action} in #{state} #{phase}" do
+          game = game(unquote(state), unquote(phase), "owner", ["player", "owner"])
+          assert {:error, :unauthorized} == Bodyguard.permit(Policy, unquote(action), "owner", game)
+        end
       end
     end
   end
 
   describe "player policies" do
     for %{state: state, phase: phase, allowed: allowed} <- @player_cases do
-      test "#{state} | #{inspect(phase)} | #{inspect(allowed)}" do
-        owner_id = "owner"
-        player_id = "player"
-        queue = [player_id, "challenger"]
-        game = game(unquote(state), unquote(phase), owner_id, queue)
-        user_id = player_id
-        allowed = unquote(allowed)
+      for action <- allowed do
+        test "allow #{action} in #{state} #{phase}" do
+          game = game(unquote(state), unquote(phase), "owner", ["player", "challenger"])
+          assert :ok == Bodyguard.permit(Policy, unquote(action), "player", game)
+        end
+      end
 
-        assert_allowed(game, user_id, allowed)
-        assert_denied(game, user_id, Policy.acts() -- allowed)
+      for action <- Policy.acts() -- allowed do
+        test "deny #{action} in #{state} #{phase}" do
+          game = game(unquote(state), unquote(phase), "owner", ["player", "challenger"])
+          assert {:error, :unauthorized} == Bodyguard.permit(Policy, unquote(action), "player", game)
+        end
       end
     end
   end
 
   describe "challenger policies" do
     for %{state: state, phase: phase, allowed: allowed} <- @challenger_cases do
-      test "#{state} | #{inspect(phase)} | #{inspect(allowed)}" do
-        owner_id = "owner"
-        challenger_id = "challenger"
-        queue = ["player", challenger_id]
-        game = game(unquote(state), unquote(phase), owner_id, queue)
-        user_id = challenger_id
-        allowed = unquote(allowed)
+      for action <- allowed do
+        test "allow #{action} in #{state} #{phase}" do
+          game = game(unquote(state), unquote(phase), "owner", ["player", "challenger"])
+          assert :ok == Bodyguard.permit(Policy, unquote(action), "challenger", game)
+        end
+      end
 
-        assert_allowed(game, user_id, allowed)
-        assert_denied(game, user_id, Policy.acts() -- allowed)
+      for action <- Policy.acts() -- allowed do
+        test "deny #{action} in #{state} #{phase}" do
+          game = game(unquote(state), unquote(phase), "owner", ["player", "challenger"])
+          assert {:error, :unauthorized} == Bodyguard.permit(Policy, unquote(action), "challenger", game)
+        end
       end
     end
   end
@@ -92,23 +91,7 @@ defmodule Songy.PolicyTest do
       owner_id: owner_id,
       queue: queue,
       cursor: 0,
-      turn:
-        case state do
-          :in_progress -> %Turn{phase: phase, timeline: [], assumptions: []}
-          _ -> nil
-        end
+      turn: if(state == :in_progress, do: %Turn{phase: phase}, else: nil)
     }
-  end
-
-  defp assert_allowed(game, user_id, actions) do
-    Enum.each(actions, fn action ->
-      assert :ok == Bodyguard.permit(Songy.Policy, action, user_id, game)
-    end)
-  end
-
-  defp assert_denied(game, user_id, actions) do
-    Enum.each(actions, fn action ->
-      assert {:error, :unauthorized} == Bodyguard.permit(Songy.Policy, action, user_id, game)
-    end)
   end
 end

@@ -15,6 +15,7 @@ defmodule Songy.Policy do
     :restart_game,
     :make_assumption,
     :reorder_timeline,
+    :see_assumptions,
     :spectate
   ]
 
@@ -61,6 +62,8 @@ defmodule Songy.Policy do
 
   defp can(:make_assumption, :owner, :in_progress, :ready), do: :ok
   defp can(:make_assumption, :owner, :in_progress, :challenging), do: :ok
+
+  defp can(:see_assumptions, _, :in_progress, :results), do: :ok
 
   defp can(:reorder_timeline, :owner, :in_progress, :ready), do: :ok
   defp can(:reorder_timeline, :owner, :in_progress, :challenging), do: :ok

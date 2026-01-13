@@ -17,4 +17,6 @@ export interface Permissions {
 
   /** Whether to show the play again button */
   can_restart_game: boolean;
+
+  can_see_assumptions: boolean;
 }

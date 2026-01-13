@@ -1,18 +1,14 @@
 <script lang="ts">
   import TrackCard from "~components/TrackCard.svelte";
   import { getGameContext } from "~components/GameChannel.svelte";
-  import { TURN_PHASE } from "~shared/types/turn";
   import type { User } from "~shared/types/user";
 
-  const { game } = $derived.by(getGameContext);
+  const { game, permissions } = $derived.by(getGameContext);
   const currentTrack = $derived(game?.track);
-  const phase = $derived(game?.turn?.phase);
 
   const participants = $derived(
     new Map(game?.participants?.map((user) => [user.uuid, user]) ?? [])
   );
-
-  $inspect(game?.turn?.assumptions);
 
   const assumptions = $derived.by(() => {
     const assumptions = game?.turn?.assumptions || [];
@@ -60,12 +56,13 @@
     bind:this={timeline}
     onwheel={handleWheel}
     onscrollend={onScrollEnd}
+    role="list"
   >
     <span class="snap" data-index={0}></span>
     {#each tracks as { user, track, current, id }, i (id)}
-      <div class="card">
+      <div class="card" role="listitem">
         <TrackCard
-          revealed={!current || phase === TURN_PHASE.RESULTS}
+          revealed={!current || permissions?.can_see_assumptions}
           {track}
           {user}
         />

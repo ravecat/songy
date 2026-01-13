@@ -38,7 +38,8 @@ defmodule Songy.Authorization do
       can_advance_turn: Bodyguard.permit?(Policy, :advance_turn, user_id, game),
       can_start_game: Bodyguard.permit?(Policy, :start_game, user_id, game),
       can_start_turn: Bodyguard.permit?(Policy, :start_turn, user_id, game),
-      can_restart_game: Bodyguard.permit?(Policy, :restart_game, user_id, game)
+      can_restart_game: Bodyguard.permit?(Policy, :restart_game, user_id, game),
+      can_see_assumptions: Bodyguard.permit?(Policy, :see_assumptions, user_id, game)
     }
   end
 
@@ -48,7 +49,8 @@ defmodule Songy.Authorization do
       can_advance_turn: false,
       can_start_game: false,
       can_start_turn: false,
-      can_restart_game: false
+      can_restart_game: false,
+      can_see_assumptions: false
     }
   end
 end
