@@ -21,6 +21,8 @@
     }, new Map<number, User | undefined>());
   });
 
+  let hasInteracted = $state(false);
+
   let tracks = $derived.by(() => {
     const timeline = game?.turn?.timeline || [];
 
@@ -41,6 +43,8 @@
   }
 
   function onScrollEnd() {
+    if (!hasInteracted) return;
+
     const rect = timeline.getBoundingClientRect();
     const el = document.elementFromPoint(
       rect.left + rect.width / 2,
@@ -59,6 +63,7 @@
     bind:this={timeline}
     onwheel={handleWheel}
     onscrollend={onScrollEnd}
+    onscroll={() => (hasInteracted = true)}
     role="list"
   >
     <span class="snap" data-index={0}></span>
