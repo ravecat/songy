@@ -3,7 +3,7 @@ import type { Permissions } from "~shared/types/permissions";
 
 export enum PUSH_EVENT {
   START_GAME = "start_game",
-  NEXT_PHASE = "next_phase",
+  ADVANCE_TURN = "advance_turn",
   MAKE_ASSUMPTION = "make_assumption",
   START_PLAYBACK = "start_playback",
   PAUSE_PLAYBACK = "pause_playback",
@@ -19,7 +19,7 @@ export enum BROADCAST_EVENT {
 
 interface PushEventPayloads {
   [PUSH_EVENT.START_GAME]: Record<string, never>;
-  [PUSH_EVENT.NEXT_PHASE]: Record<string, never>;
+  [PUSH_EVENT.ADVANCE_TURN]: Record<string, never>;
   [PUSH_EVENT.MAKE_ASSUMPTION]: { position: number };
   [PUSH_EVENT.START_PLAYBACK]: Record<string, never>;
   [PUSH_EVENT.PAUSE_PLAYBACK]: Record<string, never>;

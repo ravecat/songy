@@ -50,13 +50,13 @@ defmodule Songy.Boundary.GameSession do
     end
   end
 
-  @spec start_game_session(String.t()) :: {:ok, Core.Game.t()} | {:error, term()}
-  def start_game_session(game_id) when is_binary(game_id) do
+  @spec start_game_session(String.t(), String.t()) :: {:ok, Core.Game.t()} | {:error, term()}
+  def start_game_session(game_id, user_id) when is_binary(game_id) and is_binary(user_id) do
     with {:ok, game} <- Game.get_state(game_id),
          {:ok, provider} <- Providers.lookup(:providers, game.owner_id),
          {:ok, track} <- Player.search_random_track(provider),
          {:ok, _game} <- Game.set_track(game_id, track),
-         {:ok, game} <- Game.start_game(game_id) do
+         {:ok, game} <- Game.start_game(game_id, user_id) do
       Logger.debug("Started game session #{game_id}, owner: #{game.owner_id}")
       {:ok, game}
     else
@@ -96,7 +96,7 @@ defmodule Songy.Boundary.GameSession do
   end
 
   defdelegate owner?(game_id, user_id), to: Game
-  defdelegate next_phase(game_id), to: Game
+  defdelegate advance_turn(game_id, user_id), to: Game
 
   defdelegate make_assumption(game_id, user_id), to: Game
   defdelegate make_assumption(game_id, user_id, position), to: Game

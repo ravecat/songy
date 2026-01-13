@@ -57,8 +57,9 @@ defmodule SongyWeb.RoomChannel do
   @impl true
   def handle_in("start_game", _payload, socket) do
     @room_prefix <> room_id = socket.topic
+    current_user_id = socket.assigns.current_user_id
 
-    case GameSession.start_game_session(room_id) do
+    case GameSession.start_game_session(room_id, current_user_id) do
       {:ok, _game} ->
         {:noreply, socket}
 
@@ -141,10 +142,11 @@ defmodule SongyWeb.RoomChannel do
   end
 
   @impl true
-  def handle_in("next_phase", _payload, socket) do
+  def handle_in("advance_turn", _payload, socket) do
     @room_prefix <> room_id = socket.topic
+    current_user_id = socket.assigns.current_user_id
 
-    case GameSession.next_phase(room_id) do
+    case GameSession.advance_turn(room_id, current_user_id) do
       {:ok, _game} ->
         {:reply, :ok, socket}
 

@@ -22,8 +22,8 @@
     channel.push(PUSH_EVENT.START_GAME, {});
   };
 
-  const handleNextPhase = () => {
-    channel.push(PUSH_EVENT.NEXT_PHASE, {});
+  const handleAdvanceTurn = () => {
+    channel.push(PUSH_EVENT.ADVANCE_TURN, {});
   };
 </script>
 
@@ -76,7 +76,7 @@
     label: "Ready",
     icon: SkipForward,
     text: "ready",
-    onclick: handleNextPhase,
+    onclick: handleAdvanceTurn,
     class: "btn-primary",
     visible: permissions.can_start_turn,
   })}
@@ -87,7 +87,7 @@
     label: turnPhase === TURN_PHASE.READY ? "Next phase" : "Next turn",
     icon: SkipForward,
     text: turnPhase === TURN_PHASE.READY ? "forward" : "next turn",
-    onclick: handleNextPhase,
+    onclick: handleAdvanceTurn,
     class: "btn-primary",
     visible:
       permissions?.can_advance_turn &&

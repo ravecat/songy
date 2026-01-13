@@ -159,7 +159,7 @@ defmodule SongyWeb.RoomChannelTest do
          }}
       end)
 
-      Repatch.patch(GameSession, :start_game_session, [mode: :shared], fn ^game_id ->
+      Repatch.patch(GameSession, :start_game_session, [mode: :shared], fn ^game_id, _user_id ->
         {:ok, %{status: :in_progress}}
       end)
 
@@ -187,7 +187,7 @@ defmodule SongyWeb.RoomChannelTest do
          }}
       end)
 
-      Repatch.patch(GameSession, :start_game_session, [mode: :shared], fn ^game_id ->
+      Repatch.patch(GameSession, :start_game_session, [mode: :shared], fn ^game_id, _user_id ->
         {:error, :start_game_failed}
       end)
 
@@ -325,10 +325,10 @@ defmodule SongyWeb.RoomChannelTest do
     end
   end
 
-  # === NEXT_PHASE EVENT ===
+  # === ADVANCE_TURN EVENT ===
 
-  describe "next_phase" do
-    test "replies :ok when next_phase succeeds", %{current_user: current_user} do
+  describe "advance_turn" do
+    test "replies :ok when advance_turn succeeds", %{current_user: current_user} do
       game_id = "game-123"
       new_state = %{turn: %{phase: :ready}}
 
@@ -344,7 +344,7 @@ defmodule SongyWeb.RoomChannelTest do
          }}
       end)
 
-      Repatch.patch(GameSession, :next_phase, [mode: :shared], fn ^game_id ->
+      Repatch.patch(GameSession, :advance_turn, [mode: :shared], fn ^game_id, _user_id ->
         {:ok, new_state}
       end)
 
@@ -352,12 +352,12 @@ defmodule SongyWeb.RoomChannelTest do
       # Consume push from join
       assert_push("state", %{game: _})
 
-      ref = push(socket, "next_phase", %{})
+      ref = push(socket, "advance_turn", %{})
 
       assert_reply(ref, :ok)
     end
 
-    test "does not reply when next_phase fails", %{current_user: current_user} do
+    test "does not reply when advance_turn fails", %{current_user: current_user} do
       game_id = "game-123"
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
@@ -372,7 +372,7 @@ defmodule SongyWeb.RoomChannelTest do
          }}
       end)
 
-      Repatch.patch(GameSession, :next_phase, [mode: :shared], fn ^game_id ->
+      Repatch.patch(GameSession, :advance_turn, [mode: :shared], fn ^game_id, _user_id ->
         {:error, :game_not_started}
       end)
 
@@ -380,7 +380,7 @@ defmodule SongyWeb.RoomChannelTest do
       # Consume push from join
       assert_push("state", %{game: _})
 
-      ref = push(socket, "next_phase", %{})
+      ref = push(socket, "advance_turn", %{})
 
       refute_reply(ref, :ok)
     end

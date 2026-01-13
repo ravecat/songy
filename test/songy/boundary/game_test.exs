@@ -198,14 +198,14 @@ defmodule Songy.Boundary.GameTest do
   end
 
   describe ":waiting - :none - start game" do
-    test "transitions to :in_progress when valid", %{game_id: game_id} do
+    test "transitions to :in_progress when valid", %{game_id: game_id, owner: owner} do
       user1 = %User{uuid: "user-1", name: "Player1"}
       user2 = %User{uuid: "user-2", name: "Player2"}
 
       join_participant(game_id, user1.uuid)
       join_participant(game_id, user2.uuid)
 
-      {:ok, game} = Game.start_game(game_id)
+      {:ok, game} = Game.start_game(game_id, owner.uuid)
 
       assert game.status == :in_progress
 
@@ -214,21 +214,21 @@ defmodule Songy.Boundary.GameTest do
       assert length(response.queue) == 2
     end
 
-    test "starts with a single participant", %{game_id: game_id} do
+    test "starts with a single participant", %{game_id: game_id, owner: owner} do
       user1 = %User{uuid: "user-1", name: "Player1"}
 
       join_participant(game_id, user1.uuid)
 
-      assert {:ok, game} = Game.start_game(game_id)
+      assert {:ok, game} = Game.start_game(game_id, owner.uuid)
       assert game.status == :in_progress
       assert length(game.queue) == 1
       assert game.turn.phase == :waiting
     end
   end
 
-  describe ":waiting - :none - advance phase" do
-    test "rejects by game", %{game_id: game_id} do
-      assert {:error, :invalid_action} = Game.next_phase(game_id)
+  describe ":waiting - :none - advance turn" do
+    test "rejects by game", %{game_id: game_id, owner: owner} do
+      assert {:error, :invalid_action} = Game.advance_turn(game_id, owner.uuid)
     end
   end
 
@@ -312,13 +312,13 @@ defmodule Songy.Boundary.GameTest do
   end
 
   describe ":in_progress - :waiting - persistence across disconnects" do
-    setup %{game_id: game_id} do
+    setup %{game_id: game_id, owner: owner} do
       user1 = %User{uuid: "user-1", name: "Player1"}
       user2 = %User{uuid: "user-2", name: "Player2"}
 
       join_participant(game_id, user1.uuid)
       join_participant(game_id, user2.uuid)
-      {:ok, _} = Game.start_game(game_id)
+      {:ok, _} = Game.start_game(game_id, owner.uuid)
 
       {:ok, game} = Game.get_state(game_id)
       assert game.turn.phase == :waiting
@@ -381,14 +381,14 @@ defmodule Songy.Boundary.GameTest do
   end
 
   describe ":in_progress - :ready - persistence across disconnects" do
-    setup %{game_id: game_id} do
+    setup %{game_id: game_id, owner: owner} do
       user1 = %User{uuid: "user-1", name: "Player1"}
       user2 = %User{uuid: "user-2", name: "Player2"}
 
       join_participant(game_id, user1.uuid)
       join_participant(game_id, user2.uuid)
-      {:ok, _} = Game.start_game(game_id)
-      {:ok, _} = Game.next_phase(game_id)
+      {:ok, _} = Game.start_game(game_id, owner.uuid)
+      {:ok, _} = Game.advance_turn(game_id, owner.uuid)
 
       {:ok, game} = Game.get_state(game_id)
       assert game.turn.phase == :ready
@@ -451,43 +451,43 @@ defmodule Songy.Boundary.GameTest do
   end
 
   describe ":in_progress - :waiting - operations" do
-    setup %{game_id: game_id} do
+    setup %{game_id: game_id, owner: owner} do
       user1 = %User{uuid: "user-1", name: "Player1"}
       user2 = %User{uuid: "user-2", name: "Player2"}
 
       join_participant(game_id, user1.uuid)
       join_participant(game_id, user2.uuid)
-      {:ok, _} = Game.start_game(game_id)
+      {:ok, _} = Game.start_game(game_id, owner.uuid)
 
       %{user1: user1, user2: user2}
     end
 
-    test "can advance turn phase", %{game_id: game_id} do
-      assert {:ok, _} = Game.next_phase(game_id)
+    test "can advance turn phase", %{game_id: game_id, owner: owner} do
+      assert {:ok, _} = Game.advance_turn(game_id, owner.uuid)
     end
   end
 
   describe ":in_progress - :waiting - start game" do
-    test "rejects when already in progress", %{game_id: game_id} do
+    test "rejects when already in progress", %{game_id: game_id, owner: owner} do
       user1 = %User{uuid: "user-1", name: "Player1"}
       user2 = %User{uuid: "user-2", name: "Player2"}
 
       join_participant(game_id, user1.uuid)
       join_participant(game_id, user2.uuid)
-      {:ok, _} = Game.start_game(game_id)
+      {:ok, _} = Game.start_game(game_id, owner.uuid)
 
-      assert {:error, :game_already_started} = Game.start_game(game_id)
+      assert {:error, :game_already_started} = Game.start_game(game_id, owner.uuid)
     end
   end
 
   describe ":in_progress - :waiting - get_state" do
-    test "returns game and turn data", %{game_id: game_id} do
+    test "returns game and turn data", %{game_id: game_id, owner: owner} do
       user1 = %User{uuid: "user-1", name: "Player1"}
       user2 = %User{uuid: "user-2", name: "Player2"}
 
       join_participant(game_id, user1.uuid)
       join_participant(game_id, user2.uuid)
-      {:ok, _} = Game.start_game(game_id)
+      {:ok, _} = Game.start_game(game_id, owner.uuid)
 
       {:ok, game} = Game.get_state(game_id)
 
@@ -527,7 +527,7 @@ defmodule Songy.Boundary.GameTest do
       assert hd(game.participants).uuid == user2.uuid
     end
 
-    test "broadcasts on start_game transition", %{game_id: game_id} do
+    test "broadcasts on start_game transition", %{game_id: game_id, owner: owner} do
       user1 = %User{uuid: "user-1", name: "Player1"}
       user2 = %User{uuid: "user-2", name: "Player2"}
 
@@ -536,14 +536,14 @@ defmodule Songy.Boundary.GameTest do
       join_participant(game_id, user2.uuid)
       assert_receive {:state, _game}
 
-      {:ok, _} = Game.start_game(game_id)
+      {:ok, _} = Game.start_game(game_id, owner.uuid)
 
       assert_receive {:state, game}
       assert game.status == :in_progress
       assert game.turn.phase == :waiting
     end
 
-    test "broadcasts on next_phase transitions", %{game_id: game_id} do
+    test "broadcasts on advance_turn transitions", %{game_id: game_id, owner: owner} do
       user1 = %User{uuid: "user-1", name: "Player1"}
       user2 = %User{uuid: "user-2", name: "Player2"}
 
@@ -551,18 +551,18 @@ defmodule Songy.Boundary.GameTest do
       assert_receive {:state, _game}
       join_participant(game_id, user2.uuid)
       assert_receive {:state, _game}
-      {:ok, _} = Game.start_game(game_id)
+      {:ok, _} = Game.start_game(game_id, owner.uuid)
 
       # Drain message from start_game
       assert_receive {:state, _}
 
       # Test transition to ready
-      {:ok, _} = Game.next_phase(game_id)
+      {:ok, _} = Game.advance_turn(game_id, owner.uuid)
       assert_receive {:state, game}
       assert game.turn.phase == :ready
     end
 
-    test "broadcasts on start_playback", %{game_id: game_id} do
+    test "broadcasts on start_playback", %{game_id: game_id, owner: owner} do
       user1 = %User{uuid: "user-1", name: "Player1"}
       user2 = %User{uuid: "user-2", name: "Player2"}
 
@@ -570,14 +570,14 @@ defmodule Songy.Boundary.GameTest do
       assert_receive {:state, _game}
       join_participant(game_id, user2.uuid)
       assert_receive {:state, _game}
-      {:ok, game} = Game.start_game(game_id)
+      {:ok, game} = Game.start_game(game_id, owner.uuid)
       owner_id = game.owner_id
 
       # Drain message from start_game
       assert_receive {:state, _}
 
       # Transition to ready phase
-      {:ok, _} = Game.next_phase(game_id)
+      {:ok, _} = Game.advance_turn(game_id, owner.uuid)
       assert_receive {:state, _}
 
       {:ok, _} = Game.start_playback(game_id, owner_id)
@@ -586,7 +586,7 @@ defmodule Songy.Boundary.GameTest do
       assert game.player.is_playback == true
     end
 
-    test "broadcasts on pause_playback", %{game_id: game_id} do
+    test "broadcasts on pause_playback", %{game_id: game_id, owner: owner} do
       user1 = %User{uuid: "user-1", name: "Player1"}
       user2 = %User{uuid: "user-2", name: "Player2"}
 
@@ -594,12 +594,12 @@ defmodule Songy.Boundary.GameTest do
       assert_receive {:state, _game}
       join_participant(game_id, user2.uuid)
       assert_receive {:state, _game}
-      {:ok, game} = Game.start_game(game_id)
+      {:ok, game} = Game.start_game(game_id, owner.uuid)
       owner_id = game.owner_id
       assert_receive {:state, _}
 
       # Transition to ready phase
-      {:ok, _} = Game.next_phase(game_id)
+      {:ok, _} = Game.advance_turn(game_id, owner.uuid)
       assert_receive {:state, _}
 
       {:ok, _} = Game.start_playback(game_id, owner_id)
@@ -615,7 +615,7 @@ defmodule Songy.Boundary.GameTest do
   end
 
   describe ":in_progress - :ready - playback control" do
-    setup %{game_id: game_id} do
+    setup %{game_id: game_id, owner: owner} do
       user1 = %User{uuid: "user-1", name: "Player1"}
       user2 = %User{uuid: "user-2", name: "Player2"}
 
@@ -623,11 +623,11 @@ defmodule Songy.Boundary.GameTest do
       assert_receive {:state, _}
       join_participant(game_id, user2.uuid)
       assert_receive {:state, _}
-      {:ok, _} = Game.start_game(game_id)
+      {:ok, _} = Game.start_game(game_id, owner.uuid)
       # waiting phase
       assert_receive {:state, _}
       # waiting -> ready
-      {:ok, _} = Game.next_phase(game_id)
+      {:ok, _} = Game.advance_turn(game_id, owner.uuid)
       # ready phase
       assert_receive {:state, _}
 
@@ -694,7 +694,7 @@ defmodule Songy.Boundary.GameTest do
   end
 
   describe ":in_progress - :challenging phase - playback control" do
-    setup %{game_id: game_id} do
+    setup %{game_id: game_id, owner: owner} do
       # Temporarily increase challenging_phase_timeout to 50ms for these tests
       original_timeout = Application.get_env(:songy, :challenging_phase_timeout)
       Application.put_env(:songy, :challenging_phase_timeout, 50)
@@ -706,11 +706,11 @@ defmodule Songy.Boundary.GameTest do
       assert_receive {:state, _}
       join_participant(game_id, user2.uuid)
       assert_receive {:state, _}
-      {:ok, _} = Game.start_game(game_id)
+      {:ok, _} = Game.start_game(game_id, owner.uuid)
       # waiting phase
       assert_receive {:state, _}
       # waiting -> ready
-      {:ok, _} = Game.next_phase(game_id)
+      {:ok, _} = Game.advance_turn(game_id, owner.uuid)
       # ready phase
       assert_receive {:state, _}
 
@@ -720,7 +720,7 @@ defmodule Songy.Boundary.GameTest do
       assert_receive {:state, _}
 
       # ready -> challenging (this triggers a timer for auto-advance)
-      {:ok, _} = Game.next_phase(game_id)
+      {:ok, _} = Game.advance_turn(game_id, owner.uuid)
       # challenging phase
       assert_receive {:state, _}
 
@@ -790,7 +790,7 @@ defmodule Songy.Boundary.GameTest do
   end
 
   describe ":in_progress - :challenging - additional playback control tests" do
-    setup %{game_id: game_id} do
+    setup %{game_id: game_id, owner: owner} do
       # Temporarily increase challenging_phase_timeout to 50ms for these tests
       original_timeout = Application.get_env(:songy, :challenging_phase_timeout)
       Application.put_env(:songy, :challenging_phase_timeout, 50)
@@ -802,11 +802,11 @@ defmodule Songy.Boundary.GameTest do
       assert_receive {:state, _}
       join_participant(game_id, user2.uuid)
       assert_receive {:state, _}
-      {:ok, _} = Game.start_game(game_id)
+      {:ok, _} = Game.start_game(game_id, owner.uuid)
       # waiting phase
       assert_receive {:state, _}
       # waiting -> ready
-      {:ok, _} = Game.next_phase(game_id)
+      {:ok, _} = Game.advance_turn(game_id, owner.uuid)
       # ready phase
       assert_receive {:state, _}
 
@@ -816,7 +816,7 @@ defmodule Songy.Boundary.GameTest do
       assert_receive {:state, _}
 
       # ready -> challenging
-      {:ok, _} = Game.next_phase(game_id)
+      {:ok, _} = Game.advance_turn(game_id, owner.uuid)
       # challenging phase
       assert_receive {:state, _}
 
@@ -889,7 +889,7 @@ defmodule Songy.Boundary.GameTest do
   end
 
   describe ":in_progress - :challenging - timer broadcast" do
-    setup %{game_id: game_id} do
+    setup %{game_id: game_id, owner: owner} do
       original_timeout = Application.get_env(:songy, :challenging_phase_timeout)
       Application.put_env(:songy, :challenging_phase_timeout, 50)
 
@@ -900,11 +900,11 @@ defmodule Songy.Boundary.GameTest do
       assert_receive {:state, _}
       join_participant(game_id, user2.uuid)
       assert_receive {:state, _}
-      {:ok, _} = Game.start_game(game_id)
+      {:ok, _} = Game.start_game(game_id, owner.uuid)
       # waiting phase
       assert_receive {:state, _}
       # waiting -> ready
-      {:ok, _} = Game.next_phase(game_id)
+      {:ok, _} = Game.advance_turn(game_id, owner.uuid)
       # ready phase
       assert_receive {:state, _}
 
@@ -915,8 +915,8 @@ defmodule Songy.Boundary.GameTest do
       :ok
     end
 
-    test "broadcasts at least one timer tick", %{game_id: game_id} do
-      {:ok, _} = Game.next_phase(game_id)
+    test "broadcasts at least one timer tick", %{game_id: game_id, owner: owner} do
+      {:ok, _} = Game.advance_turn(game_id, owner.uuid)
 
       assert_receive {:timer, remaining}, 100
       assert is_integer(remaining)
@@ -925,7 +925,7 @@ defmodule Songy.Boundary.GameTest do
   end
 
   describe ":in_progress - :challenging - auto advance" do
-    setup %{game_id: game_id} do
+    setup %{game_id: game_id, owner: owner} do
       user1 = %User{uuid: "user-1", name: "Player1"}
       user2 = %User{uuid: "user-2", name: "Player2"}
 
@@ -933,19 +933,19 @@ defmodule Songy.Boundary.GameTest do
       assert_receive {:state, _}
       join_participant(game_id, user2.uuid)
       assert_receive {:state, _}
-      {:ok, _} = Game.start_game(game_id)
+      {:ok, _} = Game.start_game(game_id, owner.uuid)
       # waiting phase
       assert_receive {:state, _}
       # waiting -> ready
-      {:ok, _} = Game.next_phase(game_id)
+      {:ok, _} = Game.advance_turn(game_id, owner.uuid)
       # ready phase
       assert_receive {:state, _}
 
       %{user1: user1, user2: user2}
     end
 
-    test "auto-advances to results phase after timeout", %{game_id: game_id} do
-      {:ok, _} = Game.next_phase(game_id)
+    test "auto-advances to results phase after timeout", %{game_id: game_id, owner: owner} do
+      {:ok, _} = Game.advance_turn(game_id, owner.uuid)
       assert_receive {:state, game}
       assert game.turn.phase == :challenging
 
@@ -955,7 +955,7 @@ defmodule Songy.Boundary.GameTest do
   end
 
   describe ":in_progress - :ready - make assumption" do
-    setup %{game_id: game_id} do
+    setup %{game_id: game_id, owner: owner} do
       user1 = %User{uuid: "user-1", name: "Player1"}
       user2 = %User{uuid: "user-2", name: "Player2"}
 
@@ -963,7 +963,7 @@ defmodule Songy.Boundary.GameTest do
       assert_receive {:state, _}
       join_participant(game_id, user2.uuid)
       assert_receive {:state, _}
-      {:ok, _} = Game.start_game(game_id)
+      {:ok, _} = Game.start_game(game_id, owner.uuid)
       assert_receive {:state, _}
 
       # Set current track for assumptions (distinct from initial timelines)
@@ -972,7 +972,7 @@ defmodule Songy.Boundary.GameTest do
       assert_receive {:state, _}
 
       # waiting -> ready
-      {:ok, _} = Game.next_phase(game_id)
+      {:ok, _} = Game.advance_turn(game_id, owner.uuid)
       assert_receive {:state, _}
 
       %{user1: user1, user2: user2, track: track}
@@ -987,38 +987,24 @@ defmodule Songy.Boundary.GameTest do
       assert Enum.find(game.turn.assumptions, &(&1.user_id == user1.uuid)).position == 0
     end
 
-    test "shifts existing assumptions when adding at position", %{
+    test "player makes assumption at position 0", %{
       game_id: game_id,
-      user1: user1,
-      user2: user2
+      user1: user1
     } do
-      # User1 makes assumption at position 0
-      {:ok, _} = Game.make_assumption(game_id, user1.uuid, 0)
-      assert_receive {:state, _}
+      # User1 (player) makes assumption at position 0
+      {:ok, game} = Game.make_assumption(game_id, user1.uuid, 0)
 
-      # User2 makes assumption - no action since position is blocked by user1
-      {:ok, game} = Game.make_assumption(game_id, user2.uuid, 0)
-
-      # Track was NOT added again (position blocked by other assumption)
       assert length(game.turn.timeline) == 2
-      # User2 has no assumption because track was already added by user1
-      assert game.turn.assumptions == nil or length(game.turn.assumptions) == 1
+      assert length(game.turn.assumptions) == 1
+      assert Enum.find(game.turn.assumptions, &(&1.user_id == user1.uuid)).position == 0
     end
 
-    test "allows other user to add at non-adjacent position", %{
+    test "challenger cannot make assumption in ready phase", %{
       game_id: game_id,
-      user1: user1,
       user2: user2
     } do
-      {:ok, _} = Game.make_assumption(game_id, user1.uuid, 0)
-      assert_receive {:state, _}
-
-      {:ok, game} = Game.make_assumption(game_id, user2.uuid, 2)
-
-      assert length(game.turn.timeline) == 3
-      assert length(game.turn.assumptions) == 2
-      assert Enum.find(game.turn.assumptions, &(&1.user_id == user1.uuid)).position == 0
-      assert Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid)).position == 2
+      # User2 is challenger in ready phase, cannot make assumption
+      assert {:error, :unauthorized} = Game.make_assumption(game_id, user2.uuid, 0)
     end
 
     test "normalizes negative position to 0", %{game_id: game_id, user1: user1} do
@@ -1053,7 +1039,7 @@ defmodule Songy.Boundary.GameTest do
   end
 
   describe ":in_progress - :challenging - make_assumption" do
-    setup %{game_id: game_id} do
+    setup %{game_id: game_id, owner: owner} do
       {:ok, _pid} = Game.lookup_game(game_id)
 
       original_timeout = Application.get_env(:songy, :challenging_phase_timeout)
@@ -1070,7 +1056,7 @@ defmodule Songy.Boundary.GameTest do
       join_participant(game_id, user3.uuid)
       assert_receive {:state, _}
 
-      {:ok, _} = Game.start_game(game_id)
+      {:ok, _} = Game.start_game(game_id, owner.uuid)
       assert_receive {:state, _}
 
       # Set current track for assumptions (distinct from initial timelines)
@@ -1078,9 +1064,9 @@ defmodule Songy.Boundary.GameTest do
       {:ok, _} = Game.set_track(game_id, track)
       assert_receive {:state, _}
 
-      {:ok, _} = Game.next_phase(game_id)
+      {:ok, _} = Game.advance_turn(game_id, owner.uuid)
       assert_receive {:state, _}
-      {:ok, _} = Game.next_phase(game_id)
+      {:ok, _} = Game.advance_turn(game_id, owner.uuid)
       assert_receive {:state, game}
       assert game.turn.phase == :challenging
 
@@ -1091,53 +1077,56 @@ defmodule Songy.Boundary.GameTest do
       %{user1: user1, user2: user2, user3: user3}
     end
 
-    test "adds new assumption during challenging phase", %{game_id: game_id, user1: user1} do
-      {:ok, game} = Game.make_assumption(game_id, user1.uuid, 0)
+    test "adds new assumption during challenging phase", %{game_id: game_id, user2: user2} do
+      # user2 is challenger, can make assumption in challenging phase
+      {:ok, game} = Game.make_assumption(game_id, user2.uuid, 0)
 
       assert length(game.turn.timeline) == 2
       assert length(game.turn.assumptions) == 1
-      assert Enum.find(game.turn.assumptions, &(&1.user_id == user1.uuid)).position == 0
+      assert Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid)).position == 0
     end
 
-    test "single user makes assumption (other users can't add at blocked positions)",
+    test "player cannot make assumption in challenging phase", %{game_id: game_id, user1: user1} do
+      # user1 is player (active), cannot make assumption in challenging phase
+      assert {:error, :unauthorized} = Game.make_assumption(game_id, user1.uuid, 0)
+    end
+
+    test "multiple challengers make assumptions (blocked positions)",
          %{
            game_id: game_id,
-           user1: user1,
            user2: user2,
            user3: user3
          } do
-      {:ok, _} = Game.make_assumption(game_id, user1.uuid, 0)
-
-      # User2 tries - no action since position is blocked by user1
+      # user2 (challenger) makes assumption at position 0
       {:ok, _} = Game.make_assumption(game_id, user2.uuid, 0)
 
-      # User3 tries - no action since position is blocked by user1
+      # user3 (challenger) tries - no action since position is blocked by user2
       {:ok, game} = Game.make_assumption(game_id, user3.uuid, 0)
 
-      # Only one track in timeline, assumptions = 1 (only user1 can make assumption)
+      # Only one track in timeline, assumptions = 1 (position blocked)
       assert length(game.turn.timeline) == 2
       assert length(game.turn.assumptions) == 1
     end
 
-    test "normalizes negative position to 0", %{game_id: game_id, user1: user1} do
-      {:ok, game} = Game.make_assumption(game_id, user1.uuid, -5)
+    test "normalizes negative position to 0", %{game_id: game_id, user2: user2} do
+      {:ok, game} = Game.make_assumption(game_id, user2.uuid, -5)
 
       assert length(game.turn.timeline) == 2
-      assert Enum.find(game.turn.assumptions, &(&1.user_id == user1.uuid)).position == 0
+      assert Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid)).position == 0
     end
 
-    test "normalizes position beyond timeline length", %{game_id: game_id, user1: user1} do
-      {:ok, game} = Game.make_assumption(game_id, user1.uuid, 100)
+    test "normalizes position beyond timeline length", %{game_id: game_id, user2: user2} do
+      {:ok, game} = Game.make_assumption(game_id, user2.uuid, 100)
 
       assert length(game.turn.timeline) == 2
-      assert Enum.find(game.turn.assumptions, &(&1.user_id == user1.uuid)).position == 1
+      assert Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid)).position == 1
     end
 
     test "broadcasts after assumption in challenging phase", %{
       game_id: game_id,
-      user1: user1
+      user2: user2
     } do
-      {:ok, _} = Game.make_assumption(game_id, user1.uuid, 0)
+      {:ok, _} = Game.make_assumption(game_id, user2.uuid, 0)
 
       assert_receive {:state, game}, 25
       assert length(game.turn.assumptions) == 1
@@ -1145,12 +1134,12 @@ defmodule Songy.Boundary.GameTest do
 
     test "no-op when user makes assumption at same position", %{
       game_id: game_id,
-      user1: user1
+      user2: user2
     } do
-      {:ok, game1} = Game.make_assumption(game_id, user1.uuid, 0)
+      {:ok, game1} = Game.make_assumption(game_id, user2.uuid, 0)
       assert_receive {:state, _}
 
-      {:ok, game2} = Game.make_assumption(game_id, user1.uuid, 0)
+      {:ok, game2} = Game.make_assumption(game_id, user2.uuid, 0)
 
       # Same game state (no updates when position is the same)
       assert game1.turn.phase == game2.turn.phase
@@ -1159,27 +1148,27 @@ defmodule Songy.Boundary.GameTest do
 
     test "blocks assumptions adjacent to other users", %{
       game_id: game_id,
-      user1: user1,
-      user2: user2
+      user2: user2,
+      user3: user3
     } do
-      {:ok, _} = Game.make_assumption(game_id, user1.uuid, 0)
+      {:ok, _} = Game.make_assumption(game_id, user2.uuid, 0)
       assert_receive {:state, _}
 
-      # User1 has assumption at position 0
-      # User2 tries to make assumption at position 1 - blocked by user1
-      {:ok, game} = Game.make_assumption(game_id, user2.uuid, 1)
+      # user2 has assumption at position 0
+      # user3 tries to make assumption at position 1 - blocked by user2
+      {:ok, game} = Game.make_assumption(game_id, user3.uuid, 1)
 
       # Timeline unchanged (track already there)
       assert length(game.turn.timeline) == 2
-      # User2 has no assumption
-      user1_assumption = Enum.find(game.turn.assumptions, &(&1.user_id == user1.uuid))
-      assert user1_assumption.position == 0
-      refute Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid))
+      # user3 has no assumption
+      user2_assumption = Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid))
+      assert user2_assumption.position == 0
+      refute Enum.find(game.turn.assumptions, &(&1.user_id == user3.uuid))
     end
   end
 
   describe ":in_progress - :results - make_assumption" do
-    setup %{game_id: game_id} do
+    setup %{game_id: game_id, owner: owner} do
       # Temporarily reduce challenging_phase_timeout
       original_timeout = Application.get_env(:songy, :challenging_phase_timeout)
       Application.put_env(:songy, :challenging_phase_timeout, 50)
@@ -1193,16 +1182,14 @@ defmodule Songy.Boundary.GameTest do
       assert_receive {:state, _}
       join_participant(game_id, user2.uuid)
       assert_receive {:state, _}
-      {:ok, _} = Game.start_game(game_id)
+      {:ok, _} = Game.start_game(game_id, owner.uuid)
       assert_receive {:state, _}
-      {:ok, _} = Game.next_phase(game_id)
+      {:ok, _} = Game.advance_turn(game_id, owner.uuid)
       assert_receive {:state, _}
-      {:ok, _} = Game.next_phase(game_id)
-      assert_receive {:state, _game}
-      assert _game.turn.phase == :challenging
+      {:ok, _} = Game.advance_turn(game_id, owner.uuid)
+      assert_receive {:state, game}
+      assert game.turn.phase == :challenging
 
-      # Wait for auto-advance to results phase
-      Process.sleep(60)
       assert_receive {:state, result_game}, 100
       assert result_game.turn.phase == :results
 

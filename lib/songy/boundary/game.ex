@@ -65,8 +65,8 @@ defmodule Songy.Boundary.Game do
   end
 
   @doc "Starts the game."
-  def start_game(game_id, timeout \\ 1_000) do
-    call_if_exists(game_id, :start_game, timeout)
+  def start_game(game_id, user_id, timeout \\ 1_000) do
+    call_if_exists(game_id, {:start_game, user_id}, timeout)
   end
 
   @doc "Starts playback."
@@ -80,8 +80,8 @@ defmodule Songy.Boundary.Game do
   end
 
   @doc "Advances to the next phase."
-  def next_phase(game_id, timeout \\ 1_000) do
-    call_if_exists(game_id, :next_phase, timeout)
+  def advance_turn(game_id, user_id, timeout \\ 1_000) do
+    call_if_exists(game_id, {:advance_turn, user_id}, timeout)
   end
 
   @doc "Adds an assumption for a user at the specified position."
@@ -153,16 +153,21 @@ defmodule Songy.Boundary.Game do
     handle_presence_left(data, user_id)
   end
 
-  def handle_event({:call, from}, :start_game, {:waiting, :none}, data) do
-    Logger.info("Game #{data.id}: Starting game")
+  def handle_event({:call, from}, {:start_game, user_id}, {:waiting, :none}, data) do
+    with :ok <- Songy.Authorization.can?(:start_game, user_id, data) do
+      Logger.info("Game #{data.id}: Starting game")
 
-    game = %{
-      data
-      | status: :in_progress,
-        turn: %Core.Turn{phase: :waiting, timeline: [], assumptions: []}
-    }
+      game = %{
+        data
+        | status: :in_progress,
+          turn: %Core.Turn{phase: :waiting, timeline: [], assumptions: []}
+      }
 
-    {:next_state, {:in_progress, :waiting}, game, [{:reply, from, {:ok, game}}, {:next_event, :internal, :broadcast}]}
+      {:next_state, {:in_progress, :waiting}, game, [{:reply, from, {:ok, game}}, {:next_event, :internal, :broadcast}]}
+    else
+      {:error, reason} ->
+        {:keep_state, data, [{:reply, from, {:error, reason}}]}
+    end
   end
 
   def handle_event({:call, from}, :get_state, {:waiting, :none}, data) do
@@ -250,45 +255,56 @@ defmodule Songy.Boundary.Game do
     {:keep_state, data}
   end
 
-  def handle_event({:call, from}, :start_game, {:in_progress, _phase}, data) do
+  def handle_event({:call, from}, {:start_game, _user_id}, {:in_progress, _phase}, data) do
     {:keep_state, data, [{:reply, from, {:error, :game_already_started}}]}
   end
 
-  def handle_event({:call, from}, :next_phase, {:in_progress, :waiting}, %{turn: turn} = data) do
-    Logger.debug("Game #{data.id}: Advancing turn phase")
+  def handle_event({:call, from}, {:advance_turn, user_id}, {:in_progress, :waiting}, %{turn: turn} = data) do
+    with :ok <- Songy.Authorization.can?(:advance_turn, user_id, data) do
+      Logger.debug("Game #{data.id}: Advancing turn phase")
 
-    active_player = Enum.at(data.queue, data.cursor)
-    timeline = Map.get(data.timelines, active_player, [])
+      active_player = Enum.at(data.queue, data.cursor)
+      timeline = Map.get(data.timelines, active_player, [])
 
-    updated_game = %{data | turn: %{turn | timeline: timeline, phase: :ready}}
+      updated_game = %{data | turn: %{turn | timeline: timeline, phase: :ready}}
 
-    {:next_state, {:in_progress, :ready}, updated_game,
-     [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
+      {:next_state, {:in_progress, :ready}, updated_game,
+       [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
+    else
+      {:error, reason} ->
+        {:keep_state, data, [{:reply, from, {:error, reason}}]}
+    end
   end
 
-  def handle_event({:call, from}, :next_phase, {:in_progress, :ready}, %{turn: turn} = data) do
-    Logger.debug("Game #{data.id}: Advancing turn phase")
+  def handle_event({:call, from}, {:advance_turn, user_id}, {:in_progress, :ready}, %{turn: turn} = data) do
+    with :ok <- Songy.Authorization.can?(:advance_turn, user_id, data) do
+      Logger.debug("Game #{data.id}: Advancing turn phase")
 
-    updated_game = %{data | turn: %{turn | phase: :challenging}}
-    timeout_ms = Application.fetch_env!(:songy, :challenging_phase_timeout)
-    deadline_ms = System.system_time(:millisecond) + timeout_ms
+      updated_game = %{data | turn: %{turn | phase: :challenging}}
+      timeout_ms = Application.fetch_env!(:songy, :challenging_phase_timeout)
+      deadline_ms = System.system_time(:millisecond) + timeout_ms
 
-    {:next_state, {:in_progress, :challenging}, updated_game,
-     [
-       {:reply, from, {:ok, updated_game}},
-       {:next_event, :internal, :broadcast},
-       {{:timeout, :timer}, 0, {:tick, deadline_ms}},
-       {{:timeout, :challenging}, timeout_ms, :auto_advance}
-     ]}
+      {:next_state, {:in_progress, :challenging}, updated_game,
+       [
+         {:reply, from, {:ok, updated_game}},
+         {:next_event, :internal, :broadcast},
+         {{:timeout, :timer}, 0, {:tick, deadline_ms}},
+         {{:timeout, :challenging}, timeout_ms, :auto_advance}
+       ]}
+    else
+      {:error, reason} ->
+        {:keep_state, data, [{:reply, from, {:error, reason}}]}
+    end
   end
 
-  def handle_event({:call, from}, :next_phase, {:in_progress, :results}, data) do
-    Logger.debug("Game #{data.id}: Advancing turn phase")
-
-    with :no_winner <- Core.Game.check_winner(data),
+  def handle_event({:call, from}, {:advance_turn, user_id}, {:in_progress, :results}, data) do
+    with :ok <- Songy.Authorization.can?(:advance_turn, user_id, data),
+         :no_winner <- Core.Game.check_winner(data),
          {:ok, provider} <- Songy.Providers.lookup(:providers, data.owner_id),
          {:ok, %Core.Track{} = track} <- Playback.search_random_track(provider),
          {:ok, :playback_paused} <- Playback.pause_playback(provider) do
+      Logger.debug("Game #{data.id}: Advancing turn phase")
+
       next_cursor =
         1..length(data.queue)
         |> Enum.reduce_while(rem(data.cursor + 1, max(length(data.queue), 1)), fn _, cursor ->
@@ -332,16 +348,21 @@ defmodule Songy.Boundary.Game do
         %{track: track, turn: turn} = data
       )
       when phase in [:ready, :challenging] do
-    Logger.debug("Game #{data.id}: Making assumption for #{user_id} at #{position} (#{phase} phase)")
+    with :ok <- Songy.Authorization.can?(:make_assumption, user_id, data) do
+      Logger.debug("Game #{data.id}: Making assumption for #{user_id} at #{position} (#{phase} phase)")
 
-    updated_turn = update_timeline(turn, track, user_id, position)
-    updated_game = %{data | turn: updated_turn}
+      updated_turn = update_timeline(turn, track, user_id, position)
+      updated_game = %{data | turn: updated_turn}
 
-    {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
+      {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
+    else
+      {:error, reason} ->
+        {:keep_state, data, [{:reply, from, {:error, reason}}]}
+    end
   end
 
   def handle_event({:call, from}, {:start_playback, user_id}, {:in_progress, _phase}, data) do
-    with :ok <- Songy.Authorization.can?(data, user_id, :control_playback) do
+    with :ok <- Songy.Authorization.can?(:control_playback, user_id, data) do
       updated_game = %{data | player: Core.Player.set_playback(data.player, true)}
       {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
     else
@@ -351,7 +372,7 @@ defmodule Songy.Boundary.Game do
   end
 
   def handle_event({:call, from}, {:pause_playback, user_id}, {:in_progress, _phase}, data) do
-    with :ok <- Songy.Authorization.can?(data, user_id, :control_playback) do
+    with :ok <- Songy.Authorization.can?(:control_playback, user_id, data) do
       updated_game = %{data | player: Core.Player.set_playback(data.player, false)}
       {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
     else

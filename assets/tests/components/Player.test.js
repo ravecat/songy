@@ -133,7 +133,7 @@ describe("Player", () => {
         await fireEvent.click(screen.getByRole("button", { name: "Ready" }));
 
         expect(mockChannelContext.channel.push).toHaveBeenCalledWith(
-          PUSH_EVENT.NEXT_PHASE,
+          PUSH_EVENT.ADVANCE_TURN,
           {}
         );
       });

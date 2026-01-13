@@ -15,7 +15,6 @@ defmodule Songy.Policy do
     :restart_game,
     :make_assumption,
     :see_assumptions,
-    :spectate
   ]
 
   def acts, do: @acts
@@ -57,8 +56,8 @@ defmodule Songy.Policy do
 
   defp can(:restart_game, :owner, %Game{status: :finished}), do: :ok
 
-  defp can(:make_assumption, :owner, %Game{status: :in_progress, turn: %{phase: :ready}}), do: :ok
-  defp can(:make_assumption, :owner, %Game{status: :in_progress, turn: %{phase: :challenging}}), do: :ok
+  defp can(:make_assumption, :player, %Game{status: :in_progress, turn: %{phase: :ready}}), do: :ok
+  defp can(:make_assumption, :challenger, %Game{status: :in_progress, turn: %{phase: :challenging}}), do: :ok
 
   defp can(:see_assumptions, _, %Game{status: :in_progress, turn: %{phase: :results}}), do: :ok
 

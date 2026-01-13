@@ -73,8 +73,8 @@ defmodule Songy.Boundary.GameSessionTest do
       %{game_id: game.id, owner: owner, user: user}
     end
 
-    test "starts game and sets turn track", %{game_id: game_id} do
-      assert {:ok, game} = GameSession.start_game_session(game_id)
+    test "starts game and sets turn track", %{game_id: game_id, owner: owner} do
+      assert {:ok, game} = GameSession.start_game_session(game_id, owner.uuid)
 
       assert game.status == :in_progress
       assert %Track{} = game.track
@@ -95,17 +95,17 @@ defmodule Songy.Boundary.GameSessionTest do
       :ok = join_participant(game.id, user.uuid)
       assert_receive {:state, _game}
 
-      {:ok, game} = GameSession.start_game_session(game.id)
+      {:ok, game} = GameSession.start_game_session(game.id, owner.uuid)
 
-      %{game_id: game.id}
+      %{game_id: game.id, owner: owner}
     end
 
-    test "starts playback when game in progress", %{game_id: game_id} do
+    test "starts playback when game in progress", %{game_id: game_id, owner: owner} do
       {:ok, game} = GameSession.get_state(game_id)
       owner_id = game.owner_id
 
       # Transition to ready phase first
-      {:ok, _} = Game.next_phase(game_id)
+      {:ok, _} = Game.advance_turn(game_id, owner.uuid)
 
       assert {:ok, game} = GameSession.start_playback(game_id, owner_id)
       assert game.player.is_playback == true
@@ -126,16 +126,16 @@ defmodule Songy.Boundary.GameSessionTest do
       :ok = join_participant(game.id, user.uuid)
       assert_receive {:state, _game}
 
-      {:ok, game} = GameSession.start_game_session(game.id)
+      {:ok, game} = GameSession.start_game_session(game.id, owner.uuid)
 
-      %{game_id: game.id}
+      %{game_id: game.id, owner: owner}
     end
 
-    test "pauses playback when already playing", %{game_id: game_id} do
+    test "pauses playback when already playing", %{game_id: game_id, owner: owner} do
       {:ok, game} = GameSession.get_state(game_id)
       owner_id = game.owner_id
       # Transition to ready phase first
-      {:ok, _} = Game.next_phase(game_id)
+      {:ok, _} = Game.advance_turn(game_id, owner.uuid)
       {:ok, _} = GameSession.start_playback(game_id, owner_id)
       assert {:ok, game} = GameSession.pause_playback(game_id, owner_id)
       assert game.player.is_playback == false

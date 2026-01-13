@@ -14,8 +14,8 @@ defmodule Songy.Authorization do
 
   Returns :ok if authorized, {:error, :unauthorized} otherwise.
   """
-  @spec can?(Game.t() | nil, String.t() | nil, atom()) :: :ok | {:error, :unauthorized}
-  def can?(game, user_id, action) do
+  @spec can?(atom(), String.t() | nil, Game.t() | nil) :: :ok | {:error, :unauthorized}
+  def can?(action, user_id, game) do
     Bodyguard.permit(Policy, action, user_id, game)
   end
 
