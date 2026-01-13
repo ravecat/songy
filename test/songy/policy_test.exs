@@ -8,8 +8,8 @@ defmodule Songy.PolicyTest do
   @owner_cases [
     %{state: :waiting, phase: nil, allowed: [:start_game]},
     %{state: :in_progress, phase: :waiting, allowed: [:advance_turn, :start_turn]},
-    %{state: :in_progress, phase: :ready, allowed: [:control_playback, :make_assumption, :reorder_timeline, :advance_turn]},
-    %{state: :in_progress, phase: :challenging, allowed: [:control_playback, :make_assumption, :reorder_timeline]},
+    %{state: :in_progress, phase: :ready, allowed: [:control_playback, :make_assumption, :advance_turn]},
+    %{state: :in_progress, phase: :challenging, allowed: [:control_playback, :make_assumption]},
     %{state: :in_progress, phase: :results, allowed: [:control_playback, :advance_turn, :see_assumptions]},
     %{state: :finished, phase: nil, allowed: [:restart_game]}
   ]

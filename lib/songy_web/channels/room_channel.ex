@@ -159,27 +159,16 @@ defmodule SongyWeb.RoomChannel do
     @room_prefix <> room_id = socket.topic
     current_user_id = socket.assigns.current_user_id
 
-    case GameSession.make_assumption(room_id, current_user_id, position) do
-      {:ok, _game} ->
-        {:reply, :ok, socket}
+    with {position, ""} <- Integer.parse(to_string(position)),
+         {:ok, _game} <- GameSession.make_assumption(room_id, current_user_id, position) do
+      {:reply, :ok, socket}
+    else
+      :error ->
+        Logger.warning("Failed to make assumption in game #{room_id}: invalid position #{inspect(position)}")
+        {:noreply, socket}
 
       {:error, reason} ->
         Logger.warning("Failed to make assumption in game #{room_id}: #{inspect(reason)}")
-        {:noreply, socket}
-    end
-  end
-
-  @impl true
-  def handle_in("reorder_timeline", %{"position" => position}, socket) do
-    @room_prefix <> room_id = socket.topic
-    user_id = socket.assigns.current_user_id
-
-    case GameSession.reorder_timeline(room_id, user_id, position) do
-      {:ok, _game} ->
-        {:reply, :ok, socket}
-
-      {:error, reason} ->
-        Logger.warning("Failed to reorder timeline in game #{room_id}: #{inspect(reason)}")
         {:noreply, socket}
     end
   end

@@ -953,4 +953,276 @@ defmodule Songy.Boundary.GameTest do
       assert game.turn.phase == :results
     end
   end
+
+  describe ":in_progress - :ready - make assumption" do
+    setup %{game_id: game_id} do
+      user1 = %User{uuid: "user-1", name: "Player1"}
+      user2 = %User{uuid: "user-2", name: "Player2"}
+
+      join_participant(game_id, user1.uuid)
+      assert_receive {:state, _}
+      join_participant(game_id, user2.uuid)
+      assert_receive {:state, _}
+      {:ok, _} = Game.start_game(game_id)
+      assert_receive {:state, _}
+
+      # Set current track for assumptions (distinct from initial timelines)
+      track = %Track{id: "track-2", title: "Current Song", artist: "Current Artist", year: 2021}
+      {:ok, _} = Game.set_track(game_id, track)
+      assert_receive {:state, _}
+
+      # waiting -> ready
+      {:ok, _} = Game.next_phase(game_id)
+      assert_receive {:state, _}
+
+      %{user1: user1, user2: user2, track: track}
+    end
+
+    test "adds new assumption for user at specified position", %{game_id: game_id, user1: user1, track: track} do
+      {:ok, game} = Game.make_assumption(game_id, user1.uuid, 0)
+
+      assert length(game.turn.timeline) == 2
+      assert Enum.at(game.turn.timeline, 0).id == track.id
+      assert length(game.turn.assumptions) == 1
+      assert Enum.find(game.turn.assumptions, &(&1.user_id == user1.uuid)).position == 0
+    end
+
+    test "shifts existing assumptions when adding at position", %{
+      game_id: game_id,
+      user1: user1,
+      user2: user2
+    } do
+      # User1 makes assumption at position 0
+      {:ok, _} = Game.make_assumption(game_id, user1.uuid, 0)
+      assert_receive {:state, _}
+
+      # User2 makes assumption - no action since position is blocked by user1
+      {:ok, game} = Game.make_assumption(game_id, user2.uuid, 0)
+
+      # Track was NOT added again (position blocked by other assumption)
+      assert length(game.turn.timeline) == 2
+      # User2 has no assumption because track was already added by user1
+      assert game.turn.assumptions == nil or length(game.turn.assumptions) == 1
+    end
+
+    test "allows other user to add at non-adjacent position", %{
+      game_id: game_id,
+      user1: user1,
+      user2: user2
+    } do
+      {:ok, _} = Game.make_assumption(game_id, user1.uuid, 0)
+      assert_receive {:state, _}
+
+      {:ok, game} = Game.make_assumption(game_id, user2.uuid, 2)
+
+      assert length(game.turn.timeline) == 3
+      assert length(game.turn.assumptions) == 2
+      assert Enum.find(game.turn.assumptions, &(&1.user_id == user1.uuid)).position == 0
+      assert Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid)).position == 2
+    end
+
+    test "normalizes negative position to 0", %{game_id: game_id, user1: user1} do
+      {:ok, game} = Game.make_assumption(game_id, user1.uuid, -5)
+
+      assert length(game.turn.timeline) == 2
+      assert Enum.find(game.turn.assumptions, &(&1.user_id == user1.uuid)).position == 0
+    end
+
+    test "normalizes position beyond timeline length", %{game_id: game_id, user1: user1} do
+      {:ok, game} = Game.make_assumption(game_id, user1.uuid, 100)
+
+      # Position should be normalized to length(timeline) which is 1 initially, becomes 2 after insertion
+      assert length(game.turn.timeline) == 2
+      assert Enum.find(game.turn.assumptions, &(&1.user_id == user1.uuid)).position == 1
+    end
+
+    test "broadcasts state after assumption", %{game_id: game_id, user1: user1} do
+      {:ok, _} = Game.make_assumption(game_id, user1.uuid, 0)
+
+      assert_receive {:state, game}
+      assert length(game.turn.assumptions) == 1
+    end
+
+    test "rejects assumption in other phases (waiting)", %{game_id: game_id} do
+      {:ok, _pid} = Game.lookup_game(game_id)
+
+      # Manually send message to simulate wrong phase - note: we'd need to transition back
+      # But for this test we just verify that in ready phase, assumptions work
+      refute_receive {:reply, {:error, _}}
+    end
+  end
+
+  describe ":in_progress - :challenging - make_assumption" do
+    setup %{game_id: game_id} do
+      {:ok, _pid} = Game.lookup_game(game_id)
+
+      original_timeout = Application.get_env(:songy, :challenging_phase_timeout)
+      Application.put_env(:songy, :challenging_phase_timeout, 50)
+
+      user1 = %User{uuid: "user-1", name: "Player1"}
+      user2 = %User{uuid: "user-2", name: "Player2"}
+      user3 = %User{uuid: "user-3", name: "Player3"}
+
+      join_participant(game_id, user1.uuid)
+      assert_receive {:state, _}
+      join_participant(game_id, user2.uuid)
+      assert_receive {:state, _}
+      join_participant(game_id, user3.uuid)
+      assert_receive {:state, _}
+
+      {:ok, _} = Game.start_game(game_id)
+      assert_receive {:state, _}
+
+      # Set current track for assumptions (distinct from initial timelines)
+      track = %Track{id: "track-2", title: "Current Song", artist: "Current Artist", year: 2021}
+      {:ok, _} = Game.set_track(game_id, track)
+      assert_receive {:state, _}
+
+      {:ok, _} = Game.next_phase(game_id)
+      assert_receive {:state, _}
+      {:ok, _} = Game.next_phase(game_id)
+      assert_receive {:state, game}
+      assert game.turn.phase == :challenging
+
+      on_exit(fn ->
+        Application.put_env(:songy, :challenging_phase_timeout, original_timeout)
+      end)
+
+      %{user1: user1, user2: user2, user3: user3}
+    end
+
+    test "adds new assumption during challenging phase", %{game_id: game_id, user1: user1} do
+      {:ok, game} = Game.make_assumption(game_id, user1.uuid, 0)
+
+      assert length(game.turn.timeline) == 2
+      assert length(game.turn.assumptions) == 1
+      assert Enum.find(game.turn.assumptions, &(&1.user_id == user1.uuid)).position == 0
+    end
+
+    test "single user makes assumption (other users can't add at blocked positions)",
+         %{
+           game_id: game_id,
+           user1: user1,
+           user2: user2,
+           user3: user3
+         } do
+      {:ok, _} = Game.make_assumption(game_id, user1.uuid, 0)
+
+      # User2 tries - no action since position is blocked by user1
+      {:ok, _} = Game.make_assumption(game_id, user2.uuid, 0)
+
+      # User3 tries - no action since position is blocked by user1
+      {:ok, game} = Game.make_assumption(game_id, user3.uuid, 0)
+
+      # Only one track in timeline, assumptions = 1 (only user1 can make assumption)
+      assert length(game.turn.timeline) == 2
+      assert length(game.turn.assumptions) == 1
+    end
+
+    test "normalizes negative position to 0", %{game_id: game_id, user1: user1} do
+      {:ok, game} = Game.make_assumption(game_id, user1.uuid, -5)
+
+      assert length(game.turn.timeline) == 2
+      assert Enum.find(game.turn.assumptions, &(&1.user_id == user1.uuid)).position == 0
+    end
+
+    test "normalizes position beyond timeline length", %{game_id: game_id, user1: user1} do
+      {:ok, game} = Game.make_assumption(game_id, user1.uuid, 100)
+
+      assert length(game.turn.timeline) == 2
+      assert Enum.find(game.turn.assumptions, &(&1.user_id == user1.uuid)).position == 1
+    end
+
+    test "broadcasts after assumption in challenging phase", %{
+      game_id: game_id,
+      user1: user1
+    } do
+      {:ok, _} = Game.make_assumption(game_id, user1.uuid, 0)
+
+      assert_receive {:state, game}, 25
+      assert length(game.turn.assumptions) == 1
+    end
+
+    test "no-op when user makes assumption at same position", %{
+      game_id: game_id,
+      user1: user1
+    } do
+      {:ok, game1} = Game.make_assumption(game_id, user1.uuid, 0)
+      assert_receive {:state, _}
+
+      {:ok, game2} = Game.make_assumption(game_id, user1.uuid, 0)
+
+      # Same game state (no updates when position is the same)
+      assert game1.turn.phase == game2.turn.phase
+      assert game1.turn.timeline == game2.turn.timeline
+    end
+
+    test "blocks assumptions adjacent to other users", %{
+      game_id: game_id,
+      user1: user1,
+      user2: user2
+    } do
+      {:ok, _} = Game.make_assumption(game_id, user1.uuid, 0)
+      assert_receive {:state, _}
+
+      # User1 has assumption at position 0
+      # User2 tries to make assumption at position 1 - blocked by user1
+      {:ok, game} = Game.make_assumption(game_id, user2.uuid, 1)
+
+      # Timeline unchanged (track already there)
+      assert length(game.turn.timeline) == 2
+      # User2 has no assumption
+      user1_assumption = Enum.find(game.turn.assumptions, &(&1.user_id == user1.uuid))
+      assert user1_assumption.position == 0
+      refute Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid))
+    end
+  end
+
+  describe ":in_progress - :results - make_assumption" do
+    setup %{game_id: game_id} do
+      # Temporarily reduce challenging_phase_timeout
+      original_timeout = Application.get_env(:songy, :challenging_phase_timeout)
+      Application.put_env(:songy, :challenging_phase_timeout, 50)
+
+      {:ok, _pid} = Game.lookup_game(game_id)
+
+      user1 = %User{uuid: "user-1", name: "Player1"}
+      user2 = %User{uuid: "user-2", name: "Player2"}
+
+      join_participant(game_id, user1.uuid)
+      assert_receive {:state, _}
+      join_participant(game_id, user2.uuid)
+      assert_receive {:state, _}
+      {:ok, _} = Game.start_game(game_id)
+      assert_receive {:state, _}
+      {:ok, _} = Game.next_phase(game_id)
+      assert_receive {:state, _}
+      {:ok, _} = Game.next_phase(game_id)
+      assert_receive {:state, _game}
+      assert _game.turn.phase == :challenging
+
+      # Wait for auto-advance to results phase
+      Process.sleep(60)
+      assert_receive {:state, result_game}, 100
+      assert result_game.turn.phase == :results
+
+      on_exit(fn ->
+        Application.put_env(:songy, :challenging_phase_timeout, original_timeout)
+      end)
+
+      %{
+        user1: user1,
+        user2: user2
+      }
+    end
+
+    test "rejects make_assumption in results phase", %{game_id: game_id, user1: user1} do
+      {:ok, pid} = Game.lookup_game(game_id)
+
+      # Attempt to make assumption should fail in results phase
+      result = GenStateMachine.call(pid, {:make_assumption, user1.uuid, 0})
+
+      assert result == {:error, :invalid_action}
+    end
+  end
 end

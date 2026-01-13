@@ -5,7 +5,6 @@ export enum PUSH_EVENT {
   START_GAME = "start_game",
   NEXT_PHASE = "next_phase",
   MAKE_ASSUMPTION = "make_assumption",
-  REORDER_TIMELINE = "reorder_timeline",
   START_PLAYBACK = "start_playback",
   PAUSE_PLAYBACK = "pause_playback",
   UPDATE_PROVIDER = "update_provider",
@@ -22,7 +21,6 @@ interface PushEventPayloads {
   [PUSH_EVENT.START_GAME]: Record<string, never>;
   [PUSH_EVENT.NEXT_PHASE]: Record<string, never>;
   [PUSH_EVENT.MAKE_ASSUMPTION]: { position: number };
-  [PUSH_EVENT.REORDER_TIMELINE]: { track_id: string; position: number };
   [PUSH_EVENT.START_PLAYBACK]: Record<string, never>;
   [PUSH_EVENT.PAUSE_PLAYBACK]: Record<string, never>;
   [PUSH_EVENT.UPDATE_PROVIDER]: { device_id: string };

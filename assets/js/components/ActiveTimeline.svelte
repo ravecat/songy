@@ -45,19 +45,7 @@
     return item.user?.uuid === currentPlayer?.uuid;
   };
 
-  let dragStartedHere = $state(false);
-
-  function handleConsider({
-    detail: { items, info },
-  }: CustomEvent<DndEvent<Card>>) {
-    if (info.trigger === TRIGGERS.DRAG_STARTED) {
-      dragStartedHere = true;
-    }
-
-    if (info.trigger === TRIGGERS.DRAG_STOPPED) {
-      dragStartedHere = false;
-    }
-
+  function handleConsider({ detail: { items } }: CustomEvent<DndEvent<Card>>) {
     timeline = items;
   }
 
@@ -70,23 +58,14 @@
       info.trigger === TRIGGERS.DROPPED_INTO_ANOTHER ||
       info.trigger === TRIGGERS.DROPPED_OUTSIDE_OF_ANY
     ) {
-      dragStartedHere = false;
       return;
     }
 
     const newPosition = items.findIndex((item) => item.id === info.id);
 
-    if (dragStartedHere) {
-      channel.push(PUSH_EVENT.REORDER_TIMELINE, {
-        position: newPosition,
-      });
-    } else {
-      channel.push(PUSH_EVENT.MAKE_ASSUMPTION, {
-        position: newPosition,
-      });
-    }
-
-    dragStartedHere = false;
+    channel.push(PUSH_EVENT.MAKE_ASSUMPTION, {
+      position: newPosition,
+    });
   }
 </script>
 

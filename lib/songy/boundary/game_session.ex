@@ -102,10 +102,6 @@ defmodule Songy.Boundary.GameSession do
   defdelegate make_assumption(game_id, user_id, position), to: Game
   defdelegate make_assumption(game_id, user_id, position, timeout), to: Game
 
-  defdelegate reorder_timeline(game_id, user_id), to: Game
-  defdelegate reorder_timeline(game_id, user_id, position), to: Game
-  defdelegate reorder_timeline(game_id, user_id, position, timeout), to: Game
-
   defdelegate get_state(game_id), to: Game
 
   defp generate_session_id do

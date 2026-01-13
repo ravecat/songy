@@ -25,9 +25,9 @@
     const timeline = game?.turn?.timeline || [];
 
     return timeline.map((track, index) => ({
-      id: `${track.id}-${assumptions.get(index)?.uuid}`,
+      id: `${track?.id}-${assumptions.get(index)?.uuid}`,
       track,
-      current: track.id === currentTrack?.id,
+      current: track?.id === currentTrack?.id,
       user: assumptions.get(index),
     }));
   });
@@ -49,11 +49,7 @@
 
     const position = el?.dataset?.index;
 
-    if (true) {
-      channel?.push(PUSH_EVENT.MAKE_ASSUMPTION, { position });
-    } else {
-      channel?.push(PUSH_EVENT.REORDER_TIMELINE, { position });
-    }
+    channel?.push(PUSH_EVENT.MAKE_ASSUMPTION, { position });
   }
 </script>
 

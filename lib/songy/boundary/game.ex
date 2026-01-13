@@ -89,11 +89,6 @@ defmodule Songy.Boundary.Game do
     call_if_exists(game_id, {:make_assumption, user_id, position}, timeout)
   end
 
-  @doc "Reorders a user's timeline entry to a new position."
-  def reorder_timeline(game_id, user_id, position \\ 0, timeout \\ 1_000) do
-    call_if_exists(game_id, {:reorder_timeline, user_id, position}, timeout)
-  end
-
   @doc "Gets the active player UUID from the queue."
   def get_active_player(game_id, timeout \\ 1_000) do
     call_if_exists(game_id, :get_active_player, timeout)
@@ -333,67 +328,16 @@ defmodule Songy.Boundary.Game do
   def handle_event(
         {:call, from},
         {:make_assumption, user_id, position},
-        {:in_progress, :ready},
+        {:in_progress, phase},
         %{track: track, turn: turn} = data
-      ) do
-    Logger.debug("Game #{data.id}: Making assumption for #{user_id} at #{position} (READY phase)")
+      )
+      when phase in [:ready, :challenging] do
+    Logger.debug("Game #{data.id}: Making assumption for #{user_id} at #{position} (#{phase} phase)")
 
-    updated_turn = do_update_timeline(turn, track, user_id, position)
+    updated_turn = update_timeline(turn, track, user_id, position)
     updated_game = %{data | turn: updated_turn}
 
     {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
-  end
-
-  def handle_event(
-        {:call, from},
-        {:make_assumption, user_id, position},
-        {:in_progress, :challenging},
-        %{track: track, turn: turn} = data
-      ) do
-    Logger.debug("Game #{data.id}: Making assumption for #{user_id} at #{position}")
-
-    updated_turn = do_update_timeline(turn, track, user_id, position)
-    updated_game = %{data | turn: updated_turn}
-
-    {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
-  end
-
-  def handle_event(
-        {:call, from},
-        {:reorder_timeline, user_id, position},
-        {:in_progress, :ready},
-        %{turn: turn} = data
-      ) do
-    Logger.debug("Game #{data.id}: Reordering timeline for #{user_id} to #{position} (READY phase)")
-
-    case do_reorder_timeline(turn, user_id, position) do
-      {:ok, updated_turn} ->
-        updated_game = %{data | turn: updated_turn}
-
-        {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
-
-      {:error, reason} ->
-        {:keep_state, data, [{:reply, from, {:error, reason}}]}
-    end
-  end
-
-  def handle_event(
-        {:call, from},
-        {:reorder_timeline, user_id, position},
-        {:in_progress, :challenging},
-        %{turn: turn} = data
-      ) do
-    Logger.debug("Game #{data.id}: Reordering timeline for #{user_id} to #{position}")
-
-    case do_reorder_timeline(turn, user_id, position) do
-      {:ok, updated_turn} ->
-        updated_game = %{data | turn: updated_turn}
-
-        {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
-
-      {:error, reason} ->
-        {:keep_state, data, [{:reply, from, {:error, reason}}]}
-    end
   end
 
   def handle_event({:call, from}, {:start_playback, user_id}, {:in_progress, _phase}, data) do
@@ -518,61 +462,64 @@ defmodule Songy.Boundary.Game do
     {:keep_state, updated_game, [{:next_event, :internal, :broadcast}]}
   end
 
-  defp do_update_timeline(
+  defp update_timeline(
          %Core.Turn{timeline: timeline, assumptions: assumptions} = turn,
          track,
          user_id,
          position
        ) do
-    if Enum.any?(timeline, &(&1.id == track.id)) do
-      turn
-    else
-      new_assumptions =
-        assumptions
-        |> Enum.reject(&(&1.user_id == user_id))
-        |> Enum.map(fn
-          %{position: pos} = assumption when pos >= position ->
-            %{assumption | position: pos + 1}
+    user_assumption = Enum.find(assumptions, &(&1.user_id == user_id))
 
-          assumption ->
-            assumption
-        end)
-        |> Enum.concat([%{position: position, user_id: user_id}])
+    position = max(0, min(position, length(timeline)))
 
-      %{turn | timeline: List.insert_at(timeline, position, track), assumptions: new_assumptions}
-    end
-  end
+    blocked? =
+      assumptions
+      |> Enum.flat_map(fn %{position: pos} -> [pos, pos + 1] end)
+      |> MapSet.new()
+      |> MapSet.member?(position)
 
-  defp do_reorder_timeline(
-         %Core.Turn{timeline: timeline, assumptions: assumptions} = turn,
-         user_id,
-         new_position
-       ) do
-    with index when not is_nil(index) <- Enum.find_index(assumptions, &(&1.user_id == user_id)),
-         %{position: old_position} <- Enum.at(assumptions, index),
-         false <- old_position == new_position do
-      track = Enum.at(timeline, old_position)
-      new_timeline = timeline |> List.delete_at(old_position) |> List.insert_at(new_position, track)
+    case {user_assumption, blocked?} do
+      {nil, true} ->
+        turn
 
-      new_assumptions =
-        Enum.map(assumptions, fn
-          %{position: pos} = assumption when pos == old_position ->
-            %{assumption | position: new_position}
+      {nil, false} ->
+        new_assumptions =
+          assumptions
+          |> Enum.map(fn
+            %{position: pos} = assumption when pos >= position ->
+              %{assumption | position: pos + 1}
 
-          %{position: pos} = assumption when old_position < pos and pos <= new_position ->
-            %{assumption | position: pos - 1}
+            assumption ->
+              assumption
+          end)
+          |> Enum.concat([%{position: position, user_id: user_id}])
 
-          %{position: pos} = assumption when new_position <= pos and pos < old_position ->
-            %{assumption | position: pos + 1}
+        %{turn | timeline: List.insert_at(timeline, position, track), assumptions: new_assumptions}
 
-          assumption ->
-            assumption
-        end)
+      {%{position: _}, true} ->
+        turn
 
-      {:ok, %{turn | timeline: new_timeline, assumptions: new_assumptions}}
-    else
-      nil -> {:error, :user_assumption_not_found}
-      true -> {:ok, turn}
+      {%{position: old_position}, false} ->
+        track_at_old = Enum.at(timeline, old_position)
+        insert_position = if position > old_position, do: position - 1, else: position
+        new_timeline = timeline |> List.delete_at(old_position) |> List.insert_at(insert_position, track_at_old)
+
+        new_assumptions =
+          Enum.map(assumptions, fn
+            %{position: pos} = assumption when pos == old_position ->
+              %{assumption | position: insert_position}
+
+            %{position: pos} = assumption when old_position < pos and pos <= position ->
+              %{assumption | position: pos - 1}
+
+            %{position: pos} = assumption when position <= pos and pos < old_position ->
+              %{assumption | position: pos + 1}
+
+            assumption ->
+              assumption
+          end)
+
+        %{turn | timeline: new_timeline, assumptions: new_assumptions}
     end
   end
 

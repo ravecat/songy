@@ -14,7 +14,6 @@ defmodule Songy.Policy do
     :start_turn,
     :restart_game,
     :make_assumption,
-    :reorder_timeline,
     :see_assumptions,
     :spectate
   ]
@@ -62,9 +61,6 @@ defmodule Songy.Policy do
   defp can(:make_assumption, :owner, %Game{status: :in_progress, turn: %{phase: :challenging}}), do: :ok
 
   defp can(:see_assumptions, _, %Game{status: :in_progress, turn: %{phase: :results}}), do: :ok
-
-  defp can(:reorder_timeline, :owner, %Game{status: :in_progress, turn: %{phase: :ready}}), do: :ok
-  defp can(:reorder_timeline, :owner, %Game{status: :in_progress, turn: %{phase: :challenging}}), do: :ok
 
   defp can(_action, _subject, %Game{}), do: {:error, :unauthorized}
 
