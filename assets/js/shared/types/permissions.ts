@@ -19,4 +19,7 @@ export interface Permissions {
   can_restart_game: boolean;
 
   can_see_assumptions: boolean;
+
+  /** Whether user can make assumptions (shows active track card) */
+  can_make_assumptions: boolean;
 }
