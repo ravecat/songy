@@ -3,9 +3,9 @@ import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
 import { TURN_PHASE } from "~shared/types/turn";
 import * as GameContext from "~components/GameChannel.svelte";
 
-import ScrollableTimeline from "~components/ScrollableTimeline.svelte";
+import Timeline from "~components/Timeline.svelte";
 
-describe("ScrollableTimeline - Track Card Visibility", () => {
+describe("Timeline - Track Card Visibility", () => {
   let mockGameContext;
 
   beforeEach(() => {
@@ -64,7 +64,7 @@ describe("ScrollableTimeline - Track Card Visibility", () => {
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);
 
-    const { container } = render(ScrollableTimeline);
+    const { container } = render(Timeline);
 
     const hiddenCards = container.querySelectorAll('[aria-label="Hidden track card"]');
     expect(hiddenCards.length).toBeGreaterThanOrEqual(1);
@@ -76,7 +76,7 @@ describe("ScrollableTimeline - Track Card Visibility", () => {
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);
 
-    const { container } = render(ScrollableTimeline);
+    const { container } = render(Timeline);
 
     const timelineTrack1 = screen.getAllByText("Timeline Track 1");
     const timelineTrack2 = screen.getAllByText("Timeline Track 2");
@@ -96,7 +96,7 @@ describe("ScrollableTimeline - Track Card Visibility", () => {
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);
 
-    const { container } = render(ScrollableTimeline);
+    const { container } = render(Timeline);
 
     const allCards = container.querySelectorAll('.wrapper');
     const cardsInTimeline = mockGameContext.game.turn.timeline.length;
@@ -109,7 +109,7 @@ describe("ScrollableTimeline - Track Card Visibility", () => {
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);
 
-    const { container } = render(ScrollableTimeline);
+    const { container } = render(Timeline);
 
     const allCards = container.querySelectorAll('.wrapper');
     const cardsInTimeline = mockGameContext.game.turn.timeline.length;
@@ -123,7 +123,7 @@ describe("ScrollableTimeline - Track Card Visibility", () => {
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);
 
-    const { container } = render(ScrollableTimeline);
+    const { container } = render(Timeline);
 
     const allCards = container.querySelectorAll('.wrapper');
     const cardsInTimeline = mockGameContext.game.turn.timeline.length;
@@ -138,7 +138,7 @@ describe("ScrollableTimeline - Track Card Visibility", () => {
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);
 
-    const { container } = render(ScrollableTimeline);
+    const { container } = render(Timeline);
 
     const allCards = container.querySelectorAll('.wrapper');
     const cardsInTimeline = mockGameContext.game.turn.timeline.length;
@@ -154,7 +154,7 @@ describe("ScrollableTimeline - Track Card Visibility", () => {
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);
 
-    const { container } = render(ScrollableTimeline);
+    const { container } = render(Timeline);
 
     const allCards = container.querySelectorAll('.wrapper');
     const cardsInTimeline = mockGameContext.game.turn.timeline.length;
@@ -167,7 +167,7 @@ describe("ScrollableTimeline - Track Card Visibility", () => {
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);
 
-    render(ScrollableTimeline);
+    render(Timeline);
 
     expect(screen.getAllByText("Timeline Track 1").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Timeline Track 2").length).toBeGreaterThan(0);
@@ -182,7 +182,7 @@ describe("ScrollableTimeline - Track Card Visibility", () => {
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);
 
-    const { container } = render(ScrollableTimeline);
+    const { container } = render(Timeline);
 
     expect(screen.getAllByText("Timeline Track 1").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Timeline Track 2").length).toBeGreaterThan(0);

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import ScrollableTimeline from "~components/ScrollableTimeline.svelte";
+  import Timeline from "~components/Timeline.svelte";
   import Timer from "~components/Timer.svelte";
   import { getGameContext } from "~components/GameChannel.svelte";
   import { BROADCAST_EVENT } from "~shared/types/channel";
@@ -19,4 +19,4 @@
 </script>
 
 <Timer {seconds} />
-<ScrollableTimeline />
+<Timeline />

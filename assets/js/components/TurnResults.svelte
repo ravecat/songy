@@ -1,5 +1,5 @@
 <script lang="ts">
-  import ScrollableTimeline from "~components/ScrollableTimeline.svelte";
+  import Timeline from "~components/Timeline.svelte";
 </script>
 
-<ScrollableTimeline />
+<Timeline />
