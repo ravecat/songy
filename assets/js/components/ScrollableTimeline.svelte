@@ -37,6 +37,7 @@
   let timeline: HTMLDivElement;
 
   function handleWheel(e: WheelEvent) {
+    hasInteracted = true;
     if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
     e.preventDefault();
     timeline.scrollLeft += e.deltaY;
@@ -53,7 +54,7 @@
 
     const position = el?.dataset?.index;
 
-    channel?.push(PUSH_EVENT.MAKE_ASSUMPTION, { position });
+    channel.push(PUSH_EVENT.MAKE_ASSUMPTION, { position });
   }
 </script>
 
@@ -63,7 +64,8 @@
     bind:this={timeline}
     onwheel={handleWheel}
     onscrollend={onScrollEnd}
-    onscroll={() => (hasInteracted = true)}
+    onpointerdown={() => (hasInteracted = true)}
+    ontouchmove={() => (hasInteracted = true)}
     role="list"
   >
     <span class="snap" data-index={0}></span>
