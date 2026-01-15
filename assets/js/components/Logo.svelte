@@ -3,7 +3,7 @@
 </script>
 
 {#if loading}
-  <div class="flex flex-col items-center">
+  <div class="logo">
     <div class="audio-bars" role="status" aria-label="Loading">
       <div class="bar" data-letter="S"></div>
       <div class="bar" data-letter="O"></div>
@@ -17,6 +17,12 @@
 {/if}
 
 <style>
+  .logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .audio-bars {
     display: flex;
     gap: 3px;

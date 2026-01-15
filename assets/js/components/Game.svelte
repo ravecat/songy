@@ -3,23 +3,25 @@
   import { TURN_PHASE } from "~shared/types/turn";
   import { GAME_STATUS } from "~shared/types/game";
   import TurnWaiting from "~components/TurnWaiting.svelte";
-  import TurnChallenging from "~components/TurnChallenging.svelte";
-  import TurnResults from "~components/TurnResults.svelte";
-  import TurnReady from "~components/TurnReady.svelte";
+  import Timeline from "~components/Timeline.svelte";
 
   const { game } = $derived.by(getGameContext);
-  const turnPhase = $derived(game?.turn?.phase);
-  const gameStatus = $derived(game?.status);
+  const phase = $derived(game?.turn?.phase);
+  const status = $derived(game?.status);
 </script>
 
-{#if turnPhase === TURN_PHASE.WAITING}
+{#if phase === TURN_PHASE.WAITING}
   <TurnWaiting />
-{:else if turnPhase === TURN_PHASE.READY}
-  <TurnReady />
-{:else if turnPhase === TURN_PHASE.CHALLENGING}
-  <TurnChallenging />
-{:else if turnPhase === TURN_PHASE.RESULTS}
-  <TurnResults />
-{:else if gameStatus === GAME_STATUS.WAITING}
-  waiting for players...
+{:else if phase === TURN_PHASE.READY || phase === TURN_PHASE.CHALLENGING || phase === TURN_PHASE.RESULTS}
+  <Timeline />
+{:else if status === GAME_STATUS.WAITING}
+  <div class="waiting">waiting for players...</div>
 {/if}
+
+<style>
+  .waiting {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+</style>

@@ -4,18 +4,49 @@
   import Logo from "~components/Logo.svelte";
   import Player from "~components/Player.svelte";
   import Participants from "~components/Participants.svelte";
+  import Timer from "~components/Timer.svelte";
 
   const { game } = $derived.by(getGameContext);
 </script>
 
-<div
-  class="flex min-h-screen flex-col bg-[rgba(75,179,153,1)] bg-[radial-gradient(circle_at_center,_rgba(75,179,153,1),_rgba(44,94,167,1))]"
->
+<div class="room">
   <Logo loading={!game}>
-    <Participants />
-    <div class="flex flex-1 items-center justify-center">
+    <div class="content">
+      <div class="header-container">
+        <Timer />
+        <Participants />
+      </div>
       <Game />
+      <Player />
     </div>
-    <Player />
   </Logo>
 </div>
+
+<style>
+  .room {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-image: linear-gradient(
+      to bottom right,
+      #581c87,
+      #9f1239,
+      #c2410c
+    );
+  }
+
+  .content {
+    height: 100%;
+    width: 100%;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .header-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+</style>

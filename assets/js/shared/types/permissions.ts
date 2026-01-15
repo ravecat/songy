@@ -18,6 +18,8 @@ export interface Permissions {
   /** Whether to show the play again button */
   can_restart_game: boolean;
 
+  can_start_turn: boolean;
+
   can_see_assumptions: boolean;
 
   /** Whether user can make assumptions (shows active track card) */

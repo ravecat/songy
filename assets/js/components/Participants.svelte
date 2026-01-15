@@ -50,11 +50,9 @@
   .participants-header {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
+    justify-content: flex-end;
     gap: 1rem;
-    padding: 1rem;
-    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.2), transparent);
-    backdrop-filter: blur(4px);
+    flex: 1;
   }
 
   .participant-wrapper {

@@ -1,15 +1,25 @@
 <script lang="ts">
-  interface TimerProps {
-    seconds: number | null;
-  }
+  import { getGameContext } from "~components/GameChannel.svelte";
+  import { BROADCAST_EVENT } from "~shared/types/channel";
+  import { TURN_PHASE } from "~shared/types/turn";
 
-  let { seconds }: TimerProps = $props();
+  const { channel, game } = $derived.by(getGameContext);
+  const phase = $derived(game?.turn?.phase);
+
+  let seconds = $state<number | null>(null);
   let total = $state<number | null>(null);
 
   $effect(() => {
-    if (total === null) {
-      total = seconds;
-    }
+    const ref = channel.on(BROADCAST_EVENT.TIMER, ({ remaining }) => {
+      if (total === null) {
+        total = remaining;
+      }
+      seconds = remaining;
+    });
+
+    return () => {
+      channel.off(BROADCAST_EVENT.TIMER, ref);
+    };
   });
 
   const size = 36;
@@ -29,9 +39,9 @@
   const dashOffset = $derived.by(() => circumference * (1 - progress));
 </script>
 
-{#if seconds !== null}
+{#if phase === TURN_PHASE.CHALLENGING && seconds !== null}
   <svg
-    class="fixed left-4 top-4 z-50 h-16 w-16 pointer-events-none select-none"
+    class="h-16 w-16 shrink-0 pointer-events-none select-none"
     viewBox={`0 0 ${size} ${size}`}
     aria-live="polite"
     role="timer"

@@ -1,11 +1,48 @@
 import { render, screen } from "@testing-library/svelte";
 import { tick } from "svelte";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, beforeEach, vi, afterEach } from "vitest";
+import { Channel } from "phoenix";
+import { TURN_PHASE } from "~shared/types/turn";
+import { BROADCAST_EVENT } from "~shared/types/channel";
 import Timer from "~components/Timer.svelte";
+import * as GameContext from "~components/GameChannel.svelte";
+
+vi.mock("phoenix");
 
 describe("Timer", () => {
+  let mockChannelContext;
+  let getGameContextSpy;
+  let timerCallback;
+
+  beforeEach(() => {
+    mockChannelContext = {
+      game: {
+        turn: {
+          phase: TURN_PHASE.CHALLENGING,
+        },
+      },
+      channel: {
+        on: vi.fn((event, callback) => {
+          if (event === BROADCAST_EVENT.TIMER) {
+            timerCallback = callback;
+          }
+          return Symbol("ref");
+        }),
+        off: vi.fn(),
+      },
+    };
+
+    getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    timerCallback = null;
+  });
+
   test("does not render when seconds is null", async () => {
-    render(Timer, { props: { seconds: null } });
+    getGameContextSpy.mockReturnValue(mockChannelContext);
+    render(Timer);
 
     await tick();
 
@@ -13,7 +50,13 @@ describe("Timer", () => {
   });
 
   test("renders remaining seconds", async () => {
-    render(Timer, { props: { seconds: 12 } });
+    getGameContextSpy.mockReturnValue(mockChannelContext);
+    render(Timer);
+
+    // Simulate timer event
+    if (timerCallback) {
+      timerCallback({ remaining: 12 });
+    }
     await tick();
 
     expect(screen.getByRole("timer")).toHaveTextContent("12");
