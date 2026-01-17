@@ -65,9 +65,11 @@ defmodule Songy.Core.User do
   end
 
   defp generate_name(uuid) do
+    seed = :erlang.phash2(uuid)
+
     UniqueNamesGenerator.generate(
       [:adjectives, :animals],
-      %{seed: uuid, style: :capital, separator: " "}
+      %{seed: seed, style: :capital, separator: " "}
     )
   end
 

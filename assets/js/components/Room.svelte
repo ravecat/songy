@@ -29,12 +29,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-image: linear-gradient(
-      to bottom right,
-      #581c87,
-      #9f1239,
-      #c2410c
-    );
+    background-image: var(--landing-gradient);
   }
 
   .content {

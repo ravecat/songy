@@ -91,6 +91,47 @@
   --noise: 0;
 }
 
+/* Colors */
+:root {
+  --spotify-green: #1db954;
+  --spotify-green-hover: #1ed760;
+  --spotify-black: #191414;
+}
+
+/* Transition durations */
+:root {
+  --transition-fast: 150ms ease;
+  --transition-base: 300ms ease;
+  --transition-slow: 600ms ease;
+  --transition-none: none;
+}
+
+/* Line heights */
+:root {
+  --leading-tight: 1.2;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+  --leading-loose: 2;
+}
+
+/* Line heights */
+:root {
+  --leading-tight: 1.2;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+  --leading-loose: 2;
+}
+
+/* Landing page gradient */
+:root {
+  --landing-gradient: linear-gradient(
+    to bottom right,
+    #581c87,
+    #9f1239,
+    #c2410c
+  );
+}
+
 /* Add variants based on LiveView classes */
 @custom-variant phx-click-loading (.phx-click-loading&, .phx-click-loading &);
 @custom-variant phx-submit-loading (.phx-submit-loading&, .phx-submit-loading &);

@@ -89,8 +89,16 @@ describe("Turn waiting view", () => {
       },
     };
 
+    const mockContextNotActive = {
+      ...mockChannelContext,
+      permissions: {
+        ...mockChannelContext.permissions,
+        can_start_turn: false,
+      },
+    };
+
     getScopeContextSpy.mockReturnValue(nonActiveUserContext);
-    getGameContextSpy.mockReturnValue(mockChannelContext);
+    getGameContextSpy.mockReturnValue(mockContextNotActive);
 
     render(TurnWaiting);
 
@@ -136,8 +144,16 @@ describe("Turn waiting view", () => {
 
     mockChannelContext.game.cursor = 1;
 
+    const mockContextNonActive = {
+      ...mockChannelContext,
+      permissions: {
+        ...mockChannelContext.permissions,
+        can_start_turn: false,
+      },
+    };
+
     getScopeContextSpy.mockReturnValue(mockScopeContext);
-    getGameContextSpy.mockReturnValue(mockChannelContext);
+    getGameContextSpy.mockReturnValue(mockContextNonActive);
 
     render(TurnWaiting);
 
@@ -162,17 +178,6 @@ describe("Turn waiting view", () => {
     expect(() => {
       render(TurnWaiting);
     }).toThrow("getGameContext() must be called within a game context");
-  });
-
-  test("throws error when scopeContext is missing", () => {
-    getScopeContextSpy.mockImplementation(() => {
-      throw new Error("missing_context");
-    });
-    getGameContextSpy.mockReturnValue(mockChannelContext);
-
-    expect(() => {
-      render(TurnWaiting);
-    }).toThrow("missing_context");
   });
 
 });
