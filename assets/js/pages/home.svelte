@@ -22,7 +22,7 @@
 <div class="landing">
   <div class="rules-section">
     <div class="logo-container">
-      <Logo loading={true} />
+      <Logo />
     </div>
     <div class="rules-content">
       <h1 class="title">Music Quiz Game</h1>

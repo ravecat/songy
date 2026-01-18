@@ -37,6 +37,19 @@
   setScopeContext(context);
 </script>
 
-<Logo loading={!context.user}>
+{#if !context.user}
+  <div class="loader">
+    <Logo />
+  </div>
+{:else}
   {@render children?.()}
-</Logo>
+{/if}
+
+<style>
+  .loader {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+</style>

@@ -1,72 +1,105 @@
 <script>
-  let { loading = true, children } = $props();
+  let { size = 56, class: className = "", ...restProps } = $props();
 </script>
 
-{#if loading}
-  <div class="logo">
-    <div class="audio-bars" role="status" aria-label="Loading">
-      <div class="bar" data-letter="S"></div>
-      <div class="bar" data-letter="O"></div>
-      <div class="bar" data-letter="N"></div>
-      <div class="bar" data-letter="G"></div>
-      <div class="bar" data-letter="Y"></div>
-    </div>
-  </div>
-{:else if children}
-  {@render children?.()}
-{/if}
+<svg
+  class={className}
+  width={size}
+  height={size}
+  viewBox="0 0 56 65"
+  preserveAspectRatio="xMidYMid meet"
+  role="status"
+  aria-label="loading"
+  {...restProps}
+>
+  <rect
+    class="bar bar-1"
+    x="2"
+    y="40"
+    width="8"
+    height="8"
+    style="transform-origin: 6px 48px"
+  />
+  <text class="letter letter-1" x="6" y="59">S</text>
+
+  <rect
+    class="bar bar-2"
+    x="13"
+    y="40"
+    width="8"
+    height="8"
+    style="transform-origin: 17px 48px"
+  />
+  <text class="letter letter-2" x="17" y="59">O</text>
+
+  <rect
+    class="bar bar-3"
+    x="24"
+    y="40"
+    width="8"
+    height="8"
+    style="transform-origin: 28px 48px"
+  />
+  <text class="letter letter-3" x="28" y="59">N</text>
+
+  <rect
+    class="bar bar-4"
+    x="35"
+    y="40"
+    width="8"
+    height="8"
+    style="transform-origin: 39px 48px"
+  />
+  <text class="letter letter-4" x="39" y="59">G</text>
+
+  <rect
+    class="bar bar-5"
+    x="46"
+    y="40"
+    width="8"
+    height="8"
+    style="transform-origin: 50px 48px"
+  />
+  <text class="letter letter-5" x="50" y="59">Y</text>
+</svg>
 
 <style>
-  .logo {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .audio-bars {
-    display: flex;
-    gap: 3px;
-    align-items: end;
-    height: 40px;
-  }
-
   .bar {
-    width: 8px;
-    background: white;
+    fill: white;
     opacity: 0.7;
     animation: bounce 2s infinite ease-in-out;
-    position: relative;
   }
 
-  .bar::after {
-    content: attr(data-letter);
-    position: absolute;
-    bottom: -20px;
-    left: 50%;
-    transform: translateX(-50%);
-    color: white;
+  .letter {
+    fill: white;
     font-size: 12px;
     font-weight: bold;
     opacity: 0.8;
+    text-anchor: middle;
   }
 
-  .bar:nth-child(1) {
+  .bar-1,
+  .letter-1 {
     animation-delay: 0.2s;
     animation-duration: 1.05s;
   }
-  .bar:nth-child(2) {
+  .bar-2,
+  .letter-2 {
     animation-delay: 0.4s;
     animation-duration: 1.35s;
   }
-  .bar:nth-child(3) {
+  .bar-3,
+  .letter-3 {
     animation-delay: 0.1s;
     animation-duration: 1.2s;
   }
-  .bar:nth-child(4) {
+  .bar-4,
+  .letter-4 {
     animation-delay: 0.5s;
     animation-duration: 0.9s;
   }
-  .bar:nth-child(5) {
+  .bar-5,
+  .letter-5 {
     animation-delay: 0.3s;
     animation-duration: 1.15s;
   }
@@ -75,10 +108,10 @@
     0%,
     80%,
     100% {
-      height: 8px;
+      transform: scaleY(1);
     }
     40% {
-      height: 40px;
+      transform: scaleY(5);
     }
   }
 </style>

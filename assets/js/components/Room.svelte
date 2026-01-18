@@ -10,7 +10,9 @@
 </script>
 
 <div class="room">
-  <Logo loading={!game}>
+  {#if !game}
+    <Logo />
+  {:else}
     <div class="content">
       <div class="header-container">
         <Timer />
@@ -19,7 +21,7 @@
       <Game />
       <Player />
     </div>
-  </Logo>
+  {/if}
 </div>
 
 <style>
