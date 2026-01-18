@@ -5,7 +5,7 @@ import * as GameContext from "~components/GameChannel.svelte";
 
 import Timeline from "~components/Timeline.svelte";
 
-describe("Timeline - Track Card Visibility", () => {
+describe("Timeline", () => {
   let mockGameContext;
 
   beforeEach(() => {
@@ -43,8 +43,8 @@ describe("Timeline - Track Card Visibility", () => {
         },
       },
       permissions: {
-        can_control_playback: true,
-        can_advance_turn: true,
+        can_control_playback: false,
+        can_advance_turn: false,
         can_start_game: false,
         can_start_turn: false,
         can_restart_game: false,

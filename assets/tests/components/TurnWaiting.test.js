@@ -32,6 +32,16 @@ describe("Turn waiting view", () => {
           phase: TURN_PHASE.WAITING,
         },
       },
+      permissions: {
+        can_start_turn: false,
+        can_control_playback: false,
+        can_advance_turn: false,
+        can_start_game: false,
+        can_ready: false,
+        can_restart_game: false,
+        can_see_assumptions: false,
+        can_make_assumptions: false,
+      },
     };
 
     getScopeContextSpy = vi.spyOn(Scope, "getScopeContext");
@@ -50,8 +60,16 @@ describe("Turn waiting view", () => {
       },
     };
 
+    const mockContextActive = {
+      ...mockChannelContext,
+      permissions: {
+        ...mockChannelContext.permissions,
+        can_start_turn: true,
+      },
+    };
+
     getScopeContextSpy.mockReturnValue(mockScopeContext);
-    getGameContextSpy.mockReturnValue(mockChannelContext);
+    getGameContextSpy.mockReturnValue(mockContextActive);
 
     render(TurnWaiting);
 
@@ -90,8 +108,16 @@ describe("Turn waiting view", () => {
 
     mockChannelContext.game.cursor = 1;
 
+    const mockContextActive = {
+      ...mockChannelContext,
+      permissions: {
+        ...mockChannelContext.permissions,
+        can_start_turn: true,
+      },
+    };
+
     getScopeContextSpy.mockReturnValue(mockScopeContext);
-    getGameContextSpy.mockReturnValue(mockChannelContext);
+    getGameContextSpy.mockReturnValue(mockContextActive);
 
     render(TurnWaiting);
 

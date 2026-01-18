@@ -42,6 +42,16 @@ describe("Game", () => {
           assumptions: [],
         },
       },
+      permissions: {
+        can_start_turn: false,
+        can_control_playback: false,
+        can_advance_turn: false,
+        can_start_game: false,
+        can_ready: false,
+        can_restart_game: false,
+        can_see_assumptions: false,
+        can_make_assumptions: false,
+      },
     };
 
     getScopeContextSpy = vi.spyOn(Scope, "getScopeContext");
@@ -101,6 +111,7 @@ describe("Game", () => {
     };
 
     mockChannelContext.game.turn.phase = TURN_PHASE.WAITING;
+    mockChannelContext.permissions.can_start_turn = true;
 
     getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockReturnValue(mockChannelContext);
@@ -108,6 +119,24 @@ describe("Game", () => {
     render(Game);
 
     expect(screen.getByText("It's your turn")).toBeInTheDocument();
+  });
+
+  test("displays waiting view for passive player", () => {
+    const mockScopeContext = {
+      user: {
+        uuid: "user-2",
+        name: "Bob",
+      },
+    };
+
+    mockChannelContext.game.turn.phase = TURN_PHASE.WAITING;
+
+    getScopeContextSpy.mockReturnValue(mockScopeContext);
+    getGameContextSpy.mockReturnValue(mockChannelContext);
+
+    render(Game);
+
+    expect(screen.getByText("Alice turn")).toBeInTheDocument();
   });
 
   test("displays results view on results phase", () => {
