@@ -40,34 +40,43 @@
 </script>
 
 {#if phase === TURN_PHASE.CHALLENGING && seconds !== null}
-  <svg
-    class="h-16 w-16 shrink-0 pointer-events-none select-none"
-    viewBox={`0 0 ${size} ${size}`}
-    aria-live="polite"
-    role="timer"
-  >
-    <g transform={`rotate(-90 ${center} ${center})`}>
-      <circle
-        class="stroke-white/90 transition-[stroke-dashoffset] duration-200"
-        cx={center}
-        cy={center}
-        r={radius}
-        fill="none"
-        stroke-width={strokeWidth}
-        stroke-dasharray={`${circumference} ${circumference}`}
-        stroke-dashoffset={dashOffset}
-        stroke-linecap="round"
-      />
-    </g>
-    <text
-      class="fill-white text-sm font-bold tracking-[0.05em]"
-      x={center}
-      y={center}
-      text-anchor="middle"
-      dominant-baseline="middle"
+  <div class="timer">
+    <svg
+      viewBox={`0 0 ${size} ${size}`}
+      aria-live="polite"
+      role="timer"
+      style="width: 100%; height: 100%;"
     >
-      {seconds}
-    </text>
-  </svg>
+      <g transform={`rotate(-90 ${center} ${center})`}>
+        <circle
+          class="stroke-white/90 transition-[stroke-dashoffset] duration-200"
+          cx={center}
+          cy={center}
+          r={radius}
+          fill="none"
+          stroke-width={strokeWidth}
+          stroke-dasharray={`${circumference} ${circumference}`}
+          stroke-dashoffset={dashOffset}
+          stroke-linecap="round"
+        />
+      </g>
+      <text
+        class="fill-white text-sm font-bold tracking-[0.05em]"
+        x={center}
+        y={center}
+        text-anchor="middle"
+        dominant-baseline="middle"
+      >
+        {seconds}
+      </text>
+    </svg>
+  </div>
 {/if}
+
+<style>
+  .timer {
+    width: 3rem;
+    height: 3rem;
+  }
+</style>
 

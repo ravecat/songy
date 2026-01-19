@@ -1,44 +1,12 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
 import * as GameContext from "~components/GameChannel.svelte";
-import * as Scope from "~components/Scope.svelte";
 import Participants from "~components/Participants.svelte";
 
 describe("Participants component", () => {
-  let getScopeContextSpy;
   let getGameContextSpy;
-  
-  const mockParticipants = [
-    {
-      uuid: "user-1",
-      name: "Alice",
-      avatar_url: "https://example.com/alice.jpg",
-    },
-    {
-      uuid: "user-2",
-      name: "Bob",
-      avatar_url: "https://example.com/bob.jpg",
-    },
-    {
-      uuid: "user-3",
-      name: "Charlie",
-      avatar_url: "https://example.com/charlie.jpg",
-    },
-  ];
-
-  const mockChannelContext = {
-    game: {
-      participants: mockParticipants,
-      scores: {
-        "user-1": 42,
-        "user-2": 15,
-        "user-3": 88,
-      },
-    },
-  };
 
   beforeEach(() => {
-    getScopeContextSpy = vi.spyOn(Scope, 'getScopeContext');
     getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
   });
 
@@ -46,211 +14,95 @@ describe("Participants component", () => {
     vi.restoreAllMocks();
   });
 
-  test("renders participants when participants list is not empty", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "user-2",
-        name: "Bob",
+  test("displays correct participant count", () => {
+    const mockChannelContext = {
+      game: {
+        participants: [
+          { uuid: "user-1", name: "Alice", avatar_url: "https://example.com/alice.jpg" },
+          { uuid: "user-2", name: "Bob", avatar_url: "https://example.com/bob.jpg" },
+          { uuid: "user-3", name: "Charlie", avatar_url: "https://example.com/charlie.jpg" },
+        ],
       },
     };
-    
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
-    getGameContextSpy.mockReturnValue(mockChannelContext);
-    
-    render(Participants);
 
-    expect(screen.getByText("Alice")).toBeInTheDocument();
-    expect(screen.getByText("Bob")).toBeInTheDocument();
-    expect(screen.getByText("Charlie")).toBeInTheDocument();
-  });
-
-  test("shows star indicator for current user's avatar", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "user-2",
-        name: "Bob",
-      },
-    };
-    
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
-    getGameContextSpy.mockReturnValue(mockChannelContext);
-    
-    render(Participants);
-
-    expect(screen.getByLabelText("Your avatar")).toBeInTheDocument();
-  });
-
-  test("does not show star indicator when no current user", () => {
-    const noUserScopeContext = {
-      user: null,
-    };
-    
-    getScopeContextSpy.mockReturnValue(noUserScopeContext);
     getGameContextSpy.mockReturnValue(mockChannelContext);
 
     render(Participants);
 
-    expect(screen.queryByLabelText("Your avatar")).not.toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByLabelText("3 players online")).toBeInTheDocument();
   });
 
-  test("shows star indicator only for matching user UUID", () => {
-    const differentUserContext = {
-      user: {
-        uuid: "user-999",
-        name: "Different User",
-      },
-    };
-    
-    getScopeContextSpy.mockReturnValue(differentUserContext);
-    getGameContextSpy.mockReturnValue(mockChannelContext);
-
-    render(Participants);
-
-    expect(screen.queryByLabelText("Your avatar")).not.toBeInTheDocument();
-  });
-
-  test("renders nothing when participants list is empty", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "user-2",
-        name: "Bob",
-      },
-    };
-    
+  test("displays 0 when no participants", () => {
     const emptyChannelContext = {
       game: {
         participants: [],
-        scores: {},
       },
     };
-    
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
+
     getGameContextSpy.mockReturnValue(emptyChannelContext);
 
     render(Participants);
 
-    expect(screen.queryByRole("img")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Your avatar")).not.toBeInTheDocument();
-    expect(screen.queryByText(/./)).not.toBeInTheDocument();
-  });
-
-  test("renders avatar images with correct alt text", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "user-2",
-        name: "Bob",
-      },
-    };
-    
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
-    getGameContextSpy.mockReturnValue(mockChannelContext);
-    
-    render(Participants);
-
-    const aliceAvatar = screen.getByAltText("Alice");
-    const bobAvatar = screen.getByAltText("Bob");
-    const charlieAvatar = screen.getByAltText("Charlie");
-
-    expect(aliceAvatar).toBeInTheDocument();
-    expect(bobAvatar).toBeInTheDocument();
-    expect(charlieAvatar).toBeInTheDocument();
-
-    expect(aliceAvatar).toHaveAttribute("src", "https://example.com/alice.jpg");
-    expect(bobAvatar).toHaveAttribute("src", "https://example.com/bob.jpg");
-    expect(charlieAvatar).toHaveAttribute(
-      "src",
-      "https://example.com/charlie.jpg"
-    );
-  });
-
-  test("displays user scores in score indicators", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "user-2",
-        name: "Bob",
-      },
-    };
-    
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
-    getGameContextSpy.mockReturnValue(mockChannelContext);
-    
-    render(Participants);
-
-    expect(screen.getByText("42")).toBeInTheDocument();
-    expect(screen.getByText("15")).toBeInTheDocument();
-    expect(screen.getByText("88")).toBeInTheDocument();
-  });
-
-  test("does not display score indicator when user has no score data", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "user-2",
-        name: "Bob",
-      },
-    };
-    
-    const contextWithoutScores = {
-      game: {
-        participants: mockParticipants,
-        scores: {},
-      },
-    };
-    
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
-    getGameContextSpy.mockReturnValue(contextWithoutScores);
-
-    render(Participants);
-
-    expect(screen.queryByText("0")).not.toBeInTheDocument();
-  });
-
-  test("does not display score indicator when scores field is missing", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "user-2",
-        name: "Bob",
-      },
-    };
-    
-    const contextWithoutScoresField = {
-      game: {
-        participants: mockParticipants,
-      },
-    };
-    
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
-    getGameContextSpy.mockReturnValue(contextWithoutScoresField);
-
-    render(Participants);
-
-    expect(screen.queryByText("0")).not.toBeInTheDocument();
-  });
-
-  test("displays score indicator only for users who have score entries", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "user-2",
-        name: "Bob",
-      },
-    };
-    
-    const contextWithPartialScores = {
-      game: {
-        participants: mockParticipants,
-        scores: {
-          "user-1": 25,
-          "user-3": 0,
-        },
-      },
-    };
-    
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
-    getGameContextSpy.mockReturnValue(contextWithPartialScores);
-
-    render(Participants);
-
-    expect(screen.getByText("25")).toBeInTheDocument();
     expect(screen.getByText("0")).toBeInTheDocument();
-    expect(screen.getAllByText(/\d+/)).toHaveLength(2);
+  });
+
+  test("displays 1 player singular form", () => {
+    const singleParticipantContext = {
+      game: {
+        participants: [
+          { uuid: "user-1", name: "Alice", avatar_url: "https://example.com/alice.jpg" },
+        ],
+      },
+    };
+
+    getGameContextSpy.mockReturnValue(singleParticipantContext);
+
+    render(Participants);
+
+    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByLabelText("1 player online")).toBeInTheDocument();
+  });
+
+  test("handles null game gracefully", () => {
+    const nullGameContext = {
+      game: null,
+    };
+
+    getGameContextSpy.mockReturnValue(nullGameContext);
+
+    render(Participants);
+
+    expect(screen.getByText("0")).toBeInTheDocument();
+  });
+
+  test("handles undefined participants gracefully", () => {
+    const undefinedParticipantsContext = {
+      game: {},
+    };
+
+    getGameContextSpy.mockReturnValue(undefinedParticipantsContext);
+
+    render(Participants);
+
+    expect(screen.getByText("0")).toBeInTheDocument();
+  });
+
+  test("renders Users icon", () => {
+    const mockChannelContext = {
+      game: {
+        participants: [
+          { uuid: "user-1", name: "Alice", avatar_url: "https://example.com/alice.jpg" },
+        ],
+      },
+    };
+
+    getGameContextSpy.mockReturnValue(mockChannelContext);
+
+    const { container } = render(Participants);
+
+    const svg = container.querySelector('svg');
+    expect(svg).toBeInTheDocument();
+    expect(svg).toHaveClass('lucide-users');
   });
 });

@@ -1,19 +1,24 @@
 <script lang="ts">
   import { getGameContext } from "~components/GameChannel.svelte";
-  import { Users } from "lucide-svelte";
+  import { getScopeContext } from "~components/Scope.svelte";
+  import { Star } from "lucide-svelte";
 
   const { game } = $derived.by(getGameContext);
+  const { user } = $derived.by(getScopeContext);
 
-  const playerCount = $derived(game?.participants?.length ?? 0);
+  const score = $derived.by(() => {
+    if (!user?.uuid || !game?.scores) return 0;
+    return game.scores[user.uuid] ?? 0;
+  });
 </script>
 
-<button class="participants" aria-label={`${playerCount} player${playerCount !== 1 ? 's' : ''} online`}>
-  <Users size={20} strokeWidth={2.5} />
-  <span class="participants-value">{playerCount}</span>
+<button class="score" type="button" aria-label={`Your score: ${score}`}>
+  <Star size={20} strokeWidth={2.5} />
+  <span class="score-value">{score}</span>
 </button>
 
 <style>
-  .participants {
+  .score {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -22,29 +27,34 @@
     height: 3rem;
     padding: 0.4rem;
     box-sizing: border-box;
+    color: white;
     background: transparent;
     border: none;
-    cursor: pointer;
     border-radius: 0.5rem;
-    color: white;
+    cursor: pointer;
     padding: 0;
     transition: background-color 0.15s ease-out;
   }
 
-  .participants :global(svg) {
+  .score :global(svg) {
     flex-shrink: 0;
     display: block;
   }
 
-  .participants:hover {
+  .score:hover {
     background-color: rgba(255, 255, 255, 0.1);
   }
 
-  .participants:active {
+  .score:active {
     background-color: rgba(255, 255, 255, 0.2);
   }
 
-  .participants-value {
+  .score:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.35);
+    outline-offset: 2px;
+  }
+
+  .score-value {
     font-size: 1rem;
     font-weight: 600;
     line-height: 1;

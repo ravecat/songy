@@ -4,6 +4,7 @@
   import Logo from "~components/Logo.svelte";
   import Player from "~components/Player.svelte";
   import Participants from "~components/Participants.svelte";
+  import Score from "~components/Score.svelte";
   import Timer from "~components/Timer.svelte";
 
   const { game } = $derived.by(getGameContext);
@@ -16,7 +17,10 @@
     <div class="content">
       <div class="header-container">
         <Timer />
-        <!-- <Participants /> -->
+        <div class="header-right">
+          <Score />
+          <Participants />
+        </div>
       </div>
       <Game />
       <Player />
@@ -45,5 +49,12 @@
     display: flex;
     align-items: center;
     gap: 1rem;
+    padding: 1rem;
+  }
+
+  .header-right {
+    display: flex;
+    gap: 1rem;
+    margin-left: auto;
   }
 </style>
