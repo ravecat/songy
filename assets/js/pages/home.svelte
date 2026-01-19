@@ -55,6 +55,10 @@
         </button>
       </form>
 
+      <p class="actions-divider">
+        or use your favorite music service without limits
+      </p>
+
       <form
         use:inertia={{
           href: "/create",
@@ -156,30 +160,40 @@
     align-items: center;
   }
 
+  .actions-divider {
+    color: var(--color-base-content);
+    font-size: 0.875rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    margin: 0;
+    opacity: 0.6;
+    text-align: center;
+  }
+
   .btn-primary {
     background: var(--spotify-green);
     color: var(--spotify-black);
     border-color: var(--spotify-green);
-    box-shadow: none;
+    box-shadow: var(--shadow-btn-accent);
   }
 
   .btn-primary:hover {
     background: var(--spotify-green-hover);
     border-color: var(--spotify-green-hover);
-    box-shadow: none;
+    box-shadow: var(--shadow-btn-accent-hover);
   }
 
   .btn-apple {
     background: #ffffff;
     color: #0f172a;
     border-color: rgba(15, 23, 42, 0.12);
-    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
+    box-shadow: var(--shadow-btn-neutral);
   }
 
   .btn-apple:hover {
     background: #f8fafc;
     border-color: rgba(15, 23, 42, 0.2);
-    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.18);
+    box-shadow: var(--shadow-btn-neutral-hover);
   }
 
   @media (min-width: 640px) {
