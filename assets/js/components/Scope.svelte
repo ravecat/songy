@@ -38,7 +38,7 @@
 </script>
 
 {#if !context.user}
-  <div class="loader">
+  <div class="loader" role="status" aria-label="Loading">
     <Logo />
   </div>
 {:else}

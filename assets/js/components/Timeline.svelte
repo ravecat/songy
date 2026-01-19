@@ -80,7 +80,7 @@
       <span class="snap" data-index={Math.min(i + 1, tracks.length)}></span>
     {/each}
   </div>
-  {#if permissions?.can_make_assumptions}
+  {#if permissions?.can_make_assumptions && currentTrack}
     <TrackCard revealed={false} track={currentTrack} />
   {/if}
 </div>

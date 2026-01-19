@@ -2,6 +2,7 @@ import type { User } from './user';
 import type { Track } from './track';
 import type { Player } from './player';
 import type { Turn } from './turn';
+import type { Provider } from './provider';
 
 /**
  * Game state and related types.
@@ -43,6 +44,9 @@ export interface Game {
 
   /** UUID of the game owner/creator */
   owner_id: string;
+
+  /** Provider selected for this game */
+  provider?: Provider;
 
   /** Player state for playback control, null in waiting phase */
   player: Player | null;

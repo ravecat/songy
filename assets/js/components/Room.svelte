@@ -16,7 +16,7 @@
     <div class="content">
       <div class="header-container">
         <Timer />
-        <Participants />
+        <!-- <Participants /> -->
       </div>
       <Game />
       <Player />

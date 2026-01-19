@@ -39,6 +39,24 @@ defmodule SongyWeb.SpotifyControllerTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Successfully connected to Spotify!"
     end
 
+    test "redirects to return_to after successful authentication", %{conn: conn} do
+      Repatch.patch(Songy.Boundary.Provider.Spotify, :authenticate, fn _conn, _params ->
+        {:ok, %Songy.Core.Provider.Spotify{access_token: "token123", refresh_token: "refresh"}}
+      end)
+
+      Repatch.patch(Songy.Providers, :insert, fn _registry, _user_uuid, _data ->
+        :ok
+      end)
+
+      conn =
+        conn
+        |> put_session(:return_to, "/create?provider=spotify")
+        |> get(~p"/auth/spotify/callback", %{"code" => "valid_code"})
+
+      assert redirected_to(conn) == "/create?provider=spotify"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) == nil
+    end
+
     test "redirects to home with error message on authentication failure", %{conn: conn} do
       Repatch.patch(Songy.Boundary.Provider.Spotify, :authenticate, fn _conn, _params ->
         {:error, :invalid_grant}

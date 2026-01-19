@@ -3,8 +3,6 @@
   import { Provider } from "~shared/types/provider";
   import Logo from "~components/Logo.svelte";
   import { Users, ListOrdered, Trophy } from "lucide-svelte";
-
-  const { provider } = $props();
 </script>
 
 <svelte:head>
@@ -44,19 +42,32 @@
   </div>
 
   <div class="actions">
-    {#if provider == Provider.SPOTIFY}
-      <form use:inertia={{ href: "/create", method: "post" }}>
+    <div class="actions">
+      <form
+        use:inertia={{
+          href: "/create",
+          method: "post",
+          data: { provider: Provider.APPLE },
+        }}
+      >
+        <button type="submit" class="btn btn-apple w-3xs">
+          Create game
+        </button>
+      </form>
+
+      <form
+        use:inertia={{
+          href: "/create",
+          method: "post",
+          data: { provider: Provider.SPOTIFY },
+        }}
+      >
         <button type="submit" class="btn btn-primary w-3xs">
           {@render spotify()}
           Create game
         </button>
       </form>
-    {:else}
-      <a href="/auth/spotify" class="btn btn-primary w-3xs">
-        {@render spotify()}
-        Spotify
-      </a>
-    {/if}
+    </div>
   </div>
 </div>
 
@@ -138,6 +149,13 @@
     transition: flex-basis var(--transition-fast);
   }
 
+  .actions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+  }
+
   .btn-primary {
     background: var(--spotify-green);
     color: var(--spotify-black);
@@ -149,6 +167,19 @@
     background: var(--spotify-green-hover);
     border-color: var(--spotify-green-hover);
     box-shadow: none;
+  }
+
+  .btn-apple {
+    background: #ffffff;
+    color: #0f172a;
+    border-color: rgba(15, 23, 42, 0.12);
+    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
+  }
+
+  .btn-apple:hover {
+    background: #f8fafc;
+    border-color: rgba(15, 23, 42, 0.2);
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.18);
   }
 
   @media (min-width: 640px) {
