@@ -6,6 +6,7 @@ defmodule SongyWeb.Auth do
   import Phoenix.Controller
 
   alias Songy.Core.Provider.Apple
+  alias Songy.Core.Provider.ITunes
   alias Songy.Core.Provider.Spotify
   alias Songy.Core.User
 
@@ -32,6 +33,9 @@ defmodule SongyWeb.Auth do
 
       {:ok, %Apple{}} ->
         assign(conn, :provider, :apple)
+
+      {:ok, %ITunes{}} ->
+        assign(conn, :provider, :itunes)
 
       _ ->
         assign(conn, :provider, Application.fetch_env!(:songy, :default_provider))

@@ -153,7 +153,7 @@ defmodule SongyWeb.AuthTest do
         |> assign(:current_user, user)
         |> Auth.fetch_current_provider([])
 
-      assert conn.assigns.provider == :apple
+      assert conn.assigns.provider == :itunes
     end
 
     test "assigns provider ID when provider data found in ETS", %{conn: conn} do
@@ -188,14 +188,12 @@ defmodule SongyWeb.AuthTest do
         |> assign(:current_user, user)
         |> Auth.fetch_current_provider([])
 
-      assert conn.assigns.provider == :apple
+      assert conn.assigns.provider == :itunes
     end
 
     test "assigns different provider IDs correctly", %{conn: conn} do
       user = User.new()
 
-      # Note: Currently only Spotify provider is implemented
-      # This test would need a YouTube provider struct when implemented
       Repatch.patch(Songy.Providers, :lookup, fn :providers, _user_uuid ->
         {:ok, %Songy.Core.Provider.Spotify{access_token: "token", refresh_token: "refresh"}}
       end)

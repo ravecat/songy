@@ -32,7 +32,7 @@ defmodule SongyWeb.PageControllerTest do
 
     test "creates game session with default provider when no provider param", %{conn: conn} do
       Repatch.patch(Songy.Providers, :insert, fn :providers, _user_uuid, _provider ->
-        {:ok, %Songy.Core.Provider.Apple{}}
+        {:ok, %Songy.Core.Provider.ITunes{}}
       end)
 
       conn = post(conn, ~p"/create")
@@ -140,13 +140,16 @@ defmodule SongyWeb.PageControllerTest do
 
     test "passes provider assignment to inertia", %{conn: conn} do
       {:ok, game} = GameSession.create_game_session("owner123")
-      conn = assign(conn, :provider, :apple)
+      Repatch.patch(Songy.Providers, :lookup, fn :providers, _user_uuid ->
+        {:ok, %Songy.Core.Provider.ITunes{}}
+      end)
+
       conn = get(conn, ~p"/#{game.id}")
       assert inertia_component(conn) == "room"
 
       props = inertia_props(conn)
       assert props.roomId == game.id
-      assert props.provider == :apple
+      assert props.provider == :itunes
 
       GameSession.end_game_session(game.id)
     end

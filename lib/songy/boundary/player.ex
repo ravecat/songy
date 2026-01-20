@@ -95,9 +95,45 @@ defimpl Songy.Boundary.Player, for: Songy.Core.Provider.Apple do
   Converts Apple Music track format to standardized Track struct.
   """
   def search_random_track(_provider) do
-    token = Apple.access_token()
+    case Apple.search_random_track() do
+      {:ok, track} ->
+        {:ok, Trackable.to_track(track)}
 
-    case Apple.search_random_track(token) do
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+end
+
+defimpl Songy.Boundary.Player, for: Songy.Core.Provider.ITunes do
+  alias Songy.Boundary.Provider.ITunes
+  alias Songy.Core.Trackable
+
+  @doc """
+  Starts iTunes preview playback.
+
+  Accepts track parameter to match protocol signature.
+  """
+  def start_playback(_provider, _track) do
+    {:ok, :playback_started}
+  end
+
+  @doc """
+  Pauses iTunes preview playback.
+
+  Accepts provider parameter to match protocol signature.
+  """
+  def pause_playback(_provider) do
+    {:ok, :playback_paused}
+  end
+
+  @doc """
+  Searches for a random track using iTunes Search API.
+
+  Converts iTunes track format to standardized Track struct.
+  """
+  def search_random_track(_provider) do
+    case ITunes.search_random_track() do
       {:ok, track} ->
         {:ok, Trackable.to_track(track)}
 

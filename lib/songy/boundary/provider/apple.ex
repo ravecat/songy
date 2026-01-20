@@ -11,16 +11,30 @@ defmodule Songy.Boundary.Provider.Apple do
   alias Songy.Core.Track
 
   @base_url "https://api.music.apple.com/v1"
+  @storefront "us"
+  @types "songs"
+  @limit 25
 
   @doc """
   Returns Developer Token from application config.
 
   Token is valid for up to 6 months and manually updated via environment variable.
   Configured via APPLE_MUSIC_ACCESS_TOKEN in runtime.exs.
+
+  ## Returns
+
+    * `{:ok, token}` - Valid non-empty token
+    * `{:error, :invalid_credentials}` - Token is missing, nil, or empty string
+
   """
-  @spec access_token() :: String.t()
+  @spec access_token() :: {:ok, String.t()} | {:error, :invalid_credentials}
   def access_token do
-    Application.fetch_env!(:songy, :apple)[:access_token]
+    with {:ok, config} <- Application.fetch_env(:songy, :apple),
+         token when is_binary(token) and token != "" <- config[:access_token] do
+      {:ok, token}
+    else
+      _ -> {:error, :invalid_credentials}
+    end
   end
 
   @doc """
@@ -37,7 +51,7 @@ defmodule Songy.Boundary.Provider.Apple do
       * `:types` - Type of content to search ("songs", "albums", "artists", "playlists")
       * `:limit` - Number of results to return (1-25, default: 5)
       * `:offset` - The index of the first result to return (default: 0)
-      * `:storefront` - ISO 3166-1 alpha-2 country code (default from config)
+      * `:storefront` - ISO 3166-1 alpha-2 country code (default: "us")
 
   ## Returns
 
@@ -55,8 +69,12 @@ defmodule Songy.Boundary.Provider.Apple do
   """
   @spec search(String.t(), keyword()) :: {:ok, map()} | {:error, :search_failed}
   def search(token, params \\ []) when is_binary(token) do
-    case make_search_request(token, params) do
+    result = make_search_request(token, params)
+    Logger.debug("Apple Music API request result: #{inspect(result)}")
+
+    case result do
       {:ok, %{status: 200, body: %{"results" => results}}} ->
+        Logger.info("Apple Music API search successful: #{length(results)} results")
         {:ok, results}
 
       {:ok, %{status: status, body: body}} ->
@@ -71,6 +89,7 @@ defmodule Songy.Boundary.Provider.Apple do
 
   @doc """
   Searches for a random track in Apple Music catalog.
+
   ## Parameters
 
     * `token` - Apple Music Developer Token (required)
@@ -87,23 +106,24 @@ defmodule Songy.Boundary.Provider.Apple do
       # => {:ok, %Track.Apple{id: "1613600188", attributes: %{"name" => "Entropy", ...}}}
 
   """
-  @spec search_random_track(String.t()) :: {:ok, Track.Apple.t()} | {:error, :search_failed | :no_tracks_found}
-  def search_random_track(token) do
-    params = build_random_track_search_params()
+  @spec search_random_track() ::
+          {:ok, Track.Apple.t()} | {:error, :invalid_credentials | :search_failed | :no_tracks_found}
+  def search_random_track do
+    params = random_track_search_params()
 
-    case search(token, params) do
-      {:ok, %{"songs" => %{"data" => [_ | _] = data}}} ->
-        track =
-          data
-          |> Enum.random()
-          |> Track.Apple.to_struct()
+    with {:ok, token} <- access_token(),
+         {:ok, %{"songs" => %{"data" => [_ | _] = data}}} <- search(token, params) do
+      track =
+        data
+        |> Enum.random()
+        |> Track.Apple.to_struct()
 
-        Logger.info("Successfully found random track #{inspect(track.id)} with params: #{inspect(params)}")
+      Logger.info("Successfully found random track #{inspect(track)} with params: #{inspect(params)}")
 
-        {:ok, track}
-
+      {:ok, track}
+    else
       {:ok, %{"songs" => %{"data" => []}}} ->
-        Logger.warning("No tracks found for params: #{inspect(params)}")
+        Logger.warning("No tracks found for params: #{inspect(random_track_search_params())}")
         {:error, :no_tracks_found}
 
       {:ok, _other} ->
@@ -116,7 +136,7 @@ defmodule Songy.Boundary.Provider.Apple do
   end
 
   defp make_search_request(token, params) do
-    {storefront, search_params} = Keyword.pop(params, :storefront, Application.fetch_env!(:songy, :apple)[:storefront])
+    {storefront, search_params} = Keyword.pop(params, :storefront, @storefront)
 
     Req.get("#{@base_url}/catalog/#{storefront}/search",
       headers: [
@@ -127,20 +147,16 @@ defmodule Songy.Boundary.Provider.Apple do
     )
   end
 
-  defp build_random_track_search_params do
+  defp random_track_search_params do
     [
-      types: "songs",
-      term: generate_random_query(),
-      offset: generate_random_offset(),
-      limit: 25
+      types: @types,
+      term: random_query(),
+      offset: random_offset(),
+      limit: @limit
     ]
   end
 
-  defp generate_random_query do
-    <<:rand.uniform(26) + ?a - 1>> <> "*"
-  end
+  defp random_query, do: <<:rand.uniform(26) + ?a - 1>> <> "*"
 
-  defp generate_random_offset do
-    :rand.uniform(1000) - 1
-  end
+  defp random_offset, do: :rand.uniform(1000) - 1
 end

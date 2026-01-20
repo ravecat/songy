@@ -87,3 +87,16 @@ defimpl Songy.Boundary.Provider, for: Songy.Core.Provider.Apple do
     end
   end
 end
+
+defimpl Songy.Boundary.Provider, for: Songy.Core.Provider.ITunes do
+  alias Songy.Core.Provider
+
+  @doc """
+  Ensures iTunes provider is valid.
+
+  iTunes Search API does not require credentials.
+  """
+  def ensure(_provider) do
+    {:ok, Provider.ITunes.new()}
+  end
+end

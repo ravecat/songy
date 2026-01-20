@@ -4,6 +4,7 @@ defmodule SongyWeb.PageController do
 
   alias Songy.Boundary.GameSession
   alias Songy.Core.Provider.Apple
+  alias Songy.Core.Provider.ITunes
   alias Songy.Providers
 
   def home(conn, _params) do
@@ -71,9 +72,15 @@ defmodule SongyWeb.PageController do
     {:ok, conn}
   end
 
+  defp ensure_provider_ready(%{assigns: %{current_user: %{uuid: user_id}}} = conn, :itunes) do
+    Providers.insert(:providers, user_id, ITunes.new())
+    {:ok, conn}
+  end
+
   defp ensure_provider_ready(conn, _provider), do: {:ok, conn}
 
   defp resolve_provider(%{"provider" => "apple"}), do: :apple
+  defp resolve_provider(%{"provider" => "itunes"}), do: :itunes
   defp resolve_provider(%{"provider" => "spotify"}), do: :spotify
   defp resolve_provider(_params), do: Application.fetch_env!(:songy, :default_provider)
 end

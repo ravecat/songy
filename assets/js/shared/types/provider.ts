@@ -7,5 +7,6 @@
  */
 export enum Provider {
   SPOTIFY = 'spotify',
-  APPLE = 'apple'
+  APPLE = 'apple',
+  ITUNES = 'itunes'
 }

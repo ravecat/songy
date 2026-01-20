@@ -44,27 +44,25 @@ defimpl Songy.Core.Trackable, for: Songy.Core.Track.Apple do
   """
   def to_track(%Songy.Core.Track.Apple{} = track) do
     Songy.Core.Track.new(
-      title: extract_title(track),
-      artist: extract_artist(track),
-      year: extract_year(track),
-      cover_url: extract_cover_url(track),
-      meta: extract_meta(track)
+      title: title(track),
+      artist: artist(track),
+      year: year(track),
+      cover_url: cover_url(track),
+      meta: meta(track)
     )
   end
 
-  defp extract_title(%Songy.Core.Track.Apple{attributes: %{"name" => name}})
-       when is_binary(name) and name != "",
-       do: name
+  defp title(%Songy.Core.Track.Apple{attributes: %{"name" => name}}) when is_binary(name) and name != "",
+    do: name
 
-  defp extract_title(_), do: nil
+  defp title(_), do: nil
 
-  defp extract_artist(%Songy.Core.Track.Apple{attributes: %{"artistName" => artist}})
-       when is_binary(artist) and artist != "",
-       do: artist
+  defp artist(%Songy.Core.Track.Apple{attributes: %{"artistName" => artist}}) when is_binary(artist) and artist != "",
+    do: artist
 
-  defp extract_artist(_), do: nil
+  defp artist(_), do: nil
 
-  defp extract_year(%Songy.Core.Track.Apple{attributes: %{"releaseDate" => date}})
+  defp year(%Songy.Core.Track.Apple{attributes: %{"releaseDate" => date}})
        when is_binary(date) do
     with [year_str | _] <- String.split(date, "-"),
          {year, ""} <- Integer.parse(year_str) do
@@ -74,23 +72,23 @@ defimpl Songy.Core.Trackable, for: Songy.Core.Track.Apple do
     end
   end
 
-  defp extract_year(_), do: nil
+  defp year(_), do: nil
 
-  defp extract_cover_url(%Songy.Core.Track.Apple{
+  defp cover_url(%Songy.Core.Track.Apple{
          attributes: %{"artwork" => %{"url" => url}}
        })
        when is_binary(url) do
     String.replace(url, "{w}x{h}", "640x640")
   end
 
-  defp extract_cover_url(_), do: nil
+  defp cover_url(_), do: nil
 
-  defp extract_meta(%Songy.Core.Track.Apple{
+  defp meta(%Songy.Core.Track.Apple{
          attributes: %{"previews" => [%{"url" => url} | _]}
        })
        when is_binary(url) and url != "" do
     %{preview_url: url}
   end
 
-  defp extract_meta(_), do: %{}
+  defp meta(_), do: %{}
 end

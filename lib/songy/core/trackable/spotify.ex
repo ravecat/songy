@@ -34,20 +34,20 @@ defimpl Songy.Core.Trackable, for: Spotify.Track do
   """
   def to_track(%Spotify.Track{} = track) do
     Songy.Core.Track.new(
-      title: extract_title(track),
-      artist: extract_artist(track),
-      year: extract_year(track),
-      cover_url: extract_cover_url(track),
-      meta: extract_meta(track)
+      title: title(track),
+      artist: artist(track),
+      year: year(track),
+      cover_url: cover_url(track),
+      meta: meta(track)
     )
   end
 
   # Extract track title from name field
-  defp extract_title(%Spotify.Track{name: name}) when is_binary(name) and name != "", do: name
-  defp extract_title(_), do: nil
+  defp title(%Spotify.Track{name: name}) when is_binary(name) and name != "", do: name
+  defp title(_), do: nil
 
   # Extract all meaningful artist names from artists array and join with comma
-  defp extract_artist(%Spotify.Track{artists: artists}) when is_list(artists) do
+  defp artist(%Spotify.Track{artists: artists}) when is_list(artists) do
     artists
     |> Enum.filter(fn artist -> is_map(artist) and Map.has_key?(artist, "name") end)
     |> Enum.map(fn %{"name" => name} -> name end)
@@ -58,14 +58,14 @@ defimpl Songy.Core.Trackable, for: Spotify.Track do
     end
   end
 
-  defp extract_artist(_), do: nil
+  defp artist(_), do: nil
 
   # Extract cover URL from album images (first image in array)
-  defp extract_cover_url(%Spotify.Track{album: %{"images" => [%{"url" => url} | _]}}) when is_binary(url), do: url
-  defp extract_cover_url(_), do: nil
+  defp cover_url(%Spotify.Track{album: %{"images" => [%{"url" => url} | _]}}) when is_binary(url), do: url
+  defp cover_url(_), do: nil
 
   # Extract release year from album release_date
-  defp extract_year(%Spotify.Track{album: %{"release_date" => date}}) when is_binary(date) do
+  defp year(%Spotify.Track{album: %{"release_date" => date}}) when is_binary(date) do
     with [year_str | _] <- String.split(date, "-"),
          {year, ""} <- Integer.parse(year_str) do
       year
@@ -74,12 +74,12 @@ defimpl Songy.Core.Trackable, for: Spotify.Track do
     end
   end
 
-  defp extract_year(_), do: nil
+  defp year(_), do: nil
 
   # Extract Spotify-specific metadata including URI for playback
-  defp extract_meta(%Spotify.Track{uri: uri}) when is_binary(uri) and uri != "" do
+  defp meta(%Spotify.Track{uri: uri}) when is_binary(uri) and uri != "" do
     %{uri: uri}
   end
 
-  defp extract_meta(_), do: %{}
+  defp meta(_), do: %{}
 end

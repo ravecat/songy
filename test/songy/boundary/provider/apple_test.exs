@@ -5,6 +5,11 @@ defmodule Songy.Boundary.Provider.AppleTest do
 
   @valid_token "test_developer_token"
 
+  setup do
+    Application.put_env(:songy, :apple, access_token: @valid_token)
+    :ok
+  end
+
   describe "search/2" do
     test "returns results when search is successful" do
       expected_response = %{
@@ -94,7 +99,7 @@ defmodule Songy.Boundary.Provider.AppleTest do
     end
   end
 
-  describe "search_random_track/1" do
+  describe "search_random_track/0" do
     test "returns random track when search is successful" do
       tracks = [
         %{"id" => "123", "attributes" => %{"name" => "Track 1"}},
@@ -115,7 +120,7 @@ defmodule Songy.Boundary.Provider.AppleTest do
 
       Repatch.patch(Req, :get, fn _url, _opts -> {:ok, expected_response} end)
 
-      assert {:ok, %Songy.Core.Track.Apple{id: id} = track} = Apple.search_random_track(@valid_token)
+      assert {:ok, %Songy.Core.Track.Apple{id: id} = track} = Apple.search_random_track()
       assert id in ["123", "456", "789"]
       assert is_map(track.attributes)
     end
@@ -134,7 +139,7 @@ defmodule Songy.Boundary.Provider.AppleTest do
 
       Repatch.patch(Req, :get, fn _url, _opts -> {:ok, expected_response} end)
 
-      assert {:error, :no_tracks_found} = Apple.search_random_track(@valid_token)
+      assert {:error, :no_tracks_found} = Apple.search_random_track()
     end
 
     test "returns error when response has unexpected structure" do
@@ -151,7 +156,7 @@ defmodule Songy.Boundary.Provider.AppleTest do
 
       Repatch.patch(Req, :get, fn _url, _opts -> {:ok, expected_response} end)
 
-      assert {:error, :no_tracks_found} = Apple.search_random_track(@valid_token)
+      assert {:error, :no_tracks_found} = Apple.search_random_track()
     end
 
     test "returns error when API request fails" do
@@ -159,7 +164,7 @@ defmodule Songy.Boundary.Provider.AppleTest do
         {:error, %RuntimeError{message: "Network error"}}
       end)
 
-      assert {:error, :search_failed} = Apple.search_random_track(@valid_token)
+      assert {:error, :search_failed} = Apple.search_random_track()
     end
 
     test "uses correct search parameters" do
@@ -185,7 +190,7 @@ defmodule Songy.Boundary.Provider.AppleTest do
          }}
       end)
 
-      Apple.search_random_track(@valid_token)
+      Apple.search_random_track()
     end
 
     test "handles API error responses" do
@@ -193,7 +198,7 @@ defmodule Songy.Boundary.Provider.AppleTest do
         {:ok, %{status: 500, body: %{"errors" => [%{"status" => "500"}]}}}
       end)
 
-      assert {:error, :search_failed} = Apple.search_random_track(@valid_token)
+      assert {:error, :search_failed} = Apple.search_random_track()
     end
 
     test "returns single track from multiple results" do
@@ -215,10 +220,32 @@ defmodule Songy.Boundary.Provider.AppleTest do
 
       Repatch.patch(Req, :get, fn _url, _opts -> {:ok, expected_response} end)
 
-      assert {:ok, %Songy.Core.Track.Apple{id: id} = track} = Apple.search_random_track(@valid_token)
+      assert {:ok, %Songy.Core.Track.Apple{id: id} = track} = Apple.search_random_track()
       assert is_binary(id)
       assert is_map(track.attributes)
       assert track.attributes["name"] =~ ~r/Track \d+/
     end
   end
+
+  describe "search_random_track/0 with invalid credentials" do
+    test "returns invalid_credentials when token is empty" do
+      Application.put_env(:songy, :apple, access_token: "")
+
+      assert {:error, :invalid_credentials} = Apple.search_random_track()
+    end
+
+    test "returns invalid_credentials when token is nil" do
+      Application.put_env(:songy, :apple, access_token: nil)
+
+      assert {:error, :invalid_credentials} = Apple.search_random_track()
+    end
+
+    test "returns invalid_credentials when config is missing" do
+      Application.delete_env(:songy, :apple)
+
+      assert {:error, :invalid_credentials} = Apple.search_random_track()
+    end
+  end
 end
+
+
