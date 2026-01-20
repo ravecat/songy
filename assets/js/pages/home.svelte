@@ -47,7 +47,7 @@
         use:inertia={{
           href: "/create",
           method: "post",
-          data: { provider: Provider.APPLE },
+          data: { provider: Provider.ITUNES },
         }}
       >
         <button type="submit" class="btn btn-apple w-3xs">

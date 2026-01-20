@@ -71,6 +71,92 @@ defmodule Songy.Boundary.Provider.ITunesTest do
 
       ITunes.search(term: "test")
     end
+
+    test "decodes JSON string body" do
+      body =
+        Jason.encode!(%{
+          "resultCount" => 1,
+          "results" => [
+            %{
+              "trackId" => 123,
+              "trackName" => "Test Song",
+              "artistName" => "Test Artist",
+              "collectionName" => "Test Album",
+              "kind" => "song"
+            }
+          ]
+        })
+
+      Repatch.patch(Req, :get, fn _url, _opts -> {:ok, %{status: 200, body: body}} end)
+
+      assert {:ok, [track]} = ITunes.search(term: "test")
+      assert track["trackId"] == 123
+      assert track["trackName"] == "Test Song"
+    end
+
+    test "handles invalid JSON" do
+      Repatch.patch(Req, :get, fn _url, _opts ->
+        {:ok, %{status: 200, body: "invalid json{{{}}}"}}
+      end)
+
+      assert {:error, :search_failed} = ITunes.search(term: "test")
+    end
+
+    test "handles unexpected body type" do
+      Repatch.patch(Req, :get, fn _url, _opts ->
+        {:ok, %{status: 200, body: 12345}}
+      end)
+
+      assert {:error, :search_failed} = ITunes.search(term: "test")
+    end
+
+    test "handles body without resultCount field" do
+      Repatch.patch(Req, :get, fn _url, _opts ->
+        {:ok, %{status: 200, body: %{"results" => []}}}
+      end)
+
+      assert {:error, :search_failed} = ITunes.search(term: "test")
+    end
+
+    test "handles body without results field" do
+      Repatch.patch(Req, :get, fn _url, _opts ->
+        {:ok, %{status: 200, body: %{"resultCount" => 0}}}
+      end)
+
+      assert {:error, :search_failed} = ITunes.search(term: "test")
+    end
+
+    test "handles body where results is not a list" do
+      Repatch.patch(Req, :get, fn _url, _opts ->
+        {:ok, %{status: 200, body: %{"resultCount" => 1, "results" => "not a list"}}}
+      end)
+
+      assert {:error, :search_failed} = ITunes.search(term: "test")
+    end
+
+    test "handles empty results list" do
+      Repatch.patch(Req, :get, fn _url, _opts ->
+        {:ok, %{status: 200, body: %{"resultCount" => 0, "results" => []}}}
+      end)
+
+      assert {:ok, []} = ITunes.search(term: "test")
+    end
+
+    test "handles malformed JSON string but valid structure" do
+      Repatch.patch(Req, :get, fn _url, _opts ->
+        {:ok, %{status: 200, body: "{\"resultCount\": 1, \"results\": [malformed}"}}
+      end)
+
+      assert {:error, :search_failed} = ITunes.search(term: "test")
+    end
+
+    test "handles body as a list instead of map" do
+      Repatch.patch(Req, :get, fn _url, _opts ->
+        {:ok, %{status: 200, body: [%{"trackId" => 123}]}}
+      end)
+
+      assert {:error, :search_failed} = ITunes.search(term: "test")
+    end
   end
 
   describe "search_random_track/0" do

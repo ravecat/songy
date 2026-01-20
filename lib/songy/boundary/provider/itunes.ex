@@ -52,10 +52,8 @@ defmodule Songy.Boundary.Provider.ITunes do
     Logger.debug("iTunes Search API request result: #{inspect(result)}")
 
     case result do
-      {:ok, %{status: 200, body: %{"resultCount" => count, "results" => results}}}
-      when is_list(results) ->
-        Logger.info("iTunes Search API search successful: #{count} results")
-        {:ok, results}
+      {:ok, %{status: 200, body: body}} ->
+        handle_success_body(body)
 
       {:ok, %{status: status, body: body}} ->
         Logger.warning("iTunes Search API error #{status}: #{inspect(body)}")
@@ -83,7 +81,7 @@ defmodule Songy.Boundary.Provider.ITunes do
     params = random_track_search_params()
 
     with {:ok, results} when is_list(results) <- search(params),
-         [_ | _] = songs <- Enum.filter(results, &song_result?/1) do
+         [_ | _] = songs <- Enum.filter(results, &song?/1) do
       track =
         songs
         |> Enum.random()
@@ -103,8 +101,38 @@ defmodule Songy.Boundary.Provider.ITunes do
   end
 
   defp make_search_request(params) do
-    Req.get("#{@base_url}/search", params: params)
+    Req.get("#{@base_url}/search",
+      params: params,
+      headers: [{"Accept", "application/json"}]
+    )
   end
+
+  defp handle_success_body(body) do
+    case decode_body(body) do
+      {:ok, %{"resultCount" => count, "results" => results}} when is_list(results) ->
+        Logger.info("iTunes Search API search successful: #{count} results")
+        {:ok, results}
+
+      {:ok, _other} ->
+        Logger.warning("iTunes Search API unexpected body: #{inspect(body)}")
+        {:error, :search_failed}
+
+      {:error, reason} ->
+        Logger.warning("iTunes Search API decode failed: #{inspect(reason)}")
+        {:error, :search_failed}
+    end
+  end
+
+  defp decode_body(body) when is_map(body), do: {:ok, body}
+
+  defp decode_body(body) when is_binary(body) do
+    case Jason.decode(body) do
+      {:ok, decoded} -> {:ok, decoded}
+      {:error, error} -> {:error, error}
+    end
+  end
+
+  defp decode_body(body), do: {:error, {:unexpected_body, body}}
 
   defp random_track_search_params do
     [
@@ -120,8 +148,8 @@ defmodule Songy.Boundary.Provider.ITunes do
 
   defp random_offset, do: :rand.uniform(1000) - 1
 
-  defp song_result?(%{"kind" => "song"}), do: true
-  defp song_result?(%{"wrapperType" => "track", "kind" => "song"}), do: true
-  defp song_result?(_), do: false
+  defp song?(%{"kind" => "song"}), do: true
+  defp song?(%{"wrapperType" => "track", "kind" => "song"}), do: true
+  defp song?(_), do: false
 
 end
