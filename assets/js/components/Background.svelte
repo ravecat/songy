@@ -2,12 +2,12 @@
   let { children } = $props();
 </script>
 
-<div class="background">
+<div class="page-background">
   {@render children?.()}
 </div>
 
 <style>
-  .background {
+  .page-background {
     background: rgba(75, 179, 153, 1);
     background: radial-gradient(
       at center,

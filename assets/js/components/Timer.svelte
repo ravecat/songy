@@ -40,7 +40,7 @@
 </script>
 
 {#if phase === TURN_PHASE.CHALLENGING && seconds !== null}
-  <div class="timer">
+  <div class="game-timer">
     <svg
       viewBox={`0 0 ${size} ${size}`}
       aria-live="polite"
@@ -49,7 +49,7 @@
     >
       <g transform={`rotate(-90 ${center} ${center})`}>
         <circle
-          class="stroke-white/90 transition-[stroke-dashoffset] duration-200"
+          class="game-timer__circle stroke-white/90 transition-[stroke-dashoffset] duration-200"
           cx={center}
           cy={center}
           r={radius}
@@ -61,7 +61,7 @@
         />
       </g>
       <text
-        class="fill-white text-sm font-bold tracking-[0.05em]"
+        class="game-timer__text fill-white text-sm font-bold tracking-[0.05em]"
         x={center}
         y={center}
         text-anchor="middle"
@@ -74,7 +74,7 @@
 {/if}
 
 <style>
-  .timer {
+  .game-timer {
     width: 3rem;
     height: 3rem;
   }

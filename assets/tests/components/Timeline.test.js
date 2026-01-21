@@ -66,7 +66,7 @@ describe("Timeline", () => {
 
     const { container } = render(Timeline);
 
-    const hiddenCards = container.querySelectorAll('[aria-label="Hidden track card"]');
+    const hiddenCards = container.querySelectorAll('[aria-label="Hidden track card"][aria-hidden="false"]');
     expect(hiddenCards.length).toBeGreaterThanOrEqual(1);
   });
 
@@ -84,10 +84,8 @@ describe("Timeline", () => {
     expect(timelineTrack1.length).toBeGreaterThan(0);
     expect(timelineTrack2.length).toBeGreaterThan(0);
 
-    const allCards = container.querySelectorAll('.wrapper');
-    const cardsInTimeline = mockGameContext.game.turn.timeline.length;
-
-    expect(allCards.length).toBe(cardsInTimeline);
+    const hiddenCards = container.querySelectorAll('[aria-label="Hidden track card"][aria-hidden="false"]');
+    expect(hiddenCards.length).toBe(0);
   });
 
   test("hides track card when permissions is undefined", () => {
@@ -98,9 +96,11 @@ describe("Timeline", () => {
 
     const { container } = render(Timeline);
 
-    const allCards = container.querySelectorAll('.wrapper');
-    const cardsInTimeline = mockGameContext.game.turn.timeline.length;
-    expect(allCards.length).toBe(cardsInTimeline);
+    expect(screen.getAllByText("Timeline Track 1").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Timeline Track 2").length).toBeGreaterThan(0);
+
+    const hiddenCards = container.querySelectorAll('[aria-label="Hidden track card"][aria-hidden="false"]');
+    expect(hiddenCards.length).toBe(0);
   });
 
   test("hides track card when permissions is null", () => {
@@ -111,9 +111,11 @@ describe("Timeline", () => {
 
     const { container } = render(Timeline);
 
-    const allCards = container.querySelectorAll('.wrapper');
-    const cardsInTimeline = mockGameContext.game.turn.timeline.length;
-    expect(allCards.length).toBe(cardsInTimeline);
+    expect(screen.getAllByText("Timeline Track 1").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Timeline Track 2").length).toBeGreaterThan(0);
+
+    const hiddenCards = container.querySelectorAll('[aria-label="Hidden track card"][aria-hidden="false"]');
+    expect(hiddenCards.length).toBe(0);
   });
 
   test("player in ready phase sees track card", () => {
@@ -125,10 +127,8 @@ describe("Timeline", () => {
 
     const { container } = render(Timeline);
 
-    const allCards = container.querySelectorAll('.wrapper');
-    const cardsInTimeline = mockGameContext.game.turn.timeline.length;
-
-    expect(allCards.length).toBe(cardsInTimeline + 1);
+    const hiddenCards = container.querySelectorAll('[aria-label="Hidden track card"][aria-hidden="false"]');
+    expect(hiddenCards.length).toBe(1);
   });
 
   test("challenger in challenging phase sees track card", () => {
@@ -140,10 +140,8 @@ describe("Timeline", () => {
 
     const { container } = render(Timeline);
 
-    const allCards = container.querySelectorAll('.wrapper');
-    const cardsInTimeline = mockGameContext.game.turn.timeline.length;
-
-    expect(allCards.length).toBe(cardsInTimeline + 1);
+    const hiddenCards = container.querySelectorAll('[aria-label="Hidden track card"][aria-hidden="false"]');
+    expect(hiddenCards.length).toBe(1);
   });
 
   test("no one sees track card in results phase", () => {
@@ -156,9 +154,11 @@ describe("Timeline", () => {
 
     const { container } = render(Timeline);
 
-    const allCards = container.querySelectorAll('.wrapper');
-    const cardsInTimeline = mockGameContext.game.turn.timeline.length;
-    expect(allCards.length).toBe(cardsInTimeline);
+    const hiddenCards = container.querySelectorAll('[aria-label="Hidden track card"][aria-hidden="false"]');
+    expect(hiddenCards.length).toBe(0);
+
+    expect(screen.getAllByText("Timeline Track 1").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Timeline Track 2").length).toBeGreaterThan(0);
   });
 
   test("renders timeline tracks regardless of can_make_assumptions", () => {
@@ -182,12 +182,13 @@ describe("Timeline", () => {
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);
 
-    const { container } = render(Timeline);
+    render(Timeline);
 
     expect(screen.getAllByText("Timeline Track 1").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Timeline Track 2").length).toBeGreaterThan(0);
 
-    const allCards = container.querySelectorAll('.wrapper');
-    expect(allCards.length).toBeGreaterThan(0);
+    const { container } = render(Timeline);
+    const hiddenCards = container.querySelectorAll('[aria-label="Hidden track card"][aria-hidden="false"]');
+    expect(hiddenCards.length).toBe(0);
   });
 });

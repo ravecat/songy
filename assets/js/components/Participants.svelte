@@ -7,13 +7,13 @@
   const playerCount = $derived(game?.participants?.length ?? 0);
 </script>
 
-<button class="participants" aria-label={`${playerCount} player${playerCount !== 1 ? 's' : ''} online`}>
+<button class="participants-button" aria-label={`${playerCount} player${playerCount !== 1 ? 's' : ''} online`}>
   <Users size={20} strokeWidth={2.5} />
-  <span class="participants-value">{playerCount}</span>
+  <span class="participants-button__value">{playerCount}</span>
 </button>
 
 <style>
-  .participants {
+  .participants-button {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -31,20 +31,20 @@
     transition: background-color 0.15s ease-out;
   }
 
-  .participants :global(svg) {
+  .participants-button :global(svg) {
     flex-shrink: 0;
     display: block;
   }
 
-  .participants:hover {
+  .participants-button:hover {
     background-color: rgba(255, 255, 255, 0.1);
   }
 
-  .participants:active {
+  .participants-button:active {
     background-color: rgba(255, 255, 255, 0.2);
   }
 
-  .participants-value {
+  .participants-button__value {
     font-size: 1rem;
     font-weight: 600;
     line-height: 1;

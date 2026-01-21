@@ -15,11 +15,11 @@
 {:else if phase === TURN_PHASE.READY || phase === TURN_PHASE.CHALLENGING || phase === TURN_PHASE.RESULTS}
   <Timeline />
 {:else if status === GAME_STATUS.WAITING}
-  <div class="waiting">waiting for players...</div>
+  <div class="game-waiting">waiting for players...</div>
 {/if}
 
 <style>
-  .waiting {
+  .game-waiting {
     display: flex;
     align-items: center;
     justify-content: center;

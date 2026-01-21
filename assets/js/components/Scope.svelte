@@ -38,7 +38,7 @@
 </script>
 
 {#if !context.user}
-  <div class="loader" role="status" aria-label="Loading">
+  <div class="scope-loader" role="status" aria-label="Loading">
     <Logo />
   </div>
 {:else}
@@ -46,7 +46,7 @@
 {/if}
 
 <style>
-  .loader {
+  .scope-loader {
     display: flex;
     justify-content: center;
     align-items: center;

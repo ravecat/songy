@@ -14,10 +14,10 @@
   {#if !game}
     <Logo />
   {:else}
-    <div class="content">
-      <div class="header-container">
+    <div class="room__content">
+      <div class="room__header">
         <Timer />
-        <div class="header-right">
+        <div class="room__header-actions">
           <Score />
           <Participants />
         </div>
@@ -38,21 +38,21 @@
     background-image: var(--landing-gradient);
   }
 
-  .content {
+  .room__content {
     height: 100%;
     width: 100%;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
   }
 
-  .header-container {
+  .room__header {
     display: flex;
     align-items: center;
     gap: 1rem;
     padding: 1rem;
   }
 
-  .header-right {
+  .room__header-actions {
     display: flex;
     gap: 1rem;
     margin-left: auto;

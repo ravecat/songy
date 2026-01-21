@@ -58,9 +58,9 @@
   }
 </script>
 
-<div class="relative flex flex-1 flex-col items-center justify-center gap-4">
+<div class="timeline">
   <div
-    class="timeline"
+    class="timeline__scroll"
     bind:this={timeline}
     onwheel={handleWheel}
     onscrollend={onScrollEnd}
@@ -68,16 +68,16 @@
     ontouchmove={() => (hasInteracted = true)}
     role="list"
   >
-    <span class="snap" data-index={0}></span>
+    <span class="timeline__snap" data-index={0}></span>
     {#each tracks as { user, track, current, id }, i (id)}
-      <div class="card" role="listitem">
+      <div class="timeline__item" role="listitem">
         <TrackCard
           revealed={!current || permissions?.can_see_assumptions}
           {track}
           {user}
         />
       </div>
-      <span class="snap" data-index={Math.min(i + 1, tracks.length)}></span>
+      <span class="timeline__snap" data-index={Math.min(i + 1, tracks.length)}></span>
     {/each}
   </div>
   {#if permissions?.can_make_assumptions && currentTrack}
@@ -88,6 +88,15 @@
 <style>
   .timeline {
     display: flex;
+    flex-direction: column;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .timeline__scroll {
+    display: flex;
     width: 100%;
     overflow-x: auto;
     overflow-y: hidden;
@@ -96,20 +105,20 @@
     scrollbar-width: none;
   }
 
-  .timeline::before,
-  .timeline::after {
+  .timeline__scroll::before,
+  .timeline__scroll::after {
     content: "";
     flex-shrink: 0;
     width: 50%;
   }
 
-  .snap {
+  .timeline__snap {
     width: 1.5rem;
     flex-shrink: 0;
     scroll-snap-align: center;
   }
 
-  .card {
+  .timeline__item {
     flex: 0 0 auto;
     display: flex;
     justify-content: center;

@@ -12,13 +12,13 @@
   });
 </script>
 
-<button class="score" type="button" aria-label={`Your score: ${score}`}>
+<button class="score-button" type="button" aria-label={`Your score: ${score}`}>
   <Star size={20} strokeWidth={2.5} />
-  <span class="score-value">{score}</span>
+  <span class="score-button__value">{score}</span>
 </button>
 
 <style>
-  .score {
+  .score-button {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -36,25 +36,25 @@
     transition: background-color 0.15s ease-out;
   }
 
-  .score :global(svg) {
+  .score-button :global(svg) {
     flex-shrink: 0;
     display: block;
   }
 
-  .score:hover {
+  .score-button:hover {
     background-color: rgba(255, 255, 255, 0.1);
   }
 
-  .score:active {
+  .score-button:active {
     background-color: rgba(255, 255, 255, 0.2);
   }
 
-  .score:focus-visible {
+  .score-button:focus-visible {
     outline: 2px solid rgba(255, 255, 255, 0.35);
     outline-offset: 2px;
   }
 
-  .score-value {
+  .score-button__value {
     font-size: 1rem;
     font-weight: 600;
     line-height: 1;

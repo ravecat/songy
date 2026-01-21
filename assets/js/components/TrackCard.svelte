@@ -14,17 +14,17 @@
   let { track, revealed = true, user = null }: TrackCardProps = $props();
 </script>
 
-<div class="wrapper">
-  <div class={["card", { revealed }]}>
-    <div class="front" aria-hidden={!revealed}>
+<div class="track-card">
+  <div class={["track-card__inner", { "track-card__inner_revealed": revealed }]}>
+    <div class="track-card__front" aria-hidden={!revealed}>
       {#if revealed}
-        <div class="artist-text">
+        <div class="track-card__artist">
           {#if track?.artist?.length > 12}
             <div
-              class="marquee"
+              class="track-card__marquee"
               style="--speed: {Math.max(6, track.artist.length * 0.2)}s"
             >
-              <div class="marquee-track">
+              <div class="track-card__marquee-track">
                 <span>{track.artist}</span>
                 <span aria-hidden="true">{track.artist}</span>
               </div>
@@ -33,16 +33,16 @@
             {track?.artist ?? ""}
           {/if}
         </div>
-        <div class="year-text">
+        <div class="track-card__year">
           {track?.year ?? ""}
         </div>
-        <div class="title-text">
+        <div class="track-card__title">
           {#if track?.title?.length > 12}
             <div
-              class="marquee"
+              class="track-card__marquee"
               style="--speed: {Math.max(6, track.title.length * 0.2)}s"
             >
-              <div class="marquee-track">
+              <div class="track-card__marquee-track">
                 <span>{track.title}</span>
                 <span aria-hidden="true">{track.title}</span>
               </div>
@@ -54,10 +54,10 @@
       {/if}
     </div>
 
-    <div class="back" aria-hidden={revealed} aria-label="Hidden track card">
+    <div class="track-card__back" aria-hidden={revealed} aria-label="Hidden track card">
       {#if !revealed}
         {#if user?.avatar_url}
-          <div class="avatar">
+          <div class="track-card__avatar avatar">
             <div
               class="ring-primary ring-offset-base-100 w-16 rounded-full ring-2 ring-offset-2"
             >
@@ -65,7 +65,7 @@
             </div>
           </div>
         {:else}
-          <div class="year-text">?</div>
+          <div class="track-card__year">?</div>
         {/if}
       {/if}
     </div>
@@ -73,11 +73,11 @@
 </div>
 
 <style>
-  .wrapper {
+  .track-card {
     perspective: 1000px;
   }
 
-  .card {
+  .track-card__inner {
     position: relative;
     width: 8rem;
     height: 8rem;
@@ -92,12 +92,12 @@
       0 4px 6px -2px rgba(0, 0, 0, 0.05);
   }
 
-  .card.revealed {
+  .track-card__inner_revealed {
     transform: rotateY(0deg);
   }
 
-  .front,
-  .back {
+  .track-card__front,
+  .track-card__back {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -118,51 +118,51 @@
     );
   }
 
-  .front[aria-hidden="true"],
-  .back[aria-hidden="true"] {
+  .track-card__front[aria-hidden="true"],
+  .track-card__back[aria-hidden="true"] {
     visibility: hidden;
     pointer-events: none;
   }
 
-  .back {
+  .track-card__back {
     transform: rotateY(180deg);
   }
 
-  .artist-text {
+  .track-card__artist {
     font-weight: 600;
     font-size: 0.875rem;
   }
 
-  .year-text {
+  .track-card__year {
     font-size: 2.25rem;
     font-weight: 700;
     line-height: 1;
     letter-spacing: 0.025em;
   }
 
-  .title-text {
+  .track-card__title {
     font-size: 0.875rem;
     font-style: italic;
   }
 
-  .marquee {
+  .track-card__marquee {
     overflow: clip;
     width: 100%;
   }
 
-  .marquee-track {
+  .track-card__marquee-track {
     display: flex;
     width: max-content;
     will-change: transform;
     animation: marquee var(--speed, 8s) linear infinite;
   }
 
-  .marquee-track > span {
+  .track-card__marquee-track > span {
     padding-right: 2rem;
     flex-shrink: 0;
   }
 
-  .marquee:hover .marquee-track {
+  .track-card__marquee:hover .track-card__marquee-track {
     animation-play-state: paused;
   }
 
