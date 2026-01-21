@@ -7,20 +7,53 @@ defmodule Songy.Core.Track do
   and provider-specific metadata for playback functionality.
   """
 
-  use TypedStruct
-
   @derive {Jason.Encoder, only: [:id, :title, :artist, :year, :cover_url, :meta]}
 
-  @id_size 4
+  defstruct [
+    :id,
+    :title,
+    :artist,
+    :year,
+    :cover_url,
+    meta: %{}
+  ]
 
-  typedstruct do
-    field :id, String.t(), enforce: true
-    field :title, String.t(), enforce: true
-    field :artist, String.t(), enforce: true
-    field :year, pos_integer(), enforce: true
-    field :cover_url, String.t()
-    field :meta, map(), default: %{}
-  end
+  @typedoc "Unique track identifier (base64 encoded)"
+  @type id :: String.t()
+
+  @typedoc "Track title"
+  @type title :: String.t()
+
+  @typedoc "Artist name"
+  @type artist :: String.t()
+
+  @typedoc "Release year for guessing"
+  @type year :: pos_integer()
+
+  @typedoc "Album cover image URL"
+  @type cover_url :: String.t() | nil
+
+  @typedoc """
+  Provider-specific metadata for playback functionality.
+
+  Fields:
+    * `:preview_url` - Audio preview URL (30-60 second clips, used by iTunes/Apple Music)
+    * `:uri` - Platform-specific URI (e.g., spotify:track:xxx, used by Spotify)
+  """
+  @type meta :: %{
+            optional(:preview_url) => String.t(),
+            optional(:uri) => String.t()
+          }
+
+  @typedoc "Track structure"
+  @type t :: %__MODULE__{
+          id: id,
+          title: title,
+          artist: artist,
+          year: year,
+          cover_url: cover_url,
+          meta: meta
+        }
 
   @doc """
   Creates a new track with the given attributes.
@@ -42,18 +75,18 @@ defmodule Songy.Core.Track do
       iex> track.meta
       %{uri: "spotify:track:40riOy7x9W7GXjyGp4pjAv"}
   """
+  @id_size 4
+
   @spec new(keyword()) :: t()
   def new(attrs) when is_list(attrs) do
     struct!(
       __MODULE__,
-      Keyword.merge(
-        [id: generate_uuid()],
-        attrs
-      )
+      Keyword.put(attrs, :id, id())
     )
   end
 
-  defp generate_uuid do
+  @spec id() :: String.t()
+  defp id do
     @id_size
     |> :crypto.strong_rand_bytes()
     |> Base.url_encode64(padding: false)

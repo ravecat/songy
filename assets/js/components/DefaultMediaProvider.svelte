@@ -12,8 +12,10 @@
   const { game, channel, permissions } = $derived.by(getGameContext);
 
   const src = $derived.by(() => {
-    const previewUrl = game?.track?.meta?.preview_url ?? game?.track?.meta?.url;
-    return typeof previewUrl === "string" ? previewUrl : undefined;
+    const previewUrl = game?.track?.meta?.preview_url;
+    if (typeof previewUrl === "string") {
+      return previewUrl;
+    }
   });
   const isPlayback = $derived(Boolean(game?.player?.is_playback));
 
