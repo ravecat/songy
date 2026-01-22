@@ -235,10 +235,18 @@ defmodule Songy.Boundary.Provider.ITunesTest do
 
         assert Keyword.get(params, :entity) == "song"
         assert Keyword.get(params, :media) == "music"
-        assert Keyword.get(params, :limit) == 25
+        assert Keyword.get(params, :limit) == 50
         assert is_binary(Keyword.get(params, :term))
-        assert Keyword.get(params, :term) =~ ~r/^[a-z]\*$/
-        assert is_integer(Keyword.get(params, :offset))
+        term = Keyword.get(params, :term)
+        assert String.ends_with?(term, "*")
+        # Accept single-letter or double-letter queries
+        assert term =~ ~r/^[a-z]{1,2}\*$/
+        # Attribute should be one of: artistTerm, albumTerm, songTerm
+        attribute = Keyword.get(params, :attribute)
+        assert attribute in ["artistTerm", "albumTerm", "songTerm"]
+        # Country should be one of the supported countries
+        country = Keyword.get(params, :country)
+        assert country in ~w(us gb de fr jp ru ca au br it es in mx kr nl se pl ch ar at tr be hk)
 
         {:ok, %{status: 200, body: %{"resultCount" => 1, "results" => [%{"trackId" => 123, "kind" => "song"}]}}}
       end)

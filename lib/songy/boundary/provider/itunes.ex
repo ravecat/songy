@@ -13,7 +13,11 @@ defmodule Songy.Boundary.Provider.ITunes do
   @base_url "https://itunes.apple.com"
   @media "music"
   @entity "song"
-  @limit 25
+  @limit 50
+  @attributes ~w(artistTerm albumTerm songTerm)a
+  @countries ~w(
+    us gb de fr jp ru ca au br it es in mx kr nl se pl ch ar at tr be hk
+  )a
 
   @doc """
   Performs a search on the iTunes Search API.
@@ -28,9 +32,7 @@ defmodule Songy.Boundary.Provider.ITunes do
       * `:entity` - Type of content to search ("song", "album", "musicArtist")
       * `:types` - Apple Music-compatible alias for entity ("songs", "albums", "artists")
       * `:limit` - Number of results to return (1-200, default: 5)
-      * `:offset` - The index of the first result to return (default: 0)
       * `:country` - ISO 3166-1 alpha-2 country code (default: "us")
-      * `:storefront` - Alias for :country
 
   ## Returns
 
@@ -139,17 +141,44 @@ defmodule Songy.Boundary.Provider.ITunes do
       term: random_query(),
       media: @media,
       entity: @entity,
-      offset: random_offset(),
-      limit: @limit
+      limit: @limit,
+      attribute: random_attribute(),
+      country: random_country()
     ]
   end
 
-  defp random_query, do: <<:rand.uniform(26) + ?a - 1>> <> "*"
+  defp random_attribute do
+    @attributes
+    |> Enum.random()
+    |> Atom.to_string()
+  end
 
-  defp random_offset, do: :rand.uniform(1000) - 1
+  defp random_country do
+    @countries
+    |> Enum.random()
+    |> Atom.to_string()
+  end
+
+  defp random_query do
+    random = :rand.uniform(100)
+
+    cond do
+      random <= 60 -> generate_query(:single_letter)
+      true -> generate_query(:double_letter)
+    end
+  end
+
+  defp generate_query(:single_letter) do
+    <<:rand.uniform(26) + ?a - 1>> <> "*"
+  end
+
+  defp generate_query(:double_letter) do
+    first = :rand.uniform(26) + ?a - 1
+    second = :rand.uniform(26) + ?a - 1
+    <<first, second>> <> "*"
+  end
 
   defp song?(%{"kind" => "song"}), do: true
   defp song?(%{"wrapperType" => "track", "kind" => "song"}), do: true
   defp song?(_), do: false
-
 end
