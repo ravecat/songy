@@ -99,7 +99,7 @@ describe("Player", () => {
 
         expect(mockChannelContext.channel.push).toHaveBeenCalledWith(
           PUSH_EVENT.START_GAME,
-          {}
+          {},
         );
       });
     });
@@ -109,7 +109,7 @@ describe("Player", () => {
         renderForUser(playerUser);
 
         expect(
-          screen.queryByRole("button", { name: "Ready" })
+          screen.queryByRole("button", { name: "Ready" }),
         ).not.toBeInTheDocument();
       });
     });
@@ -134,7 +134,7 @@ describe("Player", () => {
 
         expect(mockChannelContext.channel.push).toHaveBeenCalledWith(
           PUSH_EVENT.ADVANCE_TURN,
-          {}
+          {},
         );
       });
 
@@ -174,23 +174,37 @@ describe("Player", () => {
     });
 
     describe("owner", () => {
-      test("hides next", () => {
+      test("shows forward button but disabled without assumptions", () => {
         mockChannelContext.permissions.can_control_playback = true;
 
         renderForUser(ownerUser);
 
         expect(
-          screen.getByRole("button", { name: "Play track" })
+          screen.getByRole("button", { name: "Play track" }),
         ).toBeEnabled();
         expect(
-          screen.queryByRole("button", { name: "Next phase" })
-        ).not.toBeInTheDocument();
+          screen.getByRole("button", { name: "Next phase" }),
+        ).toBeDisabled();
       });
     });
 
     describe("player", () => {
       beforeEach(() => {
         mockChannelContext.game.cursor = 1;
+      });
+
+      test("shows forward button but disabled without assumptions", () => {
+        mockChannelContext.permissions.can_control_playback = true;
+        mockChannelContext.permissions.can_advance_turn = false;
+
+        renderForUser(playerUser);
+
+        expect(
+          screen.getByRole("button", { name: "Play track" }),
+        ).toBeEnabled();
+        expect(
+          screen.getByRole("button", { name: "Next phase" }),
+        ).toBeDisabled();
       });
 
       test("shows next and enables play", () => {
@@ -200,27 +214,27 @@ describe("Player", () => {
         renderForUser(playerUser);
 
         expect(
-          screen.getByRole("button", { name: "Play track" })
+          screen.getByRole("button", { name: "Play track" }),
         ).toBeEnabled();
         expect(
-          screen.getByRole("button", { name: "Next phase" })
+          screen.getByRole("button", { name: "Next phase" }),
         ).toBeEnabled();
       });
     });
 
     describe("challenger", () => {
-      test("disables play button", () => {
+      test("disables play button and next", () => {
         mockChannelContext.permissions.can_control_playback = false;
         mockChannelContext.permissions.can_advance_turn = false;
 
         renderForUser(playerUser);
 
         expect(
-          screen.getByRole("button", { name: "Play track" })
+          screen.getByRole("button", { name: "Play track" }),
         ).toBeDisabled();
         expect(
-          screen.queryByRole("button", { name: "Next phase" })
-        ).not.toBeInTheDocument();
+          screen.getByRole("button", { name: "Next phase" }),
+        ).toBeDisabled();
       });
     });
   });

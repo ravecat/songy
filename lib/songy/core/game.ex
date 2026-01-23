@@ -162,4 +162,28 @@ defmodule Songy.Core.Game do
     end)
   end
 
+  @doc """
+  Returns the list of roles a user has in the game.
+  """
+  @spec roles(t(), String.t()) :: [:player | :owner | :challenger]
+  def roles(%__MODULE__{} = game, user_id) do
+    active_player = Enum.at(game.queue, game.cursor)
+    is_active = active_player == user_id
+    is_owner = game.owner_id == user_id
+
+    cond do
+      is_owner and is_active -> [:player, :owner]
+      is_owner -> [:owner]
+      is_active -> [:player]
+      true -> [:challenger]
+    end
+  end
+
+  @doc """
+  Checks if a user has made at least one assumption in the current turn.
+  """
+  @spec has_assumption?(t(), String.t()) :: boolean()
+  def has_assumption?(%__MODULE__{turn: turn}, user_id) do
+    Enum.any?(turn.assumptions, fn %{user_id: uid} -> uid == user_id end)
+  end
 end

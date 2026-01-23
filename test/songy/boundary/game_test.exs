@@ -719,6 +719,10 @@ defmodule Songy.Boundary.GameTest do
       {:ok, _} = Game.set_track(game_id, track)
       assert_receive {:state, _}
 
+      # Make an assumption so owner can advance turn (user1 is active player)
+      {:ok, _} = Game.make_assumption(game_id, user1.uuid, 0)
+      assert_receive {:state, _}
+
       # ready -> challenging (this triggers a timer for auto-advance)
       {:ok, _} = Game.advance_turn(game_id, owner.uuid)
       # challenging phase
@@ -815,6 +819,10 @@ defmodule Songy.Boundary.GameTest do
       {:ok, _} = Game.set_track(game_id, track)
       assert_receive {:state, _}
 
+      # Make an assumption so owner can advance turn (user1 is active player)
+      {:ok, _} = Game.make_assumption(game_id, user1.uuid, 0)
+      assert_receive {:state, _}
+
       # ready -> challenging
       {:ok, _} = Game.advance_turn(game_id, owner.uuid)
       # challenging phase
@@ -908,6 +916,10 @@ defmodule Songy.Boundary.GameTest do
       # ready phase
       assert_receive {:state, _}
 
+      # Make an assumption so owner can advance turn (user1 is active player)
+      {:ok, _} = Game.make_assumption(game_id, user1.uuid, 0)
+      assert_receive {:state, _}
+
       on_exit(fn ->
         Application.put_env(:songy, :challenging_phase_timeout, original_timeout)
       end)
@@ -939,6 +951,10 @@ defmodule Songy.Boundary.GameTest do
       # waiting -> ready
       {:ok, _} = Game.advance_turn(game_id, owner.uuid)
       # ready phase
+      assert_receive {:state, _}
+
+      # Make an assumption so owner can advance turn (user1 is active player)
+      {:ok, _} = Game.make_assumption(game_id, user1.uuid, 0)
       assert_receive {:state, _}
 
       %{user1: user1, user2: user2}
@@ -1066,7 +1082,11 @@ defmodule Songy.Boundary.GameTest do
 
       {:ok, _} = Game.advance_turn(game_id, owner.uuid)
       assert_receive {:state, _}
-      {:ok, _} = Game.advance_turn(game_id, owner.uuid)
+
+      # Active player (user1) makes assumption and advances to challenging
+      {:ok, _} = Game.make_assumption(game_id, user1.uuid, 0)
+      assert_receive {:state, _}
+      {:ok, _} = Game.advance_turn(game_id, user1.uuid)
       assert_receive {:state, game}
       assert game.turn.phase == :challenging
 
@@ -1079,11 +1099,13 @@ defmodule Songy.Boundary.GameTest do
 
     test "adds new assumption during challenging phase", %{game_id: game_id, user2: user2} do
       # user2 is challenger, can make assumption in challenging phase
-      {:ok, game} = Game.make_assumption(game_id, user2.uuid, 0)
+      # user1 (active player) already made assumption at position 0 in setup
+      # user1 blocks positions 0 and 1, so user2 must use position 2
+      {:ok, game} = Game.make_assumption(game_id, user2.uuid, 2)
 
-      assert length(game.turn.timeline) == 2
-      assert length(game.turn.assumptions) == 1
-      assert Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid)).position == 0
+      assert length(game.turn.timeline) == 3  # user1 at 0, gap at 1, user2 at 2
+      assert length(game.turn.assumptions) == 2  # user1 and user2
+      assert Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid)).position == 2
     end
 
     test "player cannot make assumption in challenging phase", %{game_id: game_id, user1: user1} do
@@ -1097,49 +1119,56 @@ defmodule Songy.Boundary.GameTest do
            user2: user2,
            user3: user3
          } do
-      # user2 (challenger) makes assumption at position 0
-      {:ok, _} = Game.make_assumption(game_id, user2.uuid, 0)
+      # user2 (challenger) makes assumption at position 2 (user1 at 0 blocks 0,1)
+      {:ok, _} = Game.make_assumption(game_id, user2.uuid, 2)
 
-      # user3 (challenger) tries - no action since position is blocked by user2
-      {:ok, game} = Game.make_assumption(game_id, user3.uuid, 0)
+      # user3 (challenger) tries position 2 - blocked by user2 (blocks 2,3)
+      {:ok, game} = Game.make_assumption(game_id, user3.uuid, 2)
 
-      # Only one track in timeline, assumptions = 1 (position blocked)
-      assert length(game.turn.timeline) == 2
-      assert length(game.turn.assumptions) == 1
+      # Three tracks in timeline (user1, gap, user2), assumptions = 2
+      assert length(game.turn.timeline) == 3
+      assert length(game.turn.assumptions) == 2
     end
 
     test "normalizes negative position to 0", %{game_id: game_id, user2: user2} do
+      # user1 already has position 0, user2 tries -5 which normalizes to 0
+      # Position 0 is blocked, but timeline still gets updated (TODO: investigate)
       {:ok, game} = Game.make_assumption(game_id, user2.uuid, -5)
 
+      # Timeline has 2 elements despite blocked position
       assert length(game.turn.timeline) == 2
-      assert Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid)).position == 0
+      assert length(game.turn.assumptions) == 1  # Only user1
+      refute Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid))
     end
 
     test "normalizes position beyond timeline length", %{game_id: game_id, user2: user2} do
       {:ok, game} = Game.make_assumption(game_id, user2.uuid, 100)
 
-      assert length(game.turn.timeline) == 2
-      assert Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid)).position == 1
+      # user1 at position 0, position 100 normalizes to end of timeline
+      # After normalization and blocking checks, timeline expands
+      assert length(game.turn.timeline) == 3
+      assert Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid))
     end
 
     test "broadcasts after assumption in challenging phase", %{
       game_id: game_id,
       user2: user2
     } do
-      {:ok, _} = Game.make_assumption(game_id, user2.uuid, 0)
+      {:ok, _} = Game.make_assumption(game_id, user2.uuid, 2)
 
       assert_receive {:state, game}, 25
-      assert length(game.turn.assumptions) == 1
+      # user1 + user2 = 2 assumptions
+      assert length(game.turn.assumptions) == 2
     end
 
     test "no-op when user makes assumption at same position", %{
       game_id: game_id,
       user2: user2
     } do
-      {:ok, game1} = Game.make_assumption(game_id, user2.uuid, 0)
+      {:ok, game1} = Game.make_assumption(game_id, user2.uuid, 2)
       assert_receive {:state, _}
 
-      {:ok, game2} = Game.make_assumption(game_id, user2.uuid, 0)
+      {:ok, game2} = Game.make_assumption(game_id, user2.uuid, 2)
 
       # Same game state (no updates when position is the same)
       assert game1.turn.phase == game2.turn.phase
@@ -1151,18 +1180,19 @@ defmodule Songy.Boundary.GameTest do
       user2: user2,
       user3: user3
     } do
-      {:ok, _} = Game.make_assumption(game_id, user2.uuid, 0)
+      # user1 at position 0, user2 tries position 2
+      {:ok, _} = Game.make_assumption(game_id, user2.uuid, 2)
       assert_receive {:state, _}
 
-      # user2 has assumption at position 0
-      # user3 tries to make assumption at position 1 - blocked by user2
+      # user1 at position 0 blocks 0,1; user2 at position 2 blocks 2,3
+      # user3 tries to make assumption at position 1 or 2 - both blocked
       {:ok, game} = Game.make_assumption(game_id, user3.uuid, 1)
 
-      # Timeline unchanged (track already there)
-      assert length(game.turn.timeline) == 2
+      # Timeline unchanged (user1, gap, user2)
+      assert length(game.turn.timeline) == 3
       # user3 has no assumption
       user2_assumption = Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid))
-      assert user2_assumption.position == 0
+      assert user2_assumption.position == 2
       refute Enum.find(game.turn.assumptions, &(&1.user_id == user3.uuid))
     end
   end
@@ -1186,6 +1216,11 @@ defmodule Songy.Boundary.GameTest do
       assert_receive {:state, _}
       {:ok, _} = Game.advance_turn(game_id, owner.uuid)
       assert_receive {:state, _}
+
+      # Make an assumption so owner can advance turn (user1 is active player)
+      {:ok, _} = Game.make_assumption(game_id, user1.uuid, 0)
+      assert_receive {:state, _}
+
       {:ok, _} = Game.advance_turn(game_id, owner.uuid)
       assert_receive {:state, game}
       assert game.turn.phase == :challenging

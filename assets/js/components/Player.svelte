@@ -14,7 +14,7 @@
   const handlePlayback = () => {
     channel.push(
       isPlayback ? PUSH_EVENT.PAUSE_PLAYBACK : PUSH_EVENT.START_PLAYBACK,
-      {}
+      {},
     );
   };
 
@@ -36,7 +36,7 @@
       {...props}
       class={cn(
         "btn h-16 w-16 flex flex-col items-center justify-between py-2",
-        props.class
+        props.class,
       )}
       aria-label={label}
     >
@@ -89,10 +89,8 @@
     text: turnPhase === TURN_PHASE.READY ? "forward" : "next turn",
     onclick: handleAdvanceTurn,
     class: "btn-primary",
-    visible:
-      permissions?.can_advance_turn &&
-      !permissions?.can_start_game &&
-      !permissions?.can_start_turn,
+    visible: !permissions?.can_start_game && !permissions?.can_start_turn,
+    disabled: !permissions?.can_advance_turn,
   })}
 {/snippet}
 

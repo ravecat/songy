@@ -73,7 +73,7 @@ defmodule Songy.AuthorizationTest do
 
       assert permissions == %{
                can_control_playback: true,
-               can_advance_turn: true,
+               can_advance_turn: false,
                can_start_game: false,
                can_start_turn: false,
                can_restart_game: false,
@@ -88,7 +88,7 @@ defmodule Songy.AuthorizationTest do
 
       assert permissions == %{
                can_control_playback: true,
-               can_advance_turn: true,
+               can_advance_turn: false,
                can_start_game: false,
                can_start_turn: false,
                can_restart_game: false,
@@ -180,7 +180,7 @@ defmodule Songy.AuthorizationTest do
 
       assert permissions == %{
                can_control_playback: true,
-               can_advance_turn: true,
+               can_advance_turn: false,
                can_start_game: false,
                can_start_turn: false,
                can_restart_game: false,
@@ -333,7 +333,7 @@ defmodule Songy.AuthorizationTest do
       owner_id: owner_id,
       queue: queue,
       cursor: 0,
-      turn: if(state == :in_progress, do: %Turn{phase: phase}, else: nil)
+      turn: if(state == :in_progress, do: %Turn{phase: phase, assumptions: []}, else: nil)
     }
   end
 end

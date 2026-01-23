@@ -14,7 +14,7 @@ defmodule Songy.Policy do
     :start_turn,
     :restart_game,
     :make_assumption,
-    :see_assumptions,
+    :see_assumptions
   ]
 
   def acts, do: @acts
@@ -24,57 +24,52 @@ defmodule Songy.Policy do
   def authorize(_action, nil, _game), do: {:error, :unauthorized}
 
   def authorize(action, user, game) do
-    subjects = subjects(game, user)
+    subjects = Game.roles(game, user)
 
-    if Enum.any?(subjects, fn subj -> can(action, subj, game) == :ok end) do
+    if Enum.any?(subjects, &can?(action, &1, user, game)) do
       :ok
     else
       {:error, :unauthorized}
     end
   end
 
-  defp can(_action, nil, _game), do: {:error, :unauthorized}
-
-  defp can(:start_game, :owner, %Game{status: :waiting}), do: :ok
-
-  defp can(:control_playback, :player, %Game{status: :in_progress, turn: %{phase: :ready}}), do: :ok
-  defp can(:control_playback, :player, %Game{status: :in_progress, turn: %{phase: :results}}), do: :ok
-  defp can(:control_playback, :owner, %Game{status: :in_progress, turn: %{phase: :results}}), do: :ok
-  defp can(:control_playback, :owner, %Game{status: :in_progress, turn: %{phase: :ready}}), do: :ok
-  defp can(:control_playback, :challenger, %Game{status: :in_progress, turn: %{phase: :challenging}}), do: :ok
-  defp can(:control_playback, :owner, %Game{status: :in_progress, turn: %{phase: :challenging}}), do: :ok
-
-  defp can(:advance_turn, :player, %Game{status: :in_progress, turn: %{phase: :waiting}}), do: :ok
-  defp can(:advance_turn, :player, %Game{status: :in_progress, turn: %{phase: :ready}}), do: :ok
-  defp can(:advance_turn, :player, %Game{status: :in_progress, turn: %{phase: :results}}), do: :ok
-  defp can(:advance_turn, :owner, %Game{status: :in_progress, turn: %{phase: :waiting}}), do: :ok
-  defp can(:advance_turn, :owner, %Game{status: :in_progress, turn: %{phase: :ready}}), do: :ok
-  defp can(:advance_turn, :owner, %Game{status: :in_progress, turn: %{phase: :results}}), do: :ok
-
-  defp can(:start_turn, :player, %Game{status: :in_progress, turn: %{phase: :waiting}}), do: :ok
-  defp can(:start_turn, :owner, %Game{status: :in_progress, turn: %{phase: :waiting}}), do: :ok
-
-  defp can(:restart_game, :owner, %Game{status: :finished}), do: :ok
-
-  defp can(:make_assumption, :player, %Game{status: :in_progress, turn: %{phase: :ready}}), do: :ok
-  defp can(:make_assumption, :challenger, %Game{status: :in_progress, turn: %{phase: :challenging}}), do: :ok
-
-  defp can(:see_assumptions, _, %Game{status: :in_progress, turn: %{phase: :results}}), do: :ok
-
-  defp can(_action, _subject, %Game{}), do: {:error, :unauthorized}
-
-  defp subjects(%Game{}, nil), do: []
-
-  defp subjects(game, user_id) do
-    active_player = Enum.at(game.queue, game.cursor)
-    is_active = active_player == user_id
-    is_owner = game.owner_id == user_id
-
-    cond do
-      is_owner and is_active -> [:player, :owner]
-      is_owner -> [:owner]
-      is_active -> [:player]
-      true -> [:challenger]
-    end
+  defp can?(:advance_turn, :player, _user_id, %Game{status: :in_progress, turn: %{phase: :ready}} = game) do
+    Game.has_assumption?(game, Enum.at(game.queue, game.cursor))
   end
+
+  defp can?(:advance_turn, :player, _user_id, %Game{status: :in_progress, turn: %{phase: :waiting}}), do: true
+  defp can?(:advance_turn, :player, _user_id, %Game{status: :in_progress, turn: %{phase: :results}}), do: true
+  defp can?(:advance_turn, :owner, _user_id, %Game{status: :in_progress, turn: %{phase: :waiting}}), do: true
+
+  defp can?(:advance_turn, :owner, _user_id, %Game{status: :in_progress, turn: %{phase: :ready}} = game) do
+    Game.has_assumption?(game, Enum.at(game.queue, game.cursor))
+  end
+
+  defp can?(:advance_turn, :owner, _user_id, %Game{status: :in_progress, turn: %{phase: :results}}), do: true
+
+  defp can?(:start_turn, :player, _user_id, %Game{status: :in_progress, turn: %{phase: :waiting}}), do: true
+  defp can?(:start_turn, :owner, _user_id, %Game{status: :in_progress, turn: %{phase: :waiting}}), do: true
+
+  defp can?(:start_game, :owner, _user_id, %Game{status: :waiting}), do: true
+
+  defp can?(:control_playback, :player, _user_id, %Game{status: :in_progress, turn: %{phase: :ready}}), do: true
+  defp can?(:control_playback, :player, _user_id, %Game{status: :in_progress, turn: %{phase: :results}}), do: true
+  defp can?(:control_playback, :owner, _user_id, %Game{status: :in_progress, turn: %{phase: :results}}), do: true
+  defp can?(:control_playback, :owner, _user_id, %Game{status: :in_progress, turn: %{phase: :ready}}), do: true
+
+  defp can?(:control_playback, :challenger, _user_id, %Game{status: :in_progress, turn: %{phase: :challenging}}),
+    do: true
+
+  defp can?(:control_playback, :owner, _user_id, %Game{status: :in_progress, turn: %{phase: :challenging}}), do: true
+
+  defp can?(:restart_game, :owner, _user_id, %Game{status: :finished}), do: true
+
+  defp can?(:make_assumption, :player, _user_id, %Game{status: :in_progress, turn: %{phase: :ready}}), do: true
+
+  defp can?(:make_assumption, :challenger, _user_id, %Game{status: :in_progress, turn: %{phase: :challenging}}),
+    do: true
+
+  defp can?(:see_assumptions, _, _user_id, %Game{status: :in_progress, turn: %{phase: :results}}), do: true
+
+  defp can?(_action, _subject, _user_id, %Game{}), do: false
 end
