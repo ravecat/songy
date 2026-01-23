@@ -1,14 +1,16 @@
 <script lang="ts">
   import TrackCard from "~components/TrackCard.svelte";
   import { getGameContext } from "~components/GameChannel.svelte";
+  import { getScopeContext } from "~components/Scope.svelte";
   import type { User } from "~shared/types/user";
   import { PUSH_EVENT } from "~shared/types/channel";
 
   const { game, permissions, channel } = $derived.by(getGameContext);
+  const { user: currentUser } = $derived.by(getScopeContext);
   const currentTrack = $derived(game?.track);
 
   const participants = $derived(
-    new Map(game?.participants?.map((user) => [user.uuid, user]) ?? [])
+    new Map(game?.participants?.map((user) => [user.uuid, user]) ?? []),
   );
 
   const assumptions = $derived.by(() => {
@@ -21,7 +23,24 @@
     }, new Map<number, User | undefined>());
   });
 
+  const activePlayerAssumptionPosition = $derived.by(() => {
+    const activePlayerId = game?.queue?.[game?.cursor ?? 0];
+
+    // If current user is the active player, don't sync (they're already scrolling)
+    if (currentUser?.uuid === activePlayerId) return null;
+
+    // Find position where active player made assumption
+    for (const [position, user] of assumptions.entries()) {
+      if (user?.uuid === activePlayerId) {
+        return position;
+      }
+    }
+
+    return null;
+  });
+
   let hasInteracted = $state(false);
+  let lastScrolledPosition = $state<number | null>(null);
 
   let tracks = $derived.by(() => {
     const timeline = game?.turn?.timeline || [];
@@ -49,13 +68,41 @@
     const rect = timeline.getBoundingClientRect();
     const el = document.elementFromPoint(
       rect.left + rect.width / 2,
-      rect.top + rect.height / 2
+      rect.top + rect.height / 2,
     ) as HTMLElement;
 
     const position = el?.dataset?.index;
 
     channel.push(PUSH_EVENT.MAKE_ASSUMPTION, { position });
   }
+
+  function scrollToIndex(index: number) {
+    if (!timeline) return;
+
+    const snapElement = timeline.querySelector(
+      `[data-index="${index}"]`,
+    ) as HTMLElement;
+    snapElement?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  }
+
+  $effect(() => {
+    const position = activePlayerAssumptionPosition;
+
+    if (
+      position === null ||
+      position === lastScrolledPosition ||
+      hasInteracted
+    ) {
+      return;
+    }
+
+    scrollToIndex(position);
+    lastScrolledPosition = position;
+  });
 </script>
 
 <div class="timeline">
@@ -77,7 +124,8 @@
           {user}
         />
       </div>
-      <span class="timeline__snap" data-index={Math.min(i + 1, tracks.length)}></span>
+      <span class="timeline__snap" data-index={Math.min(i + 1, tracks.length)}
+      ></span>
     {/each}
   </div>
   {#if permissions?.can_make_assumptions && currentTrack}

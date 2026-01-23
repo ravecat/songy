@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
 import { TURN_PHASE } from "~shared/types/turn";
 import * as GameContext from "~components/GameChannel.svelte";
+import * as ScopeContext from "~components/Scope.svelte";
 
 import Timeline from "~components/Timeline.svelte";
 
@@ -64,6 +65,14 @@ describe("Timeline", () => {
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);
 
+    const getScopeContextSpy = vi.spyOn(ScopeContext, "getScopeContext");
+    getScopeContextSpy.mockReturnValue({
+      user: {
+        uuid: "current-user-123",
+        name: "Test User",
+      },
+    });
+
     const { container } = render(Timeline);
 
     const hiddenCards = container.querySelectorAll('[aria-label="Hidden track card"][aria-hidden="false"]');
@@ -75,6 +84,14 @@ describe("Timeline", () => {
 
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);
+
+    const getScopeContextSpy = vi.spyOn(ScopeContext, "getScopeContext");
+    getScopeContextSpy.mockReturnValue({
+      user: {
+        uuid: "current-user-123",
+        name: "Test User",
+      },
+    });
 
     const { container } = render(Timeline);
 
@@ -94,6 +111,14 @@ describe("Timeline", () => {
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);
 
+    const getScopeContextSpy = vi.spyOn(ScopeContext, "getScopeContext");
+    getScopeContextSpy.mockReturnValue({
+      user: {
+        uuid: "current-user-123",
+        name: "Test User",
+      },
+    });
+
     const { container } = render(Timeline);
 
     expect(screen.getAllByText("Timeline Track 1").length).toBeGreaterThan(0);
@@ -108,6 +133,14 @@ describe("Timeline", () => {
 
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);
+
+    const getScopeContextSpy = vi.spyOn(ScopeContext, "getScopeContext");
+    getScopeContextSpy.mockReturnValue({
+      user: {
+        uuid: "current-user-123",
+        name: "Test User",
+      },
+    });
 
     const { container } = render(Timeline);
 
@@ -125,6 +158,14 @@ describe("Timeline", () => {
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);
 
+    const getScopeContextSpy = vi.spyOn(ScopeContext, "getScopeContext");
+    getScopeContextSpy.mockReturnValue({
+      user: {
+        uuid: "current-user-123",
+        name: "Test User",
+      },
+    });
+
     const { container } = render(Timeline);
 
     const hiddenCards = container.querySelectorAll('[aria-label="Hidden track card"][aria-hidden="false"]');
@@ -137,6 +178,14 @@ describe("Timeline", () => {
 
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);
+
+    const getScopeContextSpy = vi.spyOn(ScopeContext, "getScopeContext");
+    getScopeContextSpy.mockReturnValue({
+      user: {
+        uuid: "current-user-123",
+        name: "Test User",
+      },
+    });
 
     const { container } = render(Timeline);
 
@@ -151,6 +200,14 @@ describe("Timeline", () => {
 
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);
+
+    const getScopeContextSpy = vi.spyOn(ScopeContext, "getScopeContext");
+    getScopeContextSpy.mockReturnValue({
+      user: {
+        uuid: "current-user-123",
+        name: "Test User",
+      },
+    });
 
     const { container } = render(Timeline);
 
@@ -167,6 +224,14 @@ describe("Timeline", () => {
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);
 
+    const getScopeContextSpy = vi.spyOn(ScopeContext, "getScopeContext");
+    getScopeContextSpy.mockReturnValue({
+      user: {
+        uuid: "current-user-123",
+        name: "Test User",
+      },
+    });
+
     render(Timeline);
 
     expect(screen.getAllByText("Timeline Track 1").length).toBeGreaterThan(0);
@@ -181,6 +246,14 @@ describe("Timeline", () => {
 
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);
+
+    const getScopeContextSpy = vi.spyOn(ScopeContext, "getScopeContext");
+    getScopeContextSpy.mockReturnValue({
+      user: {
+        uuid: "current-user-123",
+        name: "Test User",
+      },
+    });
 
     render(Timeline);
 
