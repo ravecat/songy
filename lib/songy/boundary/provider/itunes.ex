@@ -14,10 +14,13 @@ defmodule Songy.Boundary.Provider.ITunes do
   @media "music"
   @entity "song"
   @limit 50
-  @attributes ~w(artistTerm albumTerm songTerm)a
+  @attributes ~w(artistTerm albumTerm songTerm)
   @countries ~w(
     us gb de fr jp ru ca au br it es in mx kr nl se pl ch ar at tr be hk
-  )a
+  )
+  @headers [
+    {"Accept", "application/json"}
+  ]
 
   @doc """
   Performs a search on the iTunes Search API.
@@ -86,7 +89,7 @@ defmodule Songy.Boundary.Provider.ITunes do
          [_ | _] = songs <- Enum.filter(results, &song?/1) do
       track =
         songs
-        |> Enum.random()
+        |> Enum.at(rem(:binary.decode_unsigned(:crypto.strong_rand_bytes(2)), length(songs)))
         |> Track.ITunes.to_struct()
 
       Logger.info("Successfully found random track #{inspect(track)} with params: #{inspect(params)}")
@@ -105,7 +108,7 @@ defmodule Songy.Boundary.Provider.ITunes do
   defp make_search_request(params) do
     Req.get("#{@base_url}/search",
       params: params,
-      headers: [{"Accept", "application/json"}]
+      headers: @headers
     )
   end
 
@@ -138,7 +141,7 @@ defmodule Songy.Boundary.Provider.ITunes do
 
   defp random_track_search_params do
     [
-      term: random_query(),
+      term: random_term(),
       media: @media,
       entity: @entity,
       limit: @limit,
@@ -148,35 +151,22 @@ defmodule Songy.Boundary.Provider.ITunes do
   end
 
   defp random_attribute do
-    @attributes
-    |> Enum.random()
-    |> Atom.to_string()
+    Enum.at(@attributes, rem(:binary.decode_unsigned(:crypto.strong_rand_bytes(1)), length(@attributes)))
   end
 
   defp random_country do
-    @countries
-    |> Enum.random()
-    |> Atom.to_string()
+    Enum.at(@countries, rem(:binary.decode_unsigned(:crypto.strong_rand_bytes(1)), length(@countries)))
   end
 
-  defp random_query do
-    random = :rand.uniform(100)
-
-    cond do
-      random <= 60 -> generate_query(:single_letter)
-      true -> generate_query(:double_letter)
+  defp random_term do
+    if rem(:binary.decode_unsigned(:crypto.strong_rand_bytes(1)), 2) == 0 do
+      <<random_letter()>> <> "*"
+    else
+      <<random_letter(), random_letter()>> <> "*"
     end
   end
 
-  defp generate_query(:single_letter) do
-    <<:rand.uniform(26) + ?a - 1>> <> "*"
-  end
-
-  defp generate_query(:double_letter) do
-    first = :rand.uniform(26) + ?a - 1
-    second = :rand.uniform(26) + ?a - 1
-    <<first, second>> <> "*"
-  end
+  defp random_letter, do: ?a + rem(:binary.decode_unsigned(:crypto.strong_rand_bytes(1)), 26)
 
   defp song?(%{"kind" => "song"}), do: true
   defp song?(%{"wrapperType" => "track", "kind" => "song"}), do: true
