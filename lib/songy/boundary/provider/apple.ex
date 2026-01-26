@@ -115,7 +115,7 @@ defmodule Songy.Boundary.Provider.Apple do
          {:ok, %{"songs" => %{"data" => [_ | _] = data}}} <- search(token, params) do
       track =
         data
-        |> Enum.random()
+        |> Enum.at(rem(:binary.decode_unsigned(:crypto.strong_rand_bytes(1)), length(data)))
         |> Track.Apple.to_struct()
 
       Logger.info("Successfully found random track #{inspect(track)} with params: #{inspect(params)}")
@@ -156,7 +156,7 @@ defmodule Songy.Boundary.Provider.Apple do
     ]
   end
 
-  defp random_query, do: <<:rand.uniform(26) + ?a - 1>> <> "*"
+  defp random_query, do: <<?a + rem(:binary.decode_unsigned(:crypto.strong_rand_bytes(1)), 26)>> <> "*"
 
-  defp random_offset, do: :rand.uniform(1000) - 1
+  defp random_offset, do: rem(:binary.decode_unsigned(:crypto.strong_rand_bytes(2)), 1000)
 end
