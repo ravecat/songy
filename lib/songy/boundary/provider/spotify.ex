@@ -215,8 +215,6 @@ defmodule Songy.Boundary.Provider.Spotify do
 
   # That search params return a random track result in most cases. Change carefully if needed.
   defp build_random_track_search_params do
-    :rand.seed(:exsss, :os.system_time(:nanosecond))
-
     query = generate_random_track_query()
     offset = generate_random_offset()
 
@@ -237,29 +235,20 @@ defmodule Songy.Boundary.Provider.Spotify do
 
   defp generate_random_time_range do
     current_year = Date.utc_today().year
-    start_year = :rand.uniform(current_year - 1900 + 1) + 1900 - 1
-    end_year = :rand.uniform(current_year - start_year + 1) + start_year - 1
+    start_year = Enum.random(1900..current_year)
+    end_year = Enum.random(start_year..current_year)
 
     {start_year, end_year}
   end
 
   defp generate_random_latin_letter do
-    letter_index = :rand.uniform(52)
-
-    codepoint =
-      if letter_index <= 26 do
-        # Lowercase: ?a (97) to ?z (122)
-        ?a + letter_index - 1
-      else
-        # Uppercase: ?A (65) to ?Z (90)
-        ?A + letter_index - 26 - 1
-      end
-
+    index = rem(:binary.decode_unsigned(:crypto.strong_rand_bytes(1)), 52)
+    codepoint = if index < 26, do: ?a + index, else: ?A + (index - 26)
     <<codepoint>>
   end
 
   defp generate_random_offset do
-    :rand.uniform(1000) - 1
+    rem(:binary.decode_unsigned(:crypto.strong_rand_bytes(2)), 1000)
   end
 
   defp ensure_credentials(%Spotify.Credentials{} = credentials), do: {:ok, credentials}
