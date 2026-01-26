@@ -38,10 +38,16 @@ npm-debug.log
 /assets/.vite/
 /assets/coverage/
 /assets/package-lock.json
+/assets/test-results/
+/assets/playwright-report/
+/assets/e2e/test-results/
+/assets/e2e/playwright-report/
 
 # Ignore tools artifacts.
 /.elixir_ls/
 /context_portal/
+/.sisyphus/
+/.opencode/
 
 # Environment variables
 /envs/*
