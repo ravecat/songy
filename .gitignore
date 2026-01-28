@@ -56,3 +56,5 @@ npm-debug.log
 .vscode/
 .idea/
 *.iml
+# Git worktrees
+.worktrees/
