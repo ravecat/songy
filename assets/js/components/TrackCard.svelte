@@ -1,25 +1,27 @@
 <script lang="ts">
+  import type { Snippet } from "svelte";
   import type { Track } from "~shared/types/track";
-  import type { User } from "~shared/types/user";
 
   interface TrackCardProps {
-    /** Track data to display */
-    track: Track;
+    /** Track data to display (null for assumption cards) */
+    track: Track | null;
     /** Whether the track card is revealed (shows content) */
     revealed?: boolean;
-    /** User who made assumption for this position (only for hidden tracks) */
-    user?: User | null;
+    /** Custom content for card back */
+    back?: Snippet;
   }
 
-  let { track, revealed = true, user = null }: TrackCardProps = $props();
+  let { track, revealed = true, back }: TrackCardProps = $props();
 </script>
 
 <div class="track-card">
-  <div class={["track-card__inner", { "track-card__inner_revealed": revealed }]}>
+  <div
+    class={["track-card__inner", { "track-card__inner_revealed": revealed }]}
+  >
     <div class="track-card__front" aria-hidden={!revealed}>
-      {#if revealed}
+      {#if revealed && track}
         <div class="track-card__artist">
-          {#if track?.artist?.length > 12}
+          {#if track.artist?.length > 12}
             <div
               class="track-card__marquee"
               style="--speed: {Math.max(6, track.artist.length * 0.2)}s"
@@ -30,14 +32,14 @@
               </div>
             </div>
           {:else}
-            {track?.artist ?? ""}
+            {track.artist ?? ""}
           {/if}
         </div>
         <div class="track-card__year">
-          {track?.year ?? ""}
+          {track.year ?? ""}
         </div>
         <div class="track-card__title">
-          {#if track?.title?.length > 12}
+          {#if track.title?.length > 12}
             <div
               class="track-card__marquee"
               style="--speed: {Math.max(6, track.title.length * 0.2)}s"
@@ -48,25 +50,19 @@
               </div>
             </div>
           {:else}
-            {track.title || ""}
+            {track.title ?? ""}
           {/if}
         </div>
       {/if}
     </div>
 
-    <div class="track-card__back" aria-hidden={revealed} aria-label="Hidden track card">
-      {#if !revealed}
-        {#if user?.avatar_url}
-          <div class="track-card__avatar avatar">
-            <div
-              class="ring-primary ring-offset-base-100 w-16 rounded-full ring-2 ring-offset-2"
-            >
-              <img src={user.avatar_url} alt={user.name} />
-            </div>
-          </div>
-        {:else}
-          <div class="track-card__year">?</div>
-        {/if}
+    <div
+      class="track-card__back"
+      aria-hidden={revealed}
+      aria-label="Hidden track card"
+    >
+      {#if !revealed && back}
+        {@render back()}
       {/if}
     </div>
   </div>

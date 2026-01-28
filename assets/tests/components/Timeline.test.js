@@ -18,6 +18,35 @@ describe("Timeline", () => {
           artist: "Current Artist",
           year: 2024,
         },
+        participants: [
+          {
+            uuid: "current-user-123",
+            name: "Test User",
+            avatar_url: "https://example.com/avatar.jpg",
+          },
+          {
+            uuid: "user-1",
+            name: "User 1",
+          },
+        ],
+        queue: ["current-user-123", "user-1"],
+        cursor: 0,
+        timelines: {
+          "current-user-123": [
+            {
+              id: "timeline-1",
+              title: "Timeline Track 1",
+              artist: "Artist 1",
+              year: 2020,
+            },
+            {
+              id: "timeline-2",
+              title: "Timeline Track 2",
+              artist: "Artist 2",
+              year: 2021,
+            },
+          ],
+        },
         turn: {
           phase: TURN_PHASE.READY,
           timeline: [
@@ -34,13 +63,7 @@ describe("Timeline", () => {
               year: 2021,
             },
           ],
-          assumptions: [
-            {
-              id: "assumption-1",
-              user_id: "user-1",
-              track_id: "timeline-1",
-            },
-          ],
+          assumptions: [],
         },
       },
       permissions: {
@@ -61,6 +84,17 @@ describe("Timeline", () => {
 
   test("shows track card when can_make_assumptions is true", () => {
     mockGameContext.permissions.can_make_assumptions = true;
+    mockGameContext.game.turn.assumptions = [
+      {
+        position: 1,
+        user_id: "current-user-123",
+      },
+    ];
+    mockGameContext.game.timelines["current-user-123"] = [
+      mockGameContext.game.timelines["current-user-123"][0],
+      mockGameContext.game.track,
+      mockGameContext.game.timelines["current-user-123"][1],
+    ];
 
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);
@@ -154,6 +188,12 @@ describe("Timeline", () => {
   test("player in ready phase sees track card", () => {
     mockGameContext.game.turn.phase = TURN_PHASE.READY;
     mockGameContext.permissions.can_make_assumptions = true;
+    mockGameContext.game.turn.assumptions = [
+      {
+        position: 1,
+        user_id: "current-user-123",
+      },
+    ];
 
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);
@@ -168,6 +208,7 @@ describe("Timeline", () => {
 
     const { container } = render(Timeline);
 
+    // Should show 1 hidden card: assumption slot with user avatar
     const hiddenCards = container.querySelectorAll('[aria-label="Hidden track card"][aria-hidden="false"]');
     expect(hiddenCards.length).toBe(1);
   });
@@ -175,6 +216,18 @@ describe("Timeline", () => {
   test("challenger in challenging phase sees track card", () => {
     mockGameContext.game.turn.phase = TURN_PHASE.CHALLENGING;
     mockGameContext.permissions.can_make_assumptions = true;
+    mockGameContext.game.queue = ["user-1", "current-user-123"];
+    mockGameContext.game.cursor = 0;
+    mockGameContext.game.turn.assumptions = [
+      {
+        position: 1,
+        user_id: "current-user-123",
+      },
+    ];
+    mockGameContext.game.timelines["user-1"] = [
+      mockGameContext.game.timelines["current-user-123"][0],
+      mockGameContext.game.timelines["current-user-123"][1],
+    ];
 
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);
@@ -189,6 +242,7 @@ describe("Timeline", () => {
 
     const { container } = render(Timeline);
 
+    // Should show 1 hidden card: assumption slot with user avatar
     const hiddenCards = container.querySelectorAll('[aria-label="Hidden track card"][aria-hidden="false"]');
     expect(hiddenCards.length).toBe(1);
   });
@@ -263,5 +317,70 @@ describe("Timeline", () => {
     const { container } = render(Timeline);
     const hiddenCards = container.querySelectorAll('[aria-label="Hidden track card"][aria-hidden="false"]');
     expect(hiddenCards.length).toBe(0);
+  });
+
+  test("shows assumption card with user avatar in placeholder slot", () => {
+    mockGameContext.permissions.can_make_assumptions = true;
+    mockGameContext.game.turn.assumptions = [
+      {
+        position: 0,
+        user_id: "current-user-123",
+      },
+    ];
+
+    const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
+    getGameContextSpy.mockReturnValue(mockGameContext);
+
+    const getScopeContextSpy = vi.spyOn(ScopeContext, "getScopeContext");
+    getScopeContextSpy.mockReturnValue({
+      user: {
+        uuid: "current-user-123",
+        name: "Test User",
+      },
+    });
+
+    const { container } = render(Timeline);
+
+    const avatars = container.querySelectorAll('img[src="https://example.com/avatar.jpg"]');
+    expect(avatars.length).toBeGreaterThan(0);
+  });
+
+  test("slot positions shift when assumptions exist", () => {
+    mockGameContext.permissions.can_make_assumptions = true;
+    mockGameContext.game.turn.assumptions = [
+      {
+        position: 0,
+        user_id: "current-user-123",
+      },
+    ];
+
+    const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
+    getGameContextSpy.mockReturnValue(mockGameContext);
+
+    const getScopeContextSpy = vi.spyOn(ScopeContext, "getScopeContext");
+    getScopeContextSpy.mockReturnValue({
+      user: {
+        uuid: "current-user-123",
+        name: "Test User",
+      },
+    });
+
+    const { container } = render(Timeline);
+
+    // Timeline: [A, B] (2 tracks)
+    // With assumption at position 0:
+    // assumption(0) - track A - slot(1) - track B - slot(2)
+    // Positions: slots and assumptions have data-position, tracks don't
+    const slots = container.querySelectorAll('[data-position]');
+    const positions = Array.from(slots).map(s => Number(s.dataset.position));
+
+    // Should have 3 elements with data-position (assumption + 2 slots)
+    expect(slots.length).toBe(3);
+    // Assumption at position 0
+    expect(positions[0]).toBe(0);
+    // First slot after track A: position 1
+    expect(positions[1]).toBe(1);
+    // Second slot after track B: position 2
+    expect(positions[2]).toBe(2);
   });
 });

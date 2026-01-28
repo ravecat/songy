@@ -3,19 +3,15 @@ defmodule Songy.Core.Turn do
   Game turn state structure.
   """
 
-  @derive {Jason.Encoder, only: [:phase, :timeline, :assumptions]}
+  @derive {Jason.Encoder, only: [:phase, :assumptions]}
 
   defstruct [
     :phase,
-    :timeline,
     :assumptions
   ]
 
   @typedoc "Turn phase"
   @type phase :: :waiting | :ready | :challenging | :results
-
-  @typedoc "Timeline for challenging phase"
-  @type timeline :: list(Songy.Core.Track.t())
 
   @typedoc "Player assumptions"
   @type assumptions :: list(%{position: non_neg_integer(), user_id: String.t()})
@@ -23,7 +19,6 @@ defmodule Songy.Core.Turn do
   @typedoc "Turn structure"
   @type t :: %__MODULE__{
           phase: phase,
-          timeline: timeline,
           assumptions: assumptions
         }
 end

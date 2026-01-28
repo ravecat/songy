@@ -160,7 +160,7 @@ defmodule Songy.Boundary.Game do
       game = %{
         data
         | status: :in_progress,
-          turn: %Core.Turn{phase: :waiting, timeline: [], assumptions: []}
+          turn: %Core.Turn{phase: :waiting, assumptions: []}
       }
 
       {:next_state, {:in_progress, :waiting}, game, [{:reply, from, {:ok, game}}, {:next_event, :internal, :broadcast}]}
@@ -174,7 +174,12 @@ defmodule Songy.Boundary.Game do
     {:keep_state, data, [{:reply, from, {:ok, data}}]}
   end
 
-  def handle_event({:call, from}, :get_active_player, {:waiting, :none}, %{queue: queue, cursor: cursor} = data) do
+  def handle_event(
+        {:call, from},
+        :get_active_player,
+        {:waiting, :none},
+        %{queue: queue, cursor: cursor} = data
+      ) do
     active_player = Enum.at(queue, cursor)
     {:keep_state, data, [{:reply, from, {:ok, active_player}}]}
   end
@@ -206,11 +211,22 @@ defmodule Songy.Boundary.Game do
     handle_presence_left(data, user_id)
   end
 
-  def handle_event({:timeout, :challenging}, :auto_advance, {:in_progress, :challenging}, %{turn: turn} = data) do
+  def handle_event(
+        {:timeout, :challenging},
+        :auto_advance,
+        {:in_progress, :challenging},
+        %{turn: turn} = data
+      ) do
     Logger.debug("Game #{data.id}: Challenging phase timeout - auto-advancing to results")
 
+    active_player = Enum.at(data.queue, data.cursor)
+    base_timeline = Map.get(data.timelines, active_player, [])
+
     updated_game =
-      case Enum.find(turn.assumptions, &Core.Game.valid_assumption?(turn.timeline, &1.position)) do
+      case Enum.find(
+             turn.assumptions,
+             &Core.Game.valid_assumption?(base_timeline, data.track, &1.position)
+           ) do
         %{user_id: user_id} ->
           data
           |> increment_score(user_id)
@@ -259,14 +275,16 @@ defmodule Songy.Boundary.Game do
     {:keep_state, data, [{:reply, from, {:error, :game_already_started}}]}
   end
 
-  def handle_event({:call, from}, {:advance_turn, user_id}, {:in_progress, :waiting}, %{turn: turn} = data) do
+  def handle_event(
+        {:call, from},
+        {:advance_turn, user_id},
+        {:in_progress, :waiting},
+        %{turn: turn} = data
+      ) do
     with :ok <- Songy.Authorization.can?(:advance_turn, user_id, data) do
       Logger.debug("Game #{data.id}: Advancing turn phase")
 
-      active_player = Enum.at(data.queue, data.cursor)
-      timeline = Map.get(data.timelines, active_player, [])
-
-      updated_game = %{data | turn: %{turn | timeline: timeline, phase: :ready}}
+      updated_game = %{data | turn: %{turn | phase: :ready}}
 
       {:next_state, {:in_progress, :ready}, updated_game,
        [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
@@ -276,7 +294,12 @@ defmodule Songy.Boundary.Game do
     end
   end
 
-  def handle_event({:call, from}, {:advance_turn, user_id}, {:in_progress, :ready}, %{turn: turn} = data) do
+  def handle_event(
+        {:call, from},
+        {:advance_turn, user_id},
+        {:in_progress, :ready},
+        %{turn: turn} = data
+      ) do
     with :ok <- Songy.Authorization.can?(:advance_turn, user_id, data) do
       Logger.debug("Game #{data.id}: Advancing turn phase")
 
@@ -323,7 +346,7 @@ defmodule Songy.Boundary.Game do
         | player: Core.Player.set_playback(data.player, false),
           track: track,
           cursor: next_cursor,
-          turn: %Core.Turn{phase: :waiting, timeline: [], assumptions: []}
+          turn: %Core.Turn{phase: :waiting, assumptions: []}
       }
 
       {:next_state, {:in_progress, :waiting}, updated_game,
@@ -334,7 +357,11 @@ defmodule Songy.Boundary.Game do
         timeout = Application.fetch_env!(:songy, :game_session_termination_timeout)
 
         {:next_state, {:finished, :none}, game,
-         [{:reply, from, {:ok, game}}, {:next_event, :internal, :broadcast}, {:state_timeout, timeout, :shutdown}]}
+         [
+           {:reply, from, {:ok, game}},
+           {:next_event, :internal, :broadcast},
+           {:state_timeout, timeout, :shutdown}
+         ]}
 
       {:error, reason} ->
         {:keep_state, data, [{:reply, from, {:error, reason}}]}
@@ -345,14 +372,13 @@ defmodule Songy.Boundary.Game do
         {:call, from},
         {:make_assumption, user_id, position},
         {:in_progress, phase},
-        %{track: track, turn: turn} = data
+        data
       )
       when phase in [:ready, :challenging] do
     with :ok <- Songy.Authorization.can?(:make_assumption, user_id, data) do
       Logger.debug("Game #{data.id}: Making assumption for #{user_id} at #{position} (#{phase} phase)")
 
-      updated_turn = update_timeline(turn, track, user_id, position)
-      updated_game = %{data | turn: updated_turn}
+      updated_game = update_assumptions(data, user_id, position)
 
       {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
     else
@@ -364,6 +390,7 @@ defmodule Songy.Boundary.Game do
   def handle_event({:call, from}, {:start_playback, user_id}, {:in_progress, _phase}, data) do
     with :ok <- Songy.Authorization.can?(:control_playback, user_id, data) do
       updated_game = %{data | player: Core.Player.set_playback(data.player, true)}
+
       {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
     else
       {:error, reason} ->
@@ -374,6 +401,7 @@ defmodule Songy.Boundary.Game do
   def handle_event({:call, from}, {:pause_playback, user_id}, {:in_progress, _phase}, data) do
     with :ok <- Songy.Authorization.can?(:control_playback, user_id, data) do
       updated_game = %{data | player: Core.Player.set_playback(data.player, false)}
+
       {:keep_state, updated_game, [{:reply, from, {:ok, updated_game}}, {:next_event, :internal, :broadcast}]}
     else
       {:error, reason} ->
@@ -385,13 +413,19 @@ defmodule Songy.Boundary.Game do
     {:keep_state, data, [{:reply, from, {:ok, data}}]}
   end
 
-  def handle_event({:call, from}, :get_active_player, {:in_progress, _phase}, %{queue: queue, cursor: cursor} = data) do
+  def handle_event(
+        {:call, from},
+        :get_active_player,
+        {:in_progress, _phase},
+        %{queue: queue, cursor: cursor} = data
+      ) do
     active_player = Enum.at(queue, cursor)
     {:keep_state, data, [{:reply, from, {:ok, active_player}}]}
   end
 
   def handle_event({:call, from}, {:set_track, track}, {:in_progress, _phase}, data) do
     new_data = %{data | track: track}
+
     {:keep_state, new_data, [{:reply, from, {:ok, new_data}}, {:next_event, :internal, :broadcast}]}
   end
 
@@ -422,7 +456,12 @@ defmodule Songy.Boundary.Game do
     {:keep_state, data, [{:reply, from, {:ok, data}}]}
   end
 
-  def handle_event({:call, from}, :get_active_player, {:finished, :none}, %{queue: queue, cursor: cursor} = data) do
+  def handle_event(
+        {:call, from},
+        :get_active_player,
+        {:finished, :none},
+        %{queue: queue, cursor: cursor} = data
+      ) do
     {:keep_state, data, [{:reply, from, {:ok, Enum.at(queue, cursor)}}]}
   end
 
@@ -483,64 +522,56 @@ defmodule Songy.Boundary.Game do
     {:keep_state, updated_game, [{:next_event, :internal, :broadcast}]}
   end
 
-  defp update_timeline(
-         %Core.Turn{timeline: timeline, assumptions: assumptions} = turn,
-         track,
+  defp update_assumptions(%{turn: nil} = game, _user_id, _position), do: game
+
+  defp update_assumptions(
+         %{turn: %Core.Turn{assumptions: assumptions} = turn} = game,
          user_id,
          position
        ) do
+    active_player = Enum.at(game.queue, game.cursor)
+    base_timeline = Map.get(game.timelines, active_player, [])
     user_assumption = Enum.find(assumptions, &(&1.user_id == user_id))
 
-    position = max(0, min(position, length(timeline)))
+    max_position = length(base_timeline) + length(assumptions)
+    position = max(0, min(position, max_position))
 
     blocked? =
-      assumptions
-      |> Enum.flat_map(fn %{position: pos} -> [pos, pos + 1] end)
-      |> MapSet.new()
-      |> MapSet.member?(position)
+      Enum.any?(assumptions, fn
+        %{user_id: ^user_id} -> false
+        %{position: pos} -> abs(pos - position) <= 1
+      end)
 
     case {user_assumption, blocked?} do
       {nil, true} ->
-        turn
+        game
 
       {nil, false} ->
-        new_assumptions =
-          assumptions
-          |> Enum.map(fn
+        shifted_assumptions =
+          Enum.map(assumptions, fn
             %{position: pos} = assumption when pos >= position ->
               %{assumption | position: pos + 1}
 
             assumption ->
               assumption
           end)
-          |> Enum.concat([%{position: position, user_id: user_id}])
 
-        %{turn | timeline: List.insert_at(timeline, position, track), assumptions: new_assumptions}
+        new_assumptions = shifted_assumptions ++ [%{position: position, user_id: user_id}]
+
+        %{game | turn: %{turn | assumptions: new_assumptions}}
 
       {%{position: _}, true} ->
-        turn
+        game
 
-      {%{position: old_position}, false} ->
-        track_at_old = Enum.at(timeline, old_position)
-        insert_position = if position > old_position, do: position - 1, else: position
-        new_timeline = timeline |> List.delete_at(old_position) |> List.insert_at(insert_position, track_at_old)
-
+      {%{position: _old_position}, false} ->
+        # Simply update position - slots are fixed, no shifting needed
         new_assumptions =
           Enum.map(assumptions, fn
-            %{position: pos} = assumption when pos == old_position ->
-              %{assumption | position: insert_position}
-
-            %{position: pos} = assumption when old_position < pos and pos <= position ->
-              %{assumption | position: pos - 1}
-
-            %{position: pos} = assumption when position <= pos and pos < old_position ->
-              %{assumption | position: pos + 1}
-
-            assumption ->
-              assumption
+            %{user_id: ^user_id} -> %{position: position, user_id: user_id}
+            a -> a
           end)
 
-        %{turn | timeline: new_timeline, assumptions: new_assumptions}
+        %{game | turn: %{turn | assumptions: new_assumptions}}
     end
   end
 

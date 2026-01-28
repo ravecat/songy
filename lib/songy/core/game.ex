@@ -107,21 +107,20 @@ defmodule Songy.Core.Game do
         }
 
   @doc false
-  @spec valid_assumption?(list(Track.t()), non_neg_integer()) :: boolean()
-  def valid_assumption?(timeline, position) do
-    case Enum.at(timeline, position) do
-      nil ->
-        false
+  @spec valid_assumption?(list(Track.t()), Track.t() | nil, non_neg_integer()) :: boolean()
+  def valid_assumption?(_timeline, nil, _position), do: false
 
-      %Track{year: year} ->
-        left_neighbor = if position > 0, do: Enum.at(timeline, position - 1), else: nil
-        right_neighbor = Enum.at(timeline, position + 1)
+  def valid_assumption?(timeline, %Track{} = _track, position) when position > length(timeline),
+    do: false
 
-        left_valid = is_nil(left_neighbor) or left_neighbor.year <= year
-        right_valid = is_nil(right_neighbor) or year <= right_neighbor.year
+  def valid_assumption?(timeline, %Track{year: year}, position) do
+    left_neighbor = if position > 0, do: Enum.at(timeline, position - 1), else: nil
+    right_neighbor = Enum.at(timeline, position)
 
-        left_valid and right_valid
-    end
+    left_valid = is_nil(left_neighbor) or left_neighbor.year <= year
+    right_valid = is_nil(right_neighbor) or year <= right_neighbor.year
+
+    left_valid and right_valid
   end
 
   @doc false

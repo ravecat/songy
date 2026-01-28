@@ -994,11 +994,10 @@ defmodule Songy.Boundary.GameTest do
       %{user1: user1, user2: user2, track: track}
     end
 
-    test "adds new assumption for user at specified position", %{game_id: game_id, user1: user1, track: track} do
+    test "adds new assumption for user at specified position", %{game_id: game_id, user1: user1} do
       {:ok, game} = Game.make_assumption(game_id, user1.uuid, 0)
 
-      assert length(game.turn.timeline) == 2
-      assert Enum.at(game.turn.timeline, 0).id == track.id
+      assert length(Map.get(game.timelines, Enum.at(game.queue, game.cursor), [])) == 1
       assert length(game.turn.assumptions) == 1
       assert Enum.find(game.turn.assumptions, &(&1.user_id == user1.uuid)).position == 0
     end
@@ -1010,7 +1009,7 @@ defmodule Songy.Boundary.GameTest do
       # User1 (player) makes assumption at position 0
       {:ok, game} = Game.make_assumption(game_id, user1.uuid, 0)
 
-      assert length(game.turn.timeline) == 2
+      assert length(Map.get(game.timelines, Enum.at(game.queue, game.cursor), [])) == 1
       assert length(game.turn.assumptions) == 1
       assert Enum.find(game.turn.assumptions, &(&1.user_id == user1.uuid)).position == 0
     end
@@ -1026,15 +1025,15 @@ defmodule Songy.Boundary.GameTest do
     test "normalizes negative position to 0", %{game_id: game_id, user1: user1} do
       {:ok, game} = Game.make_assumption(game_id, user1.uuid, -5)
 
-      assert length(game.turn.timeline) == 2
+      assert length(Map.get(game.timelines, Enum.at(game.queue, game.cursor), [])) == 1
       assert Enum.find(game.turn.assumptions, &(&1.user_id == user1.uuid)).position == 0
     end
 
     test "normalizes position beyond timeline length", %{game_id: game_id, user1: user1} do
       {:ok, game} = Game.make_assumption(game_id, user1.uuid, 100)
 
-      # Position should be normalized to length(timeline) which is 1 initially, becomes 2 after insertion
-      assert length(game.turn.timeline) == 2
+      # Position should be normalized to length(timeline) which is 1 initially
+      assert length(Map.get(game.timelines, Enum.at(game.queue, game.cursor), [])) == 1
       assert Enum.find(game.turn.assumptions, &(&1.user_id == user1.uuid)).position == 1
     end
 
@@ -1103,8 +1102,9 @@ defmodule Songy.Boundary.GameTest do
       # user1 blocks positions 0 and 1, so user2 must use position 2
       {:ok, game} = Game.make_assumption(game_id, user2.uuid, 2)
 
-      assert length(game.turn.timeline) == 3  # user1 at 0, gap at 1, user2 at 2
-      assert length(game.turn.assumptions) == 2  # user1 and user2
+      assert length(Map.get(game.timelines, Enum.at(game.queue, game.cursor), [])) == 1
+      # user1 and user2
+      assert length(game.turn.assumptions) == 2
       assert Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid)).position == 2
     end
 
@@ -1125,9 +1125,10 @@ defmodule Songy.Boundary.GameTest do
       # user3 (challenger) tries position 2 - blocked by user2 (blocks 2,3)
       {:ok, game} = Game.make_assumption(game_id, user3.uuid, 2)
 
-      # Three tracks in timeline (user1, gap, user2), assumptions = 2
-      assert length(game.turn.timeline) == 3
+      assert length(Map.get(game.timelines, Enum.at(game.queue, game.cursor), [])) == 1
       assert length(game.turn.assumptions) == 2
+      assert Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid)).position == 2
+      refute Enum.find(game.turn.assumptions, &(&1.user_id == user3.uuid))
     end
 
     test "normalizes negative position to 0", %{game_id: game_id, user2: user2} do
@@ -1135,29 +1136,24 @@ defmodule Songy.Boundary.GameTest do
       # Position 0 is blocked, but timeline still gets updated (TODO: investigate)
       {:ok, game} = Game.make_assumption(game_id, user2.uuid, -5)
 
-      # Timeline has 2 elements despite blocked position
-      assert length(game.turn.timeline) == 2
-      assert length(game.turn.assumptions) == 1  # Only user1
+      assert length(Map.get(game.timelines, Enum.at(game.queue, game.cursor), [])) == 1
+      # Only user1
+      assert length(game.turn.assumptions) == 1
       refute Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid))
     end
 
     test "normalizes position beyond timeline length", %{game_id: game_id, user2: user2} do
       {:ok, game} = Game.make_assumption(game_id, user2.uuid, 100)
 
-      # user1 at position 0, position 100 normalizes to end of timeline
-      # After normalization and blocking checks, timeline expands
-      assert length(game.turn.timeline) == 3
+      # user1 at position 0, position 100 normalizes to max position (2)
+      assert length(Map.get(game.timelines, Enum.at(game.queue, game.cursor), [])) == 1
       assert Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid))
     end
 
-    test "broadcasts after assumption in challenging phase", %{
-      game_id: game_id,
-      user2: user2
-    } do
+    test "broadcasts after assumption in challenging phase", %{game_id: game_id, user2: user2} do
       {:ok, _} = Game.make_assumption(game_id, user2.uuid, 2)
 
       assert_receive {:state, game}, 25
-      # user1 + user2 = 2 assumptions
       assert length(game.turn.assumptions) == 2
     end
 
@@ -1172,7 +1168,9 @@ defmodule Songy.Boundary.GameTest do
 
       # Same game state (no updates when position is the same)
       assert game1.turn.phase == game2.turn.phase
-      assert game1.turn.timeline == game2.turn.timeline
+
+      assert Map.get(game1.timelines, Enum.at(game1.queue, game1.cursor), []) ==
+               Map.get(game2.timelines, Enum.at(game2.queue, game2.cursor), [])
     end
 
     test "blocks assumptions adjacent to other users", %{
@@ -1184,12 +1182,11 @@ defmodule Songy.Boundary.GameTest do
       {:ok, _} = Game.make_assumption(game_id, user2.uuid, 2)
       assert_receive {:state, _}
 
-      # user1 at position 0 blocks 0,1; user2 at position 2 blocks 2,3
-      # user3 tries to make assumption at position 1 or 2 - both blocked
+      # user3 tries to make assumption at position 1 - blocked by user1
       {:ok, game} = Game.make_assumption(game_id, user3.uuid, 1)
 
-      # Timeline unchanged (user1, gap, user2)
-      assert length(game.turn.timeline) == 3
+      # Timeline unchanged (base timeline only)
+      assert length(Map.get(game.timelines, Enum.at(game.queue, game.cursor), [])) == 1
       # user3 has no assumption
       user2_assumption = Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid))
       assert user2_assumption.position == 2

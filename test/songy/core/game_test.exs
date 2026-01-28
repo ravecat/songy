@@ -134,15 +134,12 @@ defmodule Songy.Core.GameTest do
         %Track{id: "t3", title: "Song C", artist: "Artist", year: 2020}
       ]
 
-      bad_timeline = [
-        %Track{id: "t1", title: "Song A", artist: "Artist", year: 2000},
-        %Track{id: "t2", title: "Song B", artist: "Artist", year: 2020},
-        %Track{id: "t3", title: "Song C", artist: "Artist", year: 2010}
-      ]
+      valid_track = %Track{id: "t4", title: "Song D", artist: "Artist", year: 2005}
+      invalid_track = %Track{id: "t5", title: "Song E", artist: "Artist", year: 2015}
 
-      assert Game.valid_assumption?(timeline, 1)
-      refute Game.valid_assumption?(bad_timeline, 1)
-      refute Game.valid_assumption?(timeline, 99)
+      assert Game.valid_assumption?(timeline, valid_track, 1)
+      refute Game.valid_assumption?(timeline, invalid_track, 1)
+      refute Game.valid_assumption?(timeline, valid_track, 99)
     end
   end
 

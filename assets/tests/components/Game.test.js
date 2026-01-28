@@ -29,6 +29,24 @@ describe("Game", () => {
         queue: ["user-1", "user-2"],
         cursor: 0,
         track: null,
+        timelines: {
+          "user-1": [
+            {
+              id: "timeline-track",
+              title: "Timeline Track",
+              artist: "Timeline Artist",
+              year: 2019,
+            },
+          ],
+          "user-2": [
+            {
+              id: "timeline-track",
+              title: "Timeline Track",
+              artist: "Timeline Artist",
+              year: 2019,
+            },
+          ],
+        },
         turn: {
           phase: TURN_PHASE.READY,
           timeline: [
