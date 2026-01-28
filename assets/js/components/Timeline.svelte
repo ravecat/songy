@@ -183,6 +183,7 @@
     onpointerdown={() => (hasInteracted = true)}
     ontouchmove={() => (hasInteracted = true)}
     role="list"
+    aria-label="Timeline"
   >
     {#each cells as cell, index (index)}
       <div

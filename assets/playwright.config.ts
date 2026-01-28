@@ -8,7 +8,7 @@ export default defineConfig({
   workers: 1,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:4000',
+    baseURL: process.env.BASE_URL || 'http://localhost:4001',
     trace: 'on-first-retry',
   },
   projects: [
@@ -17,11 +17,11 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-
   webServer: {
-    command: 'mix phx.server',
-    url: 'http://localhost:4000',
+    command: 'MIX_ENV=test PORT=4001 VITE_PORT=5174 mix phx.server',
+    url: 'http://localhost:4001',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
+    cwd: '..',
   },
 });

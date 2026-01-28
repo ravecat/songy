@@ -14,7 +14,7 @@
   {#if !game}
     <Logo />
   {:else}
-    <div class="room__content">
+    <div class="room__content" role="main" aria-label="Game room">
       <div class="room__header">
         <Timer />
         <div class="room__header-actions">

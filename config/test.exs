@@ -15,9 +15,11 @@ import Config
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
 config :songy, SongyWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4002],
+  http: [ip: {127, 0, 0, 1}, port: String.to_integer(System.get_env("PORT") || "4002")],
   secret_key_base: "Puh1NLtCsE4ZyuOAo+juoEz4Hjh/8LI5nUOGBIhzx00Ewl661pI30SCVZ3oVfBNg",
-  server: false
+  server: true,
+  watchers: [vite: {Bun, :install_and_run, [:vite, ~w(dev)]}],
+  static_url: [host: "localhost", port: String.to_integer(System.get_env("VITE_PORT") || "5173")]
 
 # In test we don't send emails
 config :songy, Songy.Mailer, adapter: Swoosh.Adapters.Test

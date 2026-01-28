@@ -3,11 +3,14 @@ import tailwindcss from '@tailwindcss/vite';
 import { svelte, vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import path from 'path';
 
+const vitePort = parseInt(process.env.VITE_PORT || '5173', 10);
+const phxPort = process.env.PORT || '4000';
+
 export default defineConfig({
   server: {
-    port: 5173,
+    port: vitePort,
     strictPort: true,
-    cors: { origin: ['http://localhost:4000', 'http://127.0.0.1:4000'] },
+    cors: { origin: [`http://localhost:${phxPort}`, `http://127.0.0.1:${phxPort}`] },
     fs: {
       allow: [
         searchForWorkspaceRoot(process.cwd()),
