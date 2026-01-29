@@ -4,6 +4,7 @@
   import { GAME_STATUS } from "~shared/types/game";
   import TurnWaiting from "~components/TurnWaiting.svelte";
   import Timeline from "~components/Timeline.svelte";
+  import TurnResults from "~components/TurnResults.svelte";
 
   const { game } = $derived.by(getGameContext);
   const phase = $derived(game?.turn?.phase);
@@ -12,8 +13,10 @@
 
 {#if phase === TURN_PHASE.WAITING}
   <TurnWaiting />
-{:else if phase === TURN_PHASE.READY || phase === TURN_PHASE.CHALLENGING || phase === TURN_PHASE.RESULTS}
+{:else if phase === TURN_PHASE.READY || phase === TURN_PHASE.CHALLENGING}
   <Timeline />
+{:else if phase === TURN_PHASE.RESULTS}
+  <TurnResults />
 {:else if status === GAME_STATUS.WAITING}
   <div class="game-waiting">waiting for players...</div>
 {/if}

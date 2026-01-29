@@ -122,7 +122,6 @@
           : { kind: "slot", position },
       );
 
-      // Don't count current user's assumption - backend won't shift on update
       if (user && !isCurrentUser) assumptionsBefore++;
 
       if (i < activeTimeline.length) {
