@@ -25,7 +25,7 @@
     background: transparent;
     border: none;
     cursor: pointer;
-    border-radius: 0.5rem;
+    border-radius: var(--radius-md);
     color: white;
     padding: 0;
     transition: background-color 0.15s ease-out;
@@ -46,7 +46,7 @@
 
   .participants-button__value {
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     line-height: 1;
     min-width: 1.25rem;
   }

@@ -78,14 +78,12 @@
     width: 8rem;
     height: 8rem;
     background: linear-gradient(135deg, #facc15, #f97316);
-    border-radius: 0.5rem;
+    border-radius: var(--radius-md);
     transform: rotateY(180deg);
-    transition: transform 0.4s;
+    transition: transform var(--animation-base);
     transform-style: preserve-3d;
     user-select: none;
-    box-shadow:
-      0 10px 15px -3px rgba(0, 0, 0, 0.1),
-      0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-md);
   }
 
   .track-card__inner_revealed {
@@ -125,13 +123,13 @@
   }
 
   .track-card__artist {
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     font-size: 0.875rem;
   }
 
   .track-card__year {
     font-size: 2.25rem;
-    font-weight: 700;
+    font-weight: var(--font-weight-bold);
     line-height: 1;
     letter-spacing: 0.025em;
   }

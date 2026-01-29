@@ -24,15 +24,15 @@
   .vinyl-disc {
     width: 100%;
     height: 100%;
-    border-radius: 50%;
+    border-radius: var(--radius-circle);
     background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%);
     box-shadow:
-      0 4px 16px rgba(0, 0, 0, 0.5),
+      var(--shadow-glass),
       inset 0 0 40px rgba(0, 0, 0, 0.3);
     display: flex;
     align-items: center;
     justify-content: center;
-    animation: spin 8s linear infinite;
+    animation: spin 8s var(--ease-linear) infinite;
   }
 
   @keyframes spin {
@@ -47,7 +47,7 @@
   .vinyl-disc__grooves {
     position: absolute;
     inset: 8px;
-    border-radius: 50%;
+    border-radius: var(--radius-circle);
     background: repeating-radial-gradient(
       circle at center,
       transparent 0px,
@@ -60,7 +60,7 @@
   .vinyl-disc__label {
     width: 50px;
     height: 50px;
-    border-radius: 50%;
+    border-radius: var(--radius-circle);
     background: #1a1a1a;
     display: flex;
     align-items: center;
@@ -71,13 +71,13 @@
 
   .vinyl-disc__label_fallback {
     background: linear-gradient(135deg, #facc15, #f97316);
-    box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.3);
+    box-shadow: inset 0 var(--border-thick) var(--spacing-xs) rgba(255, 255, 255, 0.3);
   }
 
   .vinyl-disc__label-cover {
     width: 100%;
     height: 100%;
-    border-radius: 50%;
+    border-radius: var(--radius-circle);
     object-fit: cover;
   }
 </style>

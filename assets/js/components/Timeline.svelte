@@ -241,9 +241,9 @@
     flex-shrink: 0;
     scroll-snap-align: center;
     background: linear-gradient(135deg, #facc15, #f97316);
-    border-radius: 0.5rem;
-    opacity: 0.3;
-    border: 2px dashed rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-md);
+    opacity: var(--opacity-subtle);
+    border: var(--border-thick) dashed rgba(255, 255, 255, 0.2);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -251,7 +251,7 @@
   }
 
   .timeline__placeholder_track {
-    opacity: 1;
+    opacity: var(--opacity-full);
     background: none;
     border: none;
   }
@@ -259,10 +259,10 @@
   .timeline__assumption-avatar {
     width: 4rem;
     height: 4rem;
-    border-radius: 50%;
+    border-radius: var(--radius-circle);
     overflow: hidden;
-    border: 2px solid rgba(255, 255, 255, 0.5);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: var(--border-thick) solid rgba(255, 255, 255, 0.5);
+    box-shadow: var(--shadow-base);
   }
 
   .timeline__assumption-avatar img {

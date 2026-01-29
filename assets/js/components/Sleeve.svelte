@@ -35,10 +35,10 @@
       #3d2e26 40%,
       #2a1f1a 100%
     );
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.5),
-      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      var(--shadow-glass),
+      var(--shadow-inner);
   }
 
   .sleeve__cover-img {
@@ -47,8 +47,8 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    border-radius: 4px;
-    opacity: 0.3;
+    border-radius: var(--radius-sm);
+    opacity: var(--opacity-subtle);
   }
 
   .sleeve__info {
@@ -64,7 +64,7 @@
     bottom: 1rem;
     left: 1rem;
     font-size: 2rem;
-    font-weight: 800;
+    font-weight: var(--font-weight-extrabold);
     background: linear-gradient(135deg, #facc15, #f97316);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -74,7 +74,7 @@
 
   .sleeve__artist {
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     color: rgba(255, 255, 255, 0.9);
     line-height: 1.2;
   }

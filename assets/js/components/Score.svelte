@@ -30,7 +30,7 @@
     color: white;
     background: transparent;
     border: none;
-    border-radius: 0.5rem;
+    border-radius: var(--radius-md);
     cursor: pointer;
     padding: 0;
     transition: background-color 0.15s ease-out;
@@ -50,13 +50,13 @@
   }
 
   .score-button:focus-visible {
-    outline: 2px solid rgba(255, 255, 255, 0.35);
-    outline-offset: 2px;
+    outline: var(--border-thick) solid rgba(255, 255, 255, 0.35);
+    outline-offset: var(--spacing-xs);
   }
 
   .score-button__value {
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     line-height: 1;
     min-width: 1.25rem;
   }

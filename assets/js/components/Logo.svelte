@@ -66,41 +66,41 @@
 <style>
   .logo__bar {
     fill: white;
-    opacity: 0.7;
+    opacity: var(--opacity-medium);
     animation: bounce 2s infinite ease-in-out;
   }
 
   .logo__letter {
     fill: white;
     font-size: 12px;
-    font-weight: bold;
-    opacity: 0.8;
+    font-weight: var(--font-weight-bold);
+    opacity: var(--opacity-emphasis);
     text-anchor: middle;
   }
 
   .logo__bar_1,
   .logo__letter_1 {
-    animation-delay: 0.2s;
+    animation-delay: var(--delay-base);
     animation-duration: 1.05s;
   }
   .logo__bar_2,
   .logo__letter_2 {
-    animation-delay: 0.4s;
+    animation-delay: var(--delay-lg);
     animation-duration: 1.35s;
   }
   .logo__bar_3,
   .logo__letter_3 {
-    animation-delay: 0.1s;
+    animation-delay: var(--delay-sm);
     animation-duration: 1.2s;
   }
   .logo__bar_4,
   .logo__letter_4 {
-    animation-delay: 0.5s;
+    animation-delay: var(--delay-xl);
     animation-duration: 0.9s;
   }
   .logo__bar_5,
   .logo__letter_5 {
-    animation-delay: 0.3s;
+    animation-delay: var(--delay-md);
     animation-duration: 1.15s;
   }
 

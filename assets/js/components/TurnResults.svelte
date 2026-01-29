@@ -79,18 +79,18 @@
   .results__avatar {
     width: 4rem;
     height: 4rem;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     object-fit: cover;
-    outline: 2px solid rgba(255, 255, 255, 0.8);
-    outline-offset: 3px;
+    outline: var(--border-thick) solid rgba(255, 255, 255, 0.8);
+    outline-offset: var(--spacing-xs);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    animation: avatar-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
-    animation-delay: calc(var(--index) * 0.08s + 0.2s);
+    animation: avatar-pop var(--animation-base) var(--ease-bounce) backwards;
+    animation-delay: calc(var(--index) * 0.08s + var(--delay-base));
   }
 
   @keyframes avatar-pop {
     from {
-      opacity: 0;
+      opacity: var(--opacity-full);
       transform: scale(0.5);
     }
   }
