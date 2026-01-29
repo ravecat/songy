@@ -28,7 +28,7 @@
     "pixi.js": "^8.14.3",
     "svelte": "^5.41.0",
     "svelte-dnd-action": "^0.9.64",
-    "tailwind-merge": "^2.6.0",
+    "tailwind-merge": "^3.4.0",
     "topbar": "^3.0.0",
     "xstate": "^5.25.0"
   },
