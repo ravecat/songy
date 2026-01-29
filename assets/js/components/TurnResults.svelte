@@ -15,6 +15,24 @@
       ({ user_id }) => participants.get(user_id)!,
     ),
   );
+
+  // TODO: replace with actual winner logic from backend
+  const winnerId = $derived(challengers[0]?.uuid);
+
+  // Mock losers for visual testing
+  const mockLosers = [
+    {
+      uuid: "mock-1",
+      name: "Player 2",
+      avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=player2",
+    },
+    {
+      uuid: "mock-2",
+      name: "Player 3",
+      avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=player3",
+    },
+  ];
+  const displayChallengers = $derived([...challengers, ...mockLosers]);
 </script>
 
 <div class="results">
@@ -27,13 +45,20 @@
     </div>
   </div>
   <div class="results__avatars">
-    {#each challengers as user, i (user.uuid)}
-      <img
-        src={user.avatar_url}
-        alt={user.name}
-        class="results__avatar"
+    {#each displayChallengers as user, i (user.uuid)}
+      <div
+        class="results__challenger"
+        class:results__challenger--winner={user.uuid === winnerId}
         style="--index: {i}"
-      />
+      >
+        <div class="results__frame">
+          <img src={user.avatar_url} alt={user.name} class="results__avatar" />
+          {#if user.uuid === winnerId}
+            <span class="results__score"> +1 </span>
+          {/if}
+        </div>
+        <span class="results__name">{user.name}</span>
+      </div>
     {/each}
   </div>
 </div>
@@ -44,7 +69,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 1.5rem;
+    padding: var(--spacing-md);
     width: 100%;
     height: 100%;
   }
@@ -70,28 +95,90 @@
 
   .results__avatars {
     display: flex;
-    justify-content: center;
+    justify-content: space-around;
+    align-items: flex-start;
+    margin-top: var(--spacing-lg);
+    gap: var(--spacing-md);
+  }
+
+  .results__challenger {
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    margin-top: 1rem;
-    gap: 0.5rem;
+    max-width: 5rem;
+    animation: avatar-pop 0.4s var(--ease-bounce) backwards;
+    animation-delay: calc(var(--index) * 0.08s + 0.2s);
+  }
+
+  .results__challenger:not(.results__challenger--winner) {
+    opacity: var(--opacity-muted);
+  }
+
+  .results__frame {
+    position: relative;
+    padding: var(--spacing-xs);
+    border: var(--border-thick) solid rgba(255, 255, 255, 0.8);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-base);
+  }
+
+  .results__challenger--winner .results__frame {
+    border-color: var(--color-gold);
+    box-shadow: var(--shadow-gold-glow), var(--shadow-base);
   }
 
   .results__avatar {
+    display: block;
     width: 4rem;
     height: 4rem;
     border-radius: var(--radius-sm);
     object-fit: cover;
-    outline: var(--border-thick) solid rgba(255, 255, 255, 0.8);
-    outline-offset: var(--spacing-xs);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    animation: avatar-pop var(--animation-base) var(--ease-bounce) backwards;
-    animation-delay: calc(var(--index) * 0.08s + var(--delay-base));
+  }
+
+  .results__score {
+    position: absolute;
+    top: -0.625rem;
+    right: -0.625rem;
+    width: var(--spacing-md);
+    height: var(--spacing-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    border-radius: var(--radius-sm);
+    background: rgba(0, 0, 0, var(--opacity-muted));
+    color: rgba(255, 255, 255, 0.9);
+    animation: score-pop 0.3s var(--ease-bounce) backwards;
+    animation-delay: calc(var(--index) * 0.08s + var(--delay-xl));
+  }
+
+  .results__challenger--winner .results__score {
+    background: var(--gradient-gold);
+    color: #000;
+  }
+
+  .results__name {
+    width: 100%;
+    margin-top: var(--spacing-sm);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    color: rgba(255, 255, 255, var(--opacity-emphasis));
+    text-align: center;
+    overflow: hidden;
   }
 
   @keyframes avatar-pop {
     from {
-      opacity: var(--opacity-full);
+      opacity: 0;
       transform: scale(0.5);
+    }
+  }
+
+  @keyframes score-pop {
+    from {
+      opacity: 0;
+      transform: scale(0);
     }
   }
 </style>

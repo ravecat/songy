@@ -166,15 +166,23 @@ describe("Game", () => {
     };
 
     mockChannelContext.game.turn.phase = TURN_PHASE.RESULTS;
+    mockChannelContext.game.track = {
+      id: "track-1",
+      title: "Test Track",
+      artist: "Test Artist",
+      year: 2020,
+      preview_url: "https://example.com/preview.mp3",
+      cover_url: "https://example.com/cover.jpg",
+    };
 
     getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockReturnValue(mockChannelContext);
 
     render(Game);
 
-    expect(screen.getAllByText("Timeline Track")).toHaveLength(2);
-    expect(screen.getAllByText("Timeline Artist")).toHaveLength(2);
-    expect(screen.getByText("2019")).toBeInTheDocument();
+    expect(screen.getByText("Test Artist")).toBeInTheDocument();
+    expect(screen.getByText("Test Track")).toBeInTheDocument();
+    expect(screen.getByText("2020")).toBeInTheDocument();
   });
 
   test("renders nothing when turn phase is undefined", () => {

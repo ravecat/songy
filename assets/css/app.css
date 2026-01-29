@@ -96,6 +96,10 @@
   --spotify-green: #1db954;
   --spotify-green-hover: #1ed760;
   --spotify-black: #191414;
+  --color-gold: #facc15;
+  --color-orange: #f97316;
+  --gradient-gold: linear-gradient(135deg, var(--color-gold), var(--color-orange));
+  --shadow-gold-glow: 0 0 20px rgba(250, 204, 21, 0.6), 0 0 40px rgba(250, 204, 21, 0.3);
 }
 
 /* Shadows */
@@ -149,9 +153,20 @@
 
 /* Font weights */
 :root {
+  --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
   --font-weight-extrabold: 800;
+}
+
+/* Font sizes */
+:root {
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.5rem;
+  --font-size-2xl: 2rem;
 }
 
 /* Box shadows */
@@ -189,16 +204,6 @@
   --border-thin: 1px;
   --border-base: 1.5px;
   --border-thick: 2px;
-}
-
-/* Common sizes */
-:root {
-  --size-xs: 1rem;
-  --size-sm: 2rem;
-  --size-base: 3rem;
-  --size-md: 4rem;
-  --size-lg: 8rem;
-  --size-xl: 12rem;
 }
 
 /* Line heights */
