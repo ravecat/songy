@@ -106,6 +106,14 @@
   --shadow-btn-accent-hover: 0 18px 36px rgba(25, 20, 20, 0.22);
 }
 
+/* Z-index layers */
+:root {
+  --z-base: 0;
+  --z-above: 1;
+  --z-overlay: 10;
+  --z-modal: 100;
+}
+
 /* Transition durations */
 :root {
   --transition-fast: 150ms ease;
