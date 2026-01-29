@@ -25,12 +25,10 @@
     "phoenix": "workspace:*",
     "phoenix_html": "workspace:*",
     "phoenix_live_view": "workspace:*",
-    "pixi.js": "8.14.3",
     "svelte": "^5.49.0",
     "svelte-dnd-action": "^0.9.69",
     "tailwind-merge": "^3.4.0",
-    "topbar": "^3.0.0",
-    "xstate": "5.25.0"
+    "topbar": "^3.0.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.0",
