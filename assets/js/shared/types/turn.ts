@@ -31,4 +31,7 @@ export interface Turn {
 
   /** Player position assumptions: array of {position, user_id} objects */
   assumptions?: Array<{position: number; user_id: string}>;
+
+  /** Winner of the round (set in results phase) */
+  winner_id?: string;
 }

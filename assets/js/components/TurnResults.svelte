@@ -16,23 +16,7 @@
     ),
   );
 
-  // TODO: replace with actual winner logic from backend
-  const winnerId = $derived(challengers[0]?.uuid);
-
-  // Mock losers for visual testing
-  const mockLosers = [
-    {
-      uuid: "mock-1",
-      name: "Player 2",
-      avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=player2",
-    },
-    {
-      uuid: "mock-2",
-      name: "Player 3",
-      avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=player3",
-    },
-  ];
-  const displayChallengers = $derived([...challengers, ...mockLosers]);
+  const winnerId = $derived(game?.turn?.winner_id);
 </script>
 
 <div class="results">
@@ -44,12 +28,14 @@
       <Sleeve {track} />
     </div>
   </div>
-  <div class="results__avatars">
-    {#each displayChallengers as user, i (user.uuid)}
+  <div class="results__avatars" role="list">
+    {#each challengers as user, i (user.uuid)}
       <div
         class="results__challenger"
         class:results__challenger--winner={user.uuid === winnerId}
         style="--index: {i}"
+        role="listitem"
+        aria-current={user.uuid === winnerId ? "true" : undefined}
       >
         <div class="results__frame">
           <img src={user.avatar_url} alt={user.name} class="results__avatar" />

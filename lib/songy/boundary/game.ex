@@ -222,21 +222,24 @@ defmodule Songy.Boundary.Game do
     active_player = Enum.at(data.queue, data.cursor)
     base_timeline = Map.get(data.timelines, active_player, [])
 
-    updated_game =
+    {updated_game, winner_id} =
       case Enum.find(
              turn.assumptions,
              &Core.Game.valid_assumption?(base_timeline, data.track, &1.position)
            ) do
         %{user_id: user_id} ->
-          data
-          |> increment_score(user_id)
-          |> extend_user_timeline(user_id)
+          game =
+            data
+            |> increment_score(user_id)
+            |> extend_user_timeline(user_id)
+
+          {game, user_id}
 
         nil ->
-          data
+          {data, nil}
       end
 
-    updated_game = %{updated_game | turn: %{turn | phase: :results}}
+    updated_game = %{updated_game | turn: %{turn | phase: :results, winner_id: winner_id}}
 
     {:next_state, {:in_progress, :results}, updated_game, [{:next_event, :internal, :broadcast}]}
   end

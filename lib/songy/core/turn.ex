@@ -3,11 +3,12 @@ defmodule Songy.Core.Turn do
   Game turn state structure.
   """
 
-  @derive {Jason.Encoder, only: [:phase, :assumptions]}
+  @derive {Jason.Encoder, only: [:phase, :assumptions, :winner_id]}
 
   defstruct [
     :phase,
-    :assumptions
+    :assumptions,
+    :winner_id
   ]
 
   @typedoc "Turn phase"
@@ -16,9 +17,12 @@ defmodule Songy.Core.Turn do
   @typedoc "Player assumptions"
   @type assumptions :: list(%{position: non_neg_integer(), user_id: String.t()})
 
+  @type winner :: String.t() | nil
+
   @typedoc "Turn structure"
   @type t :: %__MODULE__{
           phase: phase,
-          assumptions: assumptions
+          assumptions: assumptions,
+          winner_id: winner
         }
 end
