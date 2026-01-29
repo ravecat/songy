@@ -48,5 +48,6 @@ config :mix_test_watch,
   exclude: [
     ~r/\.#/,
     ~r{priv/repo/migrations},
-    ~r{priv/static/assets}
+    ~r{priv/static/assets},
+    ~r{\.worktrees/}
   ]
