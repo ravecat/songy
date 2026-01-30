@@ -1,224 +1,254 @@
 <script>
-  import { inertia } from "@inertiajs/svelte";
+  import { inertia, Deferred } from "@inertiajs/svelte";
   import { Provider } from "~shared/types/provider";
-  import Logo from "~components/Logo.svelte";
-  import { Users, ListOrdered, Trophy } from "lucide-svelte";
+
+  let { tracks } = $props();
 </script>
 
 <svelte:head>
   <title>Songy - Music Game</title>
 </svelte:head>
 
-{#snippet spotify()}
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-    <path
-      d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424c-.18.295-.563.387-.857.207-2.348-1.435-5.304-1.76-8.785-.964-.335.077-.67-.133-.746-.468-.077-.334.132-.67.467-.746 3.809-.87 7.077-.496 9.713 1.115.293.18.386.563.208.856zm1.223-2.723c-.226.367-.706.482-1.073.257-2.687-1.652-6.785-2.131-9.965-1.166-.413.125-.849-.106-.974-.518-.125-.413.106-.849.518-.974 3.632-1.102 8.147-.568 11.239 1.328.366.226.482.706.255 1.073zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71c-.493.15-1.016-.128-1.166-.62-.15-.493.128-1.016.62-1.166 3.532-1.073 9.404-.865 13.115 1.338.445.264.590.837.326 1.282-.264.445-.837.590-1.282.326z"
-    />
-  </svg>
-{/snippet}
-
+<h1 class="sr-only">Songy - Music Game</h1>
 <div class="landing">
-  <div class="rules-section">
-    <div class="logo-container">
-      <Logo />
-    </div>
-    <div class="rules-content">
-      <h1 class="title">Music Quiz Game</h1>
-      <ul class="rules-list">
-        <li>
-          <Users size={20} strokeWidth={2.5} />
-          <span>Play with friends</span>
-        </li>
-        <li>
-          <ListOrdered size={20} strokeWidth={2.5} />
-          <span>Place songs on the timeline</span>
-        </li>
-        <li>
-          <Trophy size={20} strokeWidth={2.5} />
-          <span>Wins!</span>
-        </li>
-      </ul>
-    </div>
+  <div class="landing__covers">
+    <Deferred data="tracks">
+      {#snippet fallback()}
+        <div class="cover-grid">
+          {#each Array(50) as _}
+            <div class="cover-grid__item cover-grid__item_placeholder"></div>
+          {/each}
+        </div>
+      {/snippet}
+      <div class="cover-grid">
+        {#each tracks as track, i (track.id)}
+          <img
+            src={track.cover_url}
+            alt="{track.artist} - {track.title}"
+            class="cover-grid__item"
+            style="--i: {i}"
+          />
+        {/each}
+      </div>
+    </Deferred>
   </div>
 
   <div class="actions">
-    <form
-      use:inertia={{
-        href: "/create",
-        method: "post",
-        data: { provider: Provider.ITUNES },
-      }}
-    >
-      <button type="submit" class="btn btn-apple w-3xs"> Create game </button>
-    </form>
-
-    <p class="actions-divider">
-      or use your favorite music service without limits
-    </p>
-
-    <form
-      use:inertia={{
-        href: "/create",
-        method: "post",
-        data: { provider: Provider.SPOTIFY },
-      }}
-    >
-      <button type="submit" class="btn btn-primary w-3xs">
-        {@render spotify()}
-        Create game
-      </button>
-    </form>
+    <div class="hero">
+      <p class="hero__tagline">The Music Guessing Game</p>
+      <h2 class="hero__title">
+        Feel the <span class="hero__words">
+          <span class="hero__word">music</span>
+          <span class="hero__word">vibes</span>
+          <span class="hero__word">beats</span>
+        </span>?
+      </h2>
+      <p class="hero__description">
+        Challenge friends. Guess the year. Win.
+      </p>
+      <form
+        use:inertia={{
+          href: "/create",
+          method: "post",
+          data: { provider: Provider.ITUNES },
+        }}
+      >
+        <button type="submit" class="btn btn-quick-start w-3xs">
+          Quick game
+        </button>
+      </form>
+    </div>
   </div>
 </div>
 
+
 <style>
   .landing {
-    min-height: 100vh;
+    height: 100vh;
     display: flex;
     flex-direction: row;
+    overflow: hidden;
   }
 
-  .rules-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem 1.5rem;
-    gap: 2rem;
+  .landing__covers {
+    flex: 1 1 auto;
+    max-width: 600px;
+    overflow: hidden;
     background-image: var(--landing-gradient);
-    flex: 0 0 50%;
-    overflow: hidden;
-    opacity: 1;
-    visibility: visible;
-    transition:
-      opacity var(--transition-fast),
-      visibility var(--transition-fast),
-      flex-basis var(--transition-fast),
-      padding var(--transition-fast),
-      gap var(--transition-fast);
-  }
-
-  .logo-container {
-    height: clamp(60px, 15vw, 120px);
-    width: clamp(60px, 15vw, 120px);
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 0.75rem;
+    height: 100vh;
   }
 
-  .rules-content {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-    text-align: center;
-    color: var(--color-info-content);
-    max-width: 100%;
+  .cover-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    width: 100%;
+    max-width: min(100%, 800px);
+    height: 100%;
+    align-content: center;
+    overflow: visible;
   }
 
-  .title {
-    font-size: clamp(1.25rem, 4.5vw, 2.5rem);
-    font-weight: 700;
-    line-height: var(--line-tight);
-    text-align: center;
+  .cover-grid__item {
+    aspect-ratio: 1 / 1;
+    width: 100%;
+    object-fit: cover;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.25);
+    opacity: 0;
+    animation: fade-in 0.4s ease calc(sin(var(--i) * 1.618) * 0.4s + 0.4s)
+      forwards;
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
   }
 
-  .rules-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    font-size: clamp(0.875rem, 4.5vw, 1.125rem);
-    line-height: var(--line-relaxed);
+  .cover-grid__item:hover {
+    transform: scale(1.08);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+    opacity: var(--opacity-full);
+    z-index: 1;
   }
 
-  .rules-list li {
-    display: flex;
-    align-items: baseline;
-    gap: clamp(0.5rem, 1rem, 1rem);
+  .cover-grid__item_placeholder {
+    background: rgb(255 255 255 / 0.15);
+    animation: pulse 1.5s ease-in-out infinite;
   }
 
   .actions {
-    flex: 0 0 50%;
+    flex: 1 1 auto;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 2rem 1.5rem;
-    overflow: hidden;
-    transition: flex-basis var(--transition-fast);
   }
 
-  .actions {
+  .hero {
+    text-align: center;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.25rem;
     align-items: center;
+    max-width: 400px;
   }
 
-  .actions-divider {
-    color: var(--color-base-content);
-    font-size: 0.875rem;
-    font-weight: 400;
-    letter-spacing: 0.02em;
+  .hero__tagline {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--color-primary);
     margin: 0;
-    opacity: 0.6;
-    text-align: center;
   }
 
-  .btn-primary {
-    background: var(--spotify-green);
-    color: var(--spotify-black);
-    border-color: var(--spotify-green);
-    box-shadow: var(--shadow-btn-accent);
+  .hero__title {
+    font-size: clamp(1.75rem, 5vw, 2.5rem);
+    font-weight: 700;
+    line-height: 1.15;
+    margin: 0;
+    color: var(--color-base-content);
   }
 
-  .btn-primary:hover {
-    background: var(--spotify-green-hover);
-    border-color: var(--spotify-green-hover);
-    box-shadow: var(--shadow-btn-accent-hover);
+  .hero__words {
+    display: inline-flex;
+    flex-direction: column;
+    height: 1.15em;
+    overflow: hidden;
+    vertical-align: bottom;
   }
 
-  .btn-apple {
-    background: #ffffff;
-    color: #0f172a;
-    border-color: rgba(15, 23, 42, 0.12);
-    box-shadow: var(--shadow-btn-neutral);
+  .hero__word {
+    height: 1.15em;
+    line-height: 1.15;
+    animation: word-rotate 4s ease-in-out infinite;
   }
 
-  .btn-apple:hover {
-    background: #f8fafc;
-    border-color: rgba(15, 23, 42, 0.2);
-    box-shadow: var(--shadow-btn-neutral-hover);
-  }
-
-  @media (min-width: 640px) {
-    .rules-section {
-      padding: 3rem 2rem;
+  @keyframes word-rotate {
+    0%, 20% {
+      transform: translateY(0);
     }
-
-    .rules-content {
-      text-align: left;
+    33%, 53% {
+      transform: translateY(-100%);
     }
-  }
-
-  @media (min-width: 1024px) {
-    .rules-section {
-      padding: 4rem 3rem;
+    66%, 86% {
+      transform: translateY(-200%);
+    }
+    100% {
+      transform: translateY(-300%);
     }
   }
 
-  @media (max-width: 639px) {
-    .rules-section {
-      opacity: 0;
-      visibility: hidden;
-      flex: 0 0 0%;
-      padding: 0;
-      gap: 0;
+  .hero__description {
+    font-size: 0.9rem;
+    color: var(--color-base-content);
+    opacity: 0.7;
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .btn-quick-start {
+    background: linear-gradient(135deg, #ec4899, #8b5cf6, #06b6d4);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 20px rgb(139 92 246 / 0.4);
+  }
+
+  .btn-quick-start:hover {
+    background: linear-gradient(135deg, #db2777, #7c3aed, #0891b2);
+    box-shadow: 0 6px 28px rgb(139 92 246 / 0.5);
+  }
+
+  @media (max-width: 640px) {
+    .landing {
+      position: relative;
+    }
+
+    .landing__covers {
+      position: absolute;
+      inset: 0;
+      flex: none;
+      width: 100%;
+      height: 100%;
+      padding: 0.5rem;
     }
 
     .actions {
-      flex: 0 0 100%;
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .landing__covers::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, transparent 20%, rgb(0 0 0 / 0.7));
+      pointer-events: none;
+    }
+
+    .hero {
+      background: rgb(0 0 0 / 0.3);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 0;
+      padding: 2rem 1.5rem;
+      border: none;
+      border-top: 1px solid rgb(255 255 255 / 0.1);
+      border-bottom: 1px solid rgb(255 255 255 / 0.1);
+    }
+
+    .hero__tagline,
+    .hero__title,
+    .hero__description {
+      color: var(--color-neutral-content);
     }
   }
 </style>

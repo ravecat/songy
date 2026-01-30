@@ -98,8 +98,15 @@
   --spotify-black: #191414;
   --color-gold: #facc15;
   --color-orange: #f97316;
-  --gradient-gold: linear-gradient(135deg, var(--color-gold), var(--color-orange));
-  --shadow-gold-glow: 0 0 20px rgba(250, 204, 21, 0.6), 0 0 40px rgba(250, 204, 21, 0.3);
+  --gradient-gold: linear-gradient(
+    135deg,
+    var(--color-gold),
+    var(--color-orange)
+  );
+  --shadow-gold-glow:
+    0 0 20px rgba(250, 204, 21, 0.6), 0 0 40px rgba(250, 204, 21, 0.3);
+  --color-border-subtle: rgba(15, 23, 42, 0.12);
+  --color-border-subtle-hover: rgba(15, 23, 42, 0.2);
 }
 
 /* Shadows */
@@ -137,8 +144,11 @@
 
 /* Border radius */
 :root {
-  --radius-sm: 4px;
-  --radius-md: 0.5rem;
+  --radius-xs: 1px;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 16px;
   --radius-circle: 50%;
 }
 
@@ -222,6 +232,23 @@
     #9f1239,
     #c2410c
   );
+}
+
+/* Animations */
+@keyframes fade-in {
+  to {
+    opacity: var(--opacity-medium);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 /* Add variants based on LiveView classes */

@@ -38,7 +38,9 @@ defmodule SongyWeb.Auth do
         assign(conn, :provider, :itunes)
 
       _ ->
-        assign(conn, :provider, Application.fetch_env!(:songy, :default_provider))
+        default = Application.fetch_env!(:songy, :default_provider)
+        Songy.Providers.ensure_ready(:providers, user_id, default)
+        assign(conn, :provider, default)
     end
   end
 

@@ -52,15 +52,42 @@ defmodule Songy.Providers do
   end
 
   @doc """
+  Ensures provider is ready for the user.
+  Returns :ok if ready, {:needs_auth, provider} if OAuth required.
+  """
+  @spec ensure_ready(GenServer.server(), String.t(), atom()) :: :ok | {:needs_auth, atom()}
+  def ensure_ready(registry, user_id, :spotify) do
+    case lookup(registry, user_id) do
+      {:ok, %Songy.Core.Provider.Spotify{}} -> :ok
+      _ -> {:redirect, :spotify}
+    end
+  end
+
+  def ensure_ready(registry, user_id, :apple) do
+    insert(registry, user_id, Songy.Core.Provider.Apple.new())
+    :ok
+  end
+
+  def ensure_ready(registry, user_id, :itunes) do
+    insert(registry, user_id, Songy.Core.Provider.ITunes.new())
+    :ok
+  end
+
+  def ensure_ready(_registry, _user_id, _provider), do: :ok
+
+  @doc """
+  Returns the default provider struct based on application config.
+  """
+  @spec default() :: struct()
+  def default do
+    case Application.fetch_env!(:songy, :default_provider) do
+      :itunes -> Songy.Core.Provider.ITunes.new()
+      :apple -> Songy.Core.Provider.Apple.new()
+    end
+  end
+
+  @doc """
   Looks up the provider data for user. Automatically refreshes tokens if they're close to expiry.
-
-  ## Examples
-      iex> {:ok, pid} = Songy.Providers.start_link(name: :providers)
-      iex> Songy.Providers.lookup(:providers, "user123")
-      {:ok, %Songy.Core.Provider.Spotify{access_token: "fresh_token", refresh_token: "refresh"}}
-
-      iex> Songy.Providers.lookup(:providers, "unknown_user")
-      {:error, :provider_not_found}
   """
   @spec lookup(term(), String.t()) :: {:ok, term()} | {:error, atom()}
   def lookup(registry, user_id) when is_binary(user_id) do

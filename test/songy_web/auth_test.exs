@@ -148,6 +148,10 @@ defmodule SongyWeb.AuthTest do
         {:error, :provider_not_found}
       end)
 
+      Repatch.patch(Songy.Providers, :ensure_ready, fn :providers, _user_id, :itunes ->
+        :ok
+      end)
+
       conn =
         conn
         |> assign(:current_user, user)
@@ -181,6 +185,30 @@ defmodule SongyWeb.AuthTest do
 
       Repatch.patch(Songy.Providers, :lookup, fn :providers, _user_uuid ->
         {:error, :timeout}
+      end)
+
+      Repatch.patch(Songy.Providers, :ensure_ready, fn :providers, _user_id, :itunes ->
+        :ok
+      end)
+
+      conn =
+        conn
+        |> assign(:current_user, user)
+        |> Auth.fetch_current_provider([])
+
+      assert conn.assigns.provider == :itunes
+    end
+
+    test "calls ensure_ready with default provider", %{conn: conn} do
+      user = User.new()
+
+      Repatch.patch(Songy.Providers, :lookup, fn :providers, _user_uuid ->
+        {:error, :provider_not_found}
+      end)
+
+      Repatch.patch(Songy.Providers, :ensure_ready, fn :providers, user_id, :itunes ->
+        assert user_id == user.uuid
+        :ok
       end)
 
       conn =

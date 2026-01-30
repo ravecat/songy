@@ -1,32 +1,44 @@
 defmodule SongyWeb.PageController do
   use SongyWeb, :controller
-  require Logger
 
   alias Songy.Boundary.GameSession
-  alias Songy.Core.Provider.Apple
-  alias Songy.Core.Provider.ITunes
+  alias Songy.Boundary.Provider
   alias Songy.Providers
 
   def home(conn, _params) do
-    render_inertia(conn, "home")
+    conn
+    |> assign_prop(:tracks, inertia_defer(fn -> fetch_tracks(50) end))
+    |> render_inertia("home")
+  end
+
+  defp fetch_tracks(limit) do
+    case Provider.search(Providers.default(), term: <<Enum.random(?a..?z)>>, limit: limit, entity: "song") do
+      {:ok, tracks} -> tracks
+      _ -> []
+    end
   end
 
   def create(conn, params) do
-    %{assigns: %{current_user: %{uuid: user_id}}} = conn
-
+    user_id = conn.assigns.current_user.uuid
     provider = resolve_provider(params)
 
-    with {:ok, conn} <- ensure_provider_ready(conn, provider),
-         {:ok, game} <- GameSession.create_game_session(user_id) do
-      redirect(conn, to: ~p"/#{game.id}")
-    else
-      {:redirect, conn} ->
-        conn
+    case Providers.ensure_ready(:providers, user_id, provider) do
+      :ok ->
+        case GameSession.create_game_session(user_id) do
+          {:ok, game} ->
+            redirect(conn, to: ~p"/#{game.id}")
 
-      {:error, reason} ->
+          {:error, reason} ->
+            conn
+            |> put_flash(:error, "Failed to create game session: #{inspect(reason)}")
+            |> redirect(to: ~p"/")
+        end
+
+      {:redirect, :spotify} ->
         conn
-        |> put_flash(:error, "Failed to create game session: #{inspect(reason)}")
-        |> redirect(to: ~p"/")
+        |> put_session(:return_to, current_path(conn, provider: :spotify))
+        |> force_inertia_redirect()
+        |> redirect(to: ~p"/auth/spotify")
     end
   end
 
@@ -51,33 +63,6 @@ defmodule SongyWeb.PageController do
         |> redirect(to: ~p"/")
     end
   end
-
-  defp ensure_provider_ready(%{assigns: %{provider: :spotify}} = conn, :spotify),
-    do: {:ok, conn}
-
-  defp ensure_provider_ready(conn, :spotify) do
-    return_to = current_path(conn, provider: :spotify)
-
-    conn =
-      conn
-      |> put_session(:return_to, return_to)
-      |> force_inertia_redirect()
-      |> redirect(to: ~p"/auth/spotify")
-
-    {:redirect, conn}
-  end
-
-  defp ensure_provider_ready(%{assigns: %{current_user: %{uuid: user_id}}} = conn, :apple) do
-    Providers.insert(:providers, user_id, Apple.new())
-    {:ok, conn}
-  end
-
-  defp ensure_provider_ready(%{assigns: %{current_user: %{uuid: user_id}}} = conn, :itunes) do
-    Providers.insert(:providers, user_id, ITunes.new())
-    {:ok, conn}
-  end
-
-  defp ensure_provider_ready(conn, _provider), do: {:ok, conn}
 
   defp resolve_provider(%{"provider" => "apple"}), do: :apple
   defp resolve_provider(%{"provider" => "itunes"}), do: :itunes
