@@ -1,5 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const baseURL = process.env.BASE_URL || 'http://localhost:4001';
+const port = new URL(baseURL).port || '4001';
+const vitePort = process.env.VITE_PORT || '5174';
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
@@ -8,7 +12,7 @@ export default defineConfig({
   workers: 1,
   reporter: 'html',
   use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:4001',
+    baseURL,
     trace: 'on-first-retry',
   },
   projects: [
@@ -18,8 +22,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'MIX_ENV=test PORT=4001 VITE_PORT=5174 mix phx.server',
-    url: 'http://localhost:4001',
+    command: `MIX_ENV=test PHX_SERVER=true PORT=${port} VITE_PORT=${vitePort} mix phx.server`,
+    url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
     cwd: '..',
