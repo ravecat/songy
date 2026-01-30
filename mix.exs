@@ -55,7 +55,7 @@ defmodule Songy.MixProject do
        github: "tailwindlabs/heroicons", tag: "v2.1.1", sparse: "optimized", app: false, compile: false, depth: 1},
       {:swoosh, "~> 1.16"},
       {:inertia, "~> 2.6"},
-      {:req, "~> 0.5"},
+      {:req, "~> 0.5.17"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.26"},
