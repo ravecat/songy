@@ -42,36 +42,32 @@
   </div>
 
   <div class="actions">
-    <div class="actions">
-      <form
-        use:inertia={{
-          href: "/create",
-          method: "post",
-          data: { provider: Provider.ITUNES },
-        }}
-      >
-        <button type="submit" class="btn btn-apple w-3xs">
-          Create game
-        </button>
-      </form>
+    <form
+      use:inertia={{
+        href: "/create",
+        method: "post",
+        data: { provider: Provider.ITUNES },
+      }}
+    >
+      <button type="submit" class="btn btn-apple w-3xs"> Create game </button>
+    </form>
 
-      <p class="actions-divider">
-        or use your favorite music service without limits
-      </p>
+    <p class="actions-divider">
+      or use your favorite music service without limits
+    </p>
 
-      <form
-        use:inertia={{
-          href: "/create",
-          method: "post",
-          data: { provider: Provider.SPOTIFY },
-        }}
-      >
-        <button type="submit" class="btn btn-primary w-3xs">
-          {@render spotify()}
-          Create game
-        </button>
-      </form>
-    </div>
+    <form
+      use:inertia={{
+        href: "/create",
+        method: "post",
+        data: { provider: Provider.SPOTIFY },
+      }}
+    >
+      <button type="submit" class="btn btn-primary w-3xs">
+        {@render spotify()}
+        Create game
+      </button>
+    </form>
   </div>
 </div>
 

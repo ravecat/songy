@@ -1,8 +1,8 @@
-defmodule Songy.Boundary.PlayerTest do
+defmodule Songy.Boundary.ProviderPlaybackTest do
   use ExUnit.Case, async: true
 
   alias Songy.Boundary
-  alias Songy.Boundary.Player
+  alias Songy.Boundary.Provider
   alias Songy.Core.Track
 
   describe "Spotify provider implementation" do
@@ -35,7 +35,7 @@ defmodule Songy.Boundary.PlayerTest do
         {:ok, :playback_started}
       end)
 
-      assert {:ok, :playback_started} = Player.start_playback(provider, track)
+      assert {:ok, :playback_started} = Provider.start_playback(provider, track)
       assert Repatch.called?(Boundary.Provider.Spotify, :start_playback, 2)
     end
 
@@ -48,7 +48,7 @@ defmodule Songy.Boundary.PlayerTest do
         meta: %{}
       }
 
-      assert {:error, :missing_track_uri} = Player.start_playback(provider, track_without_uri)
+      assert {:error, :missing_track_uri} = Provider.start_playback(provider, track_without_uri)
     end
 
     test "pause_playback/1 delegates to Spotify.pause_playback/2", %{provider: provider} do
@@ -56,7 +56,7 @@ defmodule Songy.Boundary.PlayerTest do
         {:ok, :playback_paused}
       end)
 
-      assert {:ok, :playback_paused} = Player.pause_playback(provider)
+      assert {:ok, :playback_paused} = Provider.pause_playback(provider)
       assert Repatch.called?(Boundary.Provider.Spotify, :pause_playback, 2)
     end
 
@@ -79,7 +79,7 @@ defmodule Songy.Boundary.PlayerTest do
         expected_track
       end)
 
-      assert {:ok, ^expected_track} = Player.search_random_track(provider)
+      assert {:ok, ^expected_track} = Provider.search_random_track(provider)
       assert Repatch.called?(Boundary.Provider.Spotify, :search_random_track, 1)
       assert Repatch.called?(Songy.Core.Trackable, :to_track, 1)
     end
@@ -92,7 +92,7 @@ defmodule Songy.Boundary.PlayerTest do
         {:error, :invalid_credentials}
       end)
 
-      assert {:error, :invalid_credentials} = Player.start_playback(provider, track)
+      assert {:error, :invalid_credentials} = Provider.start_playback(provider, track)
     end
 
     test "pause_playback/1 handles errors from Spotify.pause_playback/2", %{provider: provider} do
@@ -100,7 +100,7 @@ defmodule Songy.Boundary.PlayerTest do
         {:error, :playback_pause_failed}
       end)
 
-      assert {:error, :playback_pause_failed} = Player.pause_playback(provider)
+      assert {:error, :playback_pause_failed} = Provider.pause_playback(provider)
     end
 
     test "search_random_track/1 handles errors from Spotify.search_random_track/1", %{
@@ -110,7 +110,7 @@ defmodule Songy.Boundary.PlayerTest do
         {:error, :no_tracks_found}
       end)
 
-      assert {:error, :no_tracks_found} = Player.search_random_track(provider)
+      assert {:error, :no_tracks_found} = Provider.search_random_track(provider)
       assert Repatch.called?(Boundary.Provider.Spotify, :search_random_track, 1)
       refute Repatch.called?(Songy.Core.Trackable, :to_track, 1)
     end
@@ -132,11 +132,11 @@ defmodule Songy.Boundary.PlayerTest do
     end
 
     test "start_playback/2 returns immediate success", %{provider: provider, track: track} do
-      assert {:ok, :playback_started} = Player.start_playback(provider, track)
+      assert {:ok, :playback_started} = Provider.start_playback(provider, track)
     end
 
     test "pause_playback/1 returns immediate success", %{provider: provider} do
-      assert {:ok, :playback_paused} = Player.pause_playback(provider)
+      assert {:ok, :playback_paused} = Provider.pause_playback(provider)
     end
 
     test "search_random_track/1 delegates to Apple.search_random_track/0", %{provider: provider} do
@@ -168,7 +168,7 @@ defmodule Songy.Boundary.PlayerTest do
         expected_track
       end)
 
-      assert {:ok, ^expected_track} = Player.search_random_track(provider)
+      assert {:ok, ^expected_track} = Provider.search_random_track(provider)
       assert Repatch.called?(Boundary.Provider.Apple, :search_random_track, 0)
       assert Repatch.called?(Songy.Core.Trackable, :to_track, 1)
     end
@@ -178,7 +178,7 @@ defmodule Songy.Boundary.PlayerTest do
         {:error, :no_tracks_found}
       end)
 
-      assert {:error, :no_tracks_found} = Player.search_random_track(provider)
+      assert {:error, :no_tracks_found} = Provider.search_random_track(provider)
       assert Repatch.called?(Boundary.Provider.Apple, :search_random_track, 0)
       refute Repatch.called?(Songy.Core.Trackable, :to_track, 1)
     end
@@ -200,11 +200,11 @@ defmodule Songy.Boundary.PlayerTest do
     end
 
     test "start_playback/2 returns immediate success", %{provider: provider, track: track} do
-      assert {:ok, :playback_started} = Player.start_playback(provider, track)
+      assert {:ok, :playback_started} = Provider.start_playback(provider, track)
     end
 
     test "pause_playback/1 returns immediate success", %{provider: provider} do
-      assert {:ok, :playback_paused} = Player.pause_playback(provider)
+      assert {:ok, :playback_paused} = Provider.pause_playback(provider)
     end
 
     test "search_random_track/1 delegates to ITunes.search_random_track/0", %{provider: provider} do
@@ -236,7 +236,7 @@ defmodule Songy.Boundary.PlayerTest do
         expected_track
       end)
 
-      assert {:ok, ^expected_track} = Player.search_random_track(provider)
+      assert {:ok, ^expected_track} = Provider.search_random_track(provider)
       assert Repatch.called?(Boundary.Provider.ITunes, :search_random_track, 0)
       assert Repatch.called?(Songy.Core.Trackable, :to_track, 1)
     end
@@ -246,7 +246,7 @@ defmodule Songy.Boundary.PlayerTest do
         {:error, :no_tracks_found}
       end)
 
-      assert {:error, :no_tracks_found} = Player.search_random_track(provider)
+      assert {:error, :no_tracks_found} = Provider.search_random_track(provider)
       assert Repatch.called?(Boundary.Provider.ITunes, :search_random_track, 0)
       refute Repatch.called?(Songy.Core.Trackable, :to_track, 1)
     end
@@ -268,15 +268,15 @@ defmodule Songy.Boundary.PlayerTest do
     end
 
     test "start_playback/2 returns not_supported error", %{provider: provider, track: track} do
-      assert {:error, :not_supported} = Player.start_playback(provider, track)
+      assert {:error, :not_supported} = Provider.start_playback(provider, track)
     end
 
     test "pause_playback/1 returns not_supported error", %{provider: provider} do
-      assert {:error, :not_supported} = Player.pause_playback(provider)
+      assert {:error, :not_supported} = Provider.pause_playback(provider)
     end
 
     test "search_random_track/1 returns not_supported error", %{provider: provider} do
-      assert {:error, :not_supported} = Player.search_random_track(provider)
+      assert {:error, :not_supported} = Provider.search_random_track(provider)
     end
   end
 end

@@ -1,6 +1,6 @@
 defmodule Songy.Boundary.GameSession do
   alias Songy.Boundary.Game
-  alias Songy.Boundary.Player
+  alias Songy.Boundary.Provider, as: Player
   alias Songy.Core
   alias Songy.Providers
 

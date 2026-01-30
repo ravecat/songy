@@ -12,7 +12,7 @@ defmodule Songy.Boundary.Game do
 
   use GenStateMachine, callback_mode: [:handle_event_function]
 
-  alias Songy.Boundary.Player, as: Playback
+  alias Songy.Boundary.Provider, as: Playback
   alias Songy.Core, as: Core
   alias SongyWeb.Presence
 

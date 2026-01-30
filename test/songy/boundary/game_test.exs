@@ -14,7 +14,7 @@ defmodule Songy.Boundary.GameTest do
        }}
     end)
 
-    Repatch.patch(Songy.Boundary.Player, :search_random_track, [mode: :shared], fn _provider ->
+    Repatch.patch(Songy.Boundary.Provider, :search_random_track, [mode: :shared], fn _provider ->
       {:ok,
        %Track{
          id: "track-1",
@@ -25,11 +25,11 @@ defmodule Songy.Boundary.GameTest do
        }}
     end)
 
-    Repatch.patch(Songy.Boundary.Player, :start_playback, [mode: :shared], fn _provider, _track ->
+    Repatch.patch(Songy.Boundary.Provider, :start_playback, [mode: :shared], fn _provider, _track ->
       {:ok, :playback_started}
     end)
 
-    Repatch.patch(Songy.Boundary.Player, :pause_playback, [mode: :shared], fn _provider ->
+    Repatch.patch(Songy.Boundary.Provider, :pause_playback, [mode: :shared], fn _provider ->
       {:ok, :playback_paused}
     end)
 
