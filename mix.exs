@@ -39,7 +39,7 @@ defmodule Songy.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:bcrypt_elixir, "~> 3.0"},
+      {:bcrypt_elixir, "~> 3.3"},
       {:dotenvy, "~> 1.0.0"},
       {:phoenix_vite, "~> 0.3.3"},
       {:phoenix, "~> 1.8.1"},
