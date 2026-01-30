@@ -66,7 +66,7 @@ defmodule Songy.MixProject do
       {:typed_struct, "~> 0.3.0"},
       {:nimble_options, "~> 1.1"},
       {:gen_state_machine, "~> 3.0"},
-      {:repatch, "~> 1.5", only: :test},
+      {:repatch, "~> 1.6", only: :test},
       {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false},
       {:recode, "~> 0.8.0", only: [:dev, :test], runtime: false},
       {:unique_names_generator, "~> 0.2"},
