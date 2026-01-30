@@ -40,7 +40,7 @@ defmodule Songy.MixProject do
   defp deps do
     [
       {:bcrypt_elixir, "~> 3.3"},
-      {:dotenvy, "~> 1.0.0"},
+      {:dotenvy, "~> 1.1"},
       {:phoenix_vite, "~> 0.3.3"},
       {:phoenix, "~> 1.8.1"},
       {:phoenix_ecto, "~> 4.5"},
