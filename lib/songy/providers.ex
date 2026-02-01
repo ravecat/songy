@@ -16,26 +16,21 @@ defmodule Songy.Providers do
   @doc """
   Starts the registry.
   """
-  def start_link(opts) do
-    server = Keyword.fetch!(opts, :name)
-    GenServer.start_link(__MODULE__, server, opts)
+  def start_link(_opts) do
+    GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
   @doc """
   Inserts or updates provider data for a specific user.
 
   ## Examples
-      iex> {:ok, pid} = Songy.Providers.start_link()
       iex> spotify_data = %Songy.Core.Provider.Spotify{access_token: "token"}
-      iex> Songy.Providers.insert(pid, "user123", spotify_data)
-      :ok
-
-      iex> Songy.Providers.insert(:providers, "user123", spotify_data)
+      iex> Songy.Providers.insert("user123", spotify_data)
       :ok
   """
-  @spec insert(GenServer.server(), String.t(), term()) :: :ok
-  def insert(registry, user_id, data) do
-    GenServer.call(registry, {:insert, user_id, data})
+  @spec insert(String.t(), term()) :: :ok
+  def insert(user_id, data) do
+    GenServer.call(__MODULE__, {:insert, user_id, data})
   end
 
   @doc """
@@ -43,83 +38,77 @@ defmodule Songy.Providers do
 
   ## Examples
       iex> new_data = %Songy.Core.Provider.Spotify{access_token: "token1", device_id: "device1"}
-      iex> Songy.Providers.update(:providers, "user123", new_data)
+      iex> Songy.Providers.update("user123", new_data)
       :ok
   """
-  @spec update(GenServer.server(), String.t(), term()) :: :ok
-  def update(registry, user_id, attrs) do
-    GenServer.call(registry, {:update, user_id, attrs})
+  @spec update(String.t(), term()) :: :ok
+  def update(user_id, attrs) do
+    GenServer.call(__MODULE__, {:update, user_id, attrs})
+  end
+
+  @doc false
+  @spec clear() :: :ok
+  def clear do
+    GenServer.call(__MODULE__, :clear)
   end
 
   @doc """
   Ensures provider is ready for the user.
-  Returns :ok if ready, {:needs_auth, provider} if OAuth required.
+  Returns {:ok, provider_id, provider} from ETS (validated and refreshed) or creates default.
   """
-  @spec ensure_ready(GenServer.server(), String.t(), atom()) :: :ok | {:needs_auth, atom()}
-  def ensure_ready(registry, user_id, :spotify) do
-    case lookup(registry, user_id) do
-      {:ok, %Songy.Core.Provider.Spotify{}} -> :ok
-      _ -> {:redirect, :spotify}
-    end
-  end
-
-  def ensure_ready(registry, user_id, :apple) do
-    insert(registry, user_id, Songy.Core.Provider.Apple.new())
-    :ok
-  end
-
-  def ensure_ready(registry, user_id, :itunes) do
-    insert(registry, user_id, Songy.Core.Provider.ITunes.new())
-    :ok
-  end
-
-  def ensure_ready(_registry, _user_id, _provider), do: :ok
-
-  @doc """
-  Returns the default provider struct based on application config.
-  """
-  @spec default() :: struct()
-  def default do
-    case Application.fetch_env!(:songy, :default_provider) do
-      :itunes -> Songy.Core.Provider.ITunes.new()
-      :apple -> Songy.Core.Provider.Apple.new()
-    end
-  end
-
-  @doc """
-  Looks up the provider data for user. Automatically refreshes tokens if they're close to expiry.
-  """
-  @spec lookup(term(), String.t()) :: {:ok, term()} | {:error, atom()}
-  def lookup(registry, user_id) when is_binary(user_id) do
-    with [{^user_id, data}] <- :ets.lookup(registry, user_id),
-         {:ok, actual_data} <- Songy.Boundary.Provider.ensure(data),
-         {:match, true, _} <- {:match, match?(^data, actual_data), actual_data} do
-      {:ok, data}
+  @spec ensure(String.t()) :: {:ok, atom(), struct()} | {:error, atom()}
+  def ensure(user_id) do
+    with {:ok, provider} <- lookup(user_id),
+         {:ok, id, ^provider} <- Songy.Boundary.Provider.ensure(provider) do
+      {:ok, id, provider}
     else
-      {:match, false, actual_data} ->
-        Logger.debug("Provider token refreshed for user #{user_id}")
-        GenServer.call(registry, {:update, user_id, actual_data})
-        {:ok, actual_data}
+      {:ok, id, refreshed} ->
+        update(user_id, refreshed)
+        {:ok, id, refreshed}
 
-      [] ->
-        Logger.warning("No provider found for user #{user_id}")
-        {:error, :provider_not_found}
+      {:error, :invalid_credentials} ->
+        remove(user_id)
+        insert_default(user_id)
+
+      {:error, :not_found} ->
+        insert_default(user_id)
 
       {:error, reason} ->
-        Logger.error("Provider error for user #{user_id}: #{inspect(reason)}")
-        GenServer.call(registry, {:remove, user_id})
         {:error, reason}
     end
   end
 
-  @impl true
-  def init(table) do
-    {:ok, :ets.new(table, [:named_table, :set, :protected, read_concurrency: true])}
+  defp insert_default(user_id) do
+    module = Application.fetch_env!(:songy, :default_provider)
+    provider = module.new()
+    insert(user_id, provider)
+    Songy.Boundary.Provider.ensure(provider)
+  end
+
+  @doc """
+  Looks up the provider data for user. Pure ETS read without validation.
+  """
+  @spec lookup(String.t()) :: {:ok, struct()} | {:error, :not_found}
+  def lookup(user_id) when is_binary(user_id) do
+    case :ets.lookup(__MODULE__, user_id) do
+      [{^user_id, data}] -> {:ok, data}
+      [] -> {:error, :not_found}
+    end
+  end
+
+  @doc false
+  def remove(user_id) do
+    GenServer.call(__MODULE__, {:remove, user_id})
   end
 
   @impl true
-  def handle_call({:insert, user_id, data}, _from, table) do
-    :ets.insert(table, {user_id, data})
+  def init([]) do
+    {:ok, :ets.new(__MODULE__, [:named_table, :set, :protected, read_concurrency: true])}
+  end
+
+  @impl true
+  def handle_call({:insert, user_id, provider}, _from, table) do
+    :ets.insert(table, {user_id, provider})
     Logger.debug("Inserted provider data for user #{user_id}")
 
     {:reply, :ok, table}
@@ -129,6 +118,12 @@ defmodule Songy.Providers do
   def handle_call({:update, user_id, data}, _from, table) do
     :ets.insert(table, {user_id, data})
     Logger.debug("Updated provider data for user #{user_id}")
+    {:reply, :ok, table}
+  end
+
+  @impl true
+  def handle_call(:clear, _from, table) do
+    :ets.delete_all_objects(table)
     {:reply, :ok, table}
   end
 

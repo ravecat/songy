@@ -6,39 +6,33 @@ defmodule SongyWeb.PageController do
   alias Songy.Providers
 
   def home(conn, _params) do
+    user_id = conn.assigns.current_user.uuid
+
     conn
-    |> assign_prop(:tracks, inertia_defer(fn -> fetch_tracks(50) end))
+    |> assign_prop(:tracks, inertia_defer(fn -> fetch_tracks(user_id, 50) end))
     |> render_inertia("home")
   end
 
-  defp fetch_tracks(limit) do
-    case Provider.search(Providers.default(), term: <<Enum.random(?a..?z)>>, limit: limit, entity: "song") do
-      {:ok, tracks} -> tracks
+  defp fetch_tracks(user_id, limit) do
+    with {:ok, _id, provider} <- Providers.ensure(user_id),
+         {:ok, tracks} <- Provider.search(provider, term: <<Enum.random(?a..?z)>>, limit: limit, entity: "song") do
+      tracks
+    else
       _ -> []
     end
   end
 
-  def create(conn, params) do
+  def create(conn, _params) do
     user_id = conn.assigns.current_user.uuid
-    provider = resolve_provider(params)
 
-    case Providers.ensure_ready(:providers, user_id, provider) do
-      :ok ->
-        case GameSession.create_game_session(user_id) do
-          {:ok, game} ->
-            redirect(conn, to: ~p"/#{game.id}")
-
-          {:error, reason} ->
-            conn
-            |> put_flash(:error, "Failed to create game session: #{inspect(reason)}")
-            |> redirect(to: ~p"/")
-        end
-
-      {:redirect, :spotify} ->
+    with {:ok, _id, _provider} <- Providers.ensure(user_id),
+         {:ok, game} <- GameSession.create_game_session(user_id) do
+      redirect(conn, to: ~p"/#{game.id}")
+    else
+      {:error, reason} ->
         conn
-        |> put_session(:return_to, current_path(conn, provider: :spotify))
-        |> force_inertia_redirect()
-        |> redirect(to: ~p"/auth/spotify")
+        |> put_flash(:error, "Failed to create game session: #{inspect(reason)}")
+        |> redirect(to: ~p"/")
     end
   end
 
@@ -63,9 +57,4 @@ defmodule SongyWeb.PageController do
         |> redirect(to: ~p"/")
     end
   end
-
-  defp resolve_provider(%{"provider" => "apple"}), do: :apple
-  defp resolve_provider(%{"provider" => "itunes"}), do: :itunes
-  defp resolve_provider(%{"provider" => "spotify"}), do: :spotify
-  defp resolve_provider(_params), do: Application.fetch_env!(:songy, :default_provider)
 end

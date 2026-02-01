@@ -12,29 +12,8 @@ defmodule SongyWeb.PageControllerTest do
     end
   end
 
-  describe "create/2 with apple provider" do
-    test "creates game session with apple provider", %{conn: conn} do
-      Repatch.patch(Songy.Providers, :insert, fn :providers, _user_uuid, _provider ->
-        {:ok, %Songy.Core.Provider.Apple{}}
-      end)
-
-      conn = post(conn, ~p"/create", provider: "apple")
-      assert redirected_to(conn, 302) =~ ~r"^/[A-Za-z0-9_-]+$"
-
-      location = redirected_to(conn, 302)
-      uuid = String.trim_leading(location, "/")
-
-      assert {:ok, pid} = GameSession.lookup_game_session(uuid)
-      assert Process.alive?(pid)
-
-      GameSession.end_game_session(uuid)
-    end
-
-    test "creates game session with default provider when no provider param", %{conn: conn} do
-      Repatch.patch(Songy.Providers, :insert, fn :providers, _user_uuid, _provider ->
-        {:ok, %Songy.Core.Provider.ITunes{}}
-      end)
-
+  describe "create/2" do
+    test "creates game session with default provider", %{conn: conn} do
       conn = post(conn, ~p"/create")
       assert redirected_to(conn, 302) =~ ~r"^/[A-Za-z0-9_-]+$"
 
@@ -46,12 +25,10 @@ defmodule SongyWeb.PageControllerTest do
 
       GameSession.end_game_session(uuid)
     end
-  end
 
-  describe "create/2 with spotify provider" do
-    test "creates game session with spotify provider when already authenticated", %{conn: conn} do
-      Repatch.patch(Songy.Providers, :lookup, fn :providers, _user_uuid ->
-        {:ok,
+    test "creates game session with existing spotify provider", %{conn: conn} do
+      Repatch.patch(Songy.Providers, :ensure, fn _user_uuid ->
+        {:ok, :spotify,
          %Songy.Core.Provider.Spotify{
            access_token: "test_token",
            refresh_token: "refresh_token",
@@ -59,7 +36,7 @@ defmodule SongyWeb.PageControllerTest do
          }}
       end)
 
-      conn = post(conn, ~p"/create", provider: "spotify")
+      conn = post(conn, ~p"/create")
       location = redirected_to(conn, 302)
       assert is_binary(location)
       assert location =~ ~r"^/[A-Za-z0-9_-]+$"
@@ -72,30 +49,21 @@ defmodule SongyWeb.PageControllerTest do
       GameSession.end_game_session(uuid)
     end
 
-    test "redirects to spotify auth when not authenticated", %{conn: conn} do
-      Repatch.patch(Songy.Providers, :lookup, fn :providers, _user_uuid ->
-        {:error, :not_found}
+    test "shows error when provider has transient error", %{conn: conn} do
+      Repatch.patch(Songy.Providers, :ensure, fn _user_uuid ->
+        {:error, :network_error}
       end)
 
-      conn = post(conn, ~p"/create", provider: "spotify")
-      location = redirected_to(conn, 302)
-      assert location == "/auth/spotify"
-      assert %{"return_to" => return_to} = get_session(conn)
-      assert return_to =~ ~r"^/create\?"
+      conn = post(conn, ~p"/create")
+      assert redirected_to(conn) == "/"
+
+      assert "Failed to create game session: :network_error" =
+               Phoenix.Flash.get(conn.assigns.flash, :error)
     end
   end
 
   describe "create/2 error handling" do
     test "returns error when game session creation fails", %{conn: conn} do
-      Repatch.patch(Songy.Providers, :lookup, fn :providers, _user_uuid ->
-        {:ok,
-         %Songy.Core.Provider.Spotify{
-           access_token: "test_token",
-           refresh_token: "refresh_token",
-           expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
-         }}
-      end)
-
       Repatch.patch(GameSession, :create_game_session, fn _user_id ->
         {:error, :database_error}
       end)
@@ -140,7 +108,8 @@ defmodule SongyWeb.PageControllerTest do
 
     test "passes provider assignment to inertia", %{conn: conn} do
       {:ok, game} = GameSession.create_game_session("owner123")
-      Repatch.patch(Songy.Providers, :lookup, fn :providers, _user_uuid ->
+
+      Repatch.patch(Songy.Providers, :lookup, fn _user_uuid ->
         {:ok, %Songy.Core.Provider.ITunes{}}
       end)
 

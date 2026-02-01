@@ -247,5 +247,3 @@ defmodule Songy.Boundary.Provider.AppleTest do
     end
   end
 end
-
-

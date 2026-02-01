@@ -103,7 +103,7 @@ defmodule SongyWeb.RoomChannel do
   def handle_in("get_provider", _payload, socket) do
     user_id = socket.assigns.current_user_id
 
-    case Songy.Providers.lookup(:providers, user_id) do
+    case Songy.Providers.lookup(user_id) do
       {:ok, %Songy.Core.Provider.Spotify{access_token: token}} when not is_nil(token) ->
         {:reply, {:ok, %{token: token}}, socket}
 
@@ -119,11 +119,11 @@ defmodule SongyWeb.RoomChannel do
   def handle_in("update_provider", payload, socket) do
     user_id = socket.assigns.current_user_id
 
-    case Songy.Providers.lookup(:providers, user_id) do
+    case Songy.Providers.lookup(user_id) do
       {:ok, current_data} ->
         attrs = for {key, val} <- payload, into: %{}, do: {String.to_atom(key), val}
         updated_data = Songy.Core.Provider.Spotify.update(current_data, attrs)
-        :ok = Songy.Providers.update(:providers, user_id, updated_data)
+        :ok = Songy.Providers.update(user_id, updated_data)
         Logger.debug("Updated provider data for user #{user_id} with #{inspect(payload)}")
         {:reply, :ok, socket}
 

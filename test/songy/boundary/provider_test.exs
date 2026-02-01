@@ -51,7 +51,7 @@ defmodule Songy.Boundary.ProviderTest do
         {:ok, updated_provider}
       end)
 
-      assert {:ok, %Spotify{access_token: "new_token"}} = Provider.ensure(spotify_provider)
+      assert {:ok, :spotify, %Spotify{access_token: "new_token"}} = Provider.ensure(spotify_provider)
     end
 
     test "ensure/1 handles Spotify boundary errors correctly" do
@@ -79,7 +79,7 @@ defmodule Songy.Boundary.ProviderTest do
         {:ok, provider}
       end)
 
-      assert {:ok, %Spotify{} = result} = Provider.ensure(original_provider)
+      assert {:ok, :spotify, %Spotify{} = result} = Provider.ensure(original_provider)
       assert result.access_token == original_provider.access_token
       assert result.refresh_token == original_provider.refresh_token
       assert result.device_id == original_provider.device_id

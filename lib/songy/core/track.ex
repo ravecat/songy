@@ -41,9 +41,9 @@ defmodule Songy.Core.Track do
     * `:uri` - Platform-specific URI (e.g., spotify:track:xxx, used by Spotify)
   """
   @type meta :: %{
-            optional(:preview_url) => String.t(),
-            optional(:uri) => String.t()
-          }
+          optional(:preview_url) => String.t(),
+          optional(:uri) => String.t()
+        }
 
   @typedoc "Track structure"
   @type t :: %__MODULE__{

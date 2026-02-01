@@ -141,15 +141,11 @@ defmodule SongyWeb.AuthTest do
   end
 
   describe "fetch_current_provider/2" do
-    test "assigns default provider when user has no provider in ETS", %{conn: conn} do
+    test "assigns default provider when ensure creates default", %{conn: conn} do
       user = User.new()
 
-      Repatch.patch(Songy.Providers, :lookup, fn :providers, _user_uuid ->
-        {:error, :provider_not_found}
-      end)
-
-      Repatch.patch(Songy.Providers, :ensure_ready, fn :providers, _user_id, :itunes ->
-        :ok
+      Repatch.patch(Songy.Providers, :ensure, fn _user_uuid ->
+        {:ok, :itunes, %Songy.Core.Provider.ITunes{}}
       end)
 
       conn =
@@ -160,16 +156,11 @@ defmodule SongyWeb.AuthTest do
       assert conn.assigns.provider == :itunes
     end
 
-    test "assigns provider ID when provider data found in ETS", %{conn: conn} do
+    test "assigns :spotify when user has Spotify provider", %{conn: conn} do
       user = User.new()
 
-      provider = %Songy.Core.Provider.Spotify{
-        access_token: "test_token",
-        refresh_token: "refresh"
-      }
-
-      Repatch.patch(Songy.Providers, :lookup, fn :providers, _user_uuid ->
-        {:ok, provider}
+      Repatch.patch(Songy.Providers, :ensure, fn _user_uuid ->
+        {:ok, :spotify, %Songy.Core.Provider.Spotify{access_token: "token", refresh_token: "refresh"}}
       end)
 
       conn =
@@ -180,15 +171,11 @@ defmodule SongyWeb.AuthTest do
       assert conn.assigns.provider == :spotify
     end
 
-    test "assigns default provider when ETS returns error", %{conn: conn} do
+    test "assigns :itunes when user has ITunes provider", %{conn: conn} do
       user = User.new()
 
-      Repatch.patch(Songy.Providers, :lookup, fn :providers, _user_uuid ->
-        {:error, :timeout}
-      end)
-
-      Repatch.patch(Songy.Providers, :ensure_ready, fn :providers, _user_id, :itunes ->
-        :ok
+      Repatch.patch(Songy.Providers, :ensure, fn _user_uuid ->
+        {:ok, :itunes, %Songy.Core.Provider.ITunes{}}
       end)
 
       conn =
@@ -199,16 +186,11 @@ defmodule SongyWeb.AuthTest do
       assert conn.assigns.provider == :itunes
     end
 
-    test "calls ensure_ready with default provider", %{conn: conn} do
+    test "assigns :apple when user has Apple provider", %{conn: conn} do
       user = User.new()
 
-      Repatch.patch(Songy.Providers, :lookup, fn :providers, _user_uuid ->
-        {:error, :provider_not_found}
-      end)
-
-      Repatch.patch(Songy.Providers, :ensure_ready, fn :providers, user_id, :itunes ->
-        assert user_id == user.uuid
-        :ok
+      Repatch.patch(Songy.Providers, :ensure, fn _user_uuid ->
+        {:ok, :apple, %Songy.Core.Provider.Apple{}}
       end)
 
       conn =
@@ -216,14 +198,14 @@ defmodule SongyWeb.AuthTest do
         |> assign(:current_user, user)
         |> Auth.fetch_current_provider([])
 
-      assert conn.assigns.provider == :itunes
+      assert conn.assigns.provider == :apple
     end
 
-    test "assigns different provider IDs correctly", %{conn: conn} do
+    test "does not assign provider when ensure returns error", %{conn: conn} do
       user = User.new()
 
-      Repatch.patch(Songy.Providers, :lookup, fn :providers, _user_uuid ->
-        {:ok, %Songy.Core.Provider.Spotify{access_token: "token", refresh_token: "refresh"}}
+      Repatch.patch(Songy.Providers, :ensure, fn _user_uuid ->
+        {:error, :network_error}
       end)
 
       conn =
@@ -231,7 +213,7 @@ defmodule SongyWeb.AuthTest do
         |> assign(:current_user, user)
         |> Auth.fetch_current_provider([])
 
-      assert conn.assigns.provider == :spotify
+      refute Map.has_key?(conn.assigns, :provider)
     end
   end
 end

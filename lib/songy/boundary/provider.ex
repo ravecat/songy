@@ -13,8 +13,9 @@ defprotocol Songy.Boundary.Provider do
 
   @doc """
   Ensures that provider credentials and data are fresh and valid.
+  Returns {:ok, provider_id, provider} on success.
   """
-  @spec ensure(t()) :: {:ok, term()} | {:error, atom()}
+  @spec ensure(t()) :: {:ok, atom(), term()} | {:error, atom()}
   def ensure(provider)
 
   @spec start_playback(t(), Songy.Core.Track.t()) :: {:ok, term()} | {:error, atom()}
@@ -31,6 +32,7 @@ defprotocol Songy.Boundary.Provider do
 end
 
 defimpl Songy.Boundary.Provider, for: Any do
+  # Note: returns {:error, _} not triple
   def ensure(_provider), do: {:error, :not_supported}
   def start_playback(_provider, _track), do: {:error, :not_supported}
   def pause_playback(_provider), do: {:error, :not_supported}
@@ -47,10 +49,10 @@ defimpl Songy.Boundary.Provider, for: Songy.Core.Provider.Spotify do
   def ensure(provider) do
     case Spotify.ensure_provider_data(provider) do
       {:ok, ^provider} ->
-        {:ok, provider}
+        {:ok, :spotify, provider}
 
       {:ok, credentials} ->
-        {:ok, Provider.Spotify.update(provider, Map.from_struct(credentials))}
+        {:ok, :spotify, Provider.Spotify.update(provider, Map.from_struct(credentials))}
 
       {:error, reason} ->
         {:error, reason}
@@ -99,7 +101,7 @@ defimpl Songy.Boundary.Provider, for: Songy.Core.Provider.Apple do
   def ensure(_provider) do
     case Apple.access_token() do
       token when is_binary(token) ->
-        {:ok, Provider.Apple.new()}
+        {:ok, :apple, Provider.Apple.new()}
 
       _ ->
         {:error, :invalid_credentials}
@@ -143,7 +145,7 @@ defimpl Songy.Boundary.Provider, for: Songy.Core.Provider.ITunes do
   alias Songy.Core.Trackable
 
   def ensure(_provider) do
-    {:ok, Provider.ITunes.new()}
+    {:ok, :itunes, Provider.ITunes.new()}
   end
 
   def start_playback(_provider, _track) do

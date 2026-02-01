@@ -64,7 +64,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _reply, _socket} = join_room_channel(current_user, game_id)
 
-      assert_push("state", %{game: ^game_state, permissions: _permissions})
+      assert_push "state", %{game: ^game_state, permissions: _permissions}
     end
 
     test "handles missing game session gracefully", %{current_user: current_user} do
@@ -76,7 +76,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _reply, _socket} = join_room_channel(current_user, game_id)
 
-      refute_push("state", _)
+      refute_push "state", _
     end
   end
 
@@ -107,11 +107,11 @@ defmodule SongyWeb.RoomChannelTest do
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
-      assert_push("state", %{game: ^initial_game, permissions: _permissions})
+      assert_push "state", %{game: ^initial_game, permissions: _permissions}
 
       send(socket.channel_pid, {:state, updated_game})
 
-      assert_push("state", %{game: ^updated_game, permissions: _permissions})
+      assert_push "state", %{game: ^updated_game, permissions: _permissions}
     end
   end
 
@@ -133,11 +133,11 @@ defmodule SongyWeb.RoomChannelTest do
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
-      assert_push("state", %{game: ^game_state, permissions: _permissions})
+      assert_push "state", %{game: ^game_state, permissions: _permissions}
 
       send(socket.channel_pid, {:timer, 7})
 
-      assert_push("timer", %{remaining: 7})
+      assert_push "timer", %{remaining: 7}
     end
   end
 
@@ -165,11 +165,11 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", %{game: %{status: :waiting}})
+      assert_push "state", %{game: %{status: :waiting}}
 
       ref = push(socket, "start_game", %{})
 
-      refute_reply(ref, :ok)
+      refute_reply ref, :ok
     end
 
     test "does not reply when start_game fails", %{current_user: current_user} do
@@ -193,11 +193,11 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", %{game: %{status: :waiting}})
+      assert_push "state", %{game: %{status: :waiting}}
 
       ref = push(socket, "start_game", %{})
 
-      refute_reply(ref, :ok)
+      refute_reply ref, :ok
     end
   end
 
@@ -227,11 +227,11 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", %{game: %{status: :in_progress}})
+      assert_push "state", %{game: %{status: :in_progress}}
 
       ref = push(socket, "start_playback", %{})
 
-      assert_reply(ref, :ok)
+      assert_reply ref, :ok
     end
 
     test "does not reply when start_playback fails", %{current_user: current_user} do
@@ -256,11 +256,11 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", %{game: %{status: :in_progress}})
+      assert_push "state", %{game: %{status: :in_progress}}
 
       ref = push(socket, "start_playback", %{})
 
-      refute_reply(ref, :ok)
+      refute_reply ref, :ok
     end
   end
 
@@ -288,11 +288,11 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", %{game: %{status: :in_progress}})
+      assert_push "state", %{game: %{status: :in_progress}}
 
       ref = push(socket, "pause_playback", %{})
 
-      assert_reply(ref, :ok)
+      assert_reply ref, :ok
     end
 
     test "does not reply when pause_playback fails", %{current_user: current_user} do
@@ -317,11 +317,11 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", %{game: _})
+      assert_push "state", %{game: _}
 
       ref = push(socket, "pause_playback", %{})
 
-      refute_reply(ref, :ok)
+      refute_reply ref, :ok
     end
   end
 
@@ -350,11 +350,11 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", %{game: _})
+      assert_push "state", %{game: _}
 
       ref = push(socket, "advance_turn", %{})
 
-      assert_reply(ref, :ok)
+      assert_reply ref, :ok
     end
 
     test "does not reply when advance_turn fails", %{current_user: current_user} do
@@ -378,11 +378,11 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", %{game: _})
+      assert_push "state", %{game: _}
 
       ref = push(socket, "advance_turn", %{})
 
-      refute_reply(ref, :ok)
+      refute_reply ref, :ok
     end
   end
 
@@ -403,7 +403,7 @@ defmodule SongyWeb.RoomChannelTest do
          }}
       end)
 
-      Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn :providers, ^user_id ->
+      Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn ^user_id ->
         {:ok,
          %Songy.Core.Provider.Spotify{
            access_token: "test-token",
@@ -415,11 +415,11 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", %{game: _})
+      assert_push "state", %{game: _}
 
       ref = push(socket, "get_provider", %{})
 
-      assert_reply(ref, :ok, %{token: "test-token"})
+      assert_reply ref, :ok, %{token: "test-token"}
     end
 
     test "returns error when provider not found", %{current_user: current_user} do
@@ -438,17 +438,17 @@ defmodule SongyWeb.RoomChannelTest do
          }}
       end)
 
-      Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn :providers, ^user_id ->
+      Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn ^user_id ->
         {:error, :provider_not_found}
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", %{game: _})
+      assert_push "state", %{game: _}
 
       ref = push(socket, "get_provider", %{})
 
-      assert_reply(ref, :error, %{reason: "invalid_credentials"})
+      assert_reply ref, :error, %{reason: "invalid_credentials"}
     end
 
     test "returns error when access token is nil", %{current_user: current_user} do
@@ -467,7 +467,7 @@ defmodule SongyWeb.RoomChannelTest do
          }}
       end)
 
-      Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn :providers, ^user_id ->
+      Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn ^user_id ->
         {:ok,
          %Songy.Core.Provider.Spotify{
            access_token: nil,
@@ -479,11 +479,11 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", %{game: _})
+      assert_push "state", %{game: _}
 
       ref = push(socket, "get_provider", %{})
 
-      assert_reply(ref, :error, %{reason: "invalid_credentials"})
+      assert_reply ref, :error, %{reason: "invalid_credentials"}
     end
   end
 
@@ -504,7 +504,7 @@ defmodule SongyWeb.RoomChannelTest do
          }}
       end)
 
-      Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn :providers, ^user_id ->
+      Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn ^user_id ->
         {:ok,
          %Songy.Core.Provider.Spotify{
            access_token: "old-token",
@@ -514,19 +514,17 @@ defmodule SongyWeb.RoomChannelTest do
          }}
       end)
 
-      Repatch.patch(Songy.Providers, :update, [mode: :shared], fn :providers,
-                                                                  ^user_id,
-                                                                  _updated_provider ->
+      Repatch.patch(Songy.Providers, :update, [mode: :shared], fn ^user_id, _updated_provider ->
         :ok
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", %{game: _})
+      assert_push "state", %{game: _}
 
       ref = push(socket, "update_provider", %{"access_token" => "new-token"})
 
-      assert_reply(ref, :ok)
+      assert_reply ref, :ok
     end
 
     test "returns error when provider not found", %{current_user: current_user} do
@@ -545,17 +543,17 @@ defmodule SongyWeb.RoomChannelTest do
          }}
       end)
 
-      Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn :providers, ^user_id ->
+      Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn ^user_id ->
         {:error, :provider_not_found}
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", %{game: _})
+      assert_push "state", %{game: _}
 
       ref = push(socket, "update_provider", %{"access_token" => "new-token"})
 
-      assert_reply(ref, :error, %{reason: "provider_not_found"})
+      assert_reply ref, :error, %{reason: "provider_not_found"}
     end
   end
 
@@ -577,10 +575,10 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", %{game: _})
+      assert_push "state", %{game: _}
 
       ref = push(socket, "get_current_user", %{})
-      assert_reply(ref, :ok, %{uuid: user_uuid})
+      assert_reply ref, :ok, %{uuid: user_uuid}
       assert user_uuid == current_user.uuid
     end
   end
@@ -611,11 +609,11 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", %{game: _})
+      assert_push "state", %{game: _}
 
       ref = push(socket, "make_assumption", %{"position" => 0})
 
-      assert_reply(ref, :ok)
+      assert_reply ref, :ok
     end
 
     test "does not reply when make_assumption fails", %{current_user: current_user} do
@@ -640,11 +638,11 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", %{game: _})
+      assert_push "state", %{game: _}
 
       ref = push(socket, "make_assumption", %{"position" => 0})
 
-      refute_reply(ref, :ok)
+      refute_reply ref, :ok
     end
 
     test "returns error for missing position in payload", %{current_user: current_user} do
@@ -664,12 +662,12 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", %{game: _})
+      assert_push "state", %{game: _}
 
       # Push with empty payload - pattern match fails, goes to generic handle_in
       ref = push(socket, "make_assumption", %{})
 
-      assert_reply(ref, :error)
+      assert_reply ref, :error
     end
   end
 
@@ -693,11 +691,11 @@ defmodule SongyWeb.RoomChannelTest do
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
       # Consume push from join
-      assert_push("state", %{game: _})
+      assert_push "state", %{game: _}
 
       ref = push(socket, "unknown_event", %{})
 
-      assert_reply(ref, :error, %{reason: "unknown_event", event: "unknown_event"})
+      assert_reply ref, :error, %{reason: "unknown_event", event: "unknown_event"}
     end
   end
 end

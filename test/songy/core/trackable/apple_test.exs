@@ -21,7 +21,10 @@ defmodule Songy.Core.Trackable.AppleTest do
             "height" => 1400
           },
           "previews" => [
-            %{"url" => "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/f1/e2/d3/f1e2d3c4-1234-5678-9abc-def012345678/mzaf_1234567890123456789.plus.aac.p.m4a"}
+            %{
+              "url" =>
+                "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/f1/e2/d3/f1e2d3c4-1234-5678-9abc-def012345678/mzaf_1234567890123456789.plus.aac.p.m4a"
+            }
           ],
           "durationInMillis" => 276_000
         }
@@ -34,7 +37,9 @@ defmodule Songy.Core.Trackable.AppleTest do
       assert result.artist == "The Prodigy"
       assert result.year == 1996
       assert result.cover_url == "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/a1/b2/c3/640x640bb.jpg"
-      assert result.meta.preview_url == "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/f1/e2/d3/f1e2d3c4-1234-5678-9abc-def012345678/mzaf_1234567890123456789.plus.aac.p.m4a"
+
+      assert result.meta.preview_url ==
+               "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/f1/e2/d3/f1e2d3c4-1234-5678-9abc-def012345678/mzaf_1234567890123456789.plus.aac.p.m4a"
     end
 
     test "handles missing previews array" do

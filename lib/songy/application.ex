@@ -16,7 +16,7 @@ defmodule Songy.Application do
       # Start a worker by calling: Songy.Worker.start_link(arg)
       # {Songy.Worker, arg},
       # Provider credentials storage with ETS
-      {Songy.Providers, name: :providers},
+      Songy.Providers,
       # Registry for game session process registration
       {Registry, [name: Songy.Registry, keys: :unique]},
       # Dynamic supervisor for game sessions

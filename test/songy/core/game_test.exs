@@ -216,5 +216,4 @@ defmodule Songy.Core.GameTest do
                )
     end
   end
-
 end

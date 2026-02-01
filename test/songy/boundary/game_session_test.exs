@@ -7,8 +7,8 @@ defmodule Songy.Boundary.GameSessionTest do
   alias Songy.Core.User
 
   setup do
-    Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn :providers, user_id ->
-      {:ok,
+    Repatch.patch(Songy.Providers, :ensure, [mode: :shared], fn user_id ->
+      {:ok, :spotify,
        %Songy.Core.Provider.Spotify{
          access_token: "token-#{user_id}",
          refresh_token: "refresh-#{user_id}"

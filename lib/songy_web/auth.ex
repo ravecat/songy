@@ -5,9 +5,6 @@ defmodule SongyWeb.Auth do
   import Plug.Conn
   import Phoenix.Controller
 
-  alias Songy.Core.Provider.Apple
-  alias Songy.Core.Provider.ITunes
-  alias Songy.Core.Provider.Spotify
   alias Songy.Core.User
 
   def fetch_current_user(conn, _opts) do
@@ -27,20 +24,9 @@ defmodule SongyWeb.Auth do
   def fetch_current_provider(conn, _opts) do
     %{assigns: %{current_user: %{uuid: user_id}}} = conn
 
-    case Songy.Providers.lookup(:providers, user_id) do
-      {:ok, %Spotify{}} ->
-        assign(conn, :provider, :spotify)
-
-      {:ok, %Apple{}} ->
-        assign(conn, :provider, :apple)
-
-      {:ok, %ITunes{}} ->
-        assign(conn, :provider, :itunes)
-
-      _ ->
-        default = Application.fetch_env!(:songy, :default_provider)
-        Songy.Providers.ensure_ready(:providers, user_id, default)
-        assign(conn, :provider, default)
+    case Songy.Providers.ensure(user_id) do
+      {:ok, id, _provider} -> assign(conn, :provider, id)
+      {:error, _reason} -> conn
     end
   end
 

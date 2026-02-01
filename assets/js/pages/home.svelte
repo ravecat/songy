@@ -1,6 +1,5 @@
 <script>
   import { inertia, Deferred } from "@inertiajs/svelte";
-  import { Provider } from "~shared/types/provider";
 
   let { tracks } = $props();
 </script>
@@ -46,13 +45,7 @@
       <p class="hero__description">
         Challenge friends. Guess the year. Win.
       </p>
-      <form
-        use:inertia={{
-          href: "/create",
-          method: "post",
-          data: { provider: Provider.ITUNES },
-        }}
-      >
+      <form use:inertia={{ href: "/create", method: "post" }}>
         <button type="submit" class="btn btn-quick-start w-3xs">
           Quick game
         </button>

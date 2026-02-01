@@ -326,7 +326,7 @@ defmodule Songy.Boundary.Game do
   def handle_event({:call, from}, {:advance_turn, user_id}, {:in_progress, :results}, data) do
     with :ok <- Songy.Authorization.can?(:advance_turn, user_id, data),
          :no_winner <- Core.Game.check_winner(data),
-         {:ok, provider} <- Songy.Providers.lookup(:providers, data.owner_id),
+         {:ok, _id, provider} <- Songy.Providers.ensure(data.owner_id),
          {:ok, %Core.Track{} = track} <- Playback.search_random_track(provider),
          {:ok, :playback_paused} <- Playback.pause_playback(provider) do
       Logger.debug("Game #{data.id}: Advancing turn phase")
@@ -486,7 +486,7 @@ defmodule Songy.Boundary.Game do
     with :ok <- Core.Game.validate_not_full(data),
          :ok <- Core.Game.validate_not_duplicate(data, user),
          :new <- rejoin?(data, user_id),
-         {:ok, provider} <- Songy.Providers.lookup(:providers, data.owner_id),
+         {:ok, _id, provider} <- Songy.Providers.ensure(data.owner_id),
          {:ok, %Core.Track{} = track} <- Playback.search_random_track(provider) do
       updated_game = %{
         data
