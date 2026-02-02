@@ -138,93 +138,80 @@
     hasInteracted = true;
     if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
     e.preventDefault();
-    timeline.scrollLeft += e.deltaY;
+    timeline.scrollLeft += e.deltaY * 0.5;
   }
 
   function onScrollEnd() {
-    if (!hasInteracted || !timeline) return;
+    if (!hasInteracted) return;
 
-    const timelineRect = timeline.getBoundingClientRect();
-    const centerX = timelineRect.left + timelineRect.width / 2;
+    const centerX =
+      timeline.getBoundingClientRect().left + timeline.offsetWidth / 2;
 
-    let closestElement: Element | null = null;
-    let minDistance = Infinity;
-
-    timeline.querySelectorAll("[role='listitem']").forEach((el) => {
-      const rect = el.getBoundingClientRect();
-      const elementCenterX = rect.left + rect.width / 2;
-      const distance = Math.abs(elementCenterX - centerX);
-
-      if (distance < minDistance) {
-        minDistance = distance;
-        closestElement = el;
-      }
+    const closestElement = Array.from(
+      timeline.querySelectorAll<HTMLElement>("[role='listitem']"),
+    ).reduce((closest, el) => {
+      const distance = Math.abs(
+        el.getBoundingClientRect().left + el.offsetWidth / 2 - centerX,
+      );
+      const closestDistance = Math.abs(
+        closest.getBoundingClientRect().left +
+          closest.offsetWidth / 2 -
+          centerX,
+      );
+      return distance < closestDistance ? el : closest;
     });
 
-    const closestPosition = closestElement
-      ? (closestElement as HTMLElement).dataset.position
-      : undefined;
+    const position = closestElement?.dataset.position;
 
-    if (closestPosition === undefined) return;
+    if (!position) return;
 
-    channel.push(PUSH_EVENT.MAKE_ASSUMPTION, {
-      position: Number(closestPosition),
-    });
+    channel.push(PUSH_EVENT.MAKE_ASSUMPTION, { position: Number(position) });
   }
 </script>
 
-<div class="timeline">
-  <div
-    class="timeline__scroll"
-    bind:this={timeline}
-    onwheel={handleWheel}
-    onscrollend={onScrollEnd}
-    onpointerdown={() => (hasInteracted = true)}
-    ontouchmove={() => (hasInteracted = true)}
-    role="list"
-    aria-label="Timeline"
-  >
-    {#each cells as cell, index (index)}
-      <div
-        class="timeline__placeholder"
-        class:timeline__placeholder_track={cell.kind !== "slot"}
-        data-position={cell.kind === "track" ? undefined : cell.position}
-        role="listitem"
-      >
-        {#if cell.kind === "track"}
-          <TrackCard track={cell.track} />
-        {:else if cell.kind === "assumption"}
-          <TrackCard track={null} revealed={false}>
-            {#snippet back()}
-              <div class="timeline__assumption-avatar">
-                <img src={cell.user.avatar_url} alt={cell.user.name} />
-              </div>
-            {/snippet}
-          </TrackCard>
-        {/if}
-      </div>
-    {/each}
-  </div>
+<div
+  class="timeline__scroll"
+  bind:this={timeline}
+  onwheel={handleWheel}
+  onscrollend={onScrollEnd}
+  onpointerdown={() => (hasInteracted = true)}
+  ontouchmove={() => (hasInteracted = true)}
+  role="list"
+  aria-label="Timeline"
+>
+  {#each cells as cell, index (index)}
+    <div
+      class="timeline__placeholder"
+      class:timeline__placeholder_track={cell.kind !== "slot"}
+      data-position={cell.kind === "track" ? undefined : cell.position}
+      role="listitem"
+    >
+      {#if cell.kind === "track"}
+        <TrackCard track={cell.track} />
+      {:else if cell.kind === "assumption"}
+        <TrackCard track={null} revealed={false}>
+          {#snippet back()}
+            <div class="timeline__assumption-avatar">
+              <img src={cell.user.avatar_url} alt={cell.user.name} />
+            </div>
+          {/snippet}
+        </TrackCard>
+      {/if}
+    </div>
+  {/each}
 </div>
 
 <style>
-  .timeline {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-  }
-
   .timeline__scroll {
     display: flex;
+    margin: auto;
     width: 100%;
     gap: 1rem;
     overflow-x: auto;
     overflow-y: hidden;
     scroll-snap-type: x mandatory;
     scroll-behavior: smooth;
+    overscroll-behavior-x: contain;
     scrollbar-width: none;
   }
 
