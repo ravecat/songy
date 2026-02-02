@@ -44,10 +44,12 @@ npm-debug.log
 /assets/e2e/playwright-report/
 
 # Ignore tools artifacts.
-/.elixir_ls/
-/context_portal/
-/.sisyphus/
-/.opencode/
+.elixir_ls/
+context_portal/
+.sisyphus/
+.opencode/
+.plans/
+.docs/
 
 # Environment variables
 /envs/*
@@ -56,5 +58,6 @@ npm-debug.log
 .vscode/
 .idea/
 *.iml
+
 # Git worktrees
 .worktrees/
