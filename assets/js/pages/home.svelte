@@ -65,7 +65,7 @@
 
   .landing__covers {
     flex: 1 1 auto;
-    max-width: 600px;
+    max-width: var(--breakpoint-mobile);
     overflow: hidden;
     background-image: var(--landing-gradient);
     display: flex;
@@ -110,6 +110,7 @@
   .cover-grid__item_placeholder {
     background: rgb(255 255 255 / 0.15);
     animation: pulse 1.5s ease-in-out infinite;
+    opacity: 1;
   }
 
   .actions {

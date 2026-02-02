@@ -125,6 +125,11 @@
   --z-modal: 100;
 }
 
+/* Breakpoints */
+:root {
+  --breakpoint-mobile: 640px;
+}
+
 /* Transition durations */
 :root {
   --transition-fast: 150ms ease;
