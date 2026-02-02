@@ -26,40 +26,6 @@ defmodule SongyWeb.PageControllerTest do
       GameSession.end_game_session(uuid)
     end
 
-    test "creates game session with existing spotify provider", %{conn: conn} do
-      Repatch.patch(Songy.Providers, :ensure, fn _user_uuid ->
-        {:ok, :spotify,
-         %Songy.Core.Provider.Spotify{
-           access_token: "test_token",
-           refresh_token: "refresh_token",
-           expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
-         }}
-      end)
-
-      conn = post(conn, ~p"/create")
-      location = redirected_to(conn, 302)
-      assert is_binary(location)
-      assert location =~ ~r"^/[A-Za-z0-9_-]+$"
-
-      uuid = String.trim_leading(location, "/")
-
-      assert {:ok, pid} = GameSession.lookup_game_session(uuid)
-      assert Process.alive?(pid)
-
-      GameSession.end_game_session(uuid)
-    end
-
-    test "shows error when provider has transient error", %{conn: conn} do
-      Repatch.patch(Songy.Providers, :ensure, fn _user_uuid ->
-        {:error, :network_error}
-      end)
-
-      conn = post(conn, ~p"/create")
-      assert redirected_to(conn) == "/"
-
-      assert "Failed to create game session: :network_error" =
-               Phoenix.Flash.get(conn.assigns.flash, :error)
-    end
   end
 
   describe "create/2 error handling" do

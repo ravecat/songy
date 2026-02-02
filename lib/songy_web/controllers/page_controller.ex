@@ -3,7 +3,6 @@ defmodule SongyWeb.PageController do
 
   alias Songy.Boundary.GameSession
   alias Songy.Music
-  alias Songy.Providers
 
   def home(conn, _params) do
     user_id = conn.assigns.current_user.uuid
@@ -16,10 +15,10 @@ defmodule SongyWeb.PageController do
   def create(conn, _params) do
     user_id = conn.assigns.current_user.uuid
 
-    with {:ok, _id, _provider} <- Providers.ensure(user_id),
-         {:ok, game} <- GameSession.create_game_session(user_id) do
-      redirect(conn, to: ~p"/#{game.id}")
-    else
+    case GameSession.create_game_session(user_id) do
+      {:ok, game} ->
+        redirect(conn, to: ~p"/#{game.id}")
+
       {:error, reason} ->
         conn
         |> put_flash(:error, "Failed to create game session: #{inspect(reason)}")
