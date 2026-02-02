@@ -22,7 +22,11 @@
 <div class="results">
   <div class="results__container">
     <div class="results__vinyl">
-      <Vinyl {track} />
+      <Vinyl>
+        {#if track?.cover_url}
+          <img src={track.cover_url} alt={track.title} class="vinyl-cover" />
+        {/if}
+      </Vinyl>
     </div>
     <div class="results__sleeve">
       <Sleeve {track} />
@@ -77,6 +81,13 @@
   .results__sleeve {
     position: relative;
     z-index: var(--z-above);
+  }
+
+  .vinyl-cover {
+    width: 100%;
+    height: 100%;
+    border-radius: var(--radius-circle);
+    object-fit: cover;
   }
 
   .results__avatars {
