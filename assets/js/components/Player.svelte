@@ -78,7 +78,7 @@
     text: "ready",
     onclick: handleAdvanceTurn,
     class: "btn-primary",
-    visible: permissions.can_start_turn,
+    visible: permissions?.can_start_turn,
   })}
 {/snippet}
 

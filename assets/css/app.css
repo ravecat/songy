@@ -269,8 +269,9 @@
 }
 
 html,
-body {
-  height: 100%;
+body,
+#app {
+  height: 100dvh;
   width: 100%;
   overflow: hidden;
 }

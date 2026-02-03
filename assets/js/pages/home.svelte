@@ -57,7 +57,7 @@
 
 <style>
   .landing {
-    height: 100vh;
+    height: 100%;
     display: flex;
     flex-direction: row;
     overflow: hidden;
@@ -72,7 +72,7 @@
     align-items: center;
     justify-content: center;
     padding: 0.75rem;
-    height: 100vh;
+    height: 100%;
   }
 
   .cover-grid {
