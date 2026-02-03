@@ -50,6 +50,7 @@ context_portal/
 .opencode/
 .plans/
 .docs/
+.direnv/
 
 # Environment variables
 /envs/*

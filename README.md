@@ -2,43 +2,95 @@
 
 Music quiz application with Spotify integration built with Phoenix Framework.
 
+## Requirements
+
+- Nix (flakes enabled)
+- direnv + nix-direnv (optional, for automatic environment activation)
+
 ## Setup
 
-1. Clone the repository
-2. Install dependencies:
+### 1. Install Nix
 
-   ```bash
-   mix deps.get
-   ```
+```bash
+sh <(curl -L https://nixos.org/nix/install)
+```
 
-3. Configure Spotify API:
+### 2. Enable flakes
 
-   - Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
-   - Create a new app
-   - Copy `.env.example` to `.env` and fill in your credentials:
+```bash
+mkdir -p ~/.config/nix
+printf "experimental-features = nix-command flakes\n" >> ~/.config/nix/nix.conf
+```
 
-     ```bash
-     cp .env.example .env
-     ```
+### 3. (Optional) Install direnv and nix-direnv
 
-   - Edit `.env` with your Spotify app credentials
-   - Add `http://localhost:4000/auth/spotify/callback` to your Spotify app's redirect URIs
+For automatic environment activation when entering the project directory:
 
-4. Start the server:
+```bash
+# Install direnv
+nix profile add nixpkgs#direnv
 
-   ```bash
-   mix phx.server
-   ```
+# Install nix-direnv
+nix profile add nixpkgs#nix-direnv
+
+# Configure nix-direnv hook
+mkdir -p ~/.config/direnv
+echo 'source $HOME/.nix-profile/share/nix-direnv/direnvrc' >> ~/.config/direnv/direnvrc
+
+# Add direnv hook to shell (bash, for other shells see https://direnv.net/docs/hook.html)
+echo 'eval "$(direnv hook bash)"' >> ~/.bashrc
+```
+
+### 4. Clone the repository
+
+### 5. Start development
+
+**With direnv (automatic):**
+
+```bash
+cd songy/
+direnv allow
+# Environment automatically activated
+mix setup
+mix phx.server
+```
+
+**Without direnv (manual):**
+
+```bash
+cd songy/
+nix develop
+mix setup
+mix phx.server
+```
 
 Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 
-## Environment Variables
+## Music Providers
 
-Create a `.env` file with the following variables:
+By default, the app uses **iTunes** (no configuration needed) - its rate limits are sufficient for development.
 
-- `SPOTIFY_CLIENT_ID` - Your Spotify app client ID
-- `SPOTIFY_SECRET_KEY` - Your Spotify app client secret
-- `SPOTIFY_USER_ID` - Your Spotify user ID (optional)
+For production or enhanced features, configure one of these providers:
+
+### Spotify
+
+1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+2. Create a new app
+3. Add `http://localhost:4000/auth/spotify/callback` to redirect URIs
+4. Set environment variables:
+
+   ```bash
+   SPOTIFY_CLIENT_ID=your_client_id
+   SPOTIFY_SECRET_KEY=your_client_secret
+   ```
+
+### Apple Music
+
+Requires Apple Music API developer token:
+
+```bash
+APPLE_MUSIC_ACCESS_TOKEN=your_access_token
+```
 
 ## Licensing
 
