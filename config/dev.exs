@@ -1,5 +1,20 @@
 import Config
 
+{:ok, addrs} = :inet.getifaddrs()
+
+lan_ip =
+  addrs
+  |> Enum.flat_map(fn {_iface, opts} -> Keyword.get_values(opts, :addr) end)
+  |> Enum.find(fn
+    {a, _b, _, _} when a in [192, 10] -> true
+    {172, b, _, _} when b >= 16 and b <= 31 -> true
+    _ -> false
+  end)
+  |> then(fn
+    nil -> "localhost"
+    ip -> ip |> Tuple.to_list() |> Enum.join(".")
+  end)
+
 # Database connection disabled - uncomment if needed
 # config :songy, Songy.Repo,
 #   username: "postgres",
@@ -19,13 +34,13 @@ import Config
 config :songy, SongyWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
-  http: [ip: {127, 0, 0, 1}, port: String.to_integer(System.get_env("PORT") || "4000")],
+  http: [ip: {0, 0, 0, 0}, port: String.to_integer(System.get_env("PORT") || "4000")],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
   secret_key_base: "D4ZJEvFP19Dn0Mpzog0xd6QL5qu8RJUNfWmGRXf7447sfWh67sHftKl8uUSLtGFw",
   watchers: [vite: {Bun, :install_and_run, [:vite, ~w(dev)]}],
-  static_url: [host: "localhost", port: String.to_integer(System.get_env("VITE_PORT") || "5173")]
+  static_url: [host: lan_ip, port: String.to_integer(System.get_env("VITE_PORT") || "5173")]
 
 # ## SSL Support
 #
