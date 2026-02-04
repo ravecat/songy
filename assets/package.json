@@ -21,13 +21,15 @@
     "@types/spotify-web-playback-sdk": "^0.1.19",
     "axios": "^1.13.4",
     "clsx": "^2.1.1",
+    "es-toolkit": "^1.44.0",
     "lucide-svelte": "^0.563.0",
     "phoenix": "workspace:*",
     "phoenix_html": "workspace:*",
     "phoenix_live_view": "workspace:*",
     "svelte": "^5.49.0",
     "tailwind-merge": "^3.4.0",
-    "topbar": "^3.0.0"
+    "topbar": "^3.0.0",
+    "vite-plugin-es-toolkit": "^1.1.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.0",

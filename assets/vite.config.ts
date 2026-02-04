@@ -2,6 +2,7 @@ import { defineConfig, searchForWorkspaceRoot } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { svelte, vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import { visualizer } from 'rollup-plugin-visualizer';
+import esToolkit from 'vite-plugin-es-toolkit';
 import path from 'path';
 
 const port = parseInt(process.env.VITE_PORT || '5173', 10);
@@ -50,6 +51,7 @@ export default defineConfig({
     emptyOutDir: true,
   },
   plugins: [
+    esToolkit(),
     tailwindcss(),
     svelte({
       preprocess: [vitePreprocess()],
@@ -57,6 +59,6 @@ export default defineConfig({
         modernAst: true,
       },
     }),
-    visualizer({ open: true, gzipSize: true }),
+    visualizer({ gzipSize: true }),
   ],
 });
