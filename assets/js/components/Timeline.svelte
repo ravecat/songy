@@ -83,6 +83,13 @@
   import { getGameContext } from "~components/GameChannel.svelte";
   import { getScopeContext } from "~components/Scope.svelte";
   import { PUSH_EVENT } from "~shared/types/channel";
+  import type { Track } from "~shared/types/track";
+  import type { User } from "~shared/types/user";
+
+  type SlotCell = { kind: "slot"; position: number };
+  type TrackCell = { kind: "track"; track: Track };
+  type AssumptionCell = { kind: "assumption"; position: number; user: User };
+  type TimelineCell = SlotCell | TrackCell | AssumptionCell;
 
   const { game, channel } = $derived.by(getGameContext);
   const { user: currentUser } = $derived.by(getScopeContext);
@@ -107,8 +114,8 @@
 
   let hasInteracted = $state(false);
 
-  const cells = $derived.by(() => {
-    const items = [];
+  const cells = $derived.by((): TimelineCell[] => {
+    const items: TimelineCell[] = [];
     let assumptionsBefore = 0;
 
     for (let i = 0; i <= activeTimeline.length; i++) {
@@ -116,16 +123,16 @@
       const user = assumptions.get(position);
       const isCurrentUser = user?.uuid === currentUser?.uuid;
 
-      items.push(
-        user
-          ? { kind: "assumption", position, user }
-          : { kind: "slot", position },
-      );
+      if (user) {
+        items.push({ kind: "assumption", position, user });
+      } else {
+        items.push({ kind: "slot", position });
+      }
 
       if (user && !isCurrentUser) assumptionsBefore++;
 
       if (i < activeTimeline.length) {
-        items.push({ kind: "track", track: activeTimeline[i] });
+        items.push({ kind: "track", track: activeTimeline[i]! });
       }
     }
 
