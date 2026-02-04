@@ -34,6 +34,8 @@ defimpl Songy.Core.Trackable, for: Songy.Core.Track.ITunes do
       }
 
   """
+  @track_sleeve_size 150
+
   def to_track(%Songy.Core.Track.ITunes{} = track) do
     Songy.Core.Track.new(
       title: title(track),
@@ -72,7 +74,7 @@ defimpl Songy.Core.Trackable, for: Songy.Core.Track.ITunes do
   defp fallback_artwork_url(_, fallback), do: fallback
 
   defp normalize_artwork_url(url) when is_binary(url) and url != "" do
-    Regex.replace(~r/\d+x\d+bb/, url, "640x640bb")
+    Regex.replace(~r/\d+x\d+bb/, url, "#{@track_sleeve_size}x#{@track_sleeve_size}bb")
   end
 
   defp normalize_artwork_url(_), do: nil
