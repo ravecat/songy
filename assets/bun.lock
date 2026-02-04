@@ -12,6 +12,7 @@
         "phoenix": "workspace:*",
         "phoenix_html": "workspace:*",
         "phoenix_live_view": "workspace:*",
+        "redaxios": "^0.5.1",
         "svelte": "^5.49.0",
         "tailwind-merge": "^3.4.0",
         "topbar": "^3.0.0",
@@ -1642,6 +1643,8 @@
     "read-pkg-up": ["read-pkg-up@9.1.0", "", { "dependencies": { "find-up": "^6.3.0", "read-pkg": "^7.1.0", "type-fest": "^2.5.0" } }, "sha512-vaMRR1AC1nrd5CQM0PhlRsO5oc2AAigqr7cCrZ/MW/Rsaflz4RlgzkpL4qoU/z1F6wrbd85iFv1OQj/y5RdGvg=="],
 
     "readdirp": ["readdirp@4.1.2", "", {}, "sha512-GDhwkLfywWL2s6vEjyhri+eXmfH6j1L7JE27WhqLeYzoh/A3DBaYGEj2H/HFZCn/kMfim73FXxEJTw06WtxQwg=="],
+
+    "redaxios": ["redaxios@0.5.1", "", {}, "sha512-FSD2AmfdbkYwl7KDExYQlVvIrFz6Yd83pGfaGjBzM9F6rpq8g652Q4Yq5QD4c+nf4g2AgeElv1y+8ajUPiOYMg=="],
 
     "redent": ["redent@3.0.0", "", { "dependencies": { "indent-string": "^4.0.0", "strip-indent": "^3.0.0" } }, "sha512-6tDA8g98We0zd0GvVeMT9arEOnTw9qM03L9cJXaCjrip1OO764RDBLBfrB4cwzNGDj5OA5ioymC9GkizgWJDUg=="],
 

@@ -24,6 +24,7 @@ export default defineConfig({
   resolve: {
     conditions: ['svelte', 'browser', 'import', 'default'],
     alias: {
+      axios: path.resolve(__dirname, 'js/lib/axios-shim.js'),
       '~': path.resolve(__dirname, 'js'),
       '~hooks': path.resolve(__dirname, 'js/hooks'),
       '~pages': path.resolve(__dirname, 'js/pages'),
@@ -35,6 +36,9 @@ export default defineConfig({
       '~priv': path.resolve(__dirname, '../priv'),
     },
   },
+  optimizeDeps: {
+    exclude: ['axios'],
+  },
   build: {
     target: 'esnext',
     manifest: true,
@@ -43,7 +47,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['phoenix', 'phoenix_html'],
-          framework: ['svelte', '@inertiajs/core', '@inertiajs/svelte', 'axios'],
+          framework: ['svelte', '@inertiajs/core', '@inertiajs/svelte'],
         },
       },
     },

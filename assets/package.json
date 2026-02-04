@@ -26,6 +26,7 @@
     "phoenix": "workspace:*",
     "phoenix_html": "workspace:*",
     "phoenix_live_view": "workspace:*",
+    "redaxios": "^0.5.1",
     "svelte": "^5.49.0",
     "tailwind-merge": "^3.4.0",
     "topbar": "^3.0.0",
