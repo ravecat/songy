@@ -275,3 +275,8 @@ body,
   width: 100%;
   overflow: hidden;
 }
+
+/* Gradient background visible during page transitions */
+html {
+  background-image: var(--landing-gradient);
+}

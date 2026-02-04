@@ -35,7 +35,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-image: var(--landing-gradient);
   }
 
   .room__content {

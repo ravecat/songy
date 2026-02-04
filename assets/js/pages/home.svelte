@@ -67,12 +67,12 @@
     flex: 1 1 auto;
     max-width: var(--breakpoint-mobile);
     overflow: hidden;
-    background-image: var(--landing-gradient);
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0.75rem;
     height: 100%;
+    background: var(--landing-gradient);
   }
 
   .cover-grid {
@@ -119,6 +119,7 @@
     align-items: center;
     justify-content: center;
     padding: 2rem 1.5rem;
+    background-color: var(--color-base-100);
   }
 
   .hero {
@@ -218,6 +219,7 @@
       align-items: center;
       justify-content: center;
       padding: 1rem;
+      background: transparent;
     }
 
     .landing__covers::after {

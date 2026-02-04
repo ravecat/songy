@@ -36,7 +36,7 @@ import axios from "axios";
 
 axios.defaults.xsrfHeaderName = "x-csrf-token";
 
-const pages = import.meta.glob("./pages/**/*.svelte");
+const pages = import.meta.glob("./pages/**/*.svelte", { eager: true });
 
 createInertiaApp({
   progress: {
@@ -44,9 +44,9 @@ createInertiaApp({
     color: "#29d",
   },
   resolve: (name) => {
-    const loader = pages[`./pages/${name}.svelte`];
-    if (!loader) throw new Error(`Page not found: ${name}`);
-    return loader();
+    const page = pages[`./pages/${name}.svelte`];
+    if (!page) throw new Error(`Page not found: ${name}`);
+    return page;
   },
   setup({ el, App, props }) {
     mount(App, { target: el, props });
