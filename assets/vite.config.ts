@@ -1,6 +1,7 @@
 import { defineConfig, searchForWorkspaceRoot } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { svelte, vitePreprocess } from '@sveltejs/vite-plugin-svelte';
+import { visualizer } from 'rollup-plugin-visualizer';
 import path from 'path';
 
 const port = parseInt(process.env.VITE_PORT || '5173', 10);
@@ -38,6 +39,12 @@ export default defineConfig({
     manifest: true,
     rollupOptions: {
       input: ['js/app.js', 'css/app.css'],
+      output: {
+        manualChunks: {
+          vendor: ['phoenix', 'phoenix_html'],
+          framework: ['svelte', '@inertiajs/core', '@inertiajs/svelte', 'axios'],
+        },
+      },
     },
     outDir: '../priv/static',
     emptyOutDir: true,
@@ -50,5 +57,6 @@ export default defineConfig({
         modernAst: true,
       },
     }),
+    visualizer({ open: true, gzipSize: true }),
   ],
 });

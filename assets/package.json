@@ -41,6 +41,7 @@
     "@vitest/ui": "^4.0.18",
     "daisyui": "^5.5.14",
     "jsdom": "^27.4.0",
+    "rollup-plugin-visualizer": "^6.0.5",
     "svelte-check": "^4.3.5",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",

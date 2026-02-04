@@ -25,7 +25,6 @@ defmodule SongyWeb.PageControllerTest do
 
       GameSession.end_game_session(uuid)
     end
-
   end
 
   describe "create/2 error handling" do

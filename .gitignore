@@ -37,6 +37,7 @@ npm-debug.log
 /assets/node_modules/
 /assets/.vite/
 /assets/coverage/
+/assets/stats.html
 /assets/package-lock.json
 /assets/test-results/
 /assets/playwright-report/
