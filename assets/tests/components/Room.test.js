@@ -4,9 +4,11 @@ import { GAME_STATUS } from "~shared/types/game";
 import Room from "~components/Room.svelte";
 import * as GameContext from "~components/GameChannel.svelte";
 import * as Scope from "~components/Scope.svelte";
+import * as QrContext from "~components/QrContext.svelte";
 
 describe("Room", () => {
   let getGameContextSpy;
+  let getQrContextSpy;
   let getScopeContextSpy;
   let mockChannelContext;
 
@@ -44,6 +46,8 @@ describe("Room", () => {
     };
 
     getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
+    getQrContextSpy = vi.spyOn(QrContext, "getQrContext");
+    getQrContextSpy.mockReturnValue({ svg: "" });
     getScopeContextSpy = vi.spyOn(Scope, "getScopeContext");
   });
 

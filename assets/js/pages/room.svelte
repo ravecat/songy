@@ -4,14 +4,17 @@
   import GameChannel from "~components/GameChannel.svelte";
   import Room from "~/components/Room.svelte";
   import MediaProvider from "~components/MediaProvider.svelte";
+  import QrContext from "~components/QrContext.svelte";
 
-  let { roomId, provider } = $props();
+  let { roomId, provider, qrSvg } = $props();
 </script>
 
 <GameChannel {socket} topic={`room:${roomId}`}>
   <MediaProvider {provider}>
-    <Scope>
-      <Room />
-    </Scope>
+    <QrContext svg={qrSvg}>
+      <Scope>
+        <Room />
+      </Scope>
+    </QrContext>
   </MediaProvider>
 </GameChannel>

@@ -30,10 +30,22 @@ defmodule SongyWeb.PageController do
     case GameSession.get_state(room_id) do
       {:ok, game} ->
         %{assigns: %{provider: provider}} = conn
+        room_url = url(conn, ~p"/#{game.id}")
+
+        {:ok, qr_svg} =
+          room_url
+          |> QRCode.create(:low)
+          |> QRCode.render(:svg, %QRCode.Render.SvgSettings{
+            background_color: "transparent",
+            structure: :minify,
+            flatten: true,
+            quiet_zone: 1
+          })
 
         conn
         |> assign_prop(:room_id, game.id)
         |> assign_prop(:provider, provider)
+        |> assign_prop(:qr_svg, qr_svg)
         |> render_inertia("room")
 
       {:error, :game_session_not_found} ->

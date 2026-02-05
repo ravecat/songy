@@ -1,11 +1,12 @@
 import { render, screen, fireEvent, within } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
 import * as GameContext from "~components/GameChannel.svelte";
-
+import * as QrContext from "~components/QrContext.svelte";
 import Lobby from "~components/Lobby.svelte";
 
 describe("Lobby", () => {
   let getGameContextSpy;
+  let getQrContextSpy;
 
   const mockParticipants = [
     {
@@ -27,6 +28,8 @@ describe("Lobby", () => {
 
   beforeEach(() => {
     getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
+    getQrContextSpy = vi.spyOn(QrContext, "getQrContext");
+    getQrContextSpy.mockReturnValue({ svg: "" });
 
     Object.assign(navigator, {
       clipboard: {
@@ -115,6 +118,23 @@ describe("Lobby", () => {
     expect(
       within(shareButton).getByText(/example\.com\/game\/abc123/),
     ).toBeInTheDocument();
+  });
+
+  test("renders QR svg when context provides it", () => {
+    getGameContextSpy.mockReturnValue({
+      game: {
+        participants: mockParticipants,
+        owner_id: "user-1",
+      },
+    });
+
+    getQrContextSpy.mockReturnValue({
+      svg: "<svg data-testid=\"qr-svg\"></svg>",
+    });
+
+    render(Lobby);
+
+    expect(screen.getByTestId("qr-svg")).toBeInTheDocument();
   });
 
   test("copies URL to clipboard on share button click", async () => {

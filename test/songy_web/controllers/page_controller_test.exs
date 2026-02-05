@@ -87,5 +87,19 @@ defmodule SongyWeb.PageControllerTest do
 
       GameSession.end_game_session(game.id)
     end
+
+    test "generates QR code SVG for room URL", %{conn: conn} do
+      {:ok, game} = GameSession.create_game_session("owner123")
+
+      conn = get(conn, ~p"/#{game.id}")
+
+      props = inertia_props(conn)
+      assert is_binary(props.qrSvg)
+      assert props.qrSvg =~ "<svg"
+      assert props.qrSvg =~ "<path"
+      assert props.qrSvg =~ ~s(fill="transparent")
+
+      GameSession.end_game_session(game.id)
+    end
   end
 end

@@ -1,10 +1,12 @@
 <script lang="ts">
   import { getGameContext } from "~components/GameChannel.svelte";
+  import { getQrContext } from "~components/QrContext.svelte";
   import { Link, Copy, Check, Crown } from "lucide-svelte";
   import Vinyl from "~components/Vinyl.svelte";
   import Sleeve from "~components/Sleeve.svelte";
 
   const { game } = $derived.by(getGameContext);
+  const { svg: qrSvg } = $derived.by(getQrContext);
 
   const participants = $derived(game?.participants ?? []);
   const ownerId = $derived(game?.owner_id ?? "");
@@ -49,6 +51,11 @@
       <Vinyl />
     </div>
     <Sleeve />
+    {#if qrSvg}
+      <div class="lobby__qr">
+        {@html qrSvg}
+      </div>
+    {/if}
   </div>
 
   <button
@@ -176,6 +183,26 @@
   .lobby__record :global(.sleeve) {
     position: relative;
     z-index: var(--z-above);
+  }
+
+  .lobby__qr {
+    position: absolute;
+    inset: 1rem;
+    z-index: var(--z-modal);
+    padding: 0.5rem;
+    background: var(--color-white);
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  }
+
+  .lobby__qr :global(svg) {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .lobby__qr :global(svg path) {
+    fill: var(--color-text);
   }
 
   @media (min-width: 640px) {
