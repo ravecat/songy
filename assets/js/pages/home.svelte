@@ -64,7 +64,7 @@
   }
 
   .landing__covers {
-    flex: 1 1 auto;
+    flex: 1 1 45%;
     max-width: var(--breakpoint-mobile);
     overflow: hidden;
     display: flex;
@@ -108,13 +108,17 @@
   }
 
   .cover-grid__item_placeholder {
+    aspect-ratio: 1 / 1;
+    width: 100%;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.25);
     background: rgb(255 255 255 / 0.15);
     animation: pulse 1.5s ease-in-out infinite;
     opacity: 1;
   }
 
   .actions {
-    flex: 1 1 auto;
+    flex: 2 1 55%;
     display: flex;
     align-items: center;
     justify-content: center;
