@@ -3,7 +3,7 @@
   import { BROADCAST_EVENT } from "~shared/types/channel";
   import { TURN_PHASE } from "~shared/types/turn";
 
-  const { channel, game } = $derived.by(getGameContext);
+  const { game, channel } = $derived.by(getGameContext);
   const phase = $derived(game?.turn?.phase);
 
   let seconds = $state<number | null>(null);

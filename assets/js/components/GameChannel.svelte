@@ -4,15 +4,9 @@
   import type { Game } from "~shared/types/game";
   import type { Permissions } from "~shared/types/permissions";
 
-  /**
-   * Game context interface providing game state and Phoenix channel access
-   */
   export interface GameContext {
-    /** Current game received from the channel */
-    game: Game | null;
-    /** User permissions for the current game, computed on the server */
-    permissions: Permissions | null;
-    /** Phoenix channel instance for real-time communication */
+    game: Game;
+    permissions: Permissions;
     channel: Channel;
   }
 
@@ -20,34 +14,112 @@
 </script>
 
 <script lang="ts">
-  import { useChannel, type ChannelProps } from "~components/Channel.svelte";
+  import Logo from "~components/Logo.svelte";
+  import { untrack } from "svelte";
+  import { useChannel, type UseChannelOptions } from "~hooks/channel.svelte";
   import { BROADCAST_EVENT } from "~shared/types/channel";
   import type { Snippet } from "svelte";
 
-  let { children, ...rest }: ChannelProps & { children?: Snippet } = $props();
+  interface Props {
+    socket: UseChannelOptions["socket"];
+    topic: UseChannelOptions["topic"];
+    children?: Snippet;
+    timeoutMs?: number;
+  }
 
-  const { channel } = useChannel(rest);
+  let { children, timeoutMs = 6_000, socket, topic }: Props = $props();
 
-  let context = $state<GameContext>({
-    game: null,
-    permissions: null,
-    channel,
+  let game = $state<Game | null>(null);
+  let permissions = $state<Permissions | null>(null);
+
+  const { promise: ready, resolve, reject } = Promise.withResolvers<void>();
+
+  const channel = useChannel({
+    socket: untrack(() => socket),
+    topic: untrack(() => topic),
+    on: {
+      [BROADCAST_EVENT.STATE]: (payload: {
+        game: Game;
+        permissions: Permissions;
+      }) => {
+        game = payload.game;
+        permissions = payload.permissions;
+        resolve();
+      },
+    },
+    join: {
+      error: (r) => reject(r),
+      timeout: () => reject(new Error("Connection timed out")),
+    },
+    onClose: () => reject(new Error("Connection closed unexpectedly")),
   });
 
-  channel.on(BROADCAST_EVENT.STATE, ({ game, permissions }) => {
-    context.game = game;
-    context.permissions = permissions;
-  });
+  const stateTimeoutId = setTimeout(
+    () => reject(new Error("Room took too long to respond")),
+    untrack(() => timeoutMs),
+  );
 
-  // Make context available to child components
-  setGameContext(context);
-
-  // Cleanup when component unmounts
   $effect(() => {
     return () => {
-      channel.leave();
+      clearTimeout(stateTimeoutId);
+      reject(new Error("Left the room"));
     };
   });
+
+  const context: GameContext = {
+    get game() {
+      if (!game) throw new Error("Game is not ready");
+      return game;
+    },
+    get permissions() {
+      if (!permissions) throw new Error("Permissions not loaded");
+      return permissions;
+    },
+    channel,
+  };
+
+  setGameContext(context);
 </script>
 
-{@render children?.()}
+<svelte:boundary>
+  {await ready}
+  {@render children?.()}
+
+  {#snippet pending()}
+    <div class="game-channel__loader">
+      <Logo />
+    </div>
+  {/snippet}
+
+  {#snippet failed(error)}
+    <div class="game-channel__error" role="alert">
+      <p class="text-lg font-semibold">Room unavailable</p>
+      <p class="opacity-70">
+        {typeof error === "object" && error && "reason" in error
+          ? `Reason: ${error.reason}`
+          : "Failed to load game state."}
+      </p>
+      <a class="btn btn-primary mt-4" href="/">Back home</a>
+    </div>
+  {/snippet}
+</svelte:boundary>
+
+<style>
+  .game-channel__loader {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100%;
+  }
+
+  .game-channel__error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100%;
+    padding: 1.5rem;
+    text-align: center;
+    gap: 0.5rem;
+  }
+</style>

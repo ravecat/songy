@@ -9,14 +9,24 @@ defmodule SongyWeb.RoomChannel do
   @room_prefix "room:"
 
   @impl true
-  def join(_topic, _payload, socket) do
-    user_id = socket.assigns.current_user_id
+  def join(topic, _payload, socket) do
+    @room_prefix <> room_id = topic
+    current_user_id = socket.assigns.current_user_id
 
-    {:ok, _} = Presence.track(socket, user_id, %{online_at: inspect(System.system_time(:second))})
+    case GameSession.get_state(room_id) do
+      {:ok, _game} ->
+        {:ok, _} =
+          Presence.track(socket, current_user_id, %{online_at: inspect(System.system_time(:second))})
 
-    send(self(), :init_client_state)
+        send(self(), :init_client_state)
 
-    {:ok, socket}
+        {:ok, socket}
+
+      {:error, reason} ->
+        Logger.warning("Join failed for #{room_id}: #{inspect(reason)}")
+
+        {:error, %{reason: "game_not_found"}}
+    end
   end
 
   @impl true

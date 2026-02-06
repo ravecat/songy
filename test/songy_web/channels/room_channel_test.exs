@@ -74,7 +74,7 @@ defmodule SongyWeb.RoomChannelTest do
         {:error, :game_not_found}
       end)
 
-      {:ok, _reply, _socket} = join_room_channel(current_user, game_id)
+      assert {:error, %{reason: "game_not_found"}} = join_room_channel(current_user, game_id)
 
       refute_push "state", _
     end

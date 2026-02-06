@@ -52,7 +52,7 @@ defmodule Songy.MixProject do
       {:floki, ">= 0.38.0", only: :test},
       {:phoenix_live_dashboard, "~> 0.8.3"},
       {:heroicons,
-       github: "tailwindlabs/heroicons", tag: "v2.1.1", sparse: "optimized", app: false, compile: false, depth: 1},
+       github: "tailwindlabs/heroicons", tag: "v2.1.1", sparse: "optimized", app: false, compile: false},
       {:swoosh, "~> 1.16"},
       {:inertia, "~> 2.6"},
       {:req, "~> 0.5.17"},

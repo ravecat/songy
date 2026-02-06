@@ -9,7 +9,7 @@
 
   let { children }: Props = $props();
 
-  const { game, channel, permissions } = $derived.by(getGameContext);
+  const { game, permissions, channel } = $derived.by(getGameContext);
 
   const src = $derived.by(() => {
     const previewUrl = game?.track?.meta?.preview_url;

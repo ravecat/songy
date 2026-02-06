@@ -7,7 +7,7 @@
   import { slide } from "svelte/transition";
   import { cn } from "~shared/utils/cn";
 
-  const { game, channel, permissions } = $derived.by(getGameContext);
+  const { game, permissions, channel } = $derived.by(getGameContext);
   const isPlayback = $derived(game?.player?.is_playback);
   const turnPhase = $derived(game?.turn?.phase);
 
