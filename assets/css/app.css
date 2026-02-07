@@ -231,13 +231,18 @@
   --leading-loose: 2;
 }
 
-/* Landing page gradient */
+/* Page gradients */
 :root {
   --landing-gradient: linear-gradient(
     to bottom right,
-    #581c87,
-    #9f1239,
-    #c2410c
+    oklch(55% 0.15 305),
+    oklch(55% 0.15 15),
+    oklch(58% 0.15 50)
+  );
+  --room-gradient: radial-gradient(
+    at center,
+    oklch(58% 0.15 15),
+    oklch(52% 0.15 305)
   );
 }
 
