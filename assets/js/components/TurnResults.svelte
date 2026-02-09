@@ -6,14 +6,13 @@
   const { game } = $derived.by(getGameContext);
   const track = $derived(game?.track);
 
-  const participants = $derived(
-    new Map(game?.participants?.map((u) => [u.uuid, u]) ?? []),
-  );
+  const participants = $derived(game?.participants ?? {});
+  const assumptions = $derived(game?.turn?.assumptions ?? {});
 
   const challengers = $derived(
-    (game?.turn?.assumptions ?? []).map(
-      ({ user_id }) => participants.get(user_id)!,
-    ),
+    Object.values(assumptions)
+      .map((userId) => participants[userId])
+      .filter(Boolean),
   );
 
   const winnerId = $derived(game?.turn?.winner_id);

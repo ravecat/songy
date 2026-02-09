@@ -114,7 +114,7 @@ defmodule Songy.Boundary.Game do
       max_participants: Keyword.get(opts, :max_participants, 10),
       max_score: Keyword.get(opts, :max_score, 10),
       status: :waiting,
-      participants: [],
+      participants: %{},
       scores: %{},
       player: Core.Player.new(),
       timelines: %{},
@@ -160,7 +160,7 @@ defmodule Songy.Boundary.Game do
       game = %{
         data
         | status: :in_progress,
-          turn: %Core.Turn{phase: :waiting, assumptions: []}
+          turn: %Core.Turn{phase: :waiting, assumptions: %{}}
       }
 
       {:next_state, {:in_progress, :waiting}, game, [{:reply, from, {:ok, game}}, {:next_event, :internal, :broadcast}]}
@@ -223,11 +223,10 @@ defmodule Songy.Boundary.Game do
     base_timeline = Map.get(data.timelines, active_player, [])
 
     {updated_game, winner_id} =
-      case Enum.find(
-             turn.assumptions,
-             &Core.Game.valid_assumption?(base_timeline, data.track, &1.position)
-           ) do
-        %{user_id: user_id} ->
+      case Enum.find(turn.assumptions, fn {position, _user_id} ->
+             Core.Game.valid_assumption?(base_timeline, data.track, position)
+           end) do
+        {_position, user_id} ->
           game =
             data
             |> increment_score(user_id)
@@ -335,7 +334,7 @@ defmodule Songy.Boundary.Game do
         1..length(data.queue)
         |> Enum.reduce_while(rem(data.cursor + 1, max(length(data.queue), 1)), fn _, cursor ->
           player_id = Enum.at(data.queue, cursor)
-          is_connected = Enum.any?(data.participants, &(&1.uuid == player_id))
+          is_connected = Map.has_key?(data.participants, player_id)
 
           if is_connected do
             {:halt, cursor}
@@ -349,7 +348,7 @@ defmodule Songy.Boundary.Game do
         | player: Core.Player.set_playback(data.player, false),
           track: track,
           cursor: next_cursor,
-          turn: %Core.Turn{phase: :waiting, assumptions: []}
+          turn: %Core.Turn{phase: :waiting, assumptions: %{}}
       }
 
       {:next_state, {:in_progress, :waiting}, updated_game,
@@ -490,7 +489,7 @@ defmodule Songy.Boundary.Game do
          {:ok, %Core.Track{} = track} <- Playback.search_random_track(provider) do
       updated_game = %{
         data
-        | participants: data.participants ++ [user],
+        | participants: Map.put(data.participants, user.uuid, user),
           scores: Map.put(data.scores, user.uuid, 0),
           queue: data.queue ++ [user_id],
           timelines: Map.put(data.timelines, user.uuid, [track])
@@ -501,7 +500,7 @@ defmodule Songy.Boundary.Game do
       :rejoined ->
         updated_game = %{
           data
-          | participants: data.participants ++ [user]
+          | participants: Map.put(data.participants, user.uuid, user)
         }
 
         {:keep_state, updated_game, [{:next_event, :internal, :broadcast}]}
@@ -519,7 +518,7 @@ defmodule Songy.Boundary.Game do
   defp handle_presence_left(data, user_id) do
     updated_game = %{
       data
-      | participants: Enum.reject(data.participants, &(&1.uuid == user_id))
+      | participants: Map.delete(data.participants, user_id)
     }
 
     {:keep_state, updated_game, [{:next_event, :internal, :broadcast}]}
@@ -534,45 +533,39 @@ defmodule Songy.Boundary.Game do
        ) do
     active_player = Enum.at(game.queue, game.cursor)
     base_timeline = Map.get(game.timelines, active_player, [])
-    user_assumption = Enum.find(assumptions, &(&1.user_id == user_id))
+    existing_position = Enum.find_value(assumptions, fn {pos, uid} -> if uid == user_id, do: pos end)
 
-    max_position = length(base_timeline) + length(assumptions)
+    max_position = length(base_timeline) + map_size(assumptions)
     position = max(0, min(position, max_position))
 
     blocked? =
       Enum.any?(assumptions, fn
-        %{user_id: ^user_id} -> false
-        %{position: pos} -> abs(pos - position) <= 1
+        {_pos, ^user_id} -> false
+        {pos, _uid} -> abs(pos - position) <= 1
       end)
 
-    case {user_assumption, blocked?} do
+    case {existing_position, blocked?} do
       {nil, true} ->
         game
 
       {nil, false} ->
-        shifted_assumptions =
-          Enum.map(assumptions, fn
-            %{position: pos} = assumption when pos >= position ->
-              %{assumption | position: pos + 1}
-
-            assumption ->
-              assumption
+        shifted =
+          Map.new(assumptions, fn
+            {pos, uid} when pos >= position -> {pos + 1, uid}
+            entry -> entry
           end)
 
-        new_assumptions = shifted_assumptions ++ [%{position: position, user_id: user_id}]
-
+        new_assumptions = Map.put(shifted, position, user_id)
         %{game | turn: %{turn | assumptions: new_assumptions}}
 
-      {%{position: _}, true} ->
+      {_, true} ->
         game
 
-      {%{position: _old_position}, false} ->
-        # Simply update position - slots are fixed, no shifting needed
+      {old_position, false} ->
         new_assumptions =
-          Enum.map(assumptions, fn
-            %{user_id: ^user_id} -> %{position: position, user_id: user_id}
-            a -> a
-          end)
+          assumptions
+          |> Map.delete(old_position)
+          |> Map.put(position, user_id)
 
         %{game | turn: %{turn | assumptions: new_assumptions}}
     end

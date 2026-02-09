@@ -14,18 +14,18 @@ describe("Game", () => {
   beforeEach(() => {
     mockChannelContext = {
       game: {
-        participants: [
-          {
+        participants: {
+          "user-1": {
             uuid: "user-1",
             name: "Alice",
             avatar_url: "https://example.com/alice.jpg",
           },
-          {
+          "user-2": {
             uuid: "user-2",
             name: "Bob",
             avatar_url: "https://example.com/bob.jpg",
           },
-        ],
+        },
         queue: ["user-1", "user-2"],
         cursor: 0,
         track: null,
@@ -57,7 +57,7 @@ describe("Game", () => {
               year: 2019,
             },
           ],
-          assumptions: [],
+          assumptions: {},
         },
       },
       permissions: {
@@ -212,7 +212,7 @@ describe("Game", () => {
     };
 
     mockChannelContext.game = {
-      participants: [],
+      participants: {},
       turn: undefined,
     };
 

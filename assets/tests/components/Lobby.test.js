@@ -8,23 +8,23 @@ describe("Lobby", () => {
   let getGameContextSpy;
   let getQrContextSpy;
 
-  const mockParticipants = [
-    {
+  const mockParticipants = {
+    "user-1": {
       uuid: "user-1",
       name: "Alice",
       avatar_url: "https://example.com/alice.jpg",
     },
-    {
+    "user-2": {
       uuid: "user-2",
       name: "Bob",
       avatar_url: "https://example.com/bob.jpg",
     },
-    {
+    "user-3": {
       uuid: "user-3",
       name: "Charlie",
       avatar_url: "https://example.com/charlie.jpg",
     },
-  ];
+  };
 
   beforeEach(() => {
     getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
@@ -51,6 +51,7 @@ describe("Lobby", () => {
     getGameContextSpy.mockReturnValue({
       game: {
         participants: mockParticipants,
+        queue: ["user-1", "user-2", "user-3"],
         owner_id: "user-1",
       },
     });
@@ -66,6 +67,7 @@ describe("Lobby", () => {
     getGameContextSpy.mockReturnValue({
       game: {
         participants: mockParticipants,
+        queue: ["user-1", "user-2", "user-3"],
         owner_id: "user-1",
       },
     });
@@ -85,6 +87,7 @@ describe("Lobby", () => {
     getGameContextSpy.mockReturnValue({
       game: {
         participants: mockParticipants,
+        queue: ["user-1", "user-2", "user-3"],
         owner_id: "user-1",
       },
     });
@@ -107,6 +110,7 @@ describe("Lobby", () => {
     getGameContextSpy.mockReturnValue({
       game: {
         participants: mockParticipants,
+        queue: ["user-1", "user-2", "user-3"],
         owner_id: "user-1",
       },
     });
@@ -124,6 +128,7 @@ describe("Lobby", () => {
     getGameContextSpy.mockReturnValue({
       game: {
         participants: mockParticipants,
+        queue: ["user-1", "user-2", "user-3"],
         owner_id: "user-1",
       },
     });
@@ -141,6 +146,7 @@ describe("Lobby", () => {
     getGameContextSpy.mockReturnValue({
       game: {
         participants: mockParticipants,
+        queue: ["user-1", "user-2", "user-3"],
         owner_id: "user-1",
       },
     });
@@ -159,6 +165,7 @@ describe("Lobby", () => {
     getGameContextSpy.mockReturnValue({
       game: {
         participants: mockParticipants,
+        queue: ["user-1", "user-2", "user-3"],
         owner_id: "user-1",
       },
     });
@@ -175,7 +182,8 @@ describe("Lobby", () => {
   test("handles empty participants list", () => {
     getGameContextSpy.mockReturnValue({
       game: {
-        participants: [],
+        participants: {},
+        queue: [],
         owner_id: "user-1",
       },
     });

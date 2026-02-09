@@ -27,8 +27,8 @@ export interface Game {
   /** Unique game room identifier */
   id: string;
 
-  /** List of participants in the game */
-  participants: User[];
+  /** Participants in the game, keyed by UUID */
+  participants: Record<string, User>;
 
   /** Maximum number of allowed participants */
   max_participants: number;

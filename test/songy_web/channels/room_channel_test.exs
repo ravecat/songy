@@ -589,7 +589,7 @@ defmodule SongyWeb.RoomChannelTest do
     test "replies :ok when make_assumption succeeds", %{current_user: current_user} do
       game_id = "game-123"
       user_id = current_user.uuid
-      new_state = %{turn: %{assumptions: [%{position: 0, user_id: user_id}]}}
+      new_state = %{turn: %{assumptions: %{0 => user_id}}}
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
         {:ok,

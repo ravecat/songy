@@ -4,7 +4,9 @@
 
   const { game } = $derived.by(getGameContext);
 
-  const playerCount = $derived(game?.participants?.length ?? 0);
+  const playerCount = $derived(
+    game?.participants ? Object.keys(game.participants).length : 0,
+  );
 </script>
 
 <button class="participants-button" aria-label={`${playerCount} player${playerCount !== 1 ? 's' : ''} online`}>

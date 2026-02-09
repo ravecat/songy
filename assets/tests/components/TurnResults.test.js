@@ -17,24 +17,24 @@ describe("TurnResults", () => {
     meta: {},
   };
 
-  const mockParticipants = [
-    {
+  const mockParticipants = {
+    "user-1": {
       uuid: "user-1",
       name: "Alice",
       avatar_url: "https://example.com/alice.jpg",
     },
-    { uuid: "user-2", name: "Bob", avatar_url: "https://example.com/bob.jpg" },
-    {
+    "user-2": { uuid: "user-2", name: "Bob", avatar_url: "https://example.com/bob.jpg" },
+    "user-3": {
       uuid: "user-3",
       name: "Charlie",
       avatar_url: "https://example.com/charlie.jpg",
     },
-  ];
+  };
 
-  const mockAssumptions = [
-    { position: 1, user_id: "user-1" },
-    { position: 2, user_id: "user-2" },
-  ];
+  const mockAssumptions = {
+    "1": "user-1",
+    "2": "user-2",
+  };
 
   beforeEach(() => {
     getGameContextSpy = vi.spyOn(GameContext, "getGameContext");

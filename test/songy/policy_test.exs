@@ -93,7 +93,7 @@ defmodule Songy.PolicyTest do
 
     test "player with assumption can advance_turn" do
       game = game(:in_progress, :ready, "owner", ["player"])
-      game = %{game | turn: %{game.turn | assumptions: [%{position: 0, user_id: "player"}]}}
+      game = %{game | turn: %{game.turn | assumptions: %{0 => "player"}}}
       assert :ok = Bodyguard.permit(Policy, :advance_turn, "player", game)
     end
 
@@ -104,7 +104,7 @@ defmodule Songy.PolicyTest do
 
     test "owner with assumption can advance_turn when active" do
       game = game(:in_progress, :ready, "owner", ["owner"])
-      game = %{game | turn: %{game.turn | assumptions: [%{position: 0, user_id: "owner"}]}}
+      game = %{game | turn: %{game.turn | assumptions: %{0 => "owner"}}}
       assert :ok = Bodyguard.permit(Policy, :advance_turn, "owner", game)
     end
   end
@@ -115,7 +115,7 @@ defmodule Songy.PolicyTest do
       owner_id: owner_id,
       queue: queue,
       cursor: 0,
-      turn: if(state == :in_progress, do: %Turn{phase: phase, assumptions: []}, else: nil)
+      turn: if(state == :in_progress, do: %Turn{phase: phase, assumptions: %{}}, else: nil)
     }
   end
 end

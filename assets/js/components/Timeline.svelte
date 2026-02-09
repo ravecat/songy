@@ -94,34 +94,22 @@
 
   const { game, channel } = $derived.by(getGameContext);
   const { user: currentUser } = $derived.by(getScopeContext);
-  const activePlayerId = $derived.by(() => game?.queue?.[game?.cursor ?? 0]);
+  const activePlayerId = $derived(game?.queue?.[game?.cursor]);
+  const participants = $derived(game?.participants ?? {});
+  const assumptions = $derived(game?.turn?.assumptions ?? {});
 
-  const participants = $derived(
-    new Map(game?.participants?.map((user) => [user.uuid, user]) ?? []),
-  );
-
-  const assumptions = $derived(
-    new Map(
-      game?.turn?.assumptions?.map(({ position, user_id }) => [
-        position,
-        participants.get(user_id),
-      ]),
-    ),
-  );
-
-  const activeTimeline = $derived.by(
-    () => game?.timelines?.[activePlayerId] ?? [],
-  );
+  const activeTimeline = $derived(game?.timelines?.[activePlayerId] ?? []);
 
   let hasInteracted = $state(false);
 
   const cells = $derived.by((): TimelineCell[] => {
     const items: TimelineCell[] = [];
-    let assumptionsBefore = 0;
+    let assumptionsCountBefore = 0;
 
     for (let i = 0; i <= activeTimeline.length; i++) {
-      const position = i + assumptionsBefore;
-      const user = assumptions.get(position);
+      const position = i + assumptionsCountBefore;
+      const userId = assumptions[position];
+      const user = userId ? participants[userId] : undefined;
       const isCurrentUser = user?.uuid === currentUser?.uuid;
 
       if (user) {
@@ -130,7 +118,7 @@
         items.push({ kind: "slot", position });
       }
 
-      if (user && !isCurrentUser) assumptionsBefore++;
+      if (user && !isCurrentUser) assumptionsCountBefore++;
 
       if (i < activeTimeline.length) {
         items.push({ kind: "track", track: activeTimeline[i]! });

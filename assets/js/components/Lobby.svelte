@@ -8,7 +8,8 @@
   const { game } = $derived.by(getGameContext);
   const { svg: qrSvg } = $derived.by(getQrContext);
 
-  const participants = $derived(game?.participants ?? []);
+  const participants = $derived(game?.participants ?? {});
+  const queue = $derived(game?.queue ?? []);
   const ownerId = $derived(game?.owner_id ?? "");
 
   let copied = $state(false);
@@ -22,27 +23,30 @@
 
 <div class="lobby">
   <div class="lobby__players" role="list">
-    {#each participants as participant, i (participant.uuid)}
-      <div
-        class="lobby-player"
-        class:lobby-player_owner={participant.uuid === ownerId}
-        style="--index: {i}"
-        role="listitem"
-      >
-        <div class="lobby-player__frame">
-          <img
-            src={participant.avatar_url}
-            alt={participant.name}
-            class="lobby-player__avatar"
-          />
-          {#if participant.uuid === ownerId}
-            <div class="lobby-player__badge">
-              <Crown size={16} strokeWidth={2.5} />
-            </div>
-          {/if}
+    {#each queue as uuid, i (uuid)}
+      {@const participant = participants[uuid]}
+      {#if participant}
+        <div
+          class="lobby-player"
+          class:lobby-player_owner={uuid === ownerId}
+          style="--index: {i}"
+          role="listitem"
+        >
+          <div class="lobby-player__frame">
+            <img
+              src={participant.avatar_url}
+              alt={participant.name}
+              class="lobby-player__avatar"
+            />
+            {#if uuid === ownerId}
+              <div class="lobby-player__badge">
+                <Crown size={16} strokeWidth={2.5} />
+              </div>
+            {/if}
+          </div>
+          <span class="lobby-player__name">{participant.name}</span>
         </div>
-        <span class="lobby-player__name">{participant.name}</span>
-      </div>
+      {/if}
     {/each}
   </div>
 

@@ -29,8 +29,8 @@ export interface Turn {
   /** Timeline snapshot for challenging phase */
   timeline?: Track[];
 
-  /** Player position assumptions: array of {position, user_id} objects */
-  assumptions?: Array<{position: number; user_id: string}>;
+  /** Player position assumptions: map of position to user_id */
+  assumptions?: Record<string, string>;
 
   /** Winner of the round (set in results phase) */
   winner_id?: string;

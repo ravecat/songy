@@ -333,7 +333,7 @@ defmodule Songy.AuthorizationTest do
       owner_id: owner_id,
       queue: queue,
       cursor: 0,
-      turn: if(state == :in_progress, do: %Turn{phase: phase, assumptions: []}, else: nil)
+      turn: if(state == :in_progress, do: %Turn{phase: phase, assumptions: %{}}, else: nil)
     }
   end
 end

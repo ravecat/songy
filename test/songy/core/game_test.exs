@@ -17,7 +17,7 @@ defmodule Songy.Core.GameTest do
         max_participants: 10,
         max_score: 10,
         status: :waiting,
-        participants: [user],
+        participants: %{user.uuid => user},
         scores: %{"user-1" => 5},
         player: Player.new(),
         timelines: %{},
@@ -79,7 +79,7 @@ defmodule Songy.Core.GameTest do
             max_participants: 2,
             max_score: 10,
             status: :waiting,
-            participants: [],
+            participants: %{},
             scores: %{},
             player: Player.new(),
             timelines: %{},
@@ -95,7 +95,7 @@ defmodule Songy.Core.GameTest do
 
     test "validate_not_full returns :ok when below capacity" do
       user = %User{uuid: "user-1", name: "Player1"}
-      game = base_game(%{participants: [user]})
+      game = base_game(%{participants: %{user.uuid => user}})
 
       assert :ok = Game.validate_not_full(game)
     end
@@ -103,7 +103,7 @@ defmodule Songy.Core.GameTest do
     test "validate_not_full returns error when at capacity" do
       user1 = %User{uuid: "user-1", name: "Player1"}
       user2 = %User{uuid: "user-2", name: "Player2"}
-      game = base_game(%{participants: [user1, user2]})
+      game = base_game(%{participants: %{user1.uuid => user1, user2.uuid => user2}})
 
       assert {:error, :game_full} = Game.validate_not_full(game)
     end
@@ -111,7 +111,7 @@ defmodule Songy.Core.GameTest do
     test "validate_not_duplicate detects existing participant" do
       user1 = %User{uuid: "user-1", name: "Player1"}
       user2 = %User{uuid: "user-2", name: "Player2"}
-      game = base_game(%{participants: [user1]})
+      game = base_game(%{participants: %{user1.uuid => user1}})
 
       assert {:error, :already_joined} = Game.validate_not_duplicate(game, user1)
       assert :ok = Game.validate_not_duplicate(game, user2)
@@ -122,9 +122,10 @@ defmodule Songy.Core.GameTest do
       user2 = %User{uuid: "user-2", name: "Player2"}
 
       assert {:error, :insufficient_participants} =
-               Game.validate_min_participants(base_game(%{participants: [user1]}))
+               Game.validate_min_participants(base_game(%{participants: %{user1.uuid => user1}}))
 
-      assert :ok = Game.validate_min_participants(base_game(%{participants: [user1, user2]}))
+      assert :ok =
+               Game.validate_min_participants(base_game(%{participants: %{user1.uuid => user1, user2.uuid => user2}}))
     end
 
     test "valid_assumption? verifies timeline order at position" do
@@ -155,7 +156,7 @@ defmodule Songy.Core.GameTest do
                      max_participants: 2,
                      max_score: 10,
                      status: :waiting,
-                     participants: [],
+                     participants: %{},
                      scores: %{},
                      player: Player.new(),
                      timelines: %{},
@@ -179,7 +180,7 @@ defmodule Songy.Core.GameTest do
                      max_participants: 2,
                      max_score: 10,
                      status: :waiting,
-                     participants: [],
+                     participants: %{},
                      scores: %{"user-1" => 9},
                      player: Player.new(),
                      timelines: %{},
@@ -203,7 +204,7 @@ defmodule Songy.Core.GameTest do
                      max_participants: 2,
                      max_score: 10,
                      status: :waiting,
-                     participants: [],
+                     participants: %{},
                      scores: %{"user-1" => 10},
                      player: Player.new(),
                      timelines: %{},

@@ -14,8 +14,8 @@ defmodule Songy.Core.Turn do
   @typedoc "Turn phase"
   @type phase :: :waiting | :ready | :challenging | :results
 
-  @typedoc "Player assumptions"
-  @type assumptions :: list(%{position: non_neg_integer(), user_id: String.t()})
+  @typedoc "Player assumptions map keyed by position"
+  @type assumptions :: %{non_neg_integer() => String.t()}
 
   @type winner :: String.t() | nil
 

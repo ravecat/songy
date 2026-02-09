@@ -63,7 +63,7 @@ defmodule Songy.Boundary.GameTest do
       assert game.id == game_id
       assert game.owner_id == owner.uuid
       assert game.status == :waiting
-      assert game.participants == []
+      assert game.participants == %{}
       assert game.max_participants == 10
       assert game.max_score == 10
       assert game.scores == %{}
@@ -94,8 +94,8 @@ defmodule Songy.Boundary.GameTest do
       join_participant(game_id, user1.uuid)
       {:ok, game} = Game.get_state(game_id)
 
-      assert length(game.participants) == 1
-      assert hd(game.participants).uuid == user1.uuid
+      assert map_size(game.participants) == 1
+      assert game.participants[user1.uuid] != nil
       assert game.scores[user1.uuid] == 0
       assert game.status == :waiting
     end
@@ -132,7 +132,7 @@ defmodule Songy.Boundary.GameTest do
 
       {:ok, game} = Game.get_state(game_id)
 
-      assert length(game.participants) == 2
+      assert map_size(game.participants) == 2
       assert game.scores[user1.uuid] == 0
       assert game.scores[user2.uuid] == 0
     end
@@ -147,7 +147,7 @@ defmodule Songy.Boundary.GameTest do
 
       refute_receive {:state, _game}
       {:ok, game} = Game.get_state(game_id)
-      assert length(game.participants) == 1
+      assert map_size(game.participants) == 1
     end
 
     test "ignores when game is full", %{game_id: game_id} do
@@ -164,7 +164,7 @@ defmodule Songy.Boundary.GameTest do
 
       refute_receive {:state, _game}
       {:ok, game} = Game.get_state(game_id)
-      assert length(game.participants) == 10
+      assert map_size(game.participants) == 10
     end
   end
 
@@ -179,8 +179,8 @@ defmodule Songy.Boundary.GameTest do
       leave_participant(game_id, user1.uuid)
       {:ok, game} = Game.get_state(game_id)
 
-      assert length(game.participants) == 1
-      assert hd(game.participants).uuid == user2.uuid
+      assert map_size(game.participants) == 1
+      assert game.participants[user2.uuid] != nil
       assert game.scores[user1.uuid] == 0
       assert game.scores[user2.uuid] == 0
     end
@@ -193,7 +193,7 @@ defmodule Songy.Boundary.GameTest do
       send(pid, {:participant_left, "missing"})
 
       assert_receive {:state, game}
-      assert length(game.participants) == 1
+      assert map_size(game.participants) == 1
     end
   end
 
@@ -249,7 +249,7 @@ defmodule Songy.Boundary.GameTest do
 
       # Queue should still contain user1
       assert game.queue == [user1.uuid, user2.uuid]
-      assert length(game.participants) == 1
+      assert map_size(game.participants) == 1
 
       # User1 reconnects
       join_participant(game_id, user1.uuid)
@@ -257,7 +257,7 @@ defmodule Songy.Boundary.GameTest do
 
       # Queue and participants should be restored
       assert game.queue == [user1.uuid, user2.uuid]
-      assert length(game.participants) == 2
+      assert map_size(game.participants) == 2
     end
 
     test "restores score on reconnect", %{game_id: game_id} do
@@ -276,7 +276,7 @@ defmodule Songy.Boundary.GameTest do
 
       # Score should be preserved even after disconnect
       assert game.scores[user1.uuid] == initial_score
-      assert length(game.participants) == 1
+      assert map_size(game.participants) == 1
 
       # User1 reconnects
       join_participant(game_id, user1.uuid)
@@ -284,7 +284,7 @@ defmodule Songy.Boundary.GameTest do
 
       # Score should be restored
       assert game.scores[user1.uuid] == initial_score
-      assert length(game.participants) == 2
+      assert map_size(game.participants) == 2
     end
 
     test "keeps stored timeline on reconnect", %{game_id: game_id} do
@@ -336,7 +336,7 @@ defmodule Songy.Boundary.GameTest do
 
       # Queue should still contain user1
       assert game.queue == [user1.uuid, user2.uuid]
-      assert length(game.participants) == 1
+      assert map_size(game.participants) == 1
 
       # User1 reconnects
       join_participant(game_id, user1.uuid)
@@ -344,7 +344,7 @@ defmodule Songy.Boundary.GameTest do
 
       # Queue and participants should be restored
       assert game.queue == [user1.uuid, user2.uuid]
-      assert length(game.participants) == 2
+      assert map_size(game.participants) == 2
     end
 
     test "restores score on reconnect", %{game_id: game_id, user1: user1} do
@@ -357,7 +357,7 @@ defmodule Songy.Boundary.GameTest do
 
       # Score should be preserved even after disconnect
       assert game.scores[user1.uuid] == initial_score
-      assert length(game.participants) == 1
+      assert map_size(game.participants) == 1
 
       # User1 reconnects
       join_participant(game_id, user1.uuid)
@@ -365,7 +365,7 @@ defmodule Songy.Boundary.GameTest do
 
       # Score should be restored
       assert game.scores[user1.uuid] == initial_score
-      assert length(game.participants) == 2
+      assert map_size(game.participants) == 2
     end
 
     test "keeps stored timeline on reconnect", %{game_id: game_id, user1: user1} do
@@ -406,7 +406,7 @@ defmodule Songy.Boundary.GameTest do
 
       # Queue should still contain user1
       assert game.queue == [user1.uuid, user2.uuid]
-      assert length(game.participants) == 1
+      assert map_size(game.participants) == 1
 
       # User1 reconnects
       join_participant(game_id, user1.uuid)
@@ -414,7 +414,7 @@ defmodule Songy.Boundary.GameTest do
 
       # Queue and participants should be restored
       assert game.queue == [user1.uuid, user2.uuid]
-      assert length(game.participants) == 2
+      assert map_size(game.participants) == 2
     end
 
     test "restores score on reconnect", %{game_id: game_id, user1: user1} do
@@ -427,7 +427,7 @@ defmodule Songy.Boundary.GameTest do
 
       # Score should be preserved even after disconnect
       assert game.scores[user1.uuid] == initial_score
-      assert length(game.participants) == 1
+      assert map_size(game.participants) == 1
 
       # User1 reconnects
       join_participant(game_id, user1.uuid)
@@ -435,7 +435,7 @@ defmodule Songy.Boundary.GameTest do
 
       # Score should be restored
       assert game.scores[user1.uuid] == initial_score
-      assert length(game.participants) == 2
+      assert map_size(game.participants) == 2
     end
 
     test "keeps stored timeline on reconnect", %{game_id: game_id, user1: user1} do
@@ -506,8 +506,8 @@ defmodule Songy.Boundary.GameTest do
       send(pid, {:participant_joined, user1.uuid})
 
       assert_receive {:state, game}
-      assert length(game.participants) == 1
-      assert hd(game.participants).uuid == user1.uuid
+      assert map_size(game.participants) == 1
+      assert game.participants[user1.uuid] != nil
     end
 
     test "broadcasts on participant leave", %{game_id: game_id} do
@@ -523,8 +523,8 @@ defmodule Songy.Boundary.GameTest do
       send(pid, {:participant_left, user1.uuid})
 
       assert_receive {:state, game}
-      assert length(game.participants) == 1
-      assert hd(game.participants).uuid == user2.uuid
+      assert map_size(game.participants) == 1
+      assert game.participants[user2.uuid] != nil
     end
 
     test "broadcasts on start_game transition", %{game_id: game_id, owner: owner} do
@@ -998,8 +998,8 @@ defmodule Songy.Boundary.GameTest do
       {:ok, game} = Game.make_assumption(game_id, user1.uuid, 0)
 
       assert length(Map.get(game.timelines, Enum.at(game.queue, game.cursor), [])) == 1
-      assert length(game.turn.assumptions) == 1
-      assert Enum.find(game.turn.assumptions, &(&1.user_id == user1.uuid)).position == 0
+      assert map_size(game.turn.assumptions) == 1
+      assert Enum.find_value(game.turn.assumptions, fn {pos, uid} -> if uid == user1.uuid, do: pos end) == 0
     end
 
     test "player makes assumption at position 0", %{
@@ -1010,8 +1010,8 @@ defmodule Songy.Boundary.GameTest do
       {:ok, game} = Game.make_assumption(game_id, user1.uuid, 0)
 
       assert length(Map.get(game.timelines, Enum.at(game.queue, game.cursor), [])) == 1
-      assert length(game.turn.assumptions) == 1
-      assert Enum.find(game.turn.assumptions, &(&1.user_id == user1.uuid)).position == 0
+      assert map_size(game.turn.assumptions) == 1
+      assert Enum.find_value(game.turn.assumptions, fn {pos, uid} -> if uid == user1.uuid, do: pos end) == 0
     end
 
     test "challenger cannot make assumption in ready phase", %{
@@ -1026,7 +1026,7 @@ defmodule Songy.Boundary.GameTest do
       {:ok, game} = Game.make_assumption(game_id, user1.uuid, -5)
 
       assert length(Map.get(game.timelines, Enum.at(game.queue, game.cursor), [])) == 1
-      assert Enum.find(game.turn.assumptions, &(&1.user_id == user1.uuid)).position == 0
+      assert Enum.find_value(game.turn.assumptions, fn {pos, uid} -> if uid == user1.uuid, do: pos end) == 0
     end
 
     test "normalizes position beyond timeline length", %{game_id: game_id, user1: user1} do
@@ -1034,14 +1034,14 @@ defmodule Songy.Boundary.GameTest do
 
       # Position should be normalized to length(timeline) which is 1 initially
       assert length(Map.get(game.timelines, Enum.at(game.queue, game.cursor), [])) == 1
-      assert Enum.find(game.turn.assumptions, &(&1.user_id == user1.uuid)).position == 1
+      assert Enum.find_value(game.turn.assumptions, fn {pos, uid} -> if uid == user1.uuid, do: pos end) == 1
     end
 
     test "broadcasts state after assumption", %{game_id: game_id, user1: user1} do
       {:ok, _} = Game.make_assumption(game_id, user1.uuid, 0)
 
       assert_receive {:state, game}
-      assert length(game.turn.assumptions) == 1
+      assert map_size(game.turn.assumptions) == 1
     end
 
     test "rejects assumption in other phases (waiting)", %{game_id: game_id} do
@@ -1104,8 +1104,8 @@ defmodule Songy.Boundary.GameTest do
 
       assert length(Map.get(game.timelines, Enum.at(game.queue, game.cursor), [])) == 1
       # user1 and user2
-      assert length(game.turn.assumptions) == 2
-      assert Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid)).position == 2
+      assert map_size(game.turn.assumptions) == 2
+      assert Enum.find_value(game.turn.assumptions, fn {pos, uid} -> if uid == user2.uuid, do: pos end) == 2
     end
 
     test "player cannot make assumption in challenging phase", %{game_id: game_id, user1: user1} do
@@ -1126,9 +1126,9 @@ defmodule Songy.Boundary.GameTest do
       {:ok, game} = Game.make_assumption(game_id, user3.uuid, 2)
 
       assert length(Map.get(game.timelines, Enum.at(game.queue, game.cursor), [])) == 1
-      assert length(game.turn.assumptions) == 2
-      assert Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid)).position == 2
-      refute Enum.find(game.turn.assumptions, &(&1.user_id == user3.uuid))
+      assert map_size(game.turn.assumptions) == 2
+      assert Enum.find_value(game.turn.assumptions, fn {pos, uid} -> if uid == user2.uuid, do: pos end) == 2
+      refute user3.uuid in Map.values(game.turn.assumptions)
     end
 
     test "normalizes negative position to 0", %{game_id: game_id, user2: user2} do
@@ -1138,8 +1138,8 @@ defmodule Songy.Boundary.GameTest do
 
       assert length(Map.get(game.timelines, Enum.at(game.queue, game.cursor), [])) == 1
       # Only user1
-      assert length(game.turn.assumptions) == 1
-      refute Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid))
+      assert map_size(game.turn.assumptions) == 1
+      refute user2.uuid in Map.values(game.turn.assumptions)
     end
 
     test "normalizes position beyond timeline length", %{game_id: game_id, user2: user2} do
@@ -1147,14 +1147,14 @@ defmodule Songy.Boundary.GameTest do
 
       # user1 at position 0, position 100 normalizes to max position (2)
       assert length(Map.get(game.timelines, Enum.at(game.queue, game.cursor), [])) == 1
-      assert Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid))
+      assert user2.uuid in Map.values(game.turn.assumptions)
     end
 
     test "broadcasts after assumption in challenging phase", %{game_id: game_id, user2: user2} do
       {:ok, _} = Game.make_assumption(game_id, user2.uuid, 2)
 
       assert_receive {:state, game}, 25
-      assert length(game.turn.assumptions) == 2
+      assert map_size(game.turn.assumptions) == 2
     end
 
     test "no-op when user makes assumption at same position", %{
@@ -1188,9 +1188,8 @@ defmodule Songy.Boundary.GameTest do
       # Timeline unchanged (base timeline only)
       assert length(Map.get(game.timelines, Enum.at(game.queue, game.cursor), [])) == 1
       # user3 has no assumption
-      user2_assumption = Enum.find(game.turn.assumptions, &(&1.user_id == user2.uuid))
-      assert user2_assumption.position == 2
-      refute Enum.find(game.turn.assumptions, &(&1.user_id == user3.uuid))
+      assert Enum.find_value(game.turn.assumptions, fn {pos, uid} -> if uid == user2.uuid, do: pos end) == 2
+      refute user3.uuid in Map.values(game.turn.assumptions)
     end
   end
 

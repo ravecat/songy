@@ -18,17 +18,17 @@ describe("Timeline", () => {
           artist: "Current Artist",
           year: 2024,
         },
-        participants: [
-          {
+        participants: {
+          "current-user-123": {
             uuid: "current-user-123",
             name: "Test User",
             avatar_url: "https://example.com/avatar.jpg",
           },
-          {
+          "user-1": {
             uuid: "user-1",
             name: "User 1",
           },
-        ],
+        },
         queue: ["current-user-123", "user-1"],
         cursor: 0,
         timelines: {
@@ -63,7 +63,7 @@ describe("Timeline", () => {
               year: 2021,
             },
           ],
-          assumptions: [],
+          assumptions: {},
         },
       },
       permissions: {
@@ -84,12 +84,9 @@ describe("Timeline", () => {
 
   test("shows track card when can_make_assumptions is true", () => {
     mockGameContext.permissions.can_make_assumptions = true;
-    mockGameContext.game.turn.assumptions = [
-      {
-        position: 1,
-        user_id: "current-user-123",
-      },
-    ];
+    mockGameContext.game.turn.assumptions = {
+      "1": "current-user-123",
+    };
     mockGameContext.game.timelines["current-user-123"] = [
       mockGameContext.game.timelines["current-user-123"][0],
       mockGameContext.game.track,
@@ -188,12 +185,9 @@ describe("Timeline", () => {
   test("player in ready phase sees track card", () => {
     mockGameContext.game.turn.phase = TURN_PHASE.READY;
     mockGameContext.permissions.can_make_assumptions = true;
-    mockGameContext.game.turn.assumptions = [
-      {
-        position: 1,
-        user_id: "current-user-123",
-      },
-    ];
+    mockGameContext.game.turn.assumptions = {
+      "1": "current-user-123",
+    };
 
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);
@@ -218,12 +212,9 @@ describe("Timeline", () => {
     mockGameContext.permissions.can_make_assumptions = true;
     mockGameContext.game.queue = ["user-1", "current-user-123"];
     mockGameContext.game.cursor = 0;
-    mockGameContext.game.turn.assumptions = [
-      {
-        position: 1,
-        user_id: "current-user-123",
-      },
-    ];
+    mockGameContext.game.turn.assumptions = {
+      "1": "current-user-123",
+    };
     mockGameContext.game.timelines["user-1"] = [
       mockGameContext.game.timelines["current-user-123"][0],
       mockGameContext.game.timelines["current-user-123"][1],
@@ -321,12 +312,9 @@ describe("Timeline", () => {
 
   test("shows assumption card with user avatar in placeholder slot", () => {
     mockGameContext.permissions.can_make_assumptions = true;
-    mockGameContext.game.turn.assumptions = [
-      {
-        position: 0,
-        user_id: "current-user-123",
-      },
-    ];
+    mockGameContext.game.turn.assumptions = {
+      "0": "current-user-123",
+    };
 
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);
@@ -347,12 +335,9 @@ describe("Timeline", () => {
 
   test("slot positions shift when assumptions exist", () => {
     mockGameContext.permissions.can_make_assumptions = true;
-    mockGameContext.game.turn.assumptions = [
-      {
-        position: 0,
-        user_id: "current-user-123",
-      },
-    ];
+    mockGameContext.game.turn.assumptions = {
+      "0": "current-user-123",
+    };
 
     const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     getGameContextSpy.mockReturnValue(mockGameContext);

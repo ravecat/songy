@@ -61,8 +61,8 @@ defmodule Songy.Core.Game do
   @typedoc "Game status/phase"
   @type status :: :waiting | :in_progress | :finished
 
-  @typedoc "List of participating users"
-  @type participants :: list(User.t())
+  @typedoc "Participants map keyed by id"
+  @type participants :: %{String.t() => User.t()}
 
   @typedoc "Player scores map"
   @type scores :: %{String.t() => integer()}
@@ -126,7 +126,7 @@ defmodule Songy.Core.Game do
   @doc false
   @spec validate_not_full(t()) :: :ok | {:error, :game_full}
   def validate_not_full(%__MODULE__{} = game) do
-    if length(game.participants) < game.max_participants do
+    if map_size(game.participants) < game.max_participants do
       :ok
     else
       {:error, :game_full}
@@ -136,7 +136,7 @@ defmodule Songy.Core.Game do
   @doc false
   @spec validate_not_duplicate(t(), User.t()) :: :ok | {:error, :already_joined}
   def validate_not_duplicate(%__MODULE__{} = game, %User{} = user) do
-    if Enum.any?(game.participants, &(&1.uuid == user.uuid)) do
+    if Map.has_key?(game.participants, user.uuid) do
       {:error, :already_joined}
     else
       :ok
@@ -146,7 +146,7 @@ defmodule Songy.Core.Game do
   @doc false
   @spec validate_min_participants(t()) :: :ok | {:error, :insufficient_participants}
   def validate_min_participants(%__MODULE__{} = game) do
-    if length(game.participants) >= 2 do
+    if map_size(game.participants) >= 2 do
       :ok
     else
       {:error, :insufficient_participants}
@@ -183,6 +183,6 @@ defmodule Songy.Core.Game do
   """
   @spec has_assumption?(t(), String.t()) :: boolean()
   def has_assumption?(%__MODULE__{turn: turn}, user_id) do
-    Enum.any?(turn.assumptions, fn %{user_id: uid} -> uid == user_id end)
+    user_id in Map.values(turn.assumptions)
   end
 end
