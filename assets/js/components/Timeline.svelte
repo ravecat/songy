@@ -83,6 +83,7 @@
   import { getGameContext } from "~components/GameChannel.svelte";
   import { getScopeContext } from "~components/Scope.svelte";
   import { PUSH_EVENT } from "~shared/types/channel";
+  import { ChevronLeft, ChevronRight } from "lucide-svelte";
   import type { Track } from "~shared/types/track";
   import type { User } from "~shared/types/user";
 
@@ -108,8 +109,8 @@
     ),
   );
 
-  const activeTimeline = $derived.by(() =>
-    activePlayerId ? game?.timelines?.[activePlayerId] || [] : [],
+  const activeTimeline = $derived.by(
+    () => game?.timelines?.[activePlayerId] ?? [],
   );
 
   let hasInteracted = $state(false);
@@ -148,6 +149,14 @@
     timeline.scrollLeft += e.deltaY * 0.5;
   }
 
+  function scrollTimeline(direction: -1 | 1) {
+    hasInteracted = true;
+    const item = timeline.querySelector<HTMLElement>("[role='listitem']");
+    if (!item) return;
+    const step = item.offsetWidth + parseFloat(getComputedStyle(timeline).gap);
+    timeline.scrollBy({ left: direction * step, behavior: "smooth" });
+  }
+
   function onScrollEnd() {
     if (!hasInteracted) return;
 
@@ -176,44 +185,71 @@
   }
 </script>
 
-<div
-  class="timeline__scroll"
-  bind:this={timeline}
-  onwheel={handleWheel}
-  onscrollend={onScrollEnd}
-  onpointerdown={() => (hasInteracted = true)}
-  ontouchmove={() => (hasInteracted = true)}
-  role="list"
-  aria-label="Timeline"
->
-  {#each cells as cell, index (index)}
-    <div
-      class="timeline__placeholder"
-      class:timeline__placeholder_track={cell.kind !== "slot"}
-      data-position={cell.kind === "track" ? undefined : cell.position}
-      role="listitem"
-    >
-      {#if cell.kind === "track"}
-        <TrackCard track={cell.track} />
-      {:else if cell.kind === "assumption"}
-        <TrackCard track={null} revealed={false}>
-          {#snippet back()}
-            <div class="timeline__assumption-avatar">
-              <img src={cell.user.avatar_url} alt={cell.user.name} />
-            </div>
-          {/snippet}
-        </TrackCard>
-      {/if}
-    </div>
-  {/each}
+<div class="timeline">
+  <button
+    class="timeline__nav"
+    onclick={() => scrollTimeline(-1)}
+    aria-label="Scroll left"
+  >
+    <ChevronLeft size={20} strokeWidth={2.5} />
+  </button>
+
+  <div
+    class="timeline__scroll"
+    bind:this={timeline}
+    onwheel={handleWheel}
+    onscrollend={onScrollEnd}
+    onpointerdown={() => (hasInteracted = true)}
+    ontouchmove={() => (hasInteracted = true)}
+    role="list"
+    aria-label="Timeline"
+  >
+    {#each cells as cell, index (index)}
+      <div
+        class="timeline__placeholder"
+        class:timeline__placeholder_track={cell.kind !== "slot"}
+        data-position={cell.kind === "track" ? undefined : cell.position}
+        role="listitem"
+      >
+        {#if cell.kind === "track"}
+          <TrackCard track={cell.track} />
+        {:else if cell.kind === "assumption"}
+          <TrackCard track={null} revealed={false}>
+            {#snippet back()}
+              <div class="timeline__assumption-avatar">
+                <img src={cell.user.avatar_url} alt={cell.user.name} />
+              </div>
+            {/snippet}
+          </TrackCard>
+        {/if}
+      </div>
+    {/each}
+  </div>
+
+  <button
+    class="timeline__nav"
+    onclick={() => scrollTimeline(1)}
+    aria-label="Scroll right"
+  >
+    <ChevronRight size={20} strokeWidth={2.5} />
+  </button>
 </div>
 
 <style>
-  .timeline__scroll {
+  .timeline {
     display: flex;
-    margin: auto;
+    align-items: center;
     width: 100%;
-    gap: 1rem;
+  }
+
+  .timeline__scroll {
+    --item-size: 8rem;
+    --gap: 1rem;
+
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    gap: var(--gap);
     overflow-x: auto;
     overflow-y: hidden;
     scroll-snap-type: x mandatory;
@@ -227,6 +263,28 @@
     content: "";
     flex-shrink: 0;
     width: 50%;
+  }
+
+  .timeline__nav {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    background: transparent;
+    border: none;
+    border-radius: 0.5rem;
+    color: white;
+    cursor: pointer;
+  }
+
+  .timeline__nav:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .timeline__nav:active {
+    background-color: rgba(255, 255, 255, 0.2);
   }
 
   .timeline__placeholder {
