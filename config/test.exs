@@ -45,7 +45,7 @@ config :songy,
   challenging_phase_timeout: 0
 
 config :mix_test_watch,
-  tasks: ["test", "assets.test", "e2e"],
+  tasks: ["test", "assets.test"],
   clear: true,
   extra_extensions: [".svelte", ".ts", ".js"],
   exclude: [
