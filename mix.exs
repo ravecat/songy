@@ -94,7 +94,7 @@ defmodule Songy.MixProject do
       "test.watch": ["test.watch"],
       "assets.setup": ["bun.install --if-missing", "bun assets install"],
       "assets.build": ["bun vite build"],
-      "assets.test": ["bun assets run test:run"],
+      "assets.test": ["bun assets run test"],
       "assets.test.watch": ["bun assets run test:watch"],
       "assets.test.ui": ["bun assets run test:ui"],
       "assets.test.coverage": ["bun assets run test:coverage"],
