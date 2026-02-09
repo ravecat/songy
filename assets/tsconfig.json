@@ -18,7 +18,8 @@
       "~shared/*": ["js/shared/*"],
       "~types/*": ["js/shared/types/*"],
       "~mocks/*": ["__mocks__/*"],
-      "~priv/*": ["../priv/*"]
+      "~priv/*": ["../priv/*"],
+      "~e2e/*": ["e2e/*"]
     },
     "types": ["vite/client", "vitest"],
     "plugins": [
@@ -36,7 +37,8 @@
     "tests/**/*.js",
     "*.ts",
     "*.js",
-    "*.svelte"
+    "*.svelte",
+    "e2e/**/*.ts"
   ],
   "exclude": ["node_modules", "dist", "_build", "../priv"]
 }

@@ -63,6 +63,7 @@
     class:lobby-share_copied={copied}
     onclick={copyShareLink}
     disabled={copied}
+    aria-label="Copy share link"
   >
     <span
       class="lobby-share__content"
