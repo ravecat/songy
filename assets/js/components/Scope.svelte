@@ -16,7 +16,7 @@
 
 <script lang="ts">
   import { getGameContext } from "~components/GameChannel.svelte";
-  import Logo from "~components/Logo.svelte";
+  import Equalizer from "~components/Equalizer.svelte";
   import { PUSH_EVENT } from "~shared/types/channel";
   import type { Snippet } from "svelte";
 
@@ -39,7 +39,7 @@
 
 {#if !context.user}
   <div class="scope-loader" role="status" aria-label="Loading">
-    <Logo />
+    <Equalizer />
   </div>
 {:else}
   {@render children?.()}

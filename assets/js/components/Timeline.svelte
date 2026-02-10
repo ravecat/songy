@@ -43,13 +43,13 @@
   Assumptions: [{pos: 1, user: U1}, {pos: 3, user: U2}]
   Available: 0, 5
 
-  ### Step 3: U3 places at position 0 (slot before A) — triggers shift!
+  ### Step 3: U3 places at position 0 (slot before A) - triggers shift!
 
   User timeline:       -      A      -      B      -      C      -
   Virtual timeline: [U3] - [A] - [U1] - [B] - [U2] - [C] - [slot]
   Positions:          0           2           4            6
   Assumptions: [{pos: 2, user: U1}, {pos: 4, user: U2}, {pos: 0, user: U3}]
-  (U1: 1→2, U2: 3→4 shifted because pos >= 0)
+  (U1: 1->2, U2: 3->4 shifted because pos >= 0)
   Available: 6
 
   ### Step 4: U4 places at position 6 (slot after C)
@@ -80,9 +80,11 @@
 -->
 <script lang="ts">
   import TrackCard from "~components/TrackCard.svelte";
+  import Equalizer from "~components/Equalizer.svelte";
   import { getGameContext } from "~components/GameChannel.svelte";
   import { getScopeContext } from "~components/Scope.svelte";
   import { PUSH_EVENT } from "~shared/types/channel";
+  import { fade } from "svelte/transition";
   import { ChevronLeft, ChevronRight } from "lucide-svelte";
   import type { Track } from "~shared/types/track";
   import type { User } from "~shared/types/user";
@@ -101,6 +103,7 @@
   const activeTimeline = $derived(game?.timelines?.[activePlayerId] ?? []);
 
   let hasInteracted = $state(false);
+  let activeCellIndex = $state<number | null>(null);
 
   const cells = $derived.by((): TimelineCell[] => {
     const items: TimelineCell[] = [];
@@ -137,21 +140,11 @@
     timeline.scrollLeft += e.deltaY * 0.5;
   }
 
-  function scrollTimeline(direction: -1 | 1) {
-    hasInteracted = true;
-    const item = timeline.querySelector<HTMLElement>("[role='listitem']");
-    if (!item) return;
-    const step = item.offsetWidth + parseFloat(getComputedStyle(timeline).gap);
-    timeline.scrollBy({ left: direction * step, behavior: "smooth" });
-  }
-
-  function onScrollEnd() {
-    if (!hasInteracted) return;
-
+  function findCenterCell(): HTMLElement | undefined {
     const centerX =
       timeline.getBoundingClientRect().left + timeline.offsetWidth / 2;
 
-    const closestElement = Array.from(
+    return Array.from(
       timeline.querySelectorAll<HTMLElement>("[role='listitem']"),
     ).reduce((closest, el) => {
       const distance = Math.abs(
@@ -164,24 +157,26 @@
       );
       return distance < closestDistance ? el : closest;
     });
+  }
+
+  function onScrollEnd() {
+    if (!hasInteracted) return;
+
+    const closestElement = findCenterCell();
+    const cellIndex = closestElement?.dataset.cellIndex;
+
+    if (cellIndex != null) {
+      activeCellIndex = Number(cellIndex);
+    }
 
     const position = closestElement?.dataset.position;
-
     if (!position) return;
 
     channel.push(PUSH_EVENT.MAKE_ASSUMPTION, { position: Number(position) });
   }
 </script>
 
-<div class="timeline">
-  <button
-    class="timeline__nav"
-    onclick={() => scrollTimeline(-1)}
-    aria-label="Scroll left"
-  >
-    <ChevronLeft size={20} strokeWidth={2.5} />
-  </button>
-
+<div class="timeline__wrapper">
   <div
     class="timeline__scroll"
     bind:this={timeline}
@@ -194,9 +189,11 @@
   >
     {#each cells as cell, index (index)}
       <div
-        class="timeline__placeholder"
-        class:timeline__placeholder_track={cell.kind !== "slot"}
+        class="timeline__cell"
+        class:timeline__cell_slot={cell.kind === "slot"}
+        class:timeline__cell-active={hasInteracted && activeCellIndex === index}
         data-position={cell.kind === "track" ? undefined : cell.position}
+        data-cell-index={index}
         role="listitem"
       >
         {#if cell.kind === "track"}
@@ -209,41 +206,59 @@
               </div>
             {/snippet}
           </TrackCard>
+        {:else if cell.kind === "slot"}
+          <Equalizer size={32} />
         {/if}
       </div>
     {/each}
   </div>
 
-  <button
-    class="timeline__nav"
-    onclick={() => scrollTimeline(1)}
-    aria-label="Scroll right"
-  >
-    <ChevronRight size={20} strokeWidth={2.5} />
-  </button>
+  <p class="timeline__hint" transition:fade={{ duration: 600 }}>
+    <ChevronLeft
+      size={16}
+      strokeWidth={2}
+      aria-hidden="true"
+      class="timeline__hint-chevron"
+    />
+    swipe to place your guess
+    <ChevronRight
+      size={16}
+      strokeWidth={2}
+      aria-hidden="true"
+      class="timeline__hint-chevron"
+    />
+  </p>
 </div>
 
 <style>
-  .timeline {
+  .timeline__wrapper {
     display: flex;
+    flex-direction: column;
     align-items: center;
+    justify-content: center;
     width: 100%;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .timeline__scroll {
-    --item-size: 8rem;
-    --gap: 1rem;
-
     display: flex;
-    flex: 1;
-    min-width: 0;
-    gap: var(--gap);
+    width: 100%;
+    padding-block: 1.5rem;
     overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: clip;
     scroll-snap-type: x mandatory;
     scroll-behavior: smooth;
     overscroll-behavior-x: contain;
     scrollbar-width: none;
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      black 3%,
+      black 97%,
+      transparent
+    );
   }
 
   .timeline__scroll::before,
@@ -253,55 +268,81 @@
     width: 50%;
   }
 
-  .timeline__nav {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.5rem;
-    height: 2.5rem;
-    background: transparent;
-    border: none;
-    border-radius: 0.5rem;
-    color: white;
-    cursor: pointer;
-  }
+  /* --- Cell base --- */
 
-  .timeline__nav:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-
-  .timeline__nav:active {
-    background-color: rgba(255, 255, 255, 0.2);
-  }
-
-  .timeline__placeholder {
+  .timeline__cell {
     width: 8rem;
     height: 8rem;
     flex-shrink: 0;
     scroll-snap-align: center;
-    background: linear-gradient(135deg, #facc15, #f97316);
-    border-radius: var(--radius-md);
-    opacity: var(--opacity-subtle);
-    border: var(--border-thick) dashed rgba(255, 255, 255, 0.2);
+    margin-inline: 0.5rem;
     display: flex;
     align-items: center;
     justify-content: center;
     user-select: none;
+    transition:
+      transform 0.25s var(--ease-out),
+      box-shadow 0.25s var(--ease-out);
   }
 
-  .timeline__placeholder_track {
-    opacity: var(--opacity-full);
-    background: none;
-    border: none;
+  /* --- Slot (empty drop zone) --- */
+
+  .timeline__cell_slot {
+    background: linear-gradient(
+      135deg,
+      var(--color-gold-8) 0%,
+      var(--color-orange-6) 100%
+    );
+    border-radius: var(--radius-card);
+    border: var(--border-thick) solid var(--color-gold-50);
+    animation: shimmer 2.4s var(--ease-in-out) infinite;
+    opacity: 1;
   }
+
+  .timeline__cell_slot:nth-child(even) {
+    animation-delay: var(--delay-xxl);
+  }
+
+  /* --- Active cell (center-snapped) --- */
+
+  .timeline__cell-active {
+    transform: scale(1.05);
+    z-index: var(--z-above);
+  }
+
+  .timeline__cell-active.timeline__cell_slot {
+    background: linear-gradient(
+      135deg,
+      var(--color-gold-25) 0%,
+      var(--color-orange-18) 100%
+    );
+    border-style: solid;
+    border-width: 3px;
+    border-color: var(--color-gold);
+    animation: shimmer-active 1.4s var(--ease-in-out) infinite;
+  }
+
+  /* --- Track/Assumption cells (no slot styling) --- */
+
+  .timeline__cell:not(.timeline__cell_slot) {
+    background: none;
+    outline: none;
+    animation: none;
+    opacity: var(--opacity-full);
+  }
+
+  .timeline__cell-active:not(.timeline__cell_slot) {
+    filter: none;
+  }
+
+  /* --- Assumption avatar --- */
 
   .timeline__assumption-avatar {
     width: 4rem;
     height: 4rem;
     border-radius: var(--radius-circle);
     overflow: hidden;
-    border: var(--border-thick) solid rgba(255, 255, 255, 0.5);
+    border: var(--border-thick) solid var(--color-white-emphasis);
     box-shadow: var(--shadow-base);
   }
 
@@ -309,5 +350,62 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+
+  /* --- Hint text --- */
+
+  .timeline__hint {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: var(--font-size-sm);
+    color: var(--color-white-emphasis);
+    pointer-events: none;
+  }
+
+  .timeline__hint :global(.timeline__hint-chevron) {
+    opacity: var(--opacity-muted);
+    animation: hint-nudge 1.4s var(--ease-in-out) infinite;
+  }
+
+  .timeline__hint :global(.timeline__hint-chevron:first-child) {
+    animation-name: nudge-left;
+  }
+
+  .timeline__hint :global(.timeline__hint-chevron:last-child) {
+    animation-name: nudge-right;
+  }
+
+  /* --- Reduced motion --- */
+
+  @media (prefers-reduced-motion: reduce) {
+    .timeline__cell_slot {
+      animation: none;
+      opacity: 1;
+      border-color: var(--color-gold-60);
+      box-shadow: inset 0 0 14px var(--color-gold-20);
+    }
+
+    .timeline__cell-active {
+      transform: none;
+    }
+
+    .timeline__cell-active.timeline__cell_slot {
+      animation: none;
+      border-style: solid;
+      border-color: var(--color-gold-85);
+      box-shadow:
+        inset 0 0 20px var(--color-gold-25),
+        0 0 14px var(--color-gold-30);
+    }
+
+    .timeline__hint {
+      opacity: var(--opacity-muted);
+    }
+
+    .timeline__hint :global(.timeline__hint-chevron) {
+      animation: none;
+    }
   }
 </style>

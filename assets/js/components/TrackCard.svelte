@@ -77,13 +77,32 @@
     position: relative;
     width: 8rem;
     height: 8rem;
-    background: linear-gradient(135deg, #facc15, #f97316);
-    border-radius: var(--radius-md);
+    background:
+      linear-gradient(
+        160deg,
+        rgba(255, 255, 255, 0.15) 0%,
+        transparent 40%
+      ),
+      linear-gradient(135deg, #facc15, #e87b10);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-card);
     transform: rotateY(180deg);
     transition: transform var(--animation-base);
     transform-style: preserve-3d;
     user-select: none;
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Noise grain overlay */
+  .track-card__inner::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--noise-url);
+    background-size: 128px 128px;
+    pointer-events: none;
+    mix-blend-mode: overlay;
   }
 
   .track-card__inner_revealed {
@@ -102,7 +121,7 @@
     left: 0;
     top: 0;
     backface-visibility: hidden;
-    gap: 0.5rem;
+    gap: 0.35rem;
     mask-image: linear-gradient(
       to right,
       transparent,
@@ -123,20 +142,25 @@
   }
 
   .track-card__artist {
-    font-weight: var(--font-weight-semibold);
-    font-size: 0.875rem;
+    font-weight: var(--font-weight-bold);
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    opacity: 0.85;
   }
 
   .track-card__year {
-    font-size: 2.25rem;
+    font-size: var(--font-size-2xl);
     font-weight: var(--font-weight-bold);
     line-height: 1;
-    letter-spacing: 0.025em;
+    letter-spacing: -0.02em;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
   }
 
   .track-card__title {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-style: italic;
+    opacity: 0.7;
   }
 
   .track-card__marquee {

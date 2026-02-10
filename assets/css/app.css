@@ -97,7 +97,24 @@
   --spotify-green-hover: #1ed760;
   --spotify-black: #191414;
   --color-gold: #facc15;
+  --color-gold-90: color-mix(in srgb, var(--color-gold) 90%, transparent);
+  --color-gold-85: color-mix(in srgb, var(--color-gold) 85%, transparent);
+  --color-gold-70: color-mix(in srgb, var(--color-gold) 70%, transparent);
+  --color-gold-65: color-mix(in srgb, var(--color-gold) 65%, transparent);
+  --color-gold-60: color-mix(in srgb, var(--color-gold) 60%, transparent);
+  --color-gold-55: color-mix(in srgb, var(--color-gold) 55%, transparent);
+  --color-gold-50: color-mix(in srgb, var(--color-gold) 50%, transparent);
+  --color-gold-45: color-mix(in srgb, var(--color-gold) 45%, transparent);
+  --color-gold-40: color-mix(in srgb, var(--color-gold) 40%, transparent);
+  --color-gold-35: color-mix(in srgb, var(--color-gold) 35%, transparent);
+  --color-gold-30: color-mix(in srgb, var(--color-gold) 30%, transparent);
+  --color-gold-25: color-mix(in srgb, var(--color-gold) 25%, transparent);
+  --color-gold-20: color-mix(in srgb, var(--color-gold) 20%, transparent);
+  --color-gold-15: color-mix(in srgb, var(--color-gold) 15%, transparent);
+  --color-gold-8: color-mix(in srgb, var(--color-gold) 8%, transparent);
   --color-orange: #f97316;
+  --color-orange-18: color-mix(in srgb, var(--color-orange) 18%, transparent);
+  --color-orange-6: color-mix(in srgb, var(--color-orange) 6%, transparent);
   --color-white: #ffffff;
   --color-white-emphasis: rgba(255, 255, 255, 0.8);
   --gradient-gold: linear-gradient(
@@ -106,7 +123,7 @@
     var(--color-orange)
   );
   --shadow-gold-glow:
-    0 0 20px rgba(250, 204, 21, 0.6), 0 0 40px rgba(250, 204, 21, 0.3);
+    0 0 20px var(--color-gold-60), 0 0 40px var(--color-gold-30);
   --color-border-subtle: rgba(15, 23, 42, 0.12);
   --color-border-subtle-hover: rgba(15, 23, 42, 0.2);
 }
@@ -155,8 +172,20 @@
   --radius-sm: 2px;
   --radius-md: 4px;
   --radius-lg: 6px;
+  --radius-card: 12px;
   --radius-xl: 16px;
   --radius-circle: 50%;
+}
+
+/* Card elevation */
+:root {
+  --shadow-card:
+    0 1px 2px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08),
+    0 12px 20px -4px rgba(0, 0, 0, 0.1);
+  --shadow-card-active:
+    0 2px 4px rgba(0, 0, 0, 0.15), 0 8px 16px rgba(0, 0, 0, 0.12),
+    0 0 0 2px rgba(250, 204, 21, 0.5), 0 0 24px rgba(250, 204, 21, 0.25);
+  --noise-url: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
 }
 
 /* Animation delays */
@@ -166,6 +195,7 @@
   --delay-md: 0.3s;
   --delay-lg: 0.4s;
   --delay-xl: 0.5s;
+  --delay-xxl: 1.2s;
 }
 
 /* Font weights */
@@ -263,6 +293,66 @@
   }
 }
 
+@keyframes nudge-left {
+  0%,
+  100% {
+    transform: translateX(0);
+    opacity: var(--opacity-subtle);
+  }
+  50% {
+    transform: translateX(-4px);
+    opacity: var(--opacity-full);
+  }
+}
+
+@keyframes nudge-right {
+  0%,
+  100% {
+    transform: translateX(0);
+    opacity: var(--opacity-subtle);
+  }
+  50% {
+    transform: translateX(4px);
+    opacity: var(--opacity-full);
+  }
+}
+
+@keyframes shimmer {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 16px var(--color-gold-35),
+      0 0 12px var(--color-gold-30),
+      0 0 24px var(--color-gold-15);
+    border-color: var(--color-gold-70);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 24px var(--color-gold-50),
+      0 0 20px var(--color-gold-45),
+      0 0 36px var(--color-gold-25);
+    border-color: var(--color-gold-90);
+  }
+}
+
+@keyframes shimmer-active {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 24px var(--color-gold-40),
+      0 0 20px var(--color-gold-50),
+      0 0 40px var(--color-gold-25);
+    border-color: var(--color-gold);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 36px var(--color-gold-55),
+      0 0 32px var(--color-gold-65),
+      0 0 60px var(--color-gold-35);
+    border-color: var(--color-gold);
+  }
+}
+
 /* Add variants based on LiveView classes */
 @custom-variant phx-click-loading (.phx-click-loading&, .phx-click-loading &);
 @custom-variant phx-submit-loading (.phx-submit-loading&, .phx-submit-loading &);
@@ -279,6 +369,13 @@ body,
   height: 100dvh;
   width: 100%;
   overflow: hidden;
+  font-family: "DM Sans", system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  font-family: inherit;
 }
 
 /* Gradient background visible during page transitions */

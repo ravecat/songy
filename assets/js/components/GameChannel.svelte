@@ -14,7 +14,7 @@
 </script>
 
 <script lang="ts">
-  import Logo from "~components/Logo.svelte";
+  import Equalizer from "~components/Equalizer.svelte";
   import { untrack } from "svelte";
   import { useChannel, type UseChannelOptions } from "~hooks/channel.svelte";
   import { BROADCAST_EVENT } from "~shared/types/channel";
@@ -87,7 +87,7 @@
 
   {#snippet pending()}
     <div class="game-channel__loader">
-      <Logo />
+      <Equalizer />
     </div>
   {/snippet}
 

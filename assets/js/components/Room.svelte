@@ -1,7 +1,7 @@
 <script>
   import { getGameContext } from "~components/GameChannel.svelte";
   import Game from "~components/Game.svelte";
-  import Logo from "~components/Logo.svelte";
+  import Equalizer from "~components/Equalizer.svelte";
   import Player from "~components/Player.svelte";
   import Participants from "~components/Participants.svelte";
   import Score from "~components/Score.svelte";
@@ -12,7 +12,7 @@
 
 <div class="room">
   {#if !game}
-    <Logo />
+    <Equalizer />
   {:else}
     <div class="room__content" role="main" aria-label="Game room">
       <div class="room__header">
