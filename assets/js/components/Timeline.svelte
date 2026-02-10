@@ -80,7 +80,6 @@
 -->
 <script lang="ts">
   import TrackCard from "~components/TrackCard.svelte";
-  import Equalizer from "~components/Equalizer.svelte";
   import { getGameContext } from "~components/GameChannel.svelte";
   import { getScopeContext } from "~components/Scope.svelte";
   import { PUSH_EVENT } from "~shared/types/channel";
@@ -197,7 +196,8 @@
   >
     {#each cells as cell, index (index)}
       {@const isSlot = cell.kind === "slot"}
-      {@const isOwnAssumption = cell.kind === "assumption" && cell.user.uuid === currentUser?.uuid}
+      {@const isOwnAssumption =
+        cell.kind === "assumption" && cell.user.uuid === currentUser?.uuid}
       {@const isSnap = isSlot || isOwnAssumption}
       {@const isActive = hasInteracted && activeCellIndex === index}
       <div
@@ -205,7 +205,9 @@
         class:timeline__cell_slot={isSlot}
         class:timeline__cell_own-assumption={isOwnAssumption}
         class:timeline__cell-active={isActive}
-        aria-label={cell.kind === "assumption" ? `${cell.user.name}'s assumption` : undefined}
+        aria-label={cell.kind === "assumption"
+          ? `${cell.user.name}'s assumption`
+          : undefined}
         data-snap={isSnap ? "" : undefined}
         data-position={cell.kind !== "track" ? cell.position : undefined}
         role="listitem"
@@ -220,8 +222,6 @@
               </div>
             {/snippet}
           </TrackCard>
-        {:else if cell.kind === "slot"}
-          <Equalizer size={32} />
         {/if}
       </div>
     {/each}
