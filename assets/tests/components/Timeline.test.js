@@ -333,6 +333,96 @@ describe("Timeline", () => {
     expect(avatars.length).toBeGreaterThan(0);
   });
 
+  describe("scroll snaps only to slots and own assumption", () => {
+    function renderTimeline(assumptions, scopeUser) {
+      mockGameContext.permissions.can_make_assumptions = true;
+      mockGameContext.game.turn.assumptions = assumptions;
+
+      vi.spyOn(GameContext, "getGameContext").mockReturnValue(mockGameContext);
+      vi.spyOn(ScopeContext, "getScopeContext").mockReturnValue({
+        user: scopeUser,
+      });
+
+      return render(Timeline);
+    }
+
+    const currentUser = {
+      uuid: "current-user-123",
+      name: "Test User",
+    };
+
+    const otherUser = {
+      uuid: "user-1",
+      name: "User 1",
+    };
+
+    test("slots have data-snap", () => {
+      const { container } = renderTimeline({}, currentUser);
+
+      // Timeline: [A, B] -> slot(0) - A - slot(1) - B - slot(2)
+      const snaps = container.querySelectorAll("[data-snap]");
+      const slots = container.querySelectorAll("[data-position]:not(:has(img))");
+
+      expect(snaps.length).toBe(3);
+      expect(slots.length).toBe(3);
+
+      slots.forEach((slot) => {
+        expect(slot).toHaveAttribute("data-snap");
+      });
+    });
+
+    test("own assumption has data-snap", () => {
+      renderTimeline(
+        { "0": "current-user-123" },
+        currentUser,
+      );
+
+      // assumption(0) - A - slot(1) - B - slot(2)
+      const ownAssumption = screen.getByLabelText("Test User's assumption");
+      expect(ownAssumption).toHaveAttribute("data-snap");
+    });
+
+    test("other user assumption does not have data-snap", () => {
+      renderTimeline(
+        { "0": "user-1" },
+        currentUser,
+      );
+
+      // assumption(0)[user-1] - A - slot(2) - B - slot(3)
+      const otherAssumption = screen.getByLabelText("User 1's assumption");
+      expect(otherAssumption).not.toHaveAttribute("data-snap");
+    });
+
+    test("track cells do not have data-snap", () => {
+      const { container } = renderTimeline({}, currentUser);
+
+      const allCells = container.querySelectorAll("[role='listitem']");
+      const tracksWithSnap = Array.from(allCells).filter(
+        (el) => !el.hasAttribute("data-position") && el.hasAttribute("data-snap"),
+      );
+
+      expect(tracksWithSnap.length).toBe(0);
+    });
+
+    test("mixed: only slots and own assumption get data-snap", () => {
+      const { container } = renderTimeline(
+        { "0": "user-1", "2": "current-user-123" },
+        currentUser,
+      );
+
+      // other(0) - A - own(2) - B - slot(3)
+      const snaps = container.querySelectorAll("[data-snap]");
+      const snapPositions = Array.from(snaps).map(
+        (el) => el.dataset.position,
+      );
+
+      // own assumption at 2, slot at 3
+      expect(snapPositions).toContain("2");
+      expect(snapPositions).toContain("3");
+      expect(snapPositions).not.toContain("0");
+    });
+  });
+
   test("slot positions shift when assumptions exist", () => {
     mockGameContext.permissions.can_make_assumptions = true;
     mockGameContext.game.turn.assumptions = {

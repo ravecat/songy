@@ -140,36 +140,44 @@
     timeline.scrollLeft += e.deltaY * 0.5;
   }
 
-  function findCenterCell(): HTMLElement | undefined {
+  function findCenterCell():
+    | { element: HTMLElement; index: number }
+    | undefined {
     const centerX =
       timeline.getBoundingClientRect().left + timeline.offsetWidth / 2;
+    const allCells =
+      timeline.querySelectorAll<HTMLElement>("[role='listitem']");
+    const snapTargets = timeline.querySelectorAll<HTMLElement>("[data-snap]");
 
-    return Array.from(
-      timeline.querySelectorAll<HTMLElement>("[role='listitem']"),
-    ).reduce((closest, el) => {
+    let closestSlot: HTMLElement | undefined;
+    let closestDistance = Infinity;
+
+    snapTargets.forEach((el) => {
       const distance = Math.abs(
         el.getBoundingClientRect().left + el.offsetWidth / 2 - centerX,
       );
-      const closestDistance = Math.abs(
-        closest.getBoundingClientRect().left +
-          closest.offsetWidth / 2 -
-          centerX,
-      );
-      return distance < closestDistance ? el : closest;
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestSlot = el;
+      }
     });
+
+    if (!closestSlot) return undefined;
+
+    const index = Array.from(allCells).indexOf(closestSlot);
+    return { element: closestSlot, index };
   }
 
   function onScrollEnd() {
     if (!hasInteracted) return;
 
-    const closestElement = findCenterCell();
-    const cellIndex = closestElement?.dataset.cellIndex;
+    const closest = findCenterCell();
 
-    if (cellIndex != null) {
-      activeCellIndex = Number(cellIndex);
+    if (closest) {
+      activeCellIndex = closest.index;
     }
 
-    const position = closestElement?.dataset.position;
+    const position = closest?.element.dataset.position;
     if (!position) return;
 
     channel.push(PUSH_EVENT.MAKE_ASSUMPTION, { position: Number(position) });
@@ -188,12 +196,18 @@
     aria-label="Timeline"
   >
     {#each cells as cell, index (index)}
+      {@const isSlot = cell.kind === "slot"}
+      {@const isOwnAssumption = cell.kind === "assumption" && cell.user.uuid === currentUser?.uuid}
+      {@const isSnap = isSlot || isOwnAssumption}
+      {@const isActive = hasInteracted && activeCellIndex === index}
       <div
         class="timeline__cell"
-        class:timeline__cell_slot={cell.kind === "slot"}
-        class:timeline__cell-active={hasInteracted && activeCellIndex === index}
-        data-position={cell.kind === "track" ? undefined : cell.position}
-        data-cell-index={index}
+        class:timeline__cell_slot={isSlot}
+        class:timeline__cell_own-assumption={isOwnAssumption}
+        class:timeline__cell-active={isActive}
+        aria-label={cell.kind === "assumption" ? `${cell.user.name}'s assumption` : undefined}
+        data-snap={isSnap ? "" : undefined}
+        data-position={cell.kind !== "track" ? cell.position : undefined}
         role="listitem"
       >
         {#if cell.kind === "track"}
@@ -274,7 +288,6 @@
     width: 8rem;
     height: 8rem;
     flex-shrink: 0;
-    scroll-snap-align: center;
     margin-inline: 0.5rem;
     display: flex;
     align-items: center;
@@ -283,6 +296,13 @@
     transition:
       transform 0.25s var(--ease-out),
       box-shadow 0.25s var(--ease-out);
+  }
+
+  /* --- Snap targets (slots + own assumption) --- */
+
+  .timeline__cell_slot,
+  .timeline__cell_own-assumption {
+    scroll-snap-align: center;
   }
 
   /* --- Slot (empty drop zone) --- */
