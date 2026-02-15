@@ -19,6 +19,7 @@
             beam.elixir_1_18
             pkgs.git
             pkgs.glibcLocales
+            pkgs.nodePackages.prettier
           ];
 
           shellHook = ''
