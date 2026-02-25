@@ -43,7 +43,7 @@
         </span>?
       </h2>
       <p class="hero__description">
-        Challenge friends. Guess the year. Win.
+        Challenge friends. Rank tracks. Win.
       </p>
       <form use:inertia={{ href: "/create", method: "post" }}>
         <button type="submit" class="btn btn-quick-start w-3xs">

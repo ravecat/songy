@@ -1,6 +1,7 @@
 # Songy
 
-Music quiz application with Spotify integration built with Phoenix Framework.
+**[songy.ravecat.io](https://songy.ravecat.io/)**
+
 
 ## Requirements
 
@@ -91,6 +92,10 @@ Requires Apple Music API developer token:
 ```bash
 APPLE_MUSIC_ACCESS_TOKEN=your_access_token
 ```
+
+## Documentation
+
+[docs/README.md](docs/README.md)
 
 ## Licensing
 
