@@ -46,10 +46,12 @@ defmodule SongyWeb.Router do
     get "/:room_id", PageController, :join
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", SongyWeb do
-  #   pipe_through :api
-  # end
+  scope "/api" do
+    pipe_through :api
+
+    forward "/asyncapi/ui", SongyWeb.Plugs.AsyncApiUI, spec_url: "/api/asyncapi"
+    forward "/asyncapi", SongyWeb.Plugs.AsyncApiSpec
+  end
 
   scope "/auth/spotify", SongyWeb do
     pipe_through :browser
