@@ -10,7 +10,15 @@ import Config
 config :bun,
   version: "1.2.16",
   assets: [args: [], cd: Path.expand("../assets", __DIR__)],
-  vite: [args: ~w(x vite), cd: Path.expand("../assets", __DIR__)]
+  vite: [args: ~w(x vite), cd: Path.expand("../assets", __DIR__)],
+  asyncapi: [
+    args: ~w(
+        x --bun @rvct/asyncapi-codegen@0.2.0
+        --input ../priv/specs/asyncapi.yaml
+        --out ./js/shared/asyncapi
+      ),
+    cd: Path.expand("../assets", __DIR__)
+  ]
 
 config :songy,
   # Ecto disabled for this project - using in-memory state management
