@@ -1,23 +1,26 @@
-import { test as base } from '@playwright/test';
-import { RoomPage } from '~e2e/pages/room.page';
+import { test as base } from "@playwright/test";
+import { HomePage } from "~e2e/pages/home.page";
+import { RoomPage } from "~e2e/pages/room.page";
 
 export const test = base.extend<{
   ownerLobbyPage: RoomPage;
   playerLobbyPage: RoomPage;
 }>({
   ownerLobbyPage: async ({ page }, use) => {
-    const ownerRoom = new RoomPage(page);
-    await ownerRoom.create();
-    await use(ownerRoom);
+    const home = new HomePage(page);
+    await home.createRoom();
+    await page.waitForURL(/\/[A-Z2-7]{4,}$/);
+    const room = new RoomPage(page);
+    await use(room);
   },
   playerLobbyPage: async ({ ownerLobbyPage, browser }, use) => {
     const context = await browser.newContext();
     const page = await context.newPage();
-    const player = new RoomPage(page);
-    await player.goto(ownerLobbyPage.url);
-    await use(player);
+    const room = new RoomPage(page);
+    await room.goto(ownerLobbyPage.url);
+    await use(room);
     await context.close();
   },
 });
 
-export { expect } from '@playwright/test';
+export { expect } from "@playwright/test";

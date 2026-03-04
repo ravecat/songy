@@ -31,7 +31,7 @@
       <Sleeve {track} />
     </div>
   </div>
-  <div class="results__avatars" role="list">
+  <div class="results__avatars" role="list" aria-label="Result challengers">
     {#each challengers as user, i (user.uuid)}
       <div
         class="results__challenger"

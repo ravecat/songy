@@ -22,7 +22,7 @@
 </script>
 
 <div class="lobby">
-  <div class="lobby__players" role="list">
+  <div class="lobby__players" role="list" aria-label="Lobby players">
     {#each queue as uuid, i (uuid)}
       {@const participant = participants[uuid]}
       {#if participant}

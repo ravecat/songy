@@ -14,7 +14,7 @@
   {#if !game}
     <Equalizer />
   {:else}
-    <div class="room__content" role="main" aria-label="Game room">
+    <main class="room__content">
       <div class="room__header">
         <Timer />
         <div class="room__header-actions">
@@ -24,7 +24,7 @@
       </div>
       <Game />
       <Player />
-    </div>
+    </main>
   {/if}
 </div>
 

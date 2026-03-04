@@ -57,8 +57,16 @@ describe("Room", () => {
 
   test("renders header and main components when game is active", () => {
     mockChannelContext.game.participants = [
-      { uuid: "user-1", name: "Alice", avatar_url: "https://example.com/alice.jpg" },
-      { uuid: "user-2", name: "Bob", avatar_url: "https://example.com/bob.jpg" },
+      {
+        uuid: "user-1",
+        name: "Alice",
+        avatar_url: "https://example.com/alice.jpg",
+      },
+      {
+        uuid: "user-2",
+        name: "Bob",
+        avatar_url: "https://example.com/bob.jpg",
+      },
     ];
 
     getGameContextSpy.mockReturnValue(mockChannelContext);
@@ -66,16 +74,17 @@ describe("Room", () => {
       user: { uuid: "user-1", name: "Alice" },
     });
 
-    const { container } = render(Room);
+    render(Room);
 
     expect(
       screen.getByRole("button", { name: "Your score: 7" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "2 players online" }),
+      screen.getByRole("status", { name: "2 players online" }),
     ).toBeInTheDocument();
-    // Lobby component is rendered when game status is WAITING
-    expect(container.querySelector(".lobby")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Copy share link" }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Play track" }),
     ).toBeInTheDocument();

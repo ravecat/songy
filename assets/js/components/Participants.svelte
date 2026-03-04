@@ -9,13 +9,21 @@
   );
 </script>
 
-<button class="participants-button" aria-label={`${playerCount} player${playerCount !== 1 ? 's' : ''} online`}>
-  <Users size={20} strokeWidth={2.5} />
-  <span class="participants-button__value">{playerCount}</span>
-</button>
+<div
+  class="participants-indicator"
+  role="status"
+  aria-live="polite"
+  aria-atomic="true"
+  aria-label={`${playerCount} player${playerCount !== 1 ? "s" : ""} online`}
+>
+  <Users size={20} strokeWidth={2.5} aria-hidden="true" />
+  <span class="participants-indicator__value" aria-hidden="true">
+    {playerCount}
+  </span>
+</div>
 
 <style>
-  .participants-button {
+  .participants-indicator {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -25,28 +33,17 @@
     padding: 0.4rem;
     box-sizing: border-box;
     background: transparent;
-    border: none;
-    cursor: pointer;
     border-radius: var(--radius-md);
     color: white;
     padding: 0;
-    transition: background-color 0.15s ease-out;
   }
 
-  .participants-button :global(svg) {
+  .participants-indicator :global(svg) {
     flex-shrink: 0;
     display: block;
   }
 
-  .participants-button:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-
-  .participants-button:active {
-    background-color: rgba(255, 255, 255, 0.2);
-  }
-
-  .participants-button__value {
+  .participants-indicator__value {
     font-size: 1rem;
     font-weight: var(--font-weight-semibold);
     line-height: 1;
