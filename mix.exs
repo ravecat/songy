@@ -106,6 +106,7 @@ defmodule Songy.MixProject do
       "assets.test.coverage": ["bun assets run test:coverage"],
       "assets.test.typecheck": ["bun assets run typecheck"],
       e2e: ["bun assets run e2e:run"],
+      "e2e.fast": ["bun assets run e2e:fast"],
       "e2e.setup": ["bun assets run e2e:install"],
       "e2e.ui": ["bun assets run e2e:ui"],
       "e2e.watch": ["bun assets run e2e:watch"],
