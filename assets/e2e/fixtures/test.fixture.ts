@@ -5,6 +5,8 @@ import { RoomPage } from "~e2e/pages/room.page";
 export const test = base.extend<{
   ownerLobbyPage: RoomPage;
   playerLobbyPage: RoomPage;
+  ownerWaitingPage: RoomPage;
+  playerWaitingPage: RoomPage;
 }>({
   ownerLobbyPage: async ({ page }, use) => {
     const home = new HomePage(page);
@@ -20,6 +22,19 @@ export const test = base.extend<{
     await room.goto(ownerLobbyPage.url);
     await use(room);
     await context.close();
+  },
+  ownerWaitingPage: async (
+    { ownerLobbyPage, playerLobbyPage: _playerLobbyPage },
+    use,
+  ) => {
+    await ownerLobbyPage.lobby.startGame();
+    await use(ownerLobbyPage);
+  },
+  playerWaitingPage: async (
+    { playerLobbyPage, ownerWaitingPage: _ownerWaitingPage },
+    use,
+  ) => {
+    await use(playerLobbyPage);
   },
 });
 

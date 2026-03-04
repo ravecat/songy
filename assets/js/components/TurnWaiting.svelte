@@ -6,7 +6,7 @@
   const activePlayer = $derived(game!.participants[game!.queue[game!.cursor]]);
 </script>
 
-<div class="turn-waiting">
+<div class="turn-waiting" role="region" aria-label="Turn waiting">
   <div class="turn-waiting__player">
     <div class="turn-waiting__avatar avatar">
       <div
