@@ -7,6 +7,8 @@ export const test = base.extend<{
   playerLobbyPage: RoomPage;
   ownerWaitingPage: RoomPage;
   playerWaitingPage: RoomPage;
+  ownerActivePage: RoomPage;
+  playerActivePage: RoomPage;
 }>({
   ownerLobbyPage: async ({ page }, use) => {
     const home = new HomePage(page);
@@ -23,7 +25,10 @@ export const test = base.extend<{
     await use(room);
     await context.close();
   },
-  ownerWaitingPage: async ({ ownerLobbyPage, playerLobbyPage }, use) => {
+  ownerWaitingPage: async (
+    { ownerLobbyPage, playerLobbyPage: _playerLobbyPage },
+    use,
+  ) => {
     await ownerLobbyPage.lobby.startGame();
     await use(ownerLobbyPage);
   },
@@ -32,6 +37,16 @@ export const test = base.extend<{
     use,
   ) => {
     await use(playerLobbyPage);
+  },
+  ownerActivePage: async ({ ownerWaitingPage }, use) => {
+    await ownerWaitingPage.waiting.startTurn();
+    await use(ownerWaitingPage);
+  },
+  playerActivePage: async (
+    { playerWaitingPage, ownerActivePage: _ownerActivePage },
+    use,
+  ) => {
+    await use(playerWaitingPage);
   },
 });
 

@@ -8,9 +8,7 @@ test.describe("room waiting", () => {
     ownerWaitingPage,
     playerWaitingPage,
   }) => {
-    await expect(ownerWaitingPage.waiting.title).toBeVisible({
-      timeout: 15_000,
-    });
+    await expect(ownerWaitingPage.waiting.title).toBeVisible();
     await expect(ownerWaitingPage.waiting.activePlayerAvatar).toBeVisible();
     await expect(playerWaitingPage.waiting.title).toBeVisible();
     await expect(playerWaitingPage.waiting.activePlayerAvatar).toBeVisible();
@@ -18,9 +16,7 @@ test.describe("room waiting", () => {
 
   test.describe("active participant", () => {
     test("can press ready", async ({ ownerWaitingPage }) => {
-      await expect(ownerWaitingPage.waiting.readyButton).toBeVisible({
-        timeout: 15_000,
-      });
+      await expect(ownerWaitingPage.waiting.readyButton).toBeVisible();
       await expect(ownerWaitingPage.waiting.readyButton).toBeEnabled();
       await expect(ownerWaitingPage.waiting.forwardButton).not.toBeVisible();
       await expect(ownerWaitingPage.waiting.title).toHaveAccessibleName(
@@ -31,9 +27,7 @@ test.describe("room waiting", () => {
     test("sees own turn title and active avatar", async ({
       ownerWaitingPage,
     }) => {
-      await expect(ownerWaitingPage.waiting.title).toBeVisible({
-        timeout: 15_000,
-      });
+      await expect(ownerWaitingPage.waiting.title).toBeVisible();
       const activePlayerName =
         (await ownerWaitingPage.waiting.activePlayerAvatar.getAttribute(
           "alt",
@@ -52,9 +46,7 @@ test.describe("room waiting", () => {
 
   test.describe("passive participant", () => {
     test("cannot advance turn", async ({ playerWaitingPage }) => {
-      await expect(playerWaitingPage.waiting.forwardButton).toBeVisible({
-        timeout: 15_000,
-      });
+      await expect(playerWaitingPage.waiting.forwardButton).toBeVisible();
       await expect(playerWaitingPage.waiting.readyButton).not.toBeVisible();
       await expect(playerWaitingPage.waiting.forwardButton).toBeDisabled();
       await expect(playerWaitingPage.waiting.title).toBeVisible();
@@ -67,9 +59,7 @@ test.describe("room waiting", () => {
       ownerWaitingPage,
       playerWaitingPage,
     }) => {
-      await expect(playerWaitingPage.waiting.forwardButton).toBeVisible({
-        timeout: 15_000,
-      });
+      await expect(playerWaitingPage.waiting.forwardButton).toBeVisible();
       const activePlayerName =
         (await ownerWaitingPage.waiting.activePlayerAvatar.getAttribute(
           "alt",
