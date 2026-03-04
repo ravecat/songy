@@ -17,7 +17,12 @@ defmodule Songy.MixProject do
   def cli do
     [
       preferred_envs: [
-        "test.watch": :test
+        "test.watch": :test,
+        e2e: :e2e,
+        "e2e.fast": :e2e,
+        "e2e.setup": :e2e,
+        "e2e.ui": :e2e,
+        "e2e.watch": :e2e
       ]
     ]
   end
@@ -37,6 +42,7 @@ defmodule Songy.MixProject do
 
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(:e2e), do: ["lib", "e2e/support"]
   defp elixirc_paths(_), do: ["lib"]
 
   # Specifies your project dependencies.

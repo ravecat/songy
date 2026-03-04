@@ -23,10 +23,7 @@ export const test = base.extend<{
     await use(room);
     await context.close();
   },
-  ownerWaitingPage: async (
-    { ownerLobbyPage, playerLobbyPage: _playerLobbyPage },
-    use,
-  ) => {
+  ownerWaitingPage: async ({ ownerLobbyPage, playerLobbyPage }, use) => {
     await ownerLobbyPage.lobby.startGame();
     await use(ownerLobbyPage);
   },
