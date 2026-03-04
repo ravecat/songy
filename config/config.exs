@@ -11,6 +11,27 @@ config :bun,
   version: "1.2.16",
   assets: [args: [], cd: Path.expand("../assets", __DIR__)],
   vite: [args: ~w(x vite), cd: Path.expand("../assets", __DIR__)],
+  "e2e.watch": [
+    args: [
+      "x",
+      "chokidar-cli",
+      "../lib/**/*.{ex,exs,heex}",
+      "e2e/**/*",
+      "js/**/*.{ts,js,svelte}",
+      "../config/e2e.exs",
+      "-i",
+      "**/node_modules/**",
+      "-i",
+      "**/.git/**",
+      "--silent",
+      "--initial",
+      "-d",
+      "50",
+      "-c",
+      "playwright test --reporter=list"
+    ],
+    cd: Path.expand("../assets", __DIR__)
+  ],
   asyncapi: [
     args: ~w(
         x --bun @rvct/asyncapi-codegen@0.2.0

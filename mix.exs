@@ -18,11 +18,11 @@ defmodule Songy.MixProject do
     [
       preferred_envs: [
         "test.watch": :test,
-        e2e: :e2e,
-        "e2e.fast": :e2e,
-        "e2e.setup": :e2e,
-        "e2e.ui": :e2e,
-        "e2e.watch": :e2e
+        "test.e2e": :e2e,
+        "test.e2e.fast": :e2e,
+        "test.e2e.setup": :e2e,
+        "test.e2e.ui": :e2e,
+        "test.e2e.watch": :e2e
       ]
     ]
   end
@@ -103,19 +103,19 @@ defmodule Songy.MixProject do
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
       "test.only": ["test --only only"],
       "test.watch": ["test.watch"],
+      "test.assets": ["bun assets run test"],
+      "test.assets.watch": ["bun assets run test:watch"],
+      "test.assets.ui": ["bun assets run test:ui"],
+      "test.assets.coverage": ["bun assets run test:coverage"],
+      "test.assets.typecheck": ["bun assets run typecheck"],
+      "test.e2e": ["bun assets run e2e:run"],
+      "test.e2e.fast": ["bun assets run e2e:fast"],
+      "test.e2e.setup": ["bun assets run e2e:install"],
+      "test.e2e.ui": ["bun assets run e2e:ui"],
+      "test.e2e.watch": ["bun e2e.watch"],
+      codegen: ["bun asyncapi"],
       "assets.setup": ["bun.install --if-missing", "bun assets install"],
       "assets.build": ["bun vite build"],
-      codegen: ["bun asyncapi"],
-      "assets.test": ["bun assets run test"],
-      "assets.test.watch": ["bun assets run test:watch"],
-      "assets.test.ui": ["bun assets run test:ui"],
-      "assets.test.coverage": ["bun assets run test:coverage"],
-      "assets.test.typecheck": ["bun assets run typecheck"],
-      e2e: ["bun assets run e2e:run"],
-      "e2e.fast": ["bun assets run e2e:fast"],
-      "e2e.setup": ["bun assets run e2e:install"],
-      "e2e.ui": ["bun assets run e2e:ui"],
-      "e2e.watch": ["bun assets run e2e:watch"],
       "assets.deploy": [
         "bun vite build",
         "phx.digest"

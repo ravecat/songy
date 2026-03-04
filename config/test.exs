@@ -45,12 +45,10 @@ config :songy,
   challenging_phase_timeout: 0
 
 config :mix_test_watch,
-  tasks: ["test", "assets.test"],
+  tasks: ["test"],
   clear: true,
-  extra_extensions: [".svelte", ".ts", ".js"],
   exclude: [
     ~r/\.#/,
     ~r{priv/repo/migrations},
-    ~r{priv/static/assets},
     ~r{\.worktrees/}
   ]
