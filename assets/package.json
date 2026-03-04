@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit",
     "e2e:install": "playwright install",
     "e2e:run": "playwright test",
-    "e2e:fast": "playwright test --reporter=line",
+    "e2e:fast": "playwright test --reporter=list",
     "e2e:ui": "playwright test --ui",
     "e2e:watch": "playwright test --ui"
   },
