@@ -34,7 +34,7 @@ servers:
       domain:
         default: localhost
       port:
-        default: "4000"
+        default: "5000"
         description: >
           Phoenix dev server port. Configured via PORT env var in config/dev.exs.
     bindings:
@@ -229,7 +229,7 @@ components:
     domain:
       description: Server hostname. Set via PHX_HOST env var.
     port:
-      default: "4000"
+      default: "5000"
       description: Server port. Set via PORT env var.
   messages:
     phxJoin:

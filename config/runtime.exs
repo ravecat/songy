@@ -43,7 +43,7 @@ config :spotify_ex,
     "app-remote-control",
     "streaming"
   ],
-  callback_url: "http://127.0.0.1:4000/auth/spotify/callback"
+  callback_url: "http://127.0.0.1:5000/auth/spotify/callback"
 
 config :songy, :apple, access_token: env!("APPLE_MUSIC_ACCESS_TOKEN", :string?, "")
 

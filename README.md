@@ -65,7 +65,7 @@ mix setup
 mix phx.server
 ```
 
-Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+Now you can visit [`localhost:5000`](http://localhost:5000) from your browser.
 
 ## Music Providers
 
@@ -77,7 +77,7 @@ For production or enhanced features, configure one of these providers:
 
 1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
 2. Create a new app
-3. Add `http://localhost:4000/auth/spotify/callback` to redirect URIs
+3. Add `http://localhost:5000/auth/spotify/callback` to redirect URIs
 4. Set environment variables:
 
    ```bash
