@@ -21,4 +21,6 @@ config :phoenix_live_view,
 config :songy,
   game_session_termination_timeout: 0,
   challenging_phase_timeout: 0,
-  default_provider: Songy.Core.Provider.Mock
+  providers: [
+    default: Songy.Core.Provider.Mock
+  ]

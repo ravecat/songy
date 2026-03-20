@@ -10,7 +10,6 @@ defmodule Songy.Boundary.Provider.ITunes do
 
   alias Songy.Core.Track
 
-  @base_url "https://itunes.apple.com"
   @media "music"
   @entity "song"
   @limit 50
@@ -106,7 +105,7 @@ defmodule Songy.Boundary.Provider.ITunes do
   end
 
   defp make_search_request(params) do
-    Req.get("#{@base_url}/search",
+    Req.get("#{base_url()}/search",
       params: params,
       headers: @headers
     )
@@ -171,4 +170,10 @@ defmodule Songy.Boundary.Provider.ITunes do
   defp song?(%{"kind" => "song"}), do: true
   defp song?(%{"wrapperType" => "track", "kind" => "song"}), do: true
   defp song?(_), do: false
+
+  defp base_url do
+    Application.fetch_env!(:songy, :providers)
+    |> Keyword.fetch!(:itunes)
+    |> Keyword.fetch!(:url)
+  end
 end

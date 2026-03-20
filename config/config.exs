@@ -51,7 +51,15 @@ config :songy,
   generators: [timestamp_type: :utc_datetime],
   game_session_termination_timeout: :timer.minutes(3),
   challenging_phase_timeout: :timer.seconds(8),
-  default_provider: Songy.Core.Provider.ITunes
+  providers: [
+    default: Songy.Core.Provider.ITunes,
+    apple: [
+      url: "https://api.music.apple.com/v1"
+    ],
+    itunes: [
+      url: "https://itunes.apple.com"
+    ]
+  ]
 
 # Configures the endpoint
 config :songy, SongyWeb.Endpoint,

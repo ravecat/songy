@@ -100,10 +100,10 @@ defimpl Songy.Boundary.Provider, for: Songy.Core.Provider.Apple do
 
   def ensure(_provider) do
     case Apple.access_token() do
-      token when is_binary(token) ->
+      {:ok, _token} ->
         {:ok, :apple, Provider.Apple.new()}
 
-      _ ->
+      {:error, :invalid_credentials} ->
         {:error, :invalid_credentials}
     end
   end

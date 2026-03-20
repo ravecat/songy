@@ -10,7 +10,6 @@ defmodule Songy.Boundary.Provider.Apple do
 
   alias Songy.Core.Track
 
-  @base_url "https://api.music.apple.com/v1"
   @storefront "us"
   @types "songs"
   @limit 25
@@ -138,7 +137,7 @@ defmodule Songy.Boundary.Provider.Apple do
   defp make_search_request(token, params) do
     {storefront, search_params} = Keyword.pop(params, :storefront, @storefront)
 
-    Req.get("#{@base_url}/catalog/#{storefront}/search",
+    Req.get("#{base_url()}/catalog/#{storefront}/search",
       headers: [
         {"Authorization", "Bearer #{token}"},
         {"Content-Type", "application/json"}
@@ -159,4 +158,10 @@ defmodule Songy.Boundary.Provider.Apple do
   defp random_query, do: <<?a + rem(:binary.decode_unsigned(:crypto.strong_rand_bytes(1)), 26)>> <> "*"
 
   defp random_offset, do: rem(:binary.decode_unsigned(:crypto.strong_rand_bytes(2)), 1000)
+
+  defp base_url do
+    Application.fetch_env!(:songy, :providers)
+    |> Keyword.fetch!(:apple)
+    |> Keyword.fetch!(:url)
+  end
 end

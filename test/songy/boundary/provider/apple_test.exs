@@ -39,18 +39,20 @@ defmodule Songy.Boundary.Provider.AppleTest do
       assert {:error, :search_failed} = Apple.search(@valid_token, term: "test")
     end
 
-    test "uses default storefront from config when not specified" do
-      Repatch.patch(Req, :get, fn url, _opts ->
-        assert url =~ "/catalog/us/search"
+    test "does not include storefront in query params when not specified" do
+      Repatch.patch(Req, :get, fn _url, opts ->
+        params = Keyword.get(opts, :params)
+        refute Keyword.has_key?(params, :storefront)
         {:ok, %{status: 200, body: %{"results" => %{}}}}
       end)
 
       Apple.search(@valid_token, term: "test")
     end
 
-    test "uses custom storefront when specified in params" do
-      Repatch.patch(Req, :get, fn url, _opts ->
-        assert url =~ "/catalog/gb/search"
+    test "removes custom storefront from query params before request" do
+      Repatch.patch(Req, :get, fn _url, opts ->
+        params = Keyword.get(opts, :params)
+        refute Keyword.has_key?(params, :storefront)
         {:ok, %{status: 200, body: %{"results" => %{}}}}
       end)
 

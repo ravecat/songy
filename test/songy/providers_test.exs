@@ -316,7 +316,7 @@ defmodule Songy.ProvidersTest do
       assert stored_data.access_token == "refreshed_token"
     end
 
-    test "falls back to default when credentials are invalid" do
+    test "falls back to default provider when credentials are invalid" do
       user_id = "user_with_invalid_refresh"
 
       invalid_data = %Spotify{

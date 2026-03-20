@@ -54,7 +54,7 @@ defmodule Songy.Providers do
 
   @doc """
   Ensures provider is ready for the user.
-  Returns {:ok, provider_id, provider} from ETS (validated and refreshed) or creates default.
+  Returns {:ok, provider_id, provider} from ETS (validated and refreshed) or creates the default provider.
   """
   @spec ensure(String.t()) :: {:ok, atom(), struct()} | {:error, atom()}
   def ensure(user_id) do
@@ -68,18 +68,21 @@ defmodule Songy.Providers do
 
       {:error, :invalid_credentials} ->
         remove(user_id)
-        insert_default(user_id)
+        insert_default_provider(user_id)
 
       {:error, :not_found} ->
-        insert_default(user_id)
+        insert_default_provider(user_id)
 
       {:error, reason} ->
         {:error, reason}
     end
   end
 
-  defp insert_default(user_id) do
-    module = Application.fetch_env!(:songy, :default_provider)
+  defp insert_default_provider(user_id) do
+    module =
+      Application.fetch_env!(:songy, :providers)
+      |> Keyword.fetch!(:default)
+
     provider = module.new()
     insert(user_id, provider)
     Songy.Boundary.Provider.ensure(provider)

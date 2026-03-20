@@ -38,10 +38,10 @@ ETS table managed by `Songy.Providers` GenServer. Tokens are keyed by `user_id` 
 - (+) No database needed - aligns with ADR-002
 - (-) Tokens lost on node restart - users must re-authenticate
 - (-) No cross-node sharing without distributed ETS or external store
-- (-) Default provider fallback (iTunes) when credentials are invalid or missing
+- (-) Default provider fallback (iTunes by default) when credentials are invalid or missing
 
 ## Code References
 
 - `lib/songy/providers.ex` - GenServer + ETS table (`insert/2`, `lookup/1`, `ensure/1`, `update/2`, `remove/1`)
 - `lib/songy_web/auth.ex` - `fetch_current_provider/2` reads from ETS
-- `config/config.exs` - `default_provider: Songy.Core.Provider.ITunes`
+- `config/config.exs` - `providers: [default: Songy.Core.Provider.ITunes, ...]`
