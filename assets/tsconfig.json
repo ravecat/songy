@@ -12,7 +12,7 @@
     "baseUrl": ".",
     "paths": {
       "~/*": ["js/*"],
-      "~hooks/*": ["js/hooks/*"],
+      "~hooks/*": ["js/shared/hooks/*"],
       "~pages/*": ["js/pages/*"],
       "~components/*": ["js/components/*"],
       "~shared/*": ["js/shared/*"],

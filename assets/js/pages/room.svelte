@@ -1,10 +1,10 @@
 <script>
-  import Scope from "~components/Scope.svelte";
+  import Scope from "~components/scope.svelte";
   import socket from "~/socket";
-  import GameChannel from "~components/GameChannel.svelte";
-  import Room from "~/components/Room.svelte";
-  import MediaProvider from "~components/MediaProvider.svelte";
-  import QrContext from "~components/QrContext.svelte";
+  import GameChannel from "~components/game_channel.svelte";
+  import Room from "~components/room.svelte";
+  import MediaProvider from "~components/media_provider.svelte";
+  import QrContext from "~components/qr_context.svelte";
 
   let { roomId, provider, qrSvg } = $props();
 </script>

@@ -27,9 +27,9 @@ export default {
   resolve: {
     conditions: ["svelte", "browser", "import", "default"],
     alias: {
-      axios: path.resolve(assetsDir, "js/lib/axios-shim.js"),
+      axios: path.resolve(assetsDir, "js/shared/lib/axios"),
       "~": path.resolve(assetsDir, "js"),
-      "~hooks": path.resolve(assetsDir, "js/hooks"),
+      "~hooks": path.resolve(assetsDir, "js/shared/hooks"),
       "~pages": path.resolve(assetsDir, "js/pages"),
       "~shared": path.resolve(assetsDir, "js/shared"),
       "~types": path.resolve(assetsDir, "js/shared/types"),
