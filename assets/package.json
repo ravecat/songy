@@ -4,12 +4,12 @@
     "../deps/*"
   ],
   "scripts": {
-    "test": "vitest run --reporter=verbose",
-    "test:watch": "vitest --watch",
-    "test:ui": "vitest --ui",
+    "test": "vitest run --project unit --project browser --passWithNoTests --reporter=verbose",
+    "test:watch": "vitest --project unit --project browser --passWithNoTests --watch",
+    "test:ui": "vitest --project unit --project browser --passWithNoTests --ui",
     "test:unit": "vitest run --project unit --reporter=verbose",
-    "test:browser": "vitest run --project browser --reporter=verbose",
-    "test:coverage": "vitest run --coverage",
+    "test:browser": "vitest run --project browser --passWithNoTests --reporter=verbose",
+    "test:coverage": "vitest run --project unit --project browser --passWithNoTests --coverage",
     "check": "svelte-check",
     "check:watch": "svelte-check --watch",
     "typecheck": "tsc --noEmit",
@@ -17,7 +17,11 @@
     "e2e:run": "playwright test",
     "e2e:fast": "playwright test --reporter=list",
     "e2e:ui": "playwright test --ui",
-    "e2e:watch": "playwright test --ui"
+    "e2e:watch": "playwright test --ui",
+    "storybook": "storybook dev",
+    "storybook:build": "storybook build",
+    "test:storybook": "vitest run --project storybook --reporter=verbose",
+    "test:storybook:watch": "vitest --project storybook"
   },
   "dependencies": {
     "@inertiajs/svelte": "^2.3.12",
@@ -39,6 +43,9 @@
   "devDependencies": {
     "@playwright/test": "^1.58.0",
     "@rvct/asyncapi-codegen": "0.2.0",
+    "@storybook/addon-svelte-csf": "^5.0.12",
+    "@storybook/addon-vitest": "^10.3.1",
+    "@storybook/svelte-vite": "^10.3.1",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@tailwindcss/vite": "^4.1.18",
     "@testing-library/jest-dom": "^6.9.1",
@@ -52,6 +59,7 @@
     "jsdom": "^27.4.0",
     "minimatch": "10.2.1",
     "rollup-plugin-visualizer": "^6.0.5",
+    "storybook": "^10.3.1",
     "svelte-check": "^4.3.5",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",

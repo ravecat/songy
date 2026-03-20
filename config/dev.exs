@@ -34,12 +34,15 @@ lan_ip =
 config :songy, SongyWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
-  http: [ip: {0, 0, 0, 0}, port: String.to_integer(System.get_env("PORT") || "5000")],
+  http: [ip: {0, 0, 0, 0}, port: String.to_integer(System.get_env("PORT") || "4000")],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
   secret_key_base: "D4ZJEvFP19Dn0Mpzog0xd6QL5qu8RJUNfWmGRXf7447sfWh67sHftKl8uUSLtGFw",
-  watchers: [vite: {Bun, :install_and_run, [:vite, ~w(dev)]}],
+  watchers: [
+    vite: {Bun, :install_and_run, [:vite, ~w(dev)]},
+    storybook: {Bun, :install_and_run, [:storybook, ~w(--port 6006)]},
+  ],
   static_url: [host: lan_ip, port: String.to_integer(System.get_env("VITE_PORT") || "5173")]
 
 # ## SSL Support

@@ -31,8 +31,12 @@
     ]
   },
   "include": [
+    ".storybook/**/*.ts",
     "js/**/*.ts",
     "js/**/*.svelte",
+    "stories/**/*.ts",
+    "stories/**/*.js",
+    "stories/**/*.svelte",
     "tests/**/*.ts",
     "tests/**/*.js",
     "*.ts",

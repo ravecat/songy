@@ -1,8 +1,12 @@
 /// <reference types="vitest" />
+import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
 import { playwright } from '@vitest/browser-playwright';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig, mergeConfig } from 'vitest/config';
 import viteConfig from './vite.config';
-import path from 'path';
+
+const dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default mergeConfig(
   viteConfig,
@@ -10,7 +14,7 @@ export default mergeConfig(
     resolve: {
       conditions: ['svelte', 'browser', 'import', 'default'],
       alias: {
-        'phoenix': path.resolve(__dirname, '__mocks__/phoenix.js'),
+        phoenix: path.resolve(dirname, '__mocks__/phoenix.js'),
       },
     },
     test: {
@@ -33,6 +37,24 @@ export default mergeConfig(
             name: 'browser',
             include: ['tests/browser/**/*.browser.{test,spec}.{js,ts}'],
             setupFiles: ['./tests/setup.browser.ts'],
+            browser: {
+              enabled: true,
+              headless: true,
+              provider: playwright(),
+              instances: [{ browser: 'chromium' }],
+            },
+          },
+        },
+        {
+          extends: true,
+          plugins: [
+            storybookTest({
+              configDir: path.join(dirname, '.storybook'),
+              storybookScript: 'bun run storybook -- --ci',
+            }),
+          ],
+          test: {
+            name: 'storybook',
             browser: {
               enabled: true,
               headless: true,
