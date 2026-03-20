@@ -47,10 +47,8 @@ defmodule SongyWeb.Router do
   end
 
   scope "/api" do
-    pipe_through :api
-
-    forward "/asyncapi/ui", SongyWeb.Plugs.AsyncApiUI, spec_url: "/api/asyncapi"
-    forward "/asyncapi", SongyWeb.Plugs.AsyncApiSpec
+    forward "/asyncapi/raw", SongyWeb.Plugs.AsyncApi, spec: "priv/specs/asyncapi.yaml"
+    forward "/asyncapi", SongyWeb.Plugs.AsyncApi, url: "/api/asyncapi/raw"
   end
 
   scope "/auth/spotify", SongyWeb do

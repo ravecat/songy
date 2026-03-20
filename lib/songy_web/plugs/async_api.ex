@@ -1,13 +1,19 @@
-defmodule SongyWeb.Plugs.AsyncApiUI do
+defmodule SongyWeb.Plugs.AsyncApi do
   @behaviour Plug
 
   @impl true
-  def init(opts) do
-    %{spec_url: Keyword.fetch!(opts, :spec_url)}
-  end
+  def init(opts), do: Map.new(opts)
 
   @impl true
-  def call(conn, %{spec_url: spec_url}) do
+  def call(conn, %{spec: spec}) do
+    spec_path = Application.app_dir(:songy, spec)
+
+    conn
+    |> Plug.Conn.put_resp_content_type("text/yaml")
+    |> Plug.Conn.send_resp(200, File.read!(spec_path))
+  end
+
+  def call(conn, %{url: url}) do
     html = """
     <!doctype html>
     <html>
@@ -24,7 +30,7 @@ defmodule SongyWeb.Plugs.AsyncApiUI do
         <script src="https://unpkg.com/@asyncapi/react-component@3/browser/standalone/index.js"></script>
         <script>
           AsyncApiStandalone.render({
-            schema: { url: '#{spec_url}' },
+            schema: { url: '#{url}' },
             config: { show: { sidebar: true } }
           }, document.body);
         </script>
