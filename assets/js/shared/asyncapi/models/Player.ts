@@ -4,11 +4,8 @@
  */
 
 /**
- * Player state within the game
+ * JSON-encoded `Songy.Core.Player`
  */
 export interface Player {
-  id?: string;
-  name?: string;
-  score?: number;
-  [k: string]: unknown;
+  is_playback: boolean;
 }

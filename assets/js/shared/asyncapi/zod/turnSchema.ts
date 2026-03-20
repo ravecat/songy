@@ -7,23 +7,13 @@ import { z } from "zod/v4";
 
 export const turn = z
   .object({
-    track: z
-      .object({
-        id: z.string().optional(),
-        name: z.string().optional(),
-        artist: z.string().optional(),
-        uri: z
-          .string()
-          .describe("Provider URI (e.g. Spotify track URI)")
-          .optional(),
-      })
-      .catchall(z.unknown())
-      .describe("Music track data")
-      .optional(),
+    phase: z.enum(["waiting", "ready", "challenging", "results"]),
     assumptions: z
-      .record(z.string(), z.number().int())
-      .describe("Map of user_id to guessed position")
-      .optional(),
+      .record(z.string(), z.string())
+      .describe(
+        "Map keyed by JSON stringified zero-based positions. Values are user ids.\n",
+      ),
+    winner_id: z.union([z.string(), z.null()]),
   })
-  .catchall(z.unknown())
-  .describe("Current turn state");
+  .strict()
+  .describe("JSON-encoded `Songy.Core.Turn`");

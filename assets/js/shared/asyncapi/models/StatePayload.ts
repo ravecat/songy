@@ -3,85 +3,92 @@
  * Do not edit manually.
  */
 
-/**
- * Full game state and caller's permissions
- */
 export interface StatePayload {
   /**
-   * Game struct serialized from `Songy.Core.Game`. All fields are
-   * Jason-encoded. The `state` field is the GenStatem FSM state name.
-   *
+   * JSON-encoded `Songy.Core.Game` snapshot
    */
   game: {
+    id: string;
+    owner_id: string;
+    max_participants: number;
+    max_score: number;
+    status: "waiting" | "in_progress" | "finished";
     /**
-     * Room ID (unique_names_generator slug)
+     * Connected and known room participants keyed by user id
      */
-    id?: string;
-    /**
-     * Current FSM state
-     */
-    state?:
-      | "lobby"
-      | "playing"
-      | "turn"
-      | "challenging"
-      | "scoring"
-      | "finished";
-    /**
-     * User ID of the room creator
-     */
-    host_id?: string;
-    players?: {
-      id?: string;
-      name?: string;
-      score?: number;
-      [k: string]: unknown;
-    }[];
-    turn?: {
+    participants: {
       /**
-       * Music track data
+       * JSON-encoded `Songy.Core.User`
        */
-      track?: {
-        id?: string;
-        name?: string;
-        artist?: string;
-        /**
-         * Provider URI (e.g. Spotify track URI)
-         */
+      [k: string]: {
+        uuid: string;
+        name: string;
+        avatar_url: string;
+      };
+    };
+    /**
+     * Per-user scores keyed by user id
+     */
+    scores: {
+      [k: string]: number;
+    };
+    player: {
+      is_playback: boolean;
+    } | null;
+    /**
+     * Per-user ordered timelines keyed by user id
+     */
+    timelines: {
+      [k: string]: {
+        id: string;
+        title: string;
+        artist: string;
+        year: number;
+        cover_url: string | null;
+        meta: {
+          preview_url?: string;
+          uri?: string;
+          [k: string]: unknown;
+        };
+      }[];
+    };
+    created_at: string;
+    queue: string[];
+    cursor: number;
+    track: {
+      id: string;
+      title: string;
+      artist: string;
+      year: number;
+      cover_url: string | null;
+      meta: {
+        preview_url?: string;
         uri?: string;
         [k: string]: unknown;
       };
-      /**
-       * Map of user_id to guessed position
-       */
-      assumptions?: {
-        [k: string]: number;
-      };
-      [k: string]: unknown;
     } | null;
-    tracks?: {
-      id?: string;
-      name?: string;
-      artist?: string;
+    turn: {
+      phase: "waiting" | "ready" | "challenging" | "results";
       /**
-       * Provider URI (e.g. Spotify track URI)
+       * Map keyed by JSON stringified zero-based positions. Values are user ids.
+       *
        */
-      uri?: string;
-      [k: string]: unknown;
-    }[];
-    [k: string]: unknown;
+      assumptions: {
+        [k: string]: string;
+      };
+      winner_id: string | null;
+    } | null;
   };
   /**
-   * Caller-specific permission flags computed by `Songy.Authorization`.
-   * All boolean fields; missing key means `false`.
-   *
+   * Caller-specific permissions computed by `Songy.Authorization.permissions/2`
    */
   permissions: {
-    can_start_game?: boolean;
-    can_start_playback?: boolean;
-    can_pause_playback?: boolean;
-    can_advance_turn?: boolean;
-    can_make_assumption?: boolean;
-    [k: string]: unknown;
+    can_control_playback: boolean;
+    can_advance_turn: boolean;
+    can_start_game: boolean;
+    can_start_turn: boolean;
+    can_restart_game: boolean;
+    can_see_assumptions: boolean;
+    can_make_assumptions: boolean;
   };
 }

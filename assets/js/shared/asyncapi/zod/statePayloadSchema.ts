@@ -9,93 +9,110 @@ export const statePayload = z
   .object({
     game: z
       .object({
-        id: z
-          .string()
-          .describe("Room ID (unique_names_generator slug)")
-          .optional(),
-        state: z
-          .enum([
-            "lobby",
-            "playing",
-            "turn",
-            "challenging",
-            "scoring",
-            "finished",
-          ])
-          .describe("Current FSM state")
-          .optional(),
-        host_id: z.string().describe("User ID of the room creator").optional(),
-        players: z
-          .array(
+        id: z.string(),
+        owner_id: z.string(),
+        max_participants: z.number().int().gte(1),
+        max_score: z.number().int().gte(1),
+        status: z.enum(["waiting", "in_progress", "finished"]),
+        participants: z
+          .record(
+            z.string(),
             z
               .object({
-                id: z.string().optional(),
-                name: z.string().optional(),
-                score: z.number().int().optional(),
+                uuid: z.string(),
+                name: z.string(),
+                avatar_url: z.string(),
               })
-              .catchall(z.unknown())
-              .describe("Player state within the game"),
+              .strict()
+              .describe("JSON-encoded `Songy.Core.User`"),
           )
-          .optional(),
-        turn: z
-          .union([
-            z
-              .object({
-                track: z
-                  .object({
-                    id: z.string().optional(),
-                    name: z.string().optional(),
-                    artist: z.string().optional(),
-                    uri: z
-                      .string()
-                      .describe("Provider URI (e.g. Spotify track URI)")
-                      .optional(),
-                  })
-                  .catchall(z.unknown())
-                  .describe("Music track data")
-                  .optional(),
-                assumptions: z
-                  .record(z.string(), z.number().int())
-                  .describe("Map of user_id to guessed position")
-                  .optional(),
-              })
-              .catchall(z.unknown())
-              .describe("Current turn state"),
-            z.null(),
-          ])
-          .optional(),
-        tracks: z
-          .array(
-            z
-              .object({
-                id: z.string().optional(),
-                name: z.string().optional(),
-                artist: z.string().optional(),
-                uri: z
-                  .string()
-                  .describe("Provider URI (e.g. Spotify track URI)")
-                  .optional(),
-              })
-              .catchall(z.unknown())
-              .describe("Music track data"),
+          .describe("Connected and known room participants keyed by user id"),
+        scores: z
+          .record(z.string(), z.number().int())
+          .describe("Per-user scores keyed by user id"),
+        player: z.union([
+          z
+            .object({ is_playback: z.boolean() })
+            .strict()
+            .describe("JSON-encoded `Songy.Core.Player`"),
+          z.null(),
+        ]),
+        timelines: z
+          .record(
+            z.string(),
+            z.array(
+              z
+                .object({
+                  id: z.string(),
+                  title: z.string(),
+                  artist: z.string(),
+                  year: z.number().int(),
+                  cover_url: z.union([z.string(), z.null()]),
+                  meta: z
+                    .object({
+                      preview_url: z.string().optional(),
+                      uri: z.string().optional(),
+                    })
+                    .catchall(z.unknown()),
+                })
+                .strict()
+                .describe("JSON-encoded `Songy.Core.Track`"),
+            ),
           )
-          .optional(),
+          .describe("Per-user ordered timelines keyed by user id"),
+        created_at: z.string().datetime({ offset: true }),
+        queue: z.array(z.string()),
+        cursor: z.number().int().gte(0),
+        track: z.union([
+          z
+            .object({
+              id: z.string(),
+              title: z.string(),
+              artist: z.string(),
+              year: z.number().int(),
+              cover_url: z.union([z.string(), z.null()]),
+              meta: z
+                .object({
+                  preview_url: z.string().optional(),
+                  uri: z.string().optional(),
+                })
+                .catchall(z.unknown()),
+            })
+            .strict()
+            .describe("JSON-encoded `Songy.Core.Track`"),
+          z.null(),
+        ]),
+        turn: z.union([
+          z
+            .object({
+              phase: z.enum(["waiting", "ready", "challenging", "results"]),
+              assumptions: z
+                .record(z.string(), z.string())
+                .describe(
+                  "Map keyed by JSON stringified zero-based positions. Values are user ids.\n",
+                ),
+              winner_id: z.union([z.string(), z.null()]),
+            })
+            .strict()
+            .describe("JSON-encoded `Songy.Core.Turn`"),
+          z.null(),
+        ]),
       })
-      .catchall(z.unknown())
-      .describe(
-        "Game struct serialized from `Songy.Core.Game`. All fields are\nJason-encoded. The `state` field is the GenStatem FSM state name.\n",
-      ),
+      .strict()
+      .describe("JSON-encoded `Songy.Core.Game` snapshot"),
     permissions: z
       .object({
-        can_start_game: z.boolean().optional(),
-        can_start_playback: z.boolean().optional(),
-        can_pause_playback: z.boolean().optional(),
-        can_advance_turn: z.boolean().optional(),
-        can_make_assumption: z.boolean().optional(),
+        can_control_playback: z.boolean(),
+        can_advance_turn: z.boolean(),
+        can_start_game: z.boolean(),
+        can_start_turn: z.boolean(),
+        can_restart_game: z.boolean(),
+        can_see_assumptions: z.boolean(),
+        can_make_assumptions: z.boolean(),
       })
-      .catchall(z.unknown())
+      .strict()
       .describe(
-        "Caller-specific permission flags computed by `Songy.Authorization`.\nAll boolean fields; missing key means `false`.\n",
+        "Caller-specific permissions computed by `Songy.Authorization.permissions/2`",
       ),
   })
-  .describe("Full game state and caller's permissions");
+  .strict();

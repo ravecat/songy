@@ -7,4 +7,4 @@ import { z } from "zod/v4";
 
 export const phxSystemPayload = z
   .record(z.string(), z.unknown())
-  .describe("Phoenix protocol payload for channel lifecycle events");
+  .describe("Phoenix protocol payload for lifecycle events");

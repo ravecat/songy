@@ -7,13 +7,15 @@ import { z } from "zod/v4";
 
 export const permissions = z
   .object({
-    can_start_game: z.boolean().optional(),
-    can_start_playback: z.boolean().optional(),
-    can_pause_playback: z.boolean().optional(),
-    can_advance_turn: z.boolean().optional(),
-    can_make_assumption: z.boolean().optional(),
+    can_control_playback: z.boolean(),
+    can_advance_turn: z.boolean(),
+    can_start_game: z.boolean(),
+    can_start_turn: z.boolean(),
+    can_restart_game: z.boolean(),
+    can_see_assumptions: z.boolean(),
+    can_make_assumptions: z.boolean(),
   })
-  .catchall(z.unknown())
+  .strict()
   .describe(
-    "Caller-specific permission flags computed by `Songy.Authorization`.\nAll boolean fields; missing key means `false`.\n",
+    "Caller-specific permissions computed by `Songy.Authorization.permissions/2`",
   );

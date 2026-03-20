@@ -7,13 +7,17 @@ import { z } from "zod/v4";
 
 export const track = z
   .object({
-    id: z.string().optional(),
-    name: z.string().optional(),
-    artist: z.string().optional(),
-    uri: z
-      .string()
-      .describe("Provider URI (e.g. Spotify track URI)")
-      .optional(),
+    id: z.string(),
+    title: z.string(),
+    artist: z.string(),
+    year: z.number().int(),
+    cover_url: z.union([z.string(), z.null()]),
+    meta: z
+      .object({
+        preview_url: z.string().optional(),
+        uri: z.string().optional(),
+      })
+      .catchall(z.unknown()),
   })
-  .catchall(z.unknown())
-  .describe("Music track data");
+  .strict()
+  .describe("JSON-encoded `Songy.Core.Track`");

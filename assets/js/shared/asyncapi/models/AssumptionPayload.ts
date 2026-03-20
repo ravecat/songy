@@ -5,8 +5,7 @@
 
 export interface AssumptionPayload {
   /**
-   * 0-based index of the guessed track position in the ordered playlist. Must be a non-negative integer.
-   *
+   * Zero-based insertion position in the active player's timeline
    */
   position: number;
 }

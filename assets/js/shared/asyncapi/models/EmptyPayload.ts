@@ -4,8 +4,6 @@
  */
 
 /**
- * No payload fields required
+ * Event without application payload fields
  */
-export interface EmptyPayload {
-  [k: string]: unknown;
-}
+export interface EmptyPayload {}

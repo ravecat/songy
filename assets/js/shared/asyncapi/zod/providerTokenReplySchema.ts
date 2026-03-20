@@ -5,12 +5,9 @@
 
 import { z } from "zod/v4";
 
-export const timerPayload = z
+export const providerTokenReply = z
   .object({
-    remaining: z
-      .number()
-      .int()
-      .gte(0)
-      .describe("Remaining time in whole seconds"),
+    status: z.literal("ok"),
+    response: z.object({ token: z.string() }).strict(),
   })
   .strict();

@@ -4,27 +4,16 @@
  */
 
 /**
- * Current turn state
+ * JSON-encoded `Songy.Core.Turn`
  */
 export interface Turn {
+  phase: "waiting" | "ready" | "challenging" | "results";
   /**
-   * Music track data
+   * Map keyed by JSON stringified zero-based positions. Values are user ids.
+   *
    */
-  track?: {
-    id?: string;
-    name?: string;
-    artist?: string;
-    /**
-     * Provider URI (e.g. Spotify track URI)
-     */
-    uri?: string;
-    [k: string]: unknown;
+  assumptions: {
+    [k: string]: string;
   };
-  /**
-   * Map of user_id to guessed position
-   */
-  assumptions?: {
-    [k: string]: number;
-  };
-  [k: string]: unknown;
+  winner_id: string | null;
 }

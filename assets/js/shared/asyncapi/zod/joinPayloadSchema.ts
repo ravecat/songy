@@ -7,4 +7,4 @@ import { z } from "zod/v4";
 
 export const joinPayload = z
   .record(z.string(), z.unknown())
-  .describe("Optional join payload accepted by the channel join handler");
+  .describe("Join payload accepted by the room channel");

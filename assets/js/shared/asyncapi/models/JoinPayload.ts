@@ -4,7 +4,7 @@
  */
 
 /**
- * Optional join payload accepted by the channel join handler
+ * Join payload accepted by the room channel
  */
 export interface JoinPayload {
   [k: string]: unknown;

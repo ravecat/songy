@@ -13,9 +13,6 @@ export type JoinReply =
   | {
       status: "error";
       response: {
-        /**
-         * Error reason (e.g. "game_not_found")
-         */
-        reason: string;
+        reason: "game_not_found";
       };
     };

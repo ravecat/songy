@@ -4,7 +4,7 @@
  */
 
 /**
- * Phoenix protocol payload for channel lifecycle events
+ * Phoenix protocol payload for lifecycle events
  */
 export interface PhxSystemPayload {
   [k: string]: unknown;

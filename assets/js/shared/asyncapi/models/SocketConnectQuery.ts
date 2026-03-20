@@ -4,15 +4,15 @@
  */
 
 /**
- * Query parameters for WebSocket connect
+ * Query parameters used by the Phoenix JS client during socket connect
  */
 export interface SocketConnectQuery {
   /**
-   * Phoenix serializer version
+   * Phoenix serializer version added by the Phoenix client
    */
   vsn: "2.0.0";
   /**
-   * Short-lived token signed with `Phoenix.Token` on page load. Used by `UserSocket.connect/3` to authenticate the connection. Max age is 24 hours.
+   * `Phoenix.Token` signed on page render and verified by `SongyWeb.UserSocket.connect/3` with `max_age: 86400`
    *
    */
   user_token: string;

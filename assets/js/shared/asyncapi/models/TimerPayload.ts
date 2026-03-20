@@ -3,12 +3,9 @@
  * Do not edit manually.
  */
 
-/**
- * Countdown timer tick
- */
 export interface TimerPayload {
   /**
-   * Remaining time in milliseconds
+   * Remaining time in whole seconds
    */
   remaining: number;
 }

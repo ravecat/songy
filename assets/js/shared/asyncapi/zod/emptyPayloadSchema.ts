@@ -6,5 +6,5 @@
 import { z } from "zod/v4";
 
 export const emptyPayload = z
-  .record(z.string(), z.unknown())
-  .describe("No payload fields required");
+  .record(z.string(), z.never())
+  .describe("Event without application payload fields");
