@@ -3,10 +3,10 @@
   import { getGameContext } from "~components/game_channel.svelte";
   import DefaultMediaProvider from "~components/default_media_provider.svelte";
   import Spotify from "~components/spotify.svelte";
-  import { Provider } from "~shared/types/provider";
+  import { Provider, type Provider as ProviderId } from "~shared/types/provider";
 
   interface Props {
-    provider?: Provider;
+    provider?: ProviderId;
     children?: Snippet;
   }
 
@@ -15,7 +15,7 @@
   const { game } = $derived.by(getGameContext);
 
   const resolvedProvider = $derived.by(() => {
-    return provider ?? game?.provider ?? Provider.ITUNES;
+    return provider ?? Provider.ITUNES;
   });
 </script>
 

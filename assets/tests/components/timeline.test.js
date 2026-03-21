@@ -17,6 +17,8 @@ describe("Timeline", () => {
           title: "Current Track",
           artist: "Current Artist",
           year: 2024,
+          cover_url: null,
+          meta: {},
         },
         participants: {
           "current-user-123": {
@@ -27,6 +29,7 @@ describe("Timeline", () => {
           "user-1": {
             uuid: "user-1",
             name: "User 1",
+            avatar_url: "https://example.com/user-1.jpg",
           },
         },
         queue: ["current-user-123", "user-1"],
@@ -38,32 +41,23 @@ describe("Timeline", () => {
               title: "Timeline Track 1",
               artist: "Artist 1",
               year: 2020,
+              cover_url: null,
+              meta: {},
             },
             {
               id: "timeline-2",
               title: "Timeline Track 2",
               artist: "Artist 2",
               year: 2021,
+              cover_url: null,
+              meta: {},
             },
           ],
         },
         turn: {
           phase: TURN_PHASE.READY,
-          timeline: [
-            {
-              id: "timeline-1",
-              title: "Timeline Track 1",
-              artist: "Artist 1",
-              year: 2020,
-            },
-            {
-              id: "timeline-2",
-              title: "Timeline Track 2",
-              artist: "Artist 2",
-              year: 2021,
-            },
-          ],
           assumptions: {},
+          winner_id: null,
         },
       },
       permissions: {

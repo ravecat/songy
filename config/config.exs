@@ -44,7 +44,7 @@ config :bun,
     args: ~w(
         x --bun @rvct/asyncapi-codegen@0.2.0
         --input ../priv/specs/asyncapi.yaml
-        --out ./js/shared/asyncapi
+        --out ./js/contracts
       ),
     cd: Path.expand("../assets", __DIR__)
   ]

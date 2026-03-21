@@ -19,6 +19,7 @@
   import { useChannel, type UseChannelOptions } from "~/shared/hooks/channel.svelte";
   import { BROADCAST_EVENT } from "~shared/types/channel";
   import type { Snippet } from "svelte";
+  import type { StatePayload } from "~contracts";
 
   interface Props {
     socket: UseChannelOptions["socket"];
@@ -38,10 +39,7 @@
     socket: untrack(() => socket),
     topic: untrack(() => topic),
     on: {
-      [BROADCAST_EVENT.STATE]: (payload: {
-        game: Game;
-        permissions: Permissions;
-      }) => {
+      [BROADCAST_EVENT.STATE]: (payload: StatePayload) => {
         game = payload.game;
         permissions = payload.permissions;
         resolve();

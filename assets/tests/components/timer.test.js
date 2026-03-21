@@ -19,6 +19,8 @@ describe("Timer", () => {
       game: {
         turn: {
           phase: TURN_PHASE.CHALLENGING,
+          assumptions: {},
+          winner_id: null,
         },
       },
       channel: {

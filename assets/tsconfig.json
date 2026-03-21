@@ -12,6 +12,8 @@
     "baseUrl": ".",
     "paths": {
       "~/*": ["js/*"],
+      "~contracts": ["js/contracts/index.ts"],
+      "~contracts/*": ["js/contracts/*"],
       "~hooks/*": ["js/shared/hooks/*"],
       "~pages/*": ["js/pages/*"],
       "~components/*": ["js/components/*"],

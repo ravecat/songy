@@ -166,7 +166,7 @@ describe("TurnResults", () => {
         turn: {
           phase: TURN_PHASE.RESULTS,
           assumptions: mockAssumptions,
-          winner_id: undefined,
+          winner_id: null,
         },
       },
     });

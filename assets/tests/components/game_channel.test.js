@@ -166,13 +166,13 @@ describe("GameChannel", () => {
     const { unmount } = render(GameChannel, {
       socket,
       topic: "room:test-room",
-      timeoutMs: 10,
+      timeoutMs: 50,
     });
 
     await tick();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 
-    await new Promise((r) => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 100));
     await tick();
 
     expect(screen.getByRole("alert")).toBeInTheDocument();
@@ -186,7 +186,7 @@ describe("GameChannel", () => {
     const { unmount } = render(GameChannel, {
       socket,
       topic: "room:test-room",
-      timeoutMs: 10,
+      timeoutMs: 50,
     });
 
     const channel = socket.channel.mock.results.at(-1).value;
@@ -205,7 +205,7 @@ describe("GameChannel", () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 
-    await new Promise((r) => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 100));
     await tick();
 
     expect(

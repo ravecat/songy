@@ -1,37 +1,22 @@
-import type { Track } from './track';
+import type { Turn } from "~contracts";
 
-/**
- * Turn phases and turn state management.
- */
+const turnPhases = [
+  "waiting",
+  "ready",
+  "challenging",
+  "results",
+] as const satisfies readonly Turn["phase"][];
 
-/**
- * Possible phases during a game turn
- */
-export enum TURN_PHASE {
-  WAITING = 'waiting',
-  READY = 'ready',
-  CHALLENGING = 'challenging',
-  RESULTS = 'results'
-}
+type AssertNever<T extends never> = T;
+type _AllTurnPhasesCovered = AssertNever<
+  Exclude<Turn["phase"], (typeof turnPhases)[number]>
+>;
 
-/**
- * Represents an active turn in the music guessing game.
- *
- * Contains turn-specific state: current phase, timeline snapshot
- * for challenging, and player assumptions.
- *
- * Note: queue, cursor, and track are stored in Game, not Turn!
- */
-export interface Turn {
-  /** Current phase of the turn */
-  phase: TURN_PHASE;
+export const TURN_PHASE = {
+  WAITING: turnPhases[0],
+  READY: turnPhases[1],
+  CHALLENGING: turnPhases[2],
+  RESULTS: turnPhases[3],
+} as const;
 
-  /** Timeline snapshot for challenging phase */
-  timeline?: Track[];
-
-  /** Player position assumptions: map of position to user_id */
-  assumptions?: Record<string, string>;
-
-  /** Winner of the round (set in results phase) */
-  winner_id?: string;
-}
+export type { Turn };

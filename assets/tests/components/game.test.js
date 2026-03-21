@@ -36,6 +36,8 @@ describe("Game", () => {
               title: "Timeline Track",
               artist: "Timeline Artist",
               year: 2019,
+              cover_url: null,
+              meta: {},
             },
           ],
           "user-2": [
@@ -44,20 +46,15 @@ describe("Game", () => {
               title: "Timeline Track",
               artist: "Timeline Artist",
               year: 2019,
+              cover_url: null,
+              meta: {},
             },
           ],
         },
         turn: {
           phase: TURN_PHASE.READY,
-          timeline: [
-            {
-              id: "timeline-track",
-              title: "Timeline Track",
-              artist: "Timeline Artist",
-              year: 2019,
-            },
-          ],
           assumptions: {},
+          winner_id: null,
         },
       },
       permissions: {
@@ -65,7 +62,6 @@ describe("Game", () => {
         can_control_playback: false,
         can_advance_turn: false,
         can_start_game: false,
-        can_ready: false,
         can_restart_game: false,
         can_see_assumptions: false,
         can_make_assumptions: false,
@@ -171,8 +167,10 @@ describe("Game", () => {
       title: "Test Track",
       artist: "Test Artist",
       year: 2020,
-      preview_url: "https://example.com/preview.mp3",
       cover_url: "https://example.com/cover.jpg",
+      meta: {
+        preview_url: "https://example.com/preview.mp3",
+      },
     };
 
     getScopeContextSpy.mockReturnValue(mockScopeContext);

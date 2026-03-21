@@ -29,6 +29,7 @@ export default {
     alias: {
       axios: path.resolve(assetsDir, "js/shared/lib/axios"),
       "~": path.resolve(assetsDir, "js"),
+      "~contracts": path.resolve(assetsDir, "js/contracts"),
       "~hooks": path.resolve(assetsDir, "js/shared/hooks"),
       "~pages": path.resolve(assetsDir, "js/pages"),
       "~shared": path.resolve(assetsDir, "js/shared"),

@@ -30,6 +30,8 @@ describe("Turn waiting view", () => {
         cursor: 0,
         turn: {
           phase: TURN_PHASE.WAITING,
+          assumptions: {},
+          winner_id: null,
         },
       },
       permissions: {
@@ -37,7 +39,6 @@ describe("Turn waiting view", () => {
         can_control_playback: false,
         can_advance_turn: false,
         can_start_game: false,
-        can_ready: false,
         can_restart_game: false,
         can_see_assumptions: false,
         can_make_assumptions: false,
@@ -77,7 +78,7 @@ describe("Turn waiting view", () => {
     expect(screen.getByAltText("Alice")).toBeInTheDocument();
     expect(screen.getByAltText("Alice")).toHaveAttribute(
       "src",
-      "https://example.com/alice.jpg"
+      "https://example.com/alice.jpg",
     );
   });
 

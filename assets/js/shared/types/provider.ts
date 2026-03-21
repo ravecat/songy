@@ -1,12 +1,7 @@
-/**
- * Music provider configuration and credentials.
- */
+export const Provider = {
+  SPOTIFY: "spotify",
+  APPLE: "apple",
+  ITUNES: "itunes",
+} as const;
 
-/**
- * Provider type for music services
- */
-export enum Provider {
-  SPOTIFY = 'spotify',
-  APPLE = 'apple',
-  ITUNES = 'itunes'
-}
+export type Provider = (typeof Provider)[keyof typeof Provider];

@@ -18,10 +18,10 @@ describe("Room", () => {
         scores: {
           "user-1": 7,
         },
-        participants: [
-          { uuid: "user-1", name: "Alice" },
-          { uuid: "user-2", name: "Bob" },
-        ],
+        participants: {
+          "user-1": { uuid: "user-1", name: "Alice" },
+          "user-2": { uuid: "user-2", name: "Bob" },
+        },
         status: GAME_STATUS.WAITING,
         turn: null,
         player: {
@@ -56,18 +56,18 @@ describe("Room", () => {
   });
 
   test("renders header and main components when game is active", () => {
-    mockChannelContext.game.participants = [
-      {
+    mockChannelContext.game.participants = {
+      "user-1": {
         uuid: "user-1",
         name: "Alice",
         avatar_url: "https://example.com/alice.jpg",
       },
-      {
+      "user-2": {
         uuid: "user-2",
         name: "Bob",
         avatar_url: "https://example.com/bob.jpg",
       },
-    ];
+    };
 
     getGameContextSpy.mockReturnValue(mockChannelContext);
     getScopeContextSpy.mockReturnValue({

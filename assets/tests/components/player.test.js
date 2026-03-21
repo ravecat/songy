@@ -25,18 +25,18 @@ describe("Player", () => {
     mockChannelContext = {
       game: {
         owner_id: "user-1",
-        participants: [
-          {
+        participants: {
+          "user-1": {
             uuid: "user-1",
             name: "Alice",
             avatar_url: "https://example.com/alice.jpg",
           },
-          {
+          "user-2": {
             uuid: "user-2",
             name: "Bob",
             avatar_url: "https://example.com/bob.jpg",
           },
-        ],
+        },
         queue: ["user-1", "user-2"],
         cursor: 0,
         status: GAME_STATUS.WAITING,
@@ -51,6 +51,8 @@ describe("Player", () => {
         can_start_game: false,
         can_start_turn: false,
         can_restart_game: false,
+        can_see_assumptions: false,
+        can_make_assumptions: false,
       },
       channel: {
         push: vi.fn(),
@@ -140,7 +142,8 @@ describe("Player", () => {
       mockChannelContext.game.status = GAME_STATUS.IN_PROGRESS;
       mockChannelContext.game.turn = {
         phase: TURN_PHASE.WAITING,
-        assumptions: [],
+        assumptions: {},
+        winner_id: null,
       };
     });
 
@@ -193,7 +196,8 @@ describe("Player", () => {
       mockChannelContext.game.status = GAME_STATUS.IN_PROGRESS;
       mockChannelContext.game.turn = {
         phase: TURN_PHASE.READY,
-        assumptions: [],
+        assumptions: {},
+        winner_id: null,
       };
     });
 
