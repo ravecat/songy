@@ -5,7 +5,7 @@
     useSpotifyPlayer,
     SPOTIFY_EVENT,
   } from "~/shared/hooks/spotify.svelte";
-  import { PUSH_EVENT } from "~shared/types/channel";
+  import { PUSH_EVENT } from "~/shared/types/phoenix";
 
   interface Props {
     children?: Snippet;

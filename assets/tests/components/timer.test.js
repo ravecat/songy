@@ -3,7 +3,7 @@ import { tick } from "svelte";
 import { describe, expect, test, beforeEach, vi, afterEach } from "vitest";
 import { Channel } from "phoenix";
 import { TURN_PHASE } from "~shared/types/turn";
-import { BROADCAST_EVENT } from "~shared/types/channel";
+import { BROADCAST_EVENT } from "~/shared/types/phoenix";
 import Timer from "~components/timer.svelte";
 import * as GameContext from "~components/game_channel.svelte";
 

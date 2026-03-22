@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Track } from "~shared/types/track";
+  import type { Track } from "~contracts";
 
   interface Props {
     track?: Track | null;

@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
 import { GAME_STATUS } from "~shared/types/game";
 import { TURN_PHASE } from "~shared/types/turn";
-import { PUSH_EVENT } from "~shared/types/channel";
+import { PUSH_EVENT } from "~/shared/types/phoenix";
 import * as GameContext from "~components/game_channel.svelte";
 import * as Scope from "~components/scope.svelte";
 

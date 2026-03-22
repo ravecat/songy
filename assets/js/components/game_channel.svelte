@@ -1,8 +1,7 @@
 <script lang="ts" module>
   import { createContext } from "svelte";
   import type { Channel } from "phoenix";
-  import type { Game } from "~shared/types/game";
-  import type { Permissions } from "~shared/types/permissions";
+  import type { Game, Permissions } from "~contracts";
 
   export interface GameContext {
     game: Game;
@@ -17,7 +16,7 @@
   import Equalizer from "~components/equalizer.svelte";
   import { untrack } from "svelte";
   import { useChannel, type UseChannelOptions } from "~/shared/hooks/channel.svelte";
-  import { BROADCAST_EVENT } from "~shared/types/channel";
+  import { BROADCAST_EVENT } from "~/shared/types/phoenix";
   import type { Snippet } from "svelte";
   import type { StatePayload } from "~contracts";
 

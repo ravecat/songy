@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import { getGameContext } from "~components/game_channel.svelte";
-  import { PUSH_EVENT } from "~shared/types/channel";
+  import { PUSH_EVENT } from "~/shared/types/phoenix";
 
   interface Props {
     children?: Snippet;

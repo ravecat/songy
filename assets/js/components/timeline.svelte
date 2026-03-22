@@ -82,11 +82,10 @@
   import TrackCard from "~components/track_card.svelte";
   import { getGameContext } from "~components/game_channel.svelte";
   import { getScopeContext } from "~components/scope.svelte";
-  import { PUSH_EVENT } from "~shared/types/channel";
+  import { PUSH_EVENT } from "~/shared/types/phoenix";
   import { fade } from "svelte/transition";
   import { ChevronLeft, ChevronRight } from "lucide-svelte";
-  import type { Track } from "~shared/types/track";
-  import type { User } from "~shared/types/user";
+  import type { Track, User } from "~contracts";
 
   type SlotCell = { kind: "slot"; position: number };
   type TrackCell = { kind: "track"; track: Track };

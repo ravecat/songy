@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/svelte";
 import { tick } from "svelte";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import GameChannel from "~components/game_channel.svelte";
-import { BROADCAST_EVENT } from "~shared/types/channel";
+import { BROADCAST_EVENT } from "~/shared/types/phoenix";
 import socket from "~/socket";
 
 vi.mock("~/socket", async () => {

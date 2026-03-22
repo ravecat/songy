@@ -1,6 +1,6 @@
 <script lang="ts" module>
   import { createContext } from "svelte";
-  import type { User } from "~shared/types/user";
+  import type { User } from "~contracts";
 
   /**
    * Scope context interface providing user information
@@ -17,7 +17,7 @@
 <script lang="ts">
   import { getGameContext } from "~components/game_channel.svelte";
   import Equalizer from "~components/equalizer.svelte";
-  import { PUSH_EVENT } from "~shared/types/channel";
+  import { PUSH_EVENT } from "~/shared/types/phoenix";
   import type { Snippet } from "svelte";
 
   let { children }: { children: Snippet } = $props();

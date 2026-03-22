@@ -1,7 +1,6 @@
 <script lang="ts">
   import { getGameContext } from "~components/game_channel.svelte";
-  import { BROADCAST_EVENT } from "~shared/types/channel";
-  import { TURN_PHASE } from "~shared/types/turn";
+  import { BROADCAST_EVENT } from "~/shared/types/phoenix";
 
   const { game, channel } = $derived.by(getGameContext);
   const phase = $derived(game?.turn?.phase);
@@ -39,7 +38,7 @@
   const dashOffset = $derived.by(() => circumference * (1 - progress));
 </script>
 
-{#if phase === TURN_PHASE.CHALLENGING && seconds !== null}
+{#if phase === "challenging" && seconds !== null}
   <div class="game-timer">
     <svg
       viewBox={`0 0 ${size} ${size}`}
@@ -79,4 +78,3 @@
     height: 3rem;
   }
 </style>
-

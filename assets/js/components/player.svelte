@@ -1,6 +1,6 @@
 <script>
   import { getGameContext } from "~components/game_channel.svelte";
-  import { PUSH_EVENT } from "~shared/types/channel";
+  import { PUSH_EVENT } from "~/shared/types/phoenix";
   import { Play, Pause, SkipForward, RotateCcw } from "lucide-svelte";
   import { inertia } from "@inertiajs/svelte";
 

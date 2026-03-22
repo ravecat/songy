@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import type { Track } from "~shared/types/track";
+  import type { Track } from "~contracts";
 
   interface TrackCardProps {
     /** Track data to display (null for assumption cards) */
