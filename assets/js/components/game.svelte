@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getGameContext } from "~components/game_channel.svelte";
+  import { getGameContext } from "~components/game_provider.svelte";
   import TurnWaiting from "~components/turn_waiting.svelte";
   import Timeline from "~components/timeline.svelte";
   import TurnResults from "~components/turn_results.svelte";

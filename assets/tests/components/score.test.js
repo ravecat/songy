@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/svelte";
 import { describe, expect, test, beforeEach, afterEach, vi } from "vitest";
-import * as GameContext from "~components/game_channel.svelte";
+import * as GameContext from "~components/game_provider.svelte";
 import * as Scope from "~components/scope.svelte";
 import Score from "~components/score.svelte";
 

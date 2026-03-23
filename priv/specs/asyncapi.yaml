@@ -57,9 +57,9 @@ channels:
     description: >
       Phoenix Channel for a single Songy game room.
 
-      The channel is stateful: the server pushes `state` after join and after
-      every state transition, and pushes `timer` once per second during the
-      challenging phase.
+      The channel is stateful: the server returns the initial room snapshot in
+      the join reply, pushes `state` after subsequent state transitions, and
+      pushes `timer` once per second during the challenging phase.
     parameters:
       room_id:
         description: Human-readable room identifier, for example `happy-tiger-42`
@@ -126,7 +126,7 @@ operations:
     summary: Join a game room
     description: |
       Client sends `phx_join` for the room topic.
-      On success the server confirms the join and then pushes the initial `state`.
+      On success the server confirms the join with the initial room snapshot.
       On failure the join is rejected with `game_not_found`.
     messages:
       - $ref: "#/channels/gameRoom/messages/phxJoin"
@@ -343,7 +343,31 @@ components:
         - name: join-ok
           payload:
             status: ok
-            response: {}
+            response:
+              game:
+                id: game-123
+                owner_id: owner123
+                max_participants: 8
+                max_score: 10
+                status: waiting
+                participants: {}
+                scores: {}
+                player:
+                  is_playback: false
+                timelines: {}
+                created_at: "2026-01-01T00:00:00Z"
+                queue: []
+                cursor: 0
+                track: null
+                turn: null
+              permissions:
+                can_control_playback: false
+                can_advance_turn: false
+                can_start_game: true
+                can_start_turn: false
+                can_restart_game: false
+                can_see_assumptions: false
+                can_make_assumptions: false
         - name: join-error-game-not-found
           payload:
             status: error
@@ -668,7 +692,16 @@ components:
       additionalProperties: true
     joinReply:
       oneOf:
-        - $ref: "#/components/schemas/emptyReply"
+        - type: object
+          required:
+            - status
+            - response
+          properties:
+            status:
+              const: ok
+            response:
+              $ref: "#/components/schemas/statePayload"
+          additionalProperties: false
         - type: object
           required:
             - status

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/svelte";
 import { tick } from "svelte";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import GameChannel from "~components/game_channel.svelte";
+import GameProvider from "~components/game_provider.svelte";
 import socket from "~/socket";
 
 vi.mock("~/socket", async () => {
@@ -12,14 +12,44 @@ vi.mock("~/socket", async () => {
   };
 });
 
-describe("GameChannel", () => {
+function buildStatePayload() {
+  return {
+    game: {
+      id: "game-1",
+      owner_id: "owner-1",
+      max_participants: 8,
+      max_score: 10,
+      status: "waiting",
+      participants: {},
+      scores: {},
+      player: null,
+      timelines: {},
+      created_at: "2026-01-01T00:00:00Z",
+      queue: [],
+      cursor: 0,
+      track: null,
+      turn: null,
+    },
+    permissions: {
+      can_control_playback: false,
+      can_advance_turn: false,
+      can_start_game: true,
+      can_start_turn: false,
+      can_restart_game: false,
+      can_see_assumptions: false,
+      can_make_assumptions: false,
+    },
+  };
+}
+
+describe("GameProvider", () => {
   afterEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
   });
 
   test("joins to channel with provided topic", () => {
-    const { unmount } = render(GameChannel, {
+    const { unmount } = render(GameProvider, {
       socket,
       topic: "room:test-room",
     });
@@ -30,7 +60,7 @@ describe("GameChannel", () => {
   });
 
   test("listens state event", () => {
-    const { unmount } = render(GameChannel, {
+    const { unmount } = render(GameProvider, {
       socket,
       topic: "room:test-room",
     });
@@ -45,8 +75,8 @@ describe("GameChannel", () => {
     unmount();
   });
 
-  test("renders loader while waiting for state", async () => {
-    const { unmount } = render(GameChannel, {
+  test("renders loader while waiting for join reply", async () => {
+    const { unmount } = render(GameProvider, {
       socket,
       topic: "room:test-room",
     });
@@ -59,23 +89,21 @@ describe("GameChannel", () => {
     unmount();
   });
 
-  test("hides loader after receiving state event", async () => {
-    const { unmount } = render(GameChannel, {
+  test("hides loader after receiving join reply", async () => {
+    const { unmount } = render(GameProvider, {
       socket,
       topic: "room:test-room",
     });
 
     const channel = socket.channel.mock.results.at(-1).value;
-    const stateCallback = channel.on.mock.calls.find(
-      ([event]) => event === "state",
+    const push = channel.join.mock.results[0].value;
+    const okHandler = push.receive.mock.calls.find(
+      ([status]) => status === "ok",
     )?.[1];
 
-    expect(stateCallback).toEqual(expect.any(Function));
+    expect(okHandler).toEqual(expect.any(Function));
 
-    stateCallback({
-      game: { id: "game-1" },
-      permissions: { can_start_game: true },
-    });
+    okHandler(buildStatePayload());
 
     await tick();
 
@@ -88,7 +116,7 @@ describe("GameChannel", () => {
   });
 
   test("renders error screen when join fails with reason", async () => {
-    const { unmount } = render(GameChannel, {
+    const { unmount } = render(GameProvider, {
       socket,
       topic: "room:test-room",
     });
@@ -101,12 +129,12 @@ describe("GameChannel", () => {
 
     expect(errorHandler).toEqual(expect.any(Function));
 
-    errorHandler({ reason: "not_allowed" });
+    errorHandler({ reason: "game_not_found" });
     await tick();
 
     expect(screen.getByRole("alert")).toBeInTheDocument();
     expect(screen.getByText("Room unavailable")).toBeInTheDocument();
-    expect(screen.getByText("Reason: not_allowed")).toBeInTheDocument();
+    expect(screen.getByText("Reason: game_not_found")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Back home" })).toHaveAttribute(
       "href",
       "/",
@@ -116,7 +144,7 @@ describe("GameChannel", () => {
   });
 
   test("renders error screen when join times out", async () => {
-    const { unmount } = render(GameChannel, {
+    const { unmount } = render(GameProvider, {
       socket,
       topic: "room:test-room",
     });
@@ -141,7 +169,7 @@ describe("GameChannel", () => {
   });
 
   test("renders error screen when channel closes unexpectedly", async () => {
-    const { unmount } = render(GameChannel, {
+    const { unmount } = render(GameProvider, {
       socket,
       topic: "room:test-room",
     });
@@ -161,62 +189,35 @@ describe("GameChannel", () => {
     unmount();
   });
 
-  test("renders error screen when state takes too long", async () => {
-    const { unmount } = render(GameChannel, {
+  test("ignores close after join succeeded", async () => {
+    const { unmount } = render(GameProvider, {
       socket,
       topic: "room:test-room",
-      timeoutMs: 50,
-    });
-
-    await tick();
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-
-    await new Promise((r) => setTimeout(r, 100));
-    await tick();
-
-    expect(screen.getByRole("alert")).toBeInTheDocument();
-    expect(screen.getByText("Room unavailable")).toBeInTheDocument();
-    expect(screen.getByText("Failed to load game state.")).toBeInTheDocument();
-
-    unmount();
-  });
-
-  test("does not render timeout error after state is received", async () => {
-    const { unmount } = render(GameChannel, {
-      socket,
-      topic: "room:test-room",
-      timeoutMs: 50,
     });
 
     const channel = socket.channel.mock.results.at(-1).value;
-    const stateCallback = channel.on.mock.calls.find(
-      ([event]) => event === "state",
+    const push = channel.join.mock.results[0].value;
+    const okHandler = push.receive.mock.calls.find(
+      ([status]) => status === "ok",
     )?.[1];
+    const onClose = channel.onClose.mock.calls[0]?.[0];
 
-    stateCallback({
-      game: { id: "game-1" },
-      permissions: { can_start_game: true },
-    });
+    okHandler(buildStatePayload());
     await tick();
 
+    onClose();
+    await tick();
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(
       screen.queryByRole("status", { name: "loading" }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-
-    await new Promise((r) => setTimeout(r, 100));
-    await tick();
-
-    expect(
-      screen.queryByRole("status", { name: "loading" }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 
     unmount();
   });
 
   test("leaves channel on unmount", () => {
-    const { unmount } = render(GameChannel, {
+    const { unmount } = render(GameProvider, {
       socket,
       topic: "room:test-room",
     });

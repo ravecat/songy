@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getGameContext } from "~components/game_channel.svelte";
+  import { getGameContext } from "~components/game_provider.svelte";
   import { getQrContext } from "~components/qr_context.svelte";
   import { Link, Copy, Check, Crown } from "lucide-svelte";
   import Vinyl from "~components/vinyl.svelte";

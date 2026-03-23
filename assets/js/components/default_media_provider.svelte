@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import { getGameContext } from "~components/game_channel.svelte";
+  import { getGameContext } from "~components/game_provider.svelte";
 
   interface Props {
     children?: Snippet;

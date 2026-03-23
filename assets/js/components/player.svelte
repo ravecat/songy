@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getGameContext } from "~components/game_channel.svelte";
+  import { getGameContext } from "~components/game_provider.svelte";
   import { Play, Pause, SkipForward, RotateCcw } from "lucide-svelte";
   import { inertia } from "@inertiajs/svelte";
 

@@ -4,6 +4,7 @@
   import type {
     AssumptionPayload,
     Game,
+    JoinReply,
     Permissions,
     StatePayload,
     TimerPayload,
@@ -12,10 +13,14 @@
   } from "~contracts";
   import type { Channel } from "~/shared/hooks/channel.svelte";
 
-  interface GameChannelSpec {
+  interface GameProviderSpec {
     on: {
       state: StatePayload;
       timer: TimerPayload;
+    };
+    join: {
+      ok: Extract<JoinReply, { status: "ok" }>["response"];
+      error: Extract<JoinReply, { status: "error" }>["response"];
     };
     push: {
       start_game: {};
@@ -36,7 +41,7 @@
   export interface GameContext {
     game: Game;
     permissions: Permissions;
-    channel: Channel<GameChannelSpec>;
+    channel: Channel<GameProviderSpec>;
   }
 
   export const [getGameContext, setGameContext] = createContext<GameContext>();
@@ -52,53 +57,44 @@
     socket: Socket;
     topic: string;
     children?: Snippet;
-    timeoutMs?: number;
   }
 
-  let { children, timeoutMs = 6_000, socket, topic }: Props = $props();
+  let { children, socket, topic }: Props = $props();
 
-  let game = $state<Game | null>(null);
-  let permissions = $state<Permissions | null>(null);
+  let room = $state<StatePayload | null>(null);
+  let error = $state<unknown>(null);
 
-  const { promise: ready, resolve, reject } = Promise.withResolvers<void>();
+  function fail(err: unknown) {
+    if (room) return;
+    error = err;
+  }
 
-  const channel = useChannel<GameChannelSpec>({
+  const channel = useChannel<GameProviderSpec>({
     socket: untrack(() => socket),
     topic: untrack(() => topic),
     on: {
       state: (payload) => {
-        game = payload.game;
-        permissions = payload.permissions;
-        resolve();
+        room = payload;
       },
     },
     join: {
-      error: (r) => reject(r),
-      timeout: () => reject(new Error("Connection timed out")),
+      ok: (payload) => {
+        room = payload;
+      },
+      error: fail,
+      timeout: () => fail(new Error("Connection timed out")),
     },
-    onClose: () => reject(new Error("Connection closed unexpectedly")),
-  });
-
-  const stateTimeoutId = setTimeout(
-    () => reject(new Error("Room took too long to respond")),
-    untrack(() => timeoutMs),
-  );
-
-  $effect(() => {
-    return () => {
-      clearTimeout(stateTimeoutId);
-      reject(new Error("Left the room"));
-    };
+    onClose: () => fail(new Error("Connection closed unexpectedly")),
   });
 
   const context: GameContext = {
     get game() {
-      if (!game) throw new Error("Game is not ready");
-      return game;
+      if (!room) throw new Error("Game is not ready");
+      return room.game;
     },
     get permissions() {
-      if (!permissions) throw new Error("Permissions not loaded");
-      return permissions;
+      if (!room) throw new Error("Permissions not loaded");
+      return room.permissions;
     },
     channel,
   };
@@ -106,28 +102,23 @@
   setGameContext(context);
 </script>
 
-<svelte:boundary>
-  {await ready}
+{#if room}
   {@render children?.()}
-
-  {#snippet pending()}
-    <div class="game-channel__loader">
-      <Equalizer />
-    </div>
-  {/snippet}
-
-  {#snippet failed(error)}
-    <div class="game-channel__error" role="alert">
-      <p class="text-lg font-semibold">Room unavailable</p>
-      <p class="opacity-70">
-        {typeof error === "object" && error && "reason" in error
-          ? `Reason: ${error.reason}`
-          : "Failed to load game state."}
-      </p>
-      <a class="btn btn-primary mt-4" href="/">Back home</a>
-    </div>
-  {/snippet}
-</svelte:boundary>
+{:else if error}
+  <div class="game-channel__error" role="alert">
+    <p class="text-lg font-semibold">Room unavailable</p>
+    <p class="opacity-70">
+      {typeof error === "object" && error && "reason" in error
+        ? `Reason: ${error.reason}`
+        : "Failed to load game state."}
+    </p>
+    <a class="btn btn-primary mt-4" href="/">Back home</a>
+  </div>
+{:else}
+  <div class="game-channel__loader">
+    <Equalizer />
+  </div>
+{/if}
 
 <style>
   .game-channel__loader {

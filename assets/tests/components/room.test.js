@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/svelte";
 import { describe, expect, test, beforeEach, vi, afterEach } from "vitest";
 import { GAME_STATUS } from "~shared/types/game";
 import Room from "~components/room.svelte";
-import * as GameContext from "~components/game_channel.svelte";
+import * as GameContext from "~components/game_provider.svelte";
 import * as Scope from "~components/scope.svelte";
 import * as QrContext from "~components/qr_context.svelte";
 

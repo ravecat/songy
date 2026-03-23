@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getGameContext } from "~components/game_channel.svelte";
+  import { getGameContext } from "~components/game_provider.svelte";
   import Vinyl from "~components/vinyl.svelte";
   import Sleeve from "~components/sleeve.svelte";
 

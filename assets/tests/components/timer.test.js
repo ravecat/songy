@@ -3,7 +3,7 @@ import { tick } from "svelte";
 import { describe, expect, test, beforeEach, vi, afterEach } from "vitest";
 import { Channel } from "phoenix";
 import Timer from "~components/timer.svelte";
-import * as GameContext from "~components/game_channel.svelte";
+import * as GameContext from "~components/game_provider.svelte";
 
 vi.mock("phoenix");
 

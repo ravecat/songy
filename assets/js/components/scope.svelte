@@ -15,7 +15,7 @@
 </script>
 
 <script lang="ts">
-  import { getGameContext } from "~components/game_channel.svelte";
+  import { getGameContext } from "~components/game_provider.svelte";
   import Equalizer from "~components/equalizer.svelte";
   import type { Snippet } from "svelte";
 
