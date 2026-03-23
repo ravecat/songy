@@ -2,8 +2,6 @@ import { render, screen } from "@testing-library/svelte";
 import { tick } from "svelte";
 import { describe, expect, test, beforeEach, vi, afterEach } from "vitest";
 import { Channel } from "phoenix";
-import { TURN_PHASE } from "~shared/types/turn";
-import { BROADCAST_EVENT } from "~/shared/types/phoenix";
 import Timer from "~components/timer.svelte";
 import * as GameContext from "~components/game_channel.svelte";
 
@@ -18,14 +16,14 @@ describe("Timer", () => {
     mockChannelContext = {
       game: {
         turn: {
-          phase: TURN_PHASE.CHALLENGING,
+          phase: "challenging",
           assumptions: {},
           winner_id: null,
         },
       },
       channel: {
         on: vi.fn((event, callback) => {
-          if (event === BROADCAST_EVENT.TIMER) {
+          if (event === "timer") {
             timerCallback = callback;
           }
           return Symbol("ref");

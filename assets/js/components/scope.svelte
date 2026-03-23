@@ -17,7 +17,6 @@
 <script lang="ts">
   import { getGameContext } from "~components/game_channel.svelte";
   import Equalizer from "~components/equalizer.svelte";
-  import { PUSH_EVENT } from "~/shared/types/phoenix";
   import type { Snippet } from "svelte";
 
   let { children }: { children: Snippet } = $props();
@@ -28,8 +27,8 @@
 
   $effect(() => {
     channel
-      .push(PUSH_EVENT.GET_CURRENT_USER, {})
-      .receive("ok", (response: User) => {
+      .push("get_current_user", {})
+      .receive("ok", (response) => {
         context.user = response;
       });
   });

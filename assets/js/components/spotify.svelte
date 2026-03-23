@@ -5,7 +5,6 @@
     useSpotifyPlayer,
     SPOTIFY_EVENT,
   } from "~/shared/hooks/spotify.svelte";
-  import { PUSH_EVENT } from "~/shared/types/phoenix";
 
   interface Props {
     children?: Snippet;
@@ -19,14 +18,14 @@
     name: "Songy room",
     getOAuthToken: (cb) => {
       channel
-        .push(PUSH_EVENT.GET_PROVIDER, {})
-        .receive("ok", ({ token }: { token: string }) => {
+        .push("get_provider", {})
+        .receive("ok", ({ token }) => {
           cb(token);
         });
     },
     on: {
       [SPOTIFY_EVENT.READY]: ({ device_id }: { device_id: string }) => {
-        channel.push(PUSH_EVENT.UPDATE_PROVIDER, { device_id });
+        channel.push("update_provider", { device_id });
       },
     },
   });

@@ -2,7 +2,6 @@ import { render, screen } from "@testing-library/svelte";
 import { tick } from "svelte";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import GameChannel from "~components/game_channel.svelte";
-import { BROADCAST_EVENT } from "~/shared/types/phoenix";
 import socket from "~/socket";
 
 vi.mock("~/socket", async () => {
@@ -39,7 +38,7 @@ describe("GameChannel", () => {
     const channel = socket.channel.mock.results[0].value;
 
     expect(channel.on).toHaveBeenCalledWith(
-      BROADCAST_EVENT.STATE,
+      "state",
       expect.any(Function),
     );
 
@@ -68,7 +67,7 @@ describe("GameChannel", () => {
 
     const channel = socket.channel.mock.results.at(-1).value;
     const stateCallback = channel.on.mock.calls.find(
-      ([event]) => event === BROADCAST_EVENT.STATE,
+      ([event]) => event === "state",
     )?.[1];
 
     expect(stateCallback).toEqual(expect.any(Function));
@@ -191,7 +190,7 @@ describe("GameChannel", () => {
 
     const channel = socket.channel.mock.results.at(-1).value;
     const stateCallback = channel.on.mock.calls.find(
-      ([event]) => event === BROADCAST_EVENT.STATE,
+      ([event]) => event === "state",
     )?.[1];
 
     stateCallback({

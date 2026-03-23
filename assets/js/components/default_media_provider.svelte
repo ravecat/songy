@@ -1,7 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import { getGameContext } from "~components/game_channel.svelte";
-  import { PUSH_EVENT } from "~/shared/types/phoenix";
 
   interface Props {
     children?: Snippet;
@@ -75,8 +74,9 @@
     }
 
     audioElement.currentTime = 0;
+
     if (permissions?.can_control_playback) {
-      channel.push(PUSH_EVENT.PAUSE_PLAYBACK, {});
+      channel.push("pause_playback", {});
     }
   };
 </script>

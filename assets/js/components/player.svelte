@@ -1,6 +1,5 @@
-<script>
+<script lang="ts">
   import { getGameContext } from "~components/game_channel.svelte";
-  import { PUSH_EVENT } from "~/shared/types/phoenix";
   import { Play, Pause, SkipForward, RotateCcw } from "lucide-svelte";
   import { inertia } from "@inertiajs/svelte";
 
@@ -9,17 +8,17 @@
 
   const handlePlayback = () => {
     channel.push(
-      isPlayback ? PUSH_EVENT.PAUSE_PLAYBACK : PUSH_EVENT.START_PLAYBACK,
+      isPlayback ? "pause_playback" : "start_playback",
       {},
     );
   };
 
   const handleStartGame = () => {
-    channel.push(PUSH_EVENT.START_GAME, {});
+    channel.push("start_game", {});
   };
 
   const handleAdvanceTurn = () => {
-    channel.push(PUSH_EVENT.ADVANCE_TURN, {});
+    channel.push("advance_turn", {});
   };
 
   const rightBtn = $derived.by(() => {

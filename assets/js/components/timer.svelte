@@ -1,6 +1,5 @@
 <script lang="ts">
   import { getGameContext } from "~components/game_channel.svelte";
-  import { BROADCAST_EVENT } from "~/shared/types/phoenix";
 
   const { game, channel } = $derived.by(getGameContext);
   const phase = $derived(game?.turn?.phase);
@@ -9,7 +8,7 @@
   let total = $state<number | null>(null);
 
   $effect(() => {
-    const ref = channel.on(BROADCAST_EVENT.TIMER, ({ remaining }) => {
+    const ref = channel.on("timer", ({ remaining }) => {
       if (total === null) {
         total = remaining;
       }
@@ -17,7 +16,7 @@
     });
 
     return () => {
-      channel.off(BROADCAST_EVENT.TIMER, ref);
+      channel.off("timer", ref);
     };
   });
 

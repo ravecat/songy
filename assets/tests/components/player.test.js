@@ -1,8 +1,5 @@
 import { render, screen, fireEvent } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
-import { GAME_STATUS } from "~shared/types/game";
-import { TURN_PHASE } from "~shared/types/turn";
-import { PUSH_EVENT } from "~/shared/types/phoenix";
 import * as GameContext from "~components/game_channel.svelte";
 import * as Scope from "~components/scope.svelte";
 
@@ -39,7 +36,7 @@ describe("Player", () => {
         },
         queue: ["user-1", "user-2"],
         cursor: 0,
-        status: GAME_STATUS.WAITING,
+        status: "waiting",
         turn: null,
         player: {
           is_playback: false,
@@ -87,7 +84,7 @@ describe("Player", () => {
 
   describe("waiting game | none turn", () => {
     beforeEach(() => {
-      mockChannelContext.game.status = GAME_STATUS.WAITING;
+      mockChannelContext.game.status = "waiting";
       mockChannelContext.game.turn = null;
     });
 
@@ -120,7 +117,7 @@ describe("Player", () => {
         );
 
         expect(mockChannelContext.channel.push).toHaveBeenCalledWith(
-          PUSH_EVENT.START_GAME,
+          "start_game",
           {},
         );
       });
@@ -139,9 +136,9 @@ describe("Player", () => {
 
   describe("in progress game | waiting turn", () => {
     beforeEach(() => {
-      mockChannelContext.game.status = GAME_STATUS.IN_PROGRESS;
+      mockChannelContext.game.status = "in_progress";
       mockChannelContext.game.turn = {
-        phase: TURN_PHASE.WAITING,
+        phase: "waiting",
         assumptions: {},
         winner_id: null,
       };
@@ -156,7 +153,7 @@ describe("Player", () => {
         await fireEvent.click(screen.getByRole("button", { name: "Ready" }));
 
         expect(mockChannelContext.channel.push).toHaveBeenCalledWith(
-          PUSH_EVENT.ADVANCE_TURN,
+          "advance_turn",
           {},
         );
       });
@@ -193,9 +190,9 @@ describe("Player", () => {
 
   describe("in progress game | ready turn", () => {
     beforeEach(() => {
-      mockChannelContext.game.status = GAME_STATUS.IN_PROGRESS;
+      mockChannelContext.game.status = "in_progress";
       mockChannelContext.game.turn = {
-        phase: TURN_PHASE.READY,
+        phase: "ready",
         assumptions: {},
         winner_id: null,
       };
@@ -269,7 +266,7 @@ describe("Player", () => {
 
   describe("finished game", () => {
     beforeEach(() => {
-      mockChannelContext.game.status = GAME_STATUS.FINISHED;
+      mockChannelContext.game.status = "finished";
       mockChannelContext.game.turn = null;
       mockChannelContext.permissions.can_restart_game = true;
       mockChannelContext.permissions.can_control_playback = true;
@@ -320,6 +317,38 @@ describe("Player", () => {
       expect(
         screen.getByRole("button", { name: "Pause track" }),
       ).toHaveAttribute("aria-pressed", "true");
+    });
+  });
+
+  describe("playback events", () => {
+    test("pushes start_playback when paused", async () => {
+      mockChannelContext.game.player.is_playback = false;
+      mockChannelContext.permissions.can_control_playback = true;
+
+      renderForUser(ownerUser);
+
+      await fireEvent.click(screen.getByRole("button", { name: "Play track" }));
+
+      expect(mockChannelContext.channel.push).toHaveBeenCalledWith(
+        "start_playback",
+        {},
+      );
+    });
+
+    test("pushes pause_playback when playing", async () => {
+      mockChannelContext.game.player.is_playback = true;
+      mockChannelContext.permissions.can_control_playback = true;
+
+      renderForUser(ownerUser);
+
+      await fireEvent.click(
+        screen.getByRole("button", { name: "Pause track" }),
+      );
+
+      expect(mockChannelContext.channel.push).toHaveBeenCalledWith(
+        "pause_playback",
+        {},
+      );
     });
   });
 });

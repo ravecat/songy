@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
-import { TURN_PHASE } from "~shared/types/turn";
 import * as GameContext from "~components/game_channel.svelte";
 import * as ScopeContext from "~components/scope.svelte";
 
@@ -55,7 +54,7 @@ describe("Timeline", () => {
           ],
         },
         turn: {
-          phase: TURN_PHASE.READY,
+          phase: "ready",
           assumptions: {},
           winner_id: null,
         },
@@ -177,7 +176,7 @@ describe("Timeline", () => {
   });
 
   test("player in ready phase sees track card", () => {
-    mockGameContext.game.turn.phase = TURN_PHASE.READY;
+    mockGameContext.game.turn.phase = "ready";
     mockGameContext.permissions.can_make_assumptions = true;
     mockGameContext.game.turn.assumptions = {
       "1": "current-user-123",
@@ -202,7 +201,7 @@ describe("Timeline", () => {
   });
 
   test("challenger in challenging phase sees track card", () => {
-    mockGameContext.game.turn.phase = TURN_PHASE.CHALLENGING;
+    mockGameContext.game.turn.phase = "challenging";
     mockGameContext.permissions.can_make_assumptions = true;
     mockGameContext.game.queue = ["user-1", "current-user-123"];
     mockGameContext.game.cursor = 0;
@@ -233,7 +232,7 @@ describe("Timeline", () => {
   });
 
   test("no one sees track card in results phase", () => {
-    mockGameContext.game.turn.phase = TURN_PHASE.RESULTS;
+    mockGameContext.game.turn.phase = "results";
     mockGameContext.permissions.can_make_assumptions = false;
     mockGameContext.permissions.can_see_assumptions = true;
 

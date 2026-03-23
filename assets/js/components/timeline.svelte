@@ -82,7 +82,6 @@
   import TrackCard from "~components/track_card.svelte";
   import { getGameContext } from "~components/game_channel.svelte";
   import { getScopeContext } from "~components/scope.svelte";
-  import { PUSH_EVENT } from "~/shared/types/phoenix";
   import { fade } from "svelte/transition";
   import { ChevronLeft, ChevronRight } from "lucide-svelte";
   import type { Track, User } from "~contracts";
@@ -178,7 +177,7 @@
     const position = closest?.element.dataset.position;
     if (!position) return;
 
-    channel.push(PUSH_EVENT.MAKE_ASSUMPTION, { position: Number(position) });
+    channel.push("make_assumption", { position: Number(position) });
   }
 </script>
 

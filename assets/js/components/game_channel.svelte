@@ -1,12 +1,42 @@
 <script lang="ts" module>
   import { createContext } from "svelte";
-  import type { Channel } from "phoenix";
-  import type { Game, Permissions } from "~contracts";
+  import type { Socket } from "phoenix";
+  import type {
+    AssumptionPayload,
+    Game,
+    Permissions,
+    StatePayload,
+    TimerPayload,
+    UpdateProviderPayload,
+    User,
+  } from "~contracts";
+  import type { Channel } from "~/shared/hooks/channel.svelte";
+
+  interface GameChannelSpec {
+    on: {
+      state: StatePayload;
+      timer: TimerPayload;
+    };
+    push: {
+      start_game: {};
+      advance_turn: {};
+      make_assumption: { payload: AssumptionPayload };
+      start_playback: {};
+      pause_playback: {};
+      update_provider: { payload: UpdateProviderPayload };
+      get_provider: {
+        reply: { ok: { token: string } };
+      };
+      get_current_user: {
+        reply: { ok: User };
+      };
+    };
+  }
 
   export interface GameContext {
     game: Game;
     permissions: Permissions;
-    channel: Channel;
+    channel: Channel<GameChannelSpec>;
   }
 
   export const [getGameContext, setGameContext] = createContext<GameContext>();
@@ -15,14 +45,12 @@
 <script lang="ts">
   import Equalizer from "~components/equalizer.svelte";
   import { untrack } from "svelte";
-  import { useChannel, type UseChannelOptions } from "~/shared/hooks/channel.svelte";
-  import { BROADCAST_EVENT } from "~/shared/types/phoenix";
+  import { useChannel } from "~/shared/hooks/channel.svelte";
   import type { Snippet } from "svelte";
-  import type { StatePayload } from "~contracts";
 
   interface Props {
-    socket: UseChannelOptions["socket"];
-    topic: UseChannelOptions["topic"];
+    socket: Socket;
+    topic: string;
     children?: Snippet;
     timeoutMs?: number;
   }
@@ -34,11 +62,11 @@
 
   const { promise: ready, resolve, reject } = Promise.withResolvers<void>();
 
-  const channel = useChannel({
+  const channel = useChannel<GameChannelSpec>({
     socket: untrack(() => socket),
     topic: untrack(() => topic),
     on: {
-      [BROADCAST_EVENT.STATE]: (payload: StatePayload) => {
+      state: (payload) => {
         game = payload.game;
         permissions = payload.permissions;
         resolve();
