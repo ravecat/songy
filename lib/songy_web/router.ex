@@ -40,6 +40,12 @@ defmodule SongyWeb.Router do
   end
 
   scope "/", SongyWeb do
+    pipe_through :browser
+
+    get "/storybook", SongyWeb.Plugs.Storybook, :index, alias: false
+  end
+
+  scope "/", SongyWeb do
     pipe_through [:inertia]
 
     get "/", PageController, :home
