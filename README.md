@@ -55,6 +55,12 @@ mix setup
 mix phx.server
 ```
 
+If you need Storybook, run it in a separate terminal:
+
+```bash
+mix storybook
+```
+
 **Without direnv (manual):**
 
 ```bash
@@ -62,6 +68,12 @@ cd songy/
 nix develop
 mix setup
 mix phx.server
+```
+
+If you need Storybook, run it in a separate terminal:
+
+```bash
+mix storybook
 ```
 
 Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.

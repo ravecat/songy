@@ -1,92 +1,77 @@
-import { render, screen } from "@testing-library/svelte";
-import { describe, expect, test, beforeEach, vi, afterEach } from "vitest";
-import { GAME_STATUS } from "~shared/types/game";
-import Room from "~components/room.svelte";
-import * as GameContext from "~components/game_provider.svelte";
-import * as Scope from "~components/scope.svelte";
-import * as QrContext from "~components/qr_context.svelte";
+import { screen, within } from "@testing-library/svelte";
+import { composeStories } from "@storybook/svelte";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import * as stories from "~stories/pages/lobby.stories";
+
+const { OwnerLobby, PlayerLobby } = composeStories(stories);
 
 describe("Room", () => {
-  let getGameContextSpy;
-  let getQrContextSpy;
-  let getScopeContextSpy;
-  let mockChannelContext;
-
   beforeEach(() => {
-    mockChannelContext = {
-      game: {
-        scores: {
-          "user-1": 7,
-        },
-        participants: {
-          "user-1": { uuid: "user-1", name: "Alice" },
-          "user-2": { uuid: "user-2", name: "Bob" },
-        },
-        status: GAME_STATUS.WAITING,
-        turn: null,
-        player: {
-          is_playback: false,
-        },
-        owner_id: "user-1",
-        queue: ["user-1", "user-2"],
-        cursor: 0,
-      },
-      permissions: {
-        can_control_playback: false,
-        can_advance_turn: false,
-        can_start_game: false,
-        can_start_turn: false,
-        can_restart_game: false,
-      },
-      channel: {
-        on: vi.fn(() => Symbol("ref")),
-        off: vi.fn(),
-        push: vi.fn(),
-      },
-    };
+    vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => {});
 
-    getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
-    getQrContextSpy = vi.spyOn(QrContext, "getQrContext");
-    getQrContextSpy.mockReturnValue({ svg: "" });
-    getScopeContextSpy = vi.spyOn(Scope, "getScopeContext");
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
+
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: { href: "https://example.com/game/abc123" },
+      writable: true,
+    });
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  test("renders header and main components when game is active", () => {
-    mockChannelContext.game.participants = {
-      "user-1": {
-        uuid: "user-1",
-        name: "Alice",
-        avatar_url: "https://example.com/alice.jpg",
-      },
-      "user-2": {
-        uuid: "user-2",
-        name: "Bob",
-        avatar_url: "https://example.com/bob.jpg",
-      },
-    };
+  describe("Lobby", () => {
+    test("renders owner lobby state", async () => {
+      await OwnerLobby.run();
 
-    getGameContextSpy.mockReturnValue(mockChannelContext);
-    getScopeContextSpy.mockReturnValue({
-      user: { uuid: "user-1", name: "Alice" },
+      const players = screen.getByRole("list", { name: "Lobby players" });
+
+      expect(within(players).getAllByRole("listitem")).toHaveLength(3);
+      expect(
+        screen.getByRole("status", { name: "3 players online" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Copy share link" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Play track" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Start game" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Forward" }),
+      ).not.toBeInTheDocument();
     });
 
-    render(Room);
+    test("renders player lobby state", async () => {
+      await PlayerLobby.run();
 
-    expect(
-      screen.getByRole("button", { name: "Your score: 7" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("status", { name: "2 players online" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Copy share link" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Play track" }),
-    ).toBeInTheDocument();
+      const players = screen.getByRole("list", { name: "Lobby players" });
+
+      expect(within(players).getAllByRole("listitem")).toHaveLength(3);
+      expect(
+        screen.getByRole("status", { name: "3 players online" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Copy share link" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Play track" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Forward" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Start game" }),
+      ).not.toBeInTheDocument();
+    });
   });
 });

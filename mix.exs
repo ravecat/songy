@@ -17,6 +17,8 @@ defmodule Songy.MixProject do
   def cli do
     [
       preferred_envs: [
+        storybook: :dev,
+        "storybook.build": :dev,
         "test.watch": :test,
         "test.e2e": :e2e,
         "test.e2e.fast": :e2e,
@@ -113,11 +115,13 @@ defmodule Songy.MixProject do
       "test.e2e.setup": ["bun assets run e2e:install"],
       "test.e2e.ui": ["bun assets run e2e:ui"],
       "test.e2e.watch": ["bun e2e.watch"],
+      storybook: ["bun storybook"],
       codegen: ["bun asyncapi"],
       "assets.setup": ["bun.install --if-missing", "bun assets install"],
       "assets.build": ["bun vite build"],
       "assets.deploy": [
         "bun vite build",
+        "bun assets run storybook:build",
         "phx.digest"
       ],
       deploy: [

@@ -33,6 +33,7 @@ export default {
       "~hooks": path.resolve(assetsDir, "js/shared/hooks"),
       "~pages": path.resolve(assetsDir, "js/pages"),
       "~shared": path.resolve(assetsDir, "js/shared"),
+      "~stories": path.resolve(assetsDir, "stories"),
       "~types": path.resolve(assetsDir, "js/shared/types"),
       "~mocks": path.resolve(assetsDir, "__mocks__"),
       "~components": path.resolve(assetsDir, "js/components"),
@@ -41,6 +42,7 @@ export default {
     },
   },
   optimizeDeps: {
+    include: ["storybook/test", "redaxios"],
     exclude: ["axios"],
   },
   build: {

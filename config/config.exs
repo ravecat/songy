@@ -10,11 +10,11 @@ import Config
 config :bun,
   version: "1.2.16",
   assets: [args: [], cd: Path.expand("../assets", __DIR__)],
-  vite: [args: ~w(x vite), cd: Path.expand("../assets", __DIR__)],
   storybook: [
-    args: ~w(run storybook -- --ci),
+    args: ~w(x storybook dev --no-open --port 6006 --exact-port),
     cd: Path.expand("../assets", __DIR__)
   ],
+  vite: [args: ~w(x vite), cd: Path.expand("../assets", __DIR__)],
   "e2e.watch": [
     args: [
       "x",

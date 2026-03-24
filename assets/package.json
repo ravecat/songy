@@ -18,8 +18,8 @@
     "e2e:fast": "playwright test --reporter=list",
     "e2e:ui": "playwright test --ui",
     "e2e:watch": "playwright test --ui",
-    "storybook": "storybook dev",
-    "storybook:build": "storybook build",
+    "storybook": "storybook dev --no-open --port 6006 --exact-port",
+    "storybook:build": "storybook build -o ../priv/static/storybook",
     "test:storybook": "vitest run --project storybook --reporter=verbose",
     "test:storybook:watch": "vitest --project storybook"
   },
