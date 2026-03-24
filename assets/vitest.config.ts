@@ -50,7 +50,6 @@ export default mergeConfig(
           plugins: [
             storybookTest({
               configDir: path.join(dirname, '.storybook'),
-              storybookScript: 'bun run storybook -- --ci',
             }),
           ],
           test: {

@@ -1,4 +1,8 @@
 import "@testing-library/jest-dom";
+import { setProjectAnnotations } from "@storybook/svelte";
+import preview from "../.storybook/preview";
+
+setProjectAnnotations(preview);
 
 // Mock dialog methods for jsdom compatibility
 if (typeof HTMLDialogElement !== 'undefined') {
