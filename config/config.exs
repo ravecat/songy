@@ -8,7 +8,7 @@
 import Config
 
 config :bun,
-  version: "1.2.16",
+  version: "1.3.8",
   assets: [args: [], cd: Path.expand("../assets", __DIR__)],
   storybook: [
     args: ~w(x storybook dev --no-open --port 6006 --exact-port),
