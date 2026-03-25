@@ -1,12 +1,14 @@
 defmodule SongyWeb.SpotifyController do
   use SongyWeb, :controller
 
+  alias Spotify.Authorization
+
   require Logger
 
   import SongyWeb.Auth
 
   def authorize(conn, _params) do
-    case Spotify.Authorization.url() do
+    case Authorization.url() do
       url when is_binary(url) ->
         redirect(conn, external: url)
 

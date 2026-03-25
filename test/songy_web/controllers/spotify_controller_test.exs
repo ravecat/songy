@@ -137,7 +137,8 @@ defmodule SongyWeb.SpotifyControllerTest do
     test "removes provider from ETS and redirects", %{conn: conn, user: user} do
       provider = %Songy.Core.Provider.Spotify{
         access_token: "token",
-        refresh_token: "refresh"
+        refresh_token: "refresh",
+        expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
       }
 
       Songy.Providers.insert(user.uuid, provider)

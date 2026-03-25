@@ -43,6 +43,11 @@ defmodule Songy.Core.Provider.Spotify do
     end
   end
 
+  @doc "Returns true when the stored token should be refreshed before use"
+  @spec refresh?(t()) :: boolean()
+  def refresh?(%__MODULE__{expires_at: nil}), do: true
+  def refresh?(%__MODULE__{expires_at: expires_at}), do: DateTime.compare(expires_at, DateTime.utc_now()) == :lt
+
   defp to_attrs_map(map) when is_map(map), do: map
   defp to_attrs_map(list) when is_list(list), do: Map.new(list)
 

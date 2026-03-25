@@ -5,6 +5,8 @@ defmodule Songy.Boundary.ProviderPlaybackTest do
   alias Songy.Boundary.Provider
   alias Songy.Core.Track
   alias Songy.Provider.Session
+  alias Spotify.Player
+  alias Spotify.Search
 
   describe "Spotify provider implementation" do
     setup do
@@ -31,14 +33,14 @@ defmodule Songy.Boundary.ProviderPlaybackTest do
       provider: provider,
       track: track
     } do
-      Repatch.patch(Spotify.Player, :play, fn _credentials, opts ->
+      Repatch.patch(Player, :play, fn _credentials, opts ->
         assert opts[:uris] == ["spotify:track:test123"]
         assert opts[:device_id] == "test_device"
         :ok
       end)
 
       assert {:ok, :playback_started} = Provider.start_playback(provider, track)
-      assert Repatch.called?(Spotify.Player, :play, 2)
+      assert Repatch.called?(Player, :play, 2)
     end
 
     test "start_playback/2 returns error when track has no URI", %{provider: provider} do
@@ -54,12 +56,12 @@ defmodule Songy.Boundary.ProviderPlaybackTest do
     end
 
     test "pause_playback/1 delegates to Spotify.pause_playback/2", %{provider: provider} do
-      Repatch.patch(Spotify.Player, :pause, fn _credentials, _opts ->
+      Repatch.patch(Player, :pause, fn _credentials, _opts ->
         :ok
       end)
 
       assert {:ok, :playback_paused} = Provider.pause_playback(provider)
-      assert Repatch.called?(Spotify.Player, :pause, 2)
+      assert Repatch.called?(Player, :pause, 2)
     end
 
     test "search_random_track/1 delegates to Spotify.search_random_track/1", %{provider: provider} do
@@ -73,7 +75,7 @@ defmodule Songy.Boundary.ProviderPlaybackTest do
         meta: %{}
       }
 
-      Repatch.patch(Spotify.Search, :query, fn _credentials, _params ->
+      Repatch.patch(Search, :query, fn _credentials, _params ->
         {:ok, %{items: [spotify_track]}}
       end)
 
@@ -82,7 +84,7 @@ defmodule Songy.Boundary.ProviderPlaybackTest do
       end)
 
       assert {:ok, ^expected_track} = Provider.search_random_track(provider)
-      assert Repatch.called?(Spotify.Search, :query, 2)
+      assert Repatch.called?(Search, :query, 2)
       assert Repatch.called?(Songy.Core.Trackable, :to_track, 1)
     end
 
@@ -90,7 +92,7 @@ defmodule Songy.Boundary.ProviderPlaybackTest do
       provider: provider,
       track: track
     } do
-      Repatch.patch(Spotify.Player, :play, fn _credentials, _opts ->
+      Repatch.patch(Player, :play, fn _credentials, _opts ->
         {:error, :invalid_credentials}
       end)
 
@@ -98,7 +100,7 @@ defmodule Songy.Boundary.ProviderPlaybackTest do
     end
 
     test "pause_playback/1 handles errors from Spotify.pause_playback/2", %{provider: provider} do
-      Repatch.patch(Spotify.Player, :pause, fn _credentials, _opts ->
+      Repatch.patch(Player, :pause, fn _credentials, _opts ->
         {:error, :api_error}
       end)
 
@@ -108,12 +110,12 @@ defmodule Songy.Boundary.ProviderPlaybackTest do
     test "search_random_track/1 handles errors from Spotify.search_random_track/1", %{
       provider: provider
     } do
-      Repatch.patch(Spotify.Search, :query, fn _credentials, _params ->
+      Repatch.patch(Search, :query, fn _credentials, _params ->
         {:ok, %{items: []}}
       end)
 
       assert {:error, :no_tracks_found} = Provider.search_random_track(provider)
-      assert Repatch.called?(Spotify.Search, :query, 2)
+      assert Repatch.called?(Search, :query, 2)
       refute Repatch.called?(Songy.Core.Trackable, :to_track, 1)
     end
   end
