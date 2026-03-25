@@ -21,16 +21,25 @@
 
   let { children }: { children: Snippet } = $props();
 
-  const { channel } = $derived.by(getGameContext);
+  const session = $derived.by(getGameContext);
 
   let context = $state<ScopeContext>({ user: null });
 
   $effect(() => {
-    channel
-      .push("get_current_user", {})
-      .receive("ok", (response) => {
-        context.user = response;
-      });
+    let active = true;
+
+    void session
+      .getCurrentUser()
+      .then((response) => {
+        if (active) {
+          context.user = response;
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
   });
 
   setScopeContext(context);

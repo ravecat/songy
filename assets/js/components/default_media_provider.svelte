@@ -8,7 +8,9 @@
 
   let { children }: Props = $props();
 
-  const { game, permissions, channel } = $derived.by(getGameContext);
+  const session = $derived.by(getGameContext);
+  const game = $derived(session.game);
+  const permissions = $derived(session.permissions);
 
   const src = $derived.by(() => {
     const previewUrl = game?.track?.meta?.preview_url;
@@ -76,7 +78,7 @@
     audioElement.currentTime = 0;
 
     if (permissions?.can_control_playback) {
-      channel.push("pause_playback", {});
+      void session.pausePlayback().catch(() => {});
     }
   };
 </script>

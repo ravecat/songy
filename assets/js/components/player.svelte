@@ -3,22 +3,23 @@
   import { Play, Pause, SkipForward, RotateCcw } from "lucide-svelte";
   import { inertia } from "@inertiajs/svelte";
 
-  const { game, permissions, channel } = $derived.by(getGameContext);
+  const session = $derived.by(getGameContext);
+  const game = $derived(session.game);
+  const permissions = $derived(session.permissions);
   const isPlayback = $derived(game?.player?.is_playback);
 
   const handlePlayback = () => {
-    channel.push(
-      isPlayback ? "pause_playback" : "start_playback",
-      {},
+    void (isPlayback ? session.pausePlayback() : session.startPlayback()).catch(
+      () => {},
     );
   };
 
   const handleStartGame = () => {
-    channel.push("start_game", {});
+    void session.startGame().catch(() => {});
   };
 
   const handleAdvanceTurn = () => {
-    channel.push("advance_turn", {});
+    void session.advanceTurn().catch(() => {});
   };
 
   const rightBtn = $derived.by(() => {

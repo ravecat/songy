@@ -1,21 +1,22 @@
 import { render } from "@testing-library/svelte";
 import { afterEach, beforeEach, expect, test, describe, vi } from "vitest";
-import { Channel } from "phoenix";
 import * as GameContext from "~/contexts/game";
 import Spotify from "~components/spotify.svelte";
 import SpotifyMock from "~mocks/spotify";
 
-vi.mock("phoenix");
 vi.stubGlobal("Spotify", SpotifyMock);
 
 describe("Spotify", () => {
-  let mockChannel;
+  let getProvider;
+  let updateProvider;
 
   beforeEach(() => {
-    mockChannel = new Channel("room:test", {}, null);
+    getProvider = vi.fn().mockResolvedValue({ token: "test-token" });
+    updateProvider = vi.fn().mockResolvedValue(undefined);
 
     vi.spyOn(GameContext, "getGameContext").mockReturnValue({
-      channel: mockChannel,
+      getProvider,
+      updateProvider,
     });
   });
 
@@ -46,7 +47,7 @@ describe("Spotify", () => {
 
     getOAuthTokenCallback(tokenCallback);
 
-    expect(mockChannel.push).toHaveBeenCalledWith("get_provider", {});
+    expect(getProvider).toHaveBeenCalled();
   });
 
   test("pushes update_provider event when player ready event is fired", () => {
@@ -62,7 +63,7 @@ describe("Spotify", () => {
 
     readyCb({ device_id: "test-device-id" });
 
-    expect(mockChannel.push).toHaveBeenCalledWith("update_provider", {
+    expect(updateProvider).toHaveBeenCalledWith({
       device_id: "test-device-id",
     });
   });

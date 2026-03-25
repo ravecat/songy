@@ -1,10 +1,9 @@
 <script lang="ts">
   import type { Socket } from "phoenix";
-  import Equalizer from "~components/equalizer.svelte";
-  import type { StatePayload } from "~contracts";
-  import { type GameChannelSpec, setGameContext } from "~/contexts/game";
   import { untrack } from "svelte";
-  import { useChannel } from "~/shared/hooks/channel.svelte";
+  import Equalizer from "~components/equalizer.svelte";
+  import { setGameContext } from "~/contexts/game";
+  import { createGameSession } from "~/shared/game_session.svelte";
   import type { Snippet } from "svelte";
 
   interface Props {
@@ -15,55 +14,29 @@
 
   let { children, socket, topic }: Props = $props();
 
-  let room = $state<StatePayload | null>(null);
-  let error = $state<unknown>(null);
+  const { socket: initialSocket, topic: initialTopic } = untrack(() => ({
+    socket,
+    topic,
+  }));
 
-  function fail(err: unknown) {
-    if (room) return;
-    error = err;
-  }
-
-  const channel = useChannel<GameChannelSpec>({
-    socket: untrack(() => socket),
-    topic: untrack(() => topic),
-    on: {
-      state: (payload) => {
-        room = payload;
-      },
-    },
-    join: {
-      ok: (payload) => {
-        room = payload;
-      },
-      error: fail,
-      timeout: () => fail(new Error("Connection timed out")),
-    },
-    onClose: () => fail(new Error("Connection closed unexpectedly")),
+  const session = createGameSession({
+    socket: initialSocket,
+    topic: initialTopic,
   });
 
-  const context = {
-    get game() {
-      if (!room) throw new Error("Game is not ready");
-      return room.game;
-    },
-    get permissions() {
-      if (!room) throw new Error("Permissions not loaded");
-      return room.permissions;
-    },
-    channel,
-  };
-
-  setGameContext(context);
+  setGameContext(session);
 </script>
 
-{#if room}
+{#if session.game}
   {@render children?.()}
-{:else if error}
+{:else if session.connection === "error" && session.error}
   <div class="game-channel__error" role="alert">
     <p class="text-lg font-semibold">Room unavailable</p>
     <p class="opacity-70">
-      {typeof error === "object" && error && "reason" in error
-        ? `Reason: ${error.reason}`
+      {typeof session.error === "object" &&
+      session.error &&
+      "reason" in session.error
+        ? `Reason: ${session.error.reason}`
         : "Failed to load game state."}
     </p>
     <a class="btn btn-primary mt-4" href="/">Back home</a>

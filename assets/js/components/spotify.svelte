@@ -12,20 +12,21 @@
 
   let { children }: Props = $props();
 
-  const { channel } = $derived.by(getGameContext);
+  const session = $derived.by(getGameContext);
 
   useSpotifyPlayer({
     name: "Songy room",
     getOAuthToken: (cb) => {
-      channel
-        .push("get_provider", {})
-        .receive("ok", ({ token }) => {
+      void session
+        .getProvider()
+        .then(({ token }) => {
           cb(token);
-        });
+        })
+        .catch(() => {});
     },
     on: {
       [SPOTIFY_EVENT.READY]: ({ device_id }: { device_id: string }) => {
-        channel.push("update_provider", { device_id });
+        void session.updateProvider({ device_id }).catch(() => {});
       },
     },
   });

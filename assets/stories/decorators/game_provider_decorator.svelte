@@ -14,24 +14,32 @@
 
   let { children, game, permissions }: Props = $props();
 
-  const noopPush = {
-    receive() {
-      return noopPush;
-    },
-  };
-
   const context: GameContext = {
+    get state() {
+      return { game, permissions };
+    },
     get game() {
       return game;
     },
     get permissions() {
       return permissions;
     },
-    channel: {
-      on: () => 0,
-      off: () => {},
-      push: () => noopPush,
-    } as unknown as GameContext["channel"],
+    timer: null,
+    connection: "ready",
+    error: null,
+    startGame: () => Promise.resolve(),
+    advanceTurn: () => Promise.resolve(),
+    makeAssumption: () => Promise.resolve(),
+    startPlayback: () => Promise.resolve(),
+    pausePlayback: () => Promise.resolve(),
+    updateProvider: () => Promise.resolve(),
+    getProvider: () => Promise.resolve({ token: "" }),
+    getCurrentUser: () =>
+      Promise.resolve({
+        uuid: "storybook-user",
+        name: "Storybook User",
+        avatar_url: "",
+      }),
   };
 
   setGameContext(context);

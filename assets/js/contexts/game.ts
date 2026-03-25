@@ -9,7 +9,13 @@ import type {
   UpdateProviderPayload,
   User,
 } from "~contracts";
-import type { Channel } from "~/shared/hooks/channel.svelte";
+
+export type GameConnectionState =
+  | "connecting"
+  | "ready"
+  | "reconnecting"
+  | "closed"
+  | "error";
 
 export interface GameChannelSpec {
   on: {
@@ -36,10 +42,24 @@ export interface GameChannelSpec {
   };
 }
 
-interface GameContext {
-  game: Game;
-  permissions: Permissions;
-  channel: Channel<GameChannelSpec>;
+export interface GameSession {
+  readonly state: StatePayload | null;
+  readonly game: Game | null;
+  readonly permissions: Permissions | null;
+  readonly timer: number | null;
+  readonly connection: GameConnectionState;
+  readonly error: unknown;
+
+  startGame(): Promise<void>;
+  advanceTurn(): Promise<void>;
+  makeAssumption(position: number): Promise<void>;
+  startPlayback(): Promise<void>;
+  pausePlayback(): Promise<void>;
+  updateProvider(payload: UpdateProviderPayload): Promise<void>;
+  getProvider(): Promise<{ token: string }>;
+  getCurrentUser(): Promise<User>;
 }
 
-export const [getGameContext, setGameContext] = createContext<GameContext>();
+export type GameContext = GameSession;
+
+export const [getGameContext, setGameContext] = createContext<GameSession>();

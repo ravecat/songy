@@ -91,7 +91,8 @@
   type AssumptionCell = { kind: "assumption"; position: number; user: User };
   type TimelineCell = SlotCell | TrackCell | AssumptionCell;
 
-  const { game, channel } = $derived.by(getGameContext);
+  const session = $derived.by(getGameContext);
+  const game = $derived(session.game);
   const { user: currentUser } = $derived.by(getScopeContext);
   const activePlayerId = $derived(game?.queue?.[game?.cursor]);
   const participants = $derived(game?.participants ?? {});
@@ -177,7 +178,7 @@
     const position = closest?.element.dataset.position;
     if (!position) return;
 
-    channel.push("make_assumption", { position: Number(position) });
+    void session.makeAssumption(Number(position)).catch(() => {});
   }
 </script>
 

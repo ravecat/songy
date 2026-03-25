@@ -1,23 +1,22 @@
 <script lang="ts">
   import { getGameContext } from "~/contexts/game";
 
-  const { game, channel } = $derived.by(getGameContext);
+  const session = $derived.by(getGameContext);
+  const game = $derived(session.game);
   const phase = $derived(game?.turn?.phase);
 
-  let seconds = $state<number | null>(null);
   let total = $state<number | null>(null);
+  const seconds = $derived.by(() => session.timer ?? null);
 
   $effect(() => {
-    const ref = channel.on("timer", ({ remaining }) => {
-      if (total === null) {
-        total = remaining;
-      }
-      seconds = remaining;
-    });
+    if (phase !== "challenging" || seconds === null) {
+      total = null;
+      return;
+    }
 
-    return () => {
-      channel.off("timer", ref);
-    };
+    if (total === null || seconds > total) {
+      total = seconds;
+    }
   });
 
   const size = 36;
