@@ -1,7 +1,7 @@
 import { screen, within } from "@testing-library/svelte";
 import { composeStories } from "@storybook/svelte";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import * as stories from "~stories/pages/lobby.stories";
+import * as stories from "~stories/pages/room.stories";
 
 const { OwnerLobby, PlayerLobby } = composeStories(stories);
 

@@ -69,11 +69,11 @@ export const game = {
 } satisfies Game;
 
 export const permissions = {
-  can_control_playback: true,
+  can_control_playback: false,
   can_advance_turn: false,
-  can_start_game: true,
+  can_start_game: false,
   can_start_turn: false,
   can_restart_game: false,
-  can_see_assumptions: true,
+  can_see_assumptions: false,
   can_make_assumptions: false,
 } satisfies Permissions;
