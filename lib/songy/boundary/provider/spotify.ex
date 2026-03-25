@@ -9,6 +9,7 @@ defmodule Songy.Boundary.Provider.Spotify do
   alias Songy.Core.Provider
   alias Songy.Core.Track
   alias Songy.Core.Trackable
+
   @behaviour Songy.Boundary.Provider
 
   require Logger

@@ -10,8 +10,8 @@ defmodule Songy.Music do
   def fetch_cover_tracks(user_id, limit \\ 50) do
     term = <<Enum.random(?a..?z)>>
 
-    with {:ok, _id, provider} <- Providers.ensure(user_id),
-         {:ok, tracks} <- Provider.search(provider, term: term, limit: limit, entity: "song") do
+    with {:ok, session} <- Providers.ensure(user_id),
+         {:ok, tracks} <- Provider.search(session, term: term, limit: limit, entity: "song") do
       tracks
     else
       _ -> []

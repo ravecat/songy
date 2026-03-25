@@ -53,8 +53,8 @@ defmodule Songy.Boundary.GameSession do
   @spec start_game_session(String.t(), String.t()) :: {:ok, Core.Game.t()} | {:error, term()}
   def start_game_session(game_id, user_id) when is_binary(game_id) and is_binary(user_id) do
     with {:ok, game} <- Game.get_state(game_id),
-         {:ok, _id, provider} <- Providers.ensure(game.owner_id),
-         {:ok, track} <- Player.search_random_track(provider),
+         {:ok, session} <- Providers.ensure(game.owner_id),
+         {:ok, track} <- Player.search_random_track(session),
          {:ok, _game} <- Game.set_track(game_id, track),
          {:ok, game} <- Game.start_game(game_id, user_id) do
       Logger.debug("Started game session #{game_id}, owner: #{game.owner_id}")
@@ -69,9 +69,9 @@ defmodule Songy.Boundary.GameSession do
   @spec start_playback(String.t(), String.t() | nil) :: {:ok, Core.Game.t()} | {:error, term()}
   def start_playback(game_id, user_id \\ nil) when is_binary(game_id) do
     with {:ok, game} <- Game.get_state(game_id),
-         {:ok, _id, provider} <- Providers.ensure(game.owner_id),
+         {:ok, session} <- Providers.ensure(game.owner_id),
          {:ok, track} <- Game.get_track(game_id),
-         {:ok, :playback_started} <- Player.start_playback(provider, track),
+         {:ok, :playback_started} <- Player.start_playback(session, track),
          {:ok, game} <- Game.start_playback(game_id, user_id) do
       {:ok, game}
     else
@@ -84,8 +84,8 @@ defmodule Songy.Boundary.GameSession do
   @spec pause_playback(String.t(), String.t() | nil) :: {:ok, Core.Game.t()} | {:error, term()}
   def pause_playback(game_id, user_id \\ nil) when is_binary(game_id) do
     with {:ok, game} <- Game.get_state(game_id),
-         {:ok, _id, provider} <- Providers.ensure(game.owner_id),
-         {:ok, :playback_paused} <- Player.pause_playback(provider),
+         {:ok, session} <- Providers.ensure(game.owner_id),
+         {:ok, :playback_paused} <- Player.pause_playback(session),
          {:ok, game} <- Game.pause_playback(game_id, user_id) do
       {:ok, game}
     else

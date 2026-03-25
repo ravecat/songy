@@ -4,14 +4,15 @@ defmodule Songy.Boundary.GameTest do
   alias Songy.Boundary.Game
   alias Songy.Core.Track
   alias Songy.Core.User
+  alias Songy.Provider.Session
 
   setup %{test: test} do
     Repatch.patch(Songy.Providers, :ensure, [mode: :shared], fn user_id ->
-      {:ok, :spotify,
-       %Songy.Core.Provider.Spotify{
+      {:ok,
+       Session.normalize!(%Songy.Core.Provider.Spotify{
          access_token: "token-#{user_id}",
          refresh_token: "refresh-#{user_id}"
-       }}
+       })}
     end)
 
     Repatch.patch(Songy.Boundary.Provider, :search_random_track, [mode: :shared], fn _provider ->

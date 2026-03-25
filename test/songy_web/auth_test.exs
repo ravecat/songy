@@ -2,6 +2,7 @@ defmodule SongyWeb.AuthTest do
   use SongyWeb.ConnCase
 
   alias Songy.Core.User
+  alias Songy.Provider.Session
   alias SongyWeb.Auth
 
   describe "fetch_current_user/2" do
@@ -145,7 +146,7 @@ defmodule SongyWeb.AuthTest do
       user = User.new()
 
       Repatch.patch(Songy.Providers, :ensure, fn _user_uuid ->
-        {:ok, :itunes, %Songy.Core.Provider.ITunes{}}
+        {:ok, Session.normalize!(%Songy.Core.Provider.ITunes{})}
       end)
 
       conn =
@@ -160,7 +161,11 @@ defmodule SongyWeb.AuthTest do
       user = User.new()
 
       Repatch.patch(Songy.Providers, :ensure, fn _user_uuid ->
-        {:ok, :spotify, %Songy.Core.Provider.Spotify{access_token: "token", refresh_token: "refresh"}}
+        {:ok,
+         Session.normalize!(%Songy.Core.Provider.Spotify{
+           access_token: "token",
+           refresh_token: "refresh"
+         })}
       end)
 
       conn =
@@ -175,7 +180,7 @@ defmodule SongyWeb.AuthTest do
       user = User.new()
 
       Repatch.patch(Songy.Providers, :ensure, fn _user_uuid ->
-        {:ok, :itunes, %Songy.Core.Provider.ITunes{}}
+        {:ok, Session.normalize!(%Songy.Core.Provider.ITunes{})}
       end)
 
       conn =
@@ -190,7 +195,7 @@ defmodule SongyWeb.AuthTest do
       user = User.new()
 
       Repatch.patch(Songy.Providers, :ensure, fn _user_uuid ->
-        {:ok, :apple, %Songy.Core.Provider.Apple{}}
+        {:ok, Session.normalize!(%Songy.Core.Provider.Apple{})}
       end)
 
       conn =

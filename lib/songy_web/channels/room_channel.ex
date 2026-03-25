@@ -2,6 +2,8 @@ defmodule SongyWeb.RoomChannel do
   use SongyWeb, :channel
 
   alias Songy.Boundary.GameSession
+  alias Songy.Core.Provider.Spotify
+  alias Songy.Provider.Session
   alias SongyWeb.Presence
 
   require Logger
@@ -97,10 +99,10 @@ defmodule SongyWeb.RoomChannel do
     user_id = socket.assigns.current_user_id
 
     case Songy.Providers.lookup(user_id) do
-      {:ok, %Songy.Core.Provider.Spotify{access_token: token}} when not is_nil(token) ->
+      {:ok, %Session{data: %Spotify{access_token: token}}} when not is_nil(token) ->
         {:reply, {:ok, %{token: token}}, socket}
 
-      {:ok, _other_provider} ->
+      {:ok, _session} ->
         {:reply, {:error, %{reason: "invalid_credentials"}}, socket}
 
       {:error, _reason} ->
@@ -113,12 +115,15 @@ defmodule SongyWeb.RoomChannel do
     user_id = socket.assigns.current_user_id
 
     case Songy.Providers.lookup(user_id) do
-      {:ok, current_data} ->
+      {:ok, %Session{data: %Spotify{} = current_data} = session} ->
         attrs = for {key, val} <- payload, into: %{}, do: {String.to_atom(key), val}
         updated_data = Songy.Core.Provider.Spotify.update(current_data, attrs)
-        :ok = Songy.Providers.update(user_id, updated_data)
+        :ok = Songy.Providers.update(user_id, Session.put_data(session, updated_data))
         Logger.debug("Updated provider data for user #{user_id} with #{inspect(payload)}")
         {:reply, :ok, socket}
+
+      {:ok, _session} ->
+        {:reply, {:error, %{reason: "provider_not_found"}}, socket}
 
       {:error, _reason} ->
         Logger.warning("Failed to update provider for user #{user_id}: user not found in ETS")

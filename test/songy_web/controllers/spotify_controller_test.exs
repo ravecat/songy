@@ -2,6 +2,7 @@ defmodule SongyWeb.SpotifyControllerTest do
   use SongyWeb.ConnCase
 
   alias Songy.Core.User
+  alias Songy.Provider.Session
 
   describe "authorize/2" do
     test "redirects to Spotify authorization URL", %{conn: conn} do
@@ -101,10 +102,10 @@ defmodule SongyWeb.SpotifyControllerTest do
       conn = get conn, ~p"/auth/spotify/callback", %{"code" => "valid_auth_code"}
 
       assert {:ok, stored_provider} = Songy.Providers.lookup(user.uuid)
-      assert %Songy.Core.Provider.Spotify{} = stored_provider
-      assert stored_provider.access_token == "successful_token"
-      assert stored_provider.refresh_token == "refresh_token_123"
-      assert stored_provider.expires_at == provider.expires_at
+      assert %Session{data: %Songy.Core.Provider.Spotify{} = spotify_provider} = stored_provider
+      assert spotify_provider.access_token == "successful_token"
+      assert spotify_provider.refresh_token == "refresh_token_123"
+      assert spotify_provider.expires_at == provider.expires_at
 
       assert redirected_to(conn) == "/"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Successfully connected to Spotify!"
@@ -141,10 +142,6 @@ defmodule SongyWeb.SpotifyControllerTest do
 
       Songy.Providers.insert(user.uuid, provider)
       assert {:ok, _} = Songy.Providers.lookup(user.uuid)
-
-      Repatch.patch(Songy.Boundary.Provider, :ensure, fn _provider ->
-        {:ok, :spotify, provider}
-      end)
 
       conn = delete(conn, ~p"/auth/spotify/disconnect")
 

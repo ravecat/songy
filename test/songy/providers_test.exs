@@ -2,6 +2,7 @@ defmodule Songy.ProvidersTest do
   use ExUnit.Case, async: false
 
   alias Songy.Core.Provider.Spotify
+  alias Songy.Provider.Session
   alias Songy.Providers
 
   setup do
@@ -35,7 +36,7 @@ defmodule Songy.ProvidersTest do
       }
 
       assert :ok = Providers.insert(user_id, data)
-      assert {:ok, %Spotify{} = result} = Providers.lookup(user_id)
+      assert {:ok, %Session{data: %Spotify{} = result}} = Providers.lookup(user_id)
       assert result.access_token == data.access_token
       assert result.refresh_token == data.refresh_token
       assert result.device_id == data.device_id
@@ -60,7 +61,7 @@ defmodule Songy.ProvidersTest do
 
       assert :ok = Providers.insert(user_id, initial_data)
       assert :ok = Providers.insert(user_id, new_data)
-      assert {:ok, %Spotify{} = result} = Providers.lookup(user_id)
+      assert {:ok, %Session{data: %Spotify{} = result}} = Providers.lookup(user_id)
       assert result.access_token == new_data.access_token
       assert result.device_id == new_data.device_id
     end
@@ -91,9 +92,9 @@ defmodule Songy.ProvidersTest do
       assert :ok = Providers.insert("user2", data2)
       assert :ok = Providers.insert("user3", data3)
 
-      assert {:ok, %Spotify{access_token: "token1"}} = Providers.lookup("user1")
-      assert {:ok, %Spotify{access_token: "token2"}} = Providers.lookup("user2")
-      assert {:ok, %Spotify{access_token: "token3"}} = Providers.lookup("user3")
+      assert {:ok, %Session{data: %Spotify{access_token: "token1"}}} = Providers.lookup("user1")
+      assert {:ok, %Session{data: %Spotify{access_token: "token2"}}} = Providers.lookup("user2")
+      assert {:ok, %Session{data: %Spotify{access_token: "token3"}}} = Providers.lookup("user3")
     end
 
     test "replaces provider when user switches to different provider" do
@@ -114,10 +115,10 @@ defmodule Songy.ProvidersTest do
       }
 
       assert :ok = Providers.insert(user_id, initial_data)
-      assert {:ok, %Spotify{access_token: "apple_token"}} = Providers.lookup(user_id)
+      assert {:ok, %Session{data: %Spotify{access_token: "apple_token"}}} = Providers.lookup(user_id)
 
       assert :ok = Providers.insert(user_id, new_data)
-      assert {:ok, %Spotify{access_token: "soundcloud_token"}} = Providers.lookup(user_id)
+      assert {:ok, %Session{data: %Spotify{access_token: "soundcloud_token"}}} = Providers.lookup(user_id)
     end
   end
 
@@ -141,7 +142,7 @@ defmodule Songy.ProvidersTest do
 
       assert :ok = Providers.insert(user_id, initial_data)
       assert :ok = Providers.update(user_id, new_data)
-      assert {:ok, %Spotify{} = result} = Providers.lookup(user_id)
+      assert {:ok, %Session{data: %Spotify{} = result}} = Providers.lookup(user_id)
       assert result.access_token == new_data.access_token
       assert result.device_id == new_data.device_id
     end
@@ -157,7 +158,7 @@ defmodule Songy.ProvidersTest do
       }
 
       assert :ok = Providers.update(user_id, new_data)
-      assert {:ok, %Spotify{device_id: "device789"}} = Providers.lookup(user_id)
+      assert {:ok, %Session{data: %Spotify{device_id: "device789"}}} = Providers.lookup(user_id)
     end
 
     test "handles update when user switches provider" do
@@ -179,7 +180,7 @@ defmodule Songy.ProvidersTest do
 
       assert :ok = Providers.insert(user_id, initial_data)
       assert :ok = Providers.update(user_id, new_data)
-      assert {:ok, %Spotify{} = result} = Providers.lookup(user_id)
+      assert {:ok, %Session{data: %Spotify{} = result}} = Providers.lookup(user_id)
       assert result.access_token == new_data.access_token
       assert result.device_id == new_data.device_id
     end
@@ -201,7 +202,7 @@ defmodule Songy.ProvidersTest do
       }
 
       assert :ok = Providers.insert(user_id, data)
-      assert {:ok, %Spotify{} = result} = Providers.lookup(user_id)
+      assert {:ok, %Session{data: %Spotify{} = result}} = Providers.lookup(user_id)
       assert result.access_token == data.access_token
       assert result.refresh_token == data.refresh_token
     end
@@ -224,8 +225,8 @@ defmodule Songy.ProvidersTest do
       assert :ok = Providers.insert("user1", data1)
       assert :ok = Providers.insert("user2", data2)
 
-      assert {:ok, %Spotify{access_token: "token1"}} = Providers.lookup("user1")
-      assert {:ok, %Spotify{access_token: "token2"}} = Providers.lookup("user2")
+      assert {:ok, %Session{data: %Spotify{access_token: "token1"}}} = Providers.lookup("user1")
+      assert {:ok, %Session{data: %Spotify{access_token: "token2"}}} = Providers.lookup("user2")
       assert {:error, :not_found} = Providers.lookup("unknown_user")
     end
 
@@ -247,10 +248,10 @@ defmodule Songy.ProvidersTest do
       }
 
       assert :ok = Providers.insert(user_id, initial_data)
-      assert {:ok, %Spotify{access_token: "apple_token"}} = Providers.lookup(user_id)
+      assert {:ok, %Session{data: %Spotify{access_token: "apple_token"}}} = Providers.lookup(user_id)
 
       assert :ok = Providers.insert(user_id, new_data)
-      assert {:ok, %Spotify{access_token: "soundcloud_token"}} = Providers.lookup(user_id)
+      assert {:ok, %Session{data: %Spotify{access_token: "soundcloud_token"}}} = Providers.lookup(user_id)
     end
   end
 
@@ -271,15 +272,15 @@ defmodule Songy.ProvidersTest do
 
       Repatch.patch(DateTime, :utc_now, fn -> current_time end)
 
-      assert {:ok, :spotify, result} = Providers.ensure(user_id)
+      assert {:ok, %Session{id: :spotify, data: result}} = Providers.ensure(user_id)
       assert result.access_token == "valid_token"
     end
 
     test "creates default provider when user has no provider" do
       user_id = "new_user"
 
-      assert {:ok, :itunes, %Songy.Core.Provider.ITunes{}} = Providers.ensure(user_id)
-      assert {:ok, %Songy.Core.Provider.ITunes{}} = Providers.lookup(user_id)
+      assert {:ok, %Session{id: :itunes, data: %Songy.Core.Provider.ITunes{}}} = Providers.ensure(user_id)
+      assert {:ok, %Session{id: :itunes, data: %Songy.Core.Provider.ITunes{}}} = Providers.lookup(user_id)
     end
 
     test "updates ETS when token has expired" do
@@ -309,11 +310,11 @@ defmodule Songy.ProvidersTest do
         {:ok, refreshed_data}
       end)
 
-      assert {:ok, :spotify, result} = Providers.ensure(user_id)
+      assert {:ok, %Session{id: :spotify, data: result}} = Providers.ensure(user_id)
       assert result.access_token == "refreshed_token"
 
-      assert [{^user_id, stored_data}] = :ets.lookup(Providers, user_id)
-      assert stored_data.access_token == "refreshed_token"
+      assert [{^user_id, stored_session}] = :ets.lookup(Providers, user_id)
+      assert stored_session.data.access_token == "refreshed_token"
     end
 
     test "falls back to default provider when credentials are invalid" do
@@ -330,8 +331,8 @@ defmodule Songy.ProvidersTest do
         {:error, :invalid_credentials}
       end)
 
-      assert {:ok, :itunes, %Songy.Core.Provider.ITunes{}} = Providers.ensure(user_id)
-      assert {:ok, %Songy.Core.Provider.ITunes{}} = Providers.lookup(user_id)
+      assert {:ok, %Session{id: :itunes, data: %Songy.Core.Provider.ITunes{}}} = Providers.ensure(user_id)
+      assert {:ok, %Session{id: :itunes, data: %Songy.Core.Provider.ITunes{}}} = Providers.lookup(user_id)
     end
 
     test "returns error for transient failures without removing provider" do
@@ -350,7 +351,7 @@ defmodule Songy.ProvidersTest do
       end)
 
       assert {:error, :network_error} = Providers.ensure(user_id)
-      assert {:ok, %Spotify{}} = Providers.lookup(user_id)
+      assert {:ok, %Session{data: %Spotify{}}} = Providers.lookup(user_id)
     end
   end
 end

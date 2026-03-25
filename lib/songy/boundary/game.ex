@@ -12,7 +12,6 @@ defmodule Songy.Boundary.Game do
 
   use GenStateMachine, callback_mode: [:handle_event_function]
 
-  alias Songy.Boundary.Provider, as: Playback
   alias Songy.Core, as: Core
   alias SongyWeb.Presence
 
@@ -325,9 +324,9 @@ defmodule Songy.Boundary.Game do
   def handle_event({:call, from}, {:advance_turn, user_id}, {:in_progress, :results}, data) do
     with :ok <- Songy.Authorization.can?(:advance_turn, user_id, data),
          :no_winner <- Core.Game.check_winner(data),
-         {:ok, _id, provider} <- Songy.Providers.ensure(data.owner_id),
-         {:ok, %Core.Track{} = track} <- Playback.search_random_track(provider),
-         {:ok, :playback_paused} <- Playback.pause_playback(provider) do
+         {:ok, session} <- Songy.Providers.ensure(data.owner_id),
+         {:ok, %Core.Track{} = track} <- Songy.Boundary.Provider.search_random_track(session),
+         {:ok, :playback_paused} <- Songy.Boundary.Provider.pause_playback(session) do
       Logger.debug("Game #{data.id}: Advancing turn phase")
 
       next_cursor =
@@ -485,8 +484,8 @@ defmodule Songy.Boundary.Game do
     with :ok <- Core.Game.validate_not_full(data),
          :ok <- Core.Game.validate_not_duplicate(data, user),
          :new <- rejoin?(data, user_id),
-         {:ok, _id, provider} <- Songy.Providers.ensure(data.owner_id),
-         {:ok, %Core.Track{} = track} <- Playback.search_random_track(provider) do
+         {:ok, session} <- Songy.Providers.ensure(data.owner_id),
+         {:ok, %Core.Track{} = track} <- Songy.Boundary.Provider.search_random_track(session) do
       updated_game = %{
         data
         | participants: Map.put(data.participants, user.uuid, user),

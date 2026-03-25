@@ -25,7 +25,7 @@ defmodule SongyWeb.Auth do
     %{assigns: %{current_user: %{uuid: user_id}}} = conn
 
     case Songy.Providers.ensure(user_id) do
-      {:ok, id, _provider} -> assign(conn, :provider, id)
+      {:ok, %{id: id}} -> assign(conn, :provider, id)
       {:error, _reason} -> conn
     end
   end

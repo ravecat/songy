@@ -3,6 +3,7 @@ defmodule Songy.Boundary.ProviderTest do
 
   alias Songy.Boundary.Provider
   alias Songy.Core.Provider.Spotify
+  alias Songy.Provider.Session
 
   describe "provider facade / unknown" do
     test "ensure/1 returns error for unsupported provider types" do
@@ -26,20 +27,22 @@ defmodule Songy.Boundary.ProviderTest do
 
   describe "provider facade / spotify" do
     test "ensure/1 handles provider with missing refresh_token" do
-      spotify_provider = %Spotify{
-        access_token: "invalid_token",
-        refresh_token: nil
-      }
+      spotify_provider =
+        Session.normalize!(%Spotify{
+          access_token: "invalid_token",
+          refresh_token: nil
+        })
 
       assert {:error, :authentication_failed} = Provider.ensure(spotify_provider)
     end
 
     test "ensure/1 delegates to Spotify boundary and handles success" do
-      spotify_provider = %Spotify{
-        access_token: "token",
-        refresh_token: "refresh_token",
-        expires_at: DateTime.utc_now()
-      }
+      spotify_provider =
+        Session.normalize!(%Spotify{
+          access_token: "token",
+          refresh_token: "refresh_token",
+          expires_at: DateTime.utc_now()
+        })
 
       updated_provider = %Spotify{
         access_token: "new_token",
@@ -51,14 +54,16 @@ defmodule Songy.Boundary.ProviderTest do
         {:ok, updated_provider}
       end)
 
-      assert {:ok, :spotify, %Spotify{access_token: "new_token"}} = Provider.ensure(spotify_provider)
+      assert {:ok, %Session{id: :spotify, data: %Spotify{access_token: "new_token"}}} =
+               Provider.ensure(spotify_provider)
     end
 
     test "ensure/1 handles Spotify boundary errors correctly" do
-      spotify_provider = %Spotify{
-        access_token: "token",
-        refresh_token: "refresh_token"
-      }
+      spotify_provider =
+        Session.normalize!(%Spotify{
+          access_token: "token",
+          refresh_token: "refresh_token"
+        })
 
       Repatch.patch(Songy.Boundary.Provider.Spotify, :ensure_provider_data, fn _provider ->
         {:error, :refresh_failed}
@@ -68,21 +73,22 @@ defmodule Songy.Boundary.ProviderTest do
     end
 
     test "ensure/1 preserves all Spotify provider fields" do
-      original_provider = %Spotify{
-        access_token: "token",
-        refresh_token: "refresh",
-        expires_at: DateTime.utc_now(),
-        device_id: "device123"
-      }
+      original_provider =
+        Session.normalize!(%Spotify{
+          access_token: "token",
+          refresh_token: "refresh",
+          expires_at: DateTime.utc_now(),
+          device_id: "device123"
+        })
 
       Repatch.patch(Songy.Boundary.Provider.Spotify, :ensure_provider_data, fn provider ->
         {:ok, provider}
       end)
 
-      assert {:ok, :spotify, %Spotify{} = result} = Provider.ensure(original_provider)
-      assert result.access_token == original_provider.access_token
-      assert result.refresh_token == original_provider.refresh_token
-      assert result.device_id == original_provider.device_id
+      assert {:ok, %Session{id: :spotify, data: %Spotify{} = result}} = Provider.ensure(original_provider)
+      assert result.access_token == original_provider.data.access_token
+      assert result.refresh_token == original_provider.data.refresh_token
+      assert result.device_id == original_provider.data.device_id
     end
   end
 end

@@ -4,6 +4,7 @@ defmodule SongyWeb.PageControllerTest do
   import Inertia.Testing
 
   alias Songy.Boundary.GameSession
+  alias Songy.Provider.Session
 
   describe "home/2" do
     test "GET / renders home inertia component", %{conn: conn} do
@@ -75,7 +76,7 @@ defmodule SongyWeb.PageControllerTest do
       {:ok, game} = GameSession.create_game_session("owner123")
 
       Repatch.patch(Songy.Providers, :lookup, fn _user_uuid ->
-        {:ok, %Songy.Core.Provider.ITunes{}}
+        {:ok, Session.normalize!(%Songy.Core.Provider.ITunes{})}
       end)
 
       conn = get(conn, ~p"/#{game.id}")

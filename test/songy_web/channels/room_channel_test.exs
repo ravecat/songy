@@ -5,6 +5,7 @@ defmodule SongyWeb.RoomChannelTest do
   alias Songy.Core.Game
   alias Songy.Core.Turn
   alias Songy.Core.User
+  alias Songy.Provider.Session
   alias SongyWeb.Presence
 
   defp join_room_channel(current_user, room_id, assigns \\ %{}) do
@@ -391,12 +392,12 @@ defmodule SongyWeb.RoomChannelTest do
 
       Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn ^user_id ->
         {:ok,
-         %Songy.Core.Provider.Spotify{
+         Session.normalize!(%Songy.Core.Provider.Spotify{
            access_token: "test-token",
            refresh_token: "test-refresh",
            device_id: nil,
            expires_at: DateTime.utc_now()
-         }}
+         })}
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
@@ -451,12 +452,12 @@ defmodule SongyWeb.RoomChannelTest do
 
       Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn ^user_id ->
         {:ok,
-         %Songy.Core.Provider.Spotify{
+         Session.normalize!(%Songy.Core.Provider.Spotify{
            access_token: nil,
            refresh_token: "test-refresh",
            device_id: nil,
            expires_at: DateTime.utc_now()
-         }}
+         })}
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
@@ -486,12 +487,12 @@ defmodule SongyWeb.RoomChannelTest do
 
       Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn ^user_id ->
         {:ok,
-         %Songy.Core.Provider.Spotify{
+         Session.normalize!(%Songy.Core.Provider.Spotify{
            access_token: "old-token",
            refresh_token: "old-refresh",
            device_id: nil,
            expires_at: DateTime.utc_now()
-         }}
+         })}
       end)
 
       Repatch.patch(Songy.Providers, :update, [mode: :shared], fn ^user_id, _updated_provider ->

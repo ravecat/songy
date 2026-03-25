@@ -2,14 +2,16 @@ defmodule Songy.Providers do
   @moduledoc """
   Provider data storage with ETS.
 
-  Stores provider credentials and metadata in memory with automatic token refresh.
-  User-centric storage structure: user_id -> provider_data.
+  Stores provider sessions in memory with automatic token refresh.
+  User-centric storage structure: user_id -> provider_session.
   Each user can have only one active provider at a time.
   """
 
   use GenServer
 
   require Logger
+
+  alias Songy.Provider.Session
 
   ## Client API
 
@@ -28,9 +30,10 @@ defmodule Songy.Providers do
       iex> Songy.Providers.insert("user123", spotify_data)
       :ok
   """
-  @spec insert(String.t(), term()) :: :ok
+  @spec insert(String.t(), Session.t() | struct()) :: :ok
   def insert(user_id, data) do
-    GenServer.call(__MODULE__, {:insert, user_id, data})
+    session = Session.normalize!(data)
+    GenServer.call(__MODULE__, {:insert, user_id, session})
   end
 
   @doc """
@@ -41,9 +44,10 @@ defmodule Songy.Providers do
       iex> Songy.Providers.update("user123", new_data)
       :ok
   """
-  @spec update(String.t(), term()) :: :ok
+  @spec update(String.t(), Session.t() | struct()) :: :ok
   def update(user_id, attrs) do
-    GenServer.call(__MODULE__, {:update, user_id, attrs})
+    session = Session.normalize!(attrs)
+    GenServer.call(__MODULE__, {:update, user_id, session})
   end
 
   @doc false
@@ -54,17 +58,17 @@ defmodule Songy.Providers do
 
   @doc """
   Ensures provider is ready for the user.
-  Returns {:ok, id, provider} from ETS (validated and refreshed) or creates the default provider.
+  Returns {:ok, session} from ETS (validated and refreshed) or creates the default provider.
   """
-  @spec ensure(String.t()) :: {:ok, atom(), struct()} | {:error, atom()}
+  @spec ensure(String.t()) :: {:ok, Session.t()} | {:error, atom()}
   def ensure(user_id) do
-    with {:ok, provider} <- lookup(user_id),
-         {:ok, id, ^provider} <- Songy.Boundary.Provider.ensure(provider) do
-      {:ok, id, provider}
+    with {:ok, session} <- lookup(user_id),
+         {:ok, ^session} <- Songy.Boundary.Provider.ensure(session) do
+      {:ok, session}
     else
-      {:ok, id, refreshed} ->
-        update(user_id, refreshed)
-        {:ok, id, refreshed}
+      {:ok, refreshed_session} ->
+        update(user_id, refreshed_session)
+        {:ok, refreshed_session}
 
       {:error, :invalid_credentials} ->
         remove(user_id)
@@ -83,18 +87,31 @@ defmodule Songy.Providers do
       Application.fetch_env!(:songy, :providers)
       |> Keyword.fetch!(:default)
 
-    provider = module.new()
-    insert(user_id, provider)
-    Songy.Boundary.Provider.ensure(provider)
+    session = Session.normalize!(module.new())
+    insert(user_id, session)
+
+    case Songy.Boundary.Provider.ensure(session) do
+      {:ok, ensured_session} ->
+        update(user_id, ensured_session)
+        {:ok, ensured_session}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   @doc """
-  Looks up the provider data for user. Pure ETS read without validation.
+  Looks up the provider session for user. Pure ETS read without validation.
   """
-  @spec lookup(String.t()) :: {:ok, struct()} | {:error, :not_found}
+  @spec lookup(String.t()) :: {:ok, Session.t()} | {:error, :not_found}
   def lookup(user_id) when is_binary(user_id) do
     case :ets.lookup(__MODULE__, user_id) do
-      [{^user_id, data}] -> {:ok, data}
+      [{^user_id, data}] ->
+        case Session.normalize(data) do
+          {:ok, session} -> {:ok, session}
+          {:error, :not_supported} -> {:error, :not_found}
+        end
+
       [] -> {:error, :not_found}
     end
   end

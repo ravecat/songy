@@ -4,15 +4,17 @@ defmodule Songy.Boundary.ProviderPlaybackTest do
   alias Songy.Boundary
   alias Songy.Boundary.Provider
   alias Songy.Core.Track
+  alias Songy.Provider.Session
 
   describe "Spotify provider implementation" do
     setup do
-      provider = %Songy.Core.Provider.Spotify{
-        access_token: "valid_token",
-        refresh_token: "refresh_token",
-        device_id: "test_device",
-        expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
-      }
+      provider =
+        Session.normalize!(%Songy.Core.Provider.Spotify{
+          access_token: "valid_token",
+          refresh_token: "refresh_token",
+          device_id: "test_device",
+          expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+        })
 
       track = %Track{
         id: "track123",
@@ -118,7 +120,7 @@ defmodule Songy.Boundary.ProviderPlaybackTest do
 
   describe "Apple Music provider implementation" do
     setup do
-      provider = %Songy.Core.Provider.Apple{}
+      provider = Session.normalize!(%Songy.Core.Provider.Apple{})
 
       track = %Track{
         id: "1440783454",
@@ -186,7 +188,7 @@ defmodule Songy.Boundary.ProviderPlaybackTest do
 
   describe "iTunes provider implementation" do
     setup do
-      provider = %Songy.Core.Provider.ITunes{}
+      provider = Session.normalize!(%Songy.Core.Provider.ITunes{})
 
       track = %Track{
         id: "1440783454",
