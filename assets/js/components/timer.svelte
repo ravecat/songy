@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getGameContext } from "~components/game_provider.svelte";
+  import { getGameContext } from "~/contexts/game";
 
   const { game, channel } = $derived.by(getGameContext);
   const phase = $derived(game?.turn?.phase);

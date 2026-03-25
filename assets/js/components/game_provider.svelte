@@ -1,54 +1,8 @@
-<script lang="ts" module>
-  import { createContext } from "svelte";
-  import type { Socket } from "phoenix";
-  import type {
-    AssumptionPayload,
-    Game,
-    JoinReply,
-    Permissions,
-    StatePayload,
-    TimerPayload,
-    UpdateProviderPayload,
-    User,
-  } from "~contracts";
-  import type { Channel } from "~/shared/hooks/channel.svelte";
-
-  interface GameProviderSpec {
-    on: {
-      state: StatePayload;
-      timer: TimerPayload;
-    };
-    join: {
-      ok: Extract<JoinReply, { status: "ok" }>["response"];
-      error: Extract<JoinReply, { status: "error" }>["response"];
-    };
-    push: {
-      start_game: {};
-      advance_turn: {};
-      make_assumption: { payload: AssumptionPayload };
-      start_playback: {};
-      pause_playback: {};
-      update_provider: { payload: UpdateProviderPayload };
-      get_provider: {
-        reply: { ok: { token: string } };
-      };
-      get_current_user: {
-        reply: { ok: User };
-      };
-    };
-  }
-
-  export interface GameContext {
-    game: Game;
-    permissions: Permissions;
-    channel: Channel<GameProviderSpec>;
-  }
-
-  export const [getGameContext, setGameContext] = createContext<GameContext>();
-</script>
-
 <script lang="ts">
+  import type { Socket } from "phoenix";
   import Equalizer from "~components/equalizer.svelte";
+  import type { StatePayload } from "~contracts";
+  import { type GameChannelSpec, setGameContext } from "~/contexts/game";
   import { untrack } from "svelte";
   import { useChannel } from "~/shared/hooks/channel.svelte";
   import type { Snippet } from "svelte";
@@ -69,7 +23,7 @@
     error = err;
   }
 
-  const channel = useChannel<GameProviderSpec>({
+  const channel = useChannel<GameChannelSpec>({
     socket: untrack(() => socket),
     topic: untrack(() => topic),
     on: {
@@ -87,7 +41,7 @@
     onClose: () => fail(new Error("Connection closed unexpectedly")),
   });
 
-  const context: GameContext = {
+  const context = {
     get game() {
       if (!room) throw new Error("Game is not ready");
       return room.game;

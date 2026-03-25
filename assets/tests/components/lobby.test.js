@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, within } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
-import * as GameContext from "~components/game_provider.svelte";
+import * as GameContext from "~/contexts/game";
 import * as QrContext from "~components/qr_context.svelte";
 import Lobby from "~components/lobby.svelte";
 

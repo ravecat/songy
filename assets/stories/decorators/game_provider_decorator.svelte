@@ -3,7 +3,7 @@
   import {
     setGameContext,
     type GameContext,
-  } from "~components/game_provider.svelte";
+  } from "~/contexts/game";
   import type { Game, Permissions } from "~contracts";
 
   interface Props {
@@ -31,7 +31,7 @@
       on: () => 0,
       off: () => {},
       push: () => noopPush,
-    } as GameContext["channel"],
+    } as unknown as GameContext["channel"],
   };
 
   setGameContext(context);

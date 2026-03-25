@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getGameContext } from "~components/game_provider.svelte";
+  import { getGameContext } from "~/contexts/game";
 
   const { game, permissions } = $derived.by(getGameContext);
 

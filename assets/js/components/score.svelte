@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getGameContext } from "~components/game_provider.svelte";
+  import { getGameContext } from "~/contexts/game";
   import { getScopeContext } from "~components/scope.svelte";
   import { Star } from "lucide-svelte";
 

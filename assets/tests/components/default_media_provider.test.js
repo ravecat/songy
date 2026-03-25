@@ -1,6 +1,6 @@
 import { render } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
-import * as GameContext from "~components/game_provider.svelte";
+import * as GameContext from "~/contexts/game";
 import DefaultMediaProvider from "~components/default_media_provider.svelte";
 
 describe("DefaultMediaProvider component", () => {

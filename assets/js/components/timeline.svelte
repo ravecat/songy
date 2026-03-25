@@ -80,7 +80,7 @@
 -->
 <script lang="ts">
   import TrackCard from "~components/track_card.svelte";
-  import { getGameContext } from "~components/game_provider.svelte";
+  import { getGameContext } from "~/contexts/game";
   import { getScopeContext } from "~components/scope.svelte";
   import { fade } from "svelte/transition";
   import { ChevronLeft, ChevronRight } from "lucide-svelte";

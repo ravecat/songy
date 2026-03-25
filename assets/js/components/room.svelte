@@ -1,5 +1,5 @@
 <script>
-  import { getGameContext } from "~components/game_provider.svelte";
+  import { getGameContext } from "~/contexts/game";
   import Game from "~components/game.svelte";
   import Equalizer from "~components/equalizer.svelte";
   import Player from "~components/player.svelte";
