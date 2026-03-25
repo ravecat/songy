@@ -50,8 +50,8 @@ defmodule Songy.Boundary.ProviderTest do
         expires_at: DateTime.utc_now()
       }
 
-      Repatch.patch(Songy.Boundary.Provider.Spotify, :ensure_provider_data, fn _provider ->
-        {:ok, updated_provider}
+      Repatch.patch(Songy.Boundary.Provider.Spotify, :ensure, fn _provider ->
+        {:ok, :spotify, updated_provider}
       end)
 
       assert {:ok, %Session{id: :spotify, data: %Spotify{access_token: "new_token"}}} =
@@ -65,7 +65,7 @@ defmodule Songy.Boundary.ProviderTest do
           refresh_token: "refresh_token"
         })
 
-      Repatch.patch(Songy.Boundary.Provider.Spotify, :ensure_provider_data, fn _provider ->
+      Repatch.patch(Songy.Boundary.Provider.Spotify, :ensure, fn _provider ->
         {:error, :refresh_failed}
       end)
 
@@ -81,8 +81,8 @@ defmodule Songy.Boundary.ProviderTest do
           device_id: "device123"
         })
 
-      Repatch.patch(Songy.Boundary.Provider.Spotify, :ensure_provider_data, fn provider ->
-        {:ok, provider}
+      Repatch.patch(Songy.Boundary.Provider.Spotify, :ensure, fn provider ->
+        {:ok, :spotify, provider}
       end)
 
       assert {:ok, %Session{id: :spotify, data: %Spotify{} = result}} = Provider.ensure(original_provider)

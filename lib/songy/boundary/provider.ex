@@ -17,6 +17,13 @@ defmodule Songy.Boundary.Provider do
   @callback search_random_track(struct()) :: {:ok, Track.t()} | {:error, atom()}
   @callback search(struct(), keyword()) :: {:ok, [Track.t()]} | {:error, atom()}
 
+  @doc false
+  defmacro __using__(_opts) do
+    quote do
+      @behaviour Songy.Boundary.Provider
+    end
+  end
+
   @spec ensure(Session.t()) :: {:ok, Session.t()} | {:error, atom()}
   def ensure(%Session{adapter: adapter, data: data} = session) when is_atom(adapter) do
     case adapter.ensure(data) do

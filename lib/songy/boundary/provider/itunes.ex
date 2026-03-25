@@ -8,7 +8,7 @@ defmodule Songy.Boundary.Provider.ITunes do
 
   require Logger
 
-  @behaviour Songy.Boundary.Provider
+  use Songy.Boundary.Provider
 
   alias Songy.Core.Provider
   alias Songy.Core.Track
@@ -24,6 +24,48 @@ defmodule Songy.Boundary.Provider.ITunes do
   @headers [
     {"Accept", "application/json"}
   ]
+
+  @impl true
+  def ensure(_provider) do
+    {:ok, :itunes, Provider.ITunes.new()}
+  end
+
+  @impl true
+  def start_playback(_provider, _track) do
+    {:ok, :playback_started}
+  end
+
+  @impl true
+  def pause_playback(_provider) do
+    {:ok, :playback_paused}
+  end
+
+  @impl true
+  def search_random_track(_provider) do
+    case search_random_track() do
+      {:ok, track} ->
+        {:ok, Trackable.to_track(track)}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @impl true
+  def search(_provider, params) do
+    case search(params) do
+      {:ok, results} ->
+        tracks =
+          results
+          |> Enum.filter(&song?/1)
+          |> Enum.map(&(Track.ITunes.to_struct(&1) |> Trackable.to_track()))
+
+        {:ok, tracks}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
 
   @doc """
   Performs a search on the iTunes Search API.
@@ -102,48 +144,6 @@ defmodule Songy.Boundary.Provider.ITunes do
       [] ->
         Logger.warning("No tracks found for params: #{inspect(params)}")
         {:error, :no_tracks_found}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  @impl true
-  def ensure(_provider) do
-    {:ok, :itunes, Provider.ITunes.new()}
-  end
-
-  @impl true
-  def start_playback(_provider, _track) do
-    {:ok, :playback_started}
-  end
-
-  @impl true
-  def pause_playback(_provider) do
-    {:ok, :playback_paused}
-  end
-
-  @impl true
-  def search_random_track(_provider) do
-    case search_random_track() do
-      {:ok, track} ->
-        {:ok, Trackable.to_track(track)}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  @impl true
-  def search(_provider, params) do
-    case search(params) do
-      {:ok, results} ->
-        tracks =
-          results
-          |> Enum.filter(&song?/1)
-          |> Enum.map(&(Track.ITunes.to_struct(&1) |> Trackable.to_track()))
-
-        {:ok, tracks}
 
       {:error, reason} ->
         {:error, reason}

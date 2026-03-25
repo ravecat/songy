@@ -10,59 +10,21 @@ defmodule Songy.Boundary.Provider.Spotify do
   alias Songy.Core.Track
   alias Songy.Core.Trackable
 
-  @behaviour Songy.Boundary.Provider
+  use Songy.Boundary.Provider
 
   require Logger
 
-  @spec authenticate(Plug.Conn.t() | Spotify.Credentials.t(), map()) ::
-          {:ok, Provider.Spotify.t()} | {:error, term()}
-  def authenticate(conn_or_credentials, params) do
-    with {:ok, credentials} <- get_credentials(conn_or_credentials),
-         {:ok, new_credentials} <- Spotify.Authentication.authenticate(credentials, params),
-         result <- new_credentials |> Map.from_struct() |> Provider.Spotify.new() do
-      {:ok, result}
-    else
-      {:error, :invalid_credentials} ->
-        Logger.error("Invalid credentials provided to authenticate")
-        {:error, :invalid_credentials}
-
-      {:error, reason} ->
-        Logger.error("Failed to authenticate with Spotify: #{inspect(reason)}")
-        {:error, reason}
-    end
-  end
-
-  defp get_credentials(%Plug.Conn{} = conn), do: {:ok, Spotify.Credentials.new(conn)}
-  defp get_credentials(%Spotify.Credentials{} = creds), do: {:ok, creds}
-  defp get_credentials(_), do: {:error, :invalid_credentials}
-
-  @doc """
-  Ensures that Spotify credentials are fresh and valid.
-
-  This function checks if the provided credentials need refreshing based on their
-  expiration time, and automatically refreshes them if necessary.
-
-  ## Parameters
-
-    * `credentials` - Provider.Spotify struct containing Spotify credentials
-
-  ## Returns
-
-    * `{:ok, updated_credentials}` - Fresh Provider.Spotify credentials (either original or refreshed)
-    * `{:error, reason}` - Failed to refresh or invalid credentials
-
-  """
-  @spec ensure_provider_data(Provider.Spotify.t()) :: {:ok, Provider.Spotify.t()} | {:error, term()}
-  def ensure_provider_data(%Provider.Spotify{access_token: access_token, refresh_token: refresh_token} = data) do
-    with true <- refresh_token?(data),
+  @impl true
+  def ensure(%Provider.Spotify{access_token: access_token, refresh_token: refresh_token} = provider) do
+    with true <- refresh_token?(provider),
          credentials <- Spotify.Credentials.new(access_token, refresh_token),
-         {:ok, new_data} <- Spotify.Authentication.refresh(credentials) do
-      Logger.info("Spotify refresh response #{inspect(new_data)}")
+         {:ok, refreshed_provider} <- Spotify.Authentication.refresh(credentials) do
+      Logger.info("Spotify refresh response #{inspect(refreshed_provider)}")
 
-      {:ok, Provider.Spotify.update(data, %{access_token: new_data.access_token})}
+      {:ok, :spotify, Provider.Spotify.update(provider, %{access_token: refreshed_provider.access_token})}
     else
       false ->
-        {:ok, data}
+        {:ok, :spotify, provider}
 
       {:error, reason} ->
         Logger.error("Failed to refresh Spotify data: #{inspect(reason)}")
@@ -74,39 +36,13 @@ defmodule Songy.Boundary.Provider.Spotify do
     end
   end
 
-  def ensure_provider_data(_), do: {:error, :invalid_credentials}
-
-  @impl true
-  def ensure(provider) do
-    case ensure_provider_data(provider) do
-      {:ok, ^provider} ->
-        {:ok, :spotify, provider}
-
-      {:ok, credentials} ->
-        {:ok, :spotify, Provider.Spotify.update(provider, Map.from_struct(credentials))}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
+  def ensure(_), do: {:error, :invalid_credentials}
 
   @impl true
   def start_playback(%{device_id: device_id} = provider, %Track{meta: %{uri: uri}}) do
-    play(provider, uris: [uri], device_id: device_id)
-  end
+    params = [uris: [uri], device_id: device_id]
 
-  def start_playback(_provider, %Track{}) do
-    {:error, :missing_track_uri}
-  end
-
-  def start_playback(credentials) do
-    play(credentials)
-  end
-
-  @spec play(credentials :: Provider.Spotify.t() | map(), params :: keyword()) ::
-          {:ok, :playback_started} | {:error, :invalid_credentials | :playback_start_failed}
-  def play(credentials, params \\ []) do
-    with {:ok, credentials} <- ensure_credentials(credentials),
+    with {:ok, credentials} <- ensure_credentials(provider),
          response <- Spotify.Player.play(credentials, params),
          {:ok, _} <- handle_api_response(response) do
       Logger.info("Successfully started playback with options: #{inspect(params)}")
@@ -121,18 +57,16 @@ defmodule Songy.Boundary.Provider.Spotify do
     end
   end
 
-  @impl true
-  def pause_playback(provider) do
-    pause(provider)
+  def start_playback(_provider, %Track{}) do
+    {:error, :missing_track_uri}
   end
 
-  @spec pause(credentials :: Provider.Spotify.t() | map(), params :: keyword()) ::
-          {:ok, :playback_paused} | {:error, :invalid_credentials | :playback_pause_failed}
-  def pause(credentials, params \\ []) do
-    with {:ok, credentials} <- ensure_credentials(credentials),
-         response <- Spotify.Player.pause(credentials, params),
+  @impl true
+  def pause_playback(provider) do
+    with {:ok, credentials} <- ensure_credentials(provider),
+         response <- Spotify.Player.pause(credentials, []),
          {:ok, _} <- handle_api_response(response) do
-      Logger.info("Successfully paused playback with options: #{inspect(params)}")
+      Logger.info("Successfully paused playback with options: []")
       {:ok, :playback_paused}
     else
       {:error, :invalid_credentials} ->
@@ -144,62 +78,28 @@ defmodule Songy.Boundary.Provider.Spotify do
     end
   end
 
-  @doc """
-  Performs a general search on Spotify.
-
-  This function can search for tracks, albums, artists, playlists, and other content types
-  supported by the Spotify Web API.
-
-  ## Parameters
-
-    * `credentials` - Spotify credentials with access token or map with :access_token key
-    * `params` - Search parameters as keyword list:
-      * `:q` - Search query string (required for meaningful results)
-      * `:type` - Type of content to search ("track", "album", "artist", "playlist")
-      * `:limit` - Number of results to return (1-50, default depends on Spotify API)
-      * `:offset` - The index of the first result to return (default: 0)
-      * `:market` - ISO 3166-1 alpha-2 country code to limit results
-
-  ## Returns
-
-    * `{:ok, result}` - Search results as returned by Spotify API
-    * `{:error, :invalid_credentials}` - Missing or invalid credentials
-    * `{:error, :search_failed}` - Spotify API error
-
-  ## Examples
-
-      # Search for tracks
-      search_api(credentials, q: "bohemian rhapsody", type: "track", limit: 10)
-
-      # Search for albums
-      search_api(credentials, q: "dark side of the moon", type: "album")
-
-      # Search for artists
-      search_api(credentials, q: "queen", type: "artist", limit: 5)
-
-  """
   def search(credentials) do
     search(credentials, [])
   end
 
   @impl true
   def search(%Provider.Spotify{} = provider, params) do
-    case search_api(provider, params) do
-      {:ok, %{items: items}} ->
-        {:ok, Enum.map(items, &Trackable.to_track/1)}
+    with {:ok, credentials} <- ensure_credentials(provider),
+         response <- Spotify.Search.query(credentials, params),
+         {:ok, %{items: items}} <- handle_api_response(response) do
+      Logger.info("Successfully performed search with params: #{inspect(params)}")
+      {:ok, Enum.map(items, &Trackable.to_track/1)}
+    else
+      {:error, :invalid_credentials} ->
+        {:error, :invalid_credentials}
 
       {:error, reason} ->
-        {:error, reason}
+        Logger.warning("Failed to perform search: #{inspect(reason)}")
+        {:error, :search_failed}
     end
   end
 
   def search(credentials, params) do
-    search_api(credentials, params)
-  end
-
-  @spec search_api(credentials :: Provider.Spotify.t() | map(), params :: keyword()) ::
-          {:ok, map()} | {:error, :invalid_credentials | :search_failed}
-  def search_api(credentials, params \\ []) do
     with {:ok, credentials} <- ensure_credentials(credentials),
          response <- Spotify.Search.query(credentials, params) do
       Logger.info("Spotify API response: #{inspect(response)}")
@@ -222,6 +122,54 @@ defmodule Songy.Boundary.Provider.Spotify do
         {:error, :search_failed}
     end
   end
+
+  @impl true
+  def search_random_track(%Provider.Spotify{} = provider) do
+    params = build_random_track_search_params()
+
+    with {:ok, credentials} <- ensure_credentials(provider),
+         response <- Spotify.Search.query(credentials, params),
+         {:ok, %{items: [track | _]}} <- handle_api_response(response) do
+      Logger.info("Successfully found random track #{inspect(track)} with query: #{inspect(params)}")
+      {:ok, Trackable.to_track(track)}
+    else
+      {:ok, %{items: []}} ->
+        Logger.warning("No tracks found for query: #{inspect(params)}")
+        {:error, :no_tracks_found}
+
+      {:error, :invalid_credentials} ->
+        {:error, :invalid_credentials}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  def search_random_track(credentials) do
+    search_random_track_api(credentials)
+  end
+
+  @spec authenticate(Plug.Conn.t() | Spotify.Credentials.t(), map()) ::
+          {:ok, Provider.Spotify.t()} | {:error, term()}
+  def authenticate(conn_or_credentials, params) do
+    with {:ok, credentials} <- get_credentials(conn_or_credentials),
+         {:ok, new_credentials} <- Spotify.Authentication.authenticate(credentials, params),
+         result <- new_credentials |> Map.from_struct() |> Provider.Spotify.new() do
+      {:ok, result}
+    else
+      {:error, :invalid_credentials} ->
+        Logger.error("Invalid credentials provided to authenticate")
+        {:error, :invalid_credentials}
+
+      {:error, reason} ->
+        Logger.error("Failed to authenticate with Spotify: #{inspect(reason)}")
+        {:error, reason}
+    end
+  end
+
+  defp get_credentials(%Plug.Conn{} = conn), do: {:ok, Spotify.Credentials.new(conn)}
+  defp get_credentials(%Spotify.Credentials{} = creds), do: {:ok, creds}
+  defp get_credentials(_), do: {:error, :invalid_credentials}
 
   @doc """
   Searches for a random track on Spotify.
@@ -249,27 +197,12 @@ defmodule Songy.Boundary.Provider.Spotify do
   - Limited to 1 track result
 
   """
-  @impl true
-  def search_random_track(%Provider.Spotify{} = provider) do
-    case search_random_track_api(provider) do
-      {:ok, track} ->
-        {:ok, Trackable.to_track(track)}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  def search_random_track(credentials) do
-    search_random_track_api(credentials)
-  end
-
   @spec search_random_track_api(credentials :: Provider.Spotify.t() | map()) ::
           {:ok, map()} | {:error, :invalid_credentials | :search_failed | :no_tracks_found}
   def search_random_track_api(credentials) do
     params = build_random_track_search_params()
 
-    case search_api(credentials, params) do
+    case search(credentials, params) do
       {:ok, %{items: [track | _]}} ->
         Logger.info("Successfully found random track #{inspect(track)} with query: #{inspect(params)}")
         {:ok, track}

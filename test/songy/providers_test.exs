@@ -306,8 +306,8 @@ defmodule Songy.ProvidersTest do
 
       Repatch.patch(DateTime, :utc_now, fn -> current_time end)
 
-      Repatch.patch(Songy.Boundary.Provider.Spotify, :ensure_provider_data, fn _provider ->
-        {:ok, refreshed_data}
+      Repatch.patch(Songy.Boundary.Provider.Spotify, :ensure, fn _provider ->
+        {:ok, :spotify, refreshed_data}
       end)
 
       assert {:ok, %Session{id: :spotify, data: result}} = Providers.ensure(user_id)
@@ -327,7 +327,7 @@ defmodule Songy.ProvidersTest do
 
       assert :ok = Providers.insert(user_id, invalid_data)
 
-      Repatch.patch(Songy.Boundary.Provider.Spotify, :ensure_provider_data, fn _provider ->
+      Repatch.patch(Songy.Boundary.Provider.Spotify, :ensure, fn _provider ->
         {:error, :invalid_credentials}
       end)
 
@@ -346,7 +346,7 @@ defmodule Songy.ProvidersTest do
 
       assert :ok = Providers.insert(user_id, valid_data)
 
-      Repatch.patch(Songy.Boundary.Provider.Spotify, :ensure_provider_data, fn _provider ->
+      Repatch.patch(Songy.Boundary.Provider.Spotify, :ensure, fn _provider ->
         {:error, :network_error}
       end)
 

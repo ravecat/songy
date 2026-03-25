@@ -8,7 +8,7 @@ defmodule Songy.Boundary.Provider.Apple do
 
   require Logger
 
-  @behaviour Songy.Boundary.Provider
+  use Songy.Boundary.Provider
 
   alias Songy.Core.Provider
   alias Songy.Core.Track
@@ -17,6 +17,55 @@ defmodule Songy.Boundary.Provider.Apple do
   @storefront "us"
   @types "songs"
   @limit 25
+
+  @impl true
+  def ensure(_provider) do
+    case access_token() do
+      {:ok, _token} ->
+        {:ok, :apple, Provider.Apple.new()}
+
+      {:error, :invalid_credentials} ->
+        {:error, :invalid_credentials}
+    end
+  end
+
+  @impl true
+  def start_playback(_provider, _track) do
+    {:ok, :playback_started}
+  end
+
+  @impl true
+  def pause_playback(_provider) do
+    {:ok, :playback_paused}
+  end
+
+  @impl true
+  def search_random_track(_provider) do
+    case search_random_track() do
+      {:ok, track} ->
+        {:ok, Trackable.to_track(track)}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @impl true
+  def search(token, params) when is_binary(token) do
+    search_catalog(token, params)
+  end
+
+  @impl true
+  def search(%Provider.Apple{}, params) do
+    with {:ok, token} <- access_token(),
+         {:ok, %{"songs" => %{"data" => data}}} <- search_catalog(token, params) do
+      tracks = Enum.map(data, &(Track.Apple.to_struct(&1) |> Trackable.to_track()))
+      {:ok, tracks}
+    else
+      {:ok, _} -> {:ok, []}
+      {:error, reason} -> {:error, reason}
+    end
+  end
 
   @doc """
   Returns Developer Token from application config.
@@ -135,55 +184,6 @@ defmodule Songy.Boundary.Provider.Apple do
 
       {:error, reason} ->
         {:error, reason}
-    end
-  end
-
-  @impl true
-  def ensure(_provider) do
-    case access_token() do
-      {:ok, _token} ->
-        {:ok, :apple, Provider.Apple.new()}
-
-      {:error, :invalid_credentials} ->
-        {:error, :invalid_credentials}
-    end
-  end
-
-  @impl true
-  def start_playback(_provider, _track) do
-    {:ok, :playback_started}
-  end
-
-  @impl true
-  def pause_playback(_provider) do
-    {:ok, :playback_paused}
-  end
-
-  @impl true
-  def search_random_track(_provider) do
-    case search_random_track() do
-      {:ok, track} ->
-        {:ok, Trackable.to_track(track)}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  @impl true
-  def search(token, params) when is_binary(token) do
-    search_catalog(token, params)
-  end
-
-  @impl true
-  def search(%Provider.Apple{}, params) do
-    with {:ok, token} <- access_token(),
-         {:ok, %{"songs" => %{"data" => data}}} <- search_catalog(token, params) do
-      tracks = Enum.map(data, &(Track.Apple.to_struct(&1) |> Trackable.to_track()))
-      {:ok, tracks}
-    else
-      {:ok, _} -> {:ok, []}
-      {:error, reason} -> {:error, reason}
     end
   end
 
