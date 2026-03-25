@@ -54,7 +54,7 @@ defmodule Songy.Providers do
 
   @doc """
   Ensures provider is ready for the user.
-  Returns {:ok, provider_id, provider} from ETS (validated and refreshed) or creates the default provider.
+  Returns {:ok, id, provider} from ETS (validated and refreshed) or creates the default provider.
   """
   @spec ensure(String.t()) :: {:ok, atom(), struct()} | {:error, atom()}
   def ensure(user_id) do

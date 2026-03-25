@@ -4,7 +4,7 @@ defmodule Songy.Boundary.ProviderTest do
   alias Songy.Boundary.Provider
   alias Songy.Core.Provider.Spotify
 
-  describe "provider protocol / unknown" do
+  describe "provider facade / unknown" do
     test "ensure/1 returns error for unsupported provider types" do
       unsupported_provider = %{type: :unknown}
 
@@ -24,7 +24,7 @@ defmodule Songy.Boundary.ProviderTest do
     end
   end
 
-  describe "provider protocol / spotify" do
+  describe "provider facade / spotify" do
     test "ensure/1 handles provider with missing refresh_token" do
       spotify_provider = %Spotify{
         access_token: "invalid_token",
