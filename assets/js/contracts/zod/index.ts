@@ -22,5 +22,4 @@ export { emptyReply } from "./emptyReplySchema.js";
 export { providerTokenReply } from "./providerTokenReplySchema.js";
 export { invalidCredentialsReply } from "./invalidCredentialsReplySchema.js";
 export { providerNotFoundReply } from "./providerNotFoundReplySchema.js";
-export { currentUserReply } from "./currentUserReplySchema.js";
 export { unknownEventReply } from "./unknownEventReplySchema.js";

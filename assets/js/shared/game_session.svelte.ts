@@ -173,8 +173,5 @@ export function createGameSession(
     getProvider() {
       return pushWithReply("get_provider", {});
     },
-    getCurrentUser() {
-      return pushWithReply("get_current_user", {});
-    },
   };
 }

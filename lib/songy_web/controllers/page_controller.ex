@@ -29,7 +29,6 @@ defmodule SongyWeb.PageController do
   def join(conn, %{"room_id" => room_id}) do
     case GameSession.get_state(room_id) do
       {:ok, game} ->
-        %{assigns: %{provider: provider}} = conn
         room_url = url(conn, ~p"/#{game.id}")
 
         {:ok, qr_svg} =
@@ -44,7 +43,6 @@ defmodule SongyWeb.PageController do
 
         conn
         |> assign_prop(:room_id, game.id)
-        |> assign_prop(:provider, provider)
         |> assign_prop(:qr_svg, qr_svg)
         |> render_inertia("room")
 

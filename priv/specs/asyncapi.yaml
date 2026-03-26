@@ -108,10 +108,6 @@ channels:
         $ref: "#/components/messages/updateProviderReplyOk"
       updateProviderReplyProviderNotFound:
         $ref: "#/components/messages/updateProviderReplyProviderNotFound"
-      getCurrentUser:
-        $ref: "#/components/messages/getCurrentUser"
-      getCurrentUserReplyOk:
-        $ref: "#/components/messages/getCurrentUserReplyOk"
       unknownEventReply:
         $ref: "#/components/messages/unknownEventReply"
     bindings:
@@ -255,22 +251,6 @@ operations:
       messages:
         - $ref: "#/channels/gameRoom/messages/updateProviderReplyOk"
         - $ref: "#/channels/gameRoom/messages/updateProviderReplyProviderNotFound"
-  getCurrentUser:
-    action: send
-    channel:
-      $ref: "#/channels/gameRoom"
-    summary: Fetch the current user represented by the socket
-    description: |
-      Client sends `get_current_user` with an empty payload.
-      The server replies with the deterministic in-memory `User` struct
-      for the authenticated socket user id.
-    messages:
-      - $ref: "#/channels/gameRoom/messages/getCurrentUser"
-    reply:
-      channel:
-        $ref: "#/channels/gameRoom"
-      messages:
-        - $ref: "#/channels/gameRoom/messages/getCurrentUserReplyOk"
   receiveState:
     action: receive
     channel:
@@ -629,31 +609,6 @@ components:
             status: error
             response:
               reason: provider_not_found
-    getCurrentUser:
-      name: get_current_user
-      title: Get Current User
-      summary: Request the current socket user
-      contentType: application/json
-      payload:
-        $ref: "#/components/schemas/emptyPayload"
-      examples:
-        - name: get-current-user
-          payload: {}
-    getCurrentUserReplyOk:
-      name: phx_reply
-      title: Get Current User Reply
-      summary: Successful current user reply
-      contentType: application/json
-      payload:
-        $ref: "#/components/schemas/currentUserReply"
-      examples:
-        - name: current-user
-          payload:
-            status: ok
-            response:
-              uuid: test-uuid
-              name: Brave Lion
-              avatar_url: https://api.dicebear.com/9.x/thumbs/svg?seed=test-uuid
     unknownEventReply:
       name: phx_reply
       title: Unknown Event Reply
@@ -1017,17 +972,6 @@ components:
             reason:
               const: provider_not_found
           additionalProperties: false
-      additionalProperties: false
-    currentUserReply:
-      type: object
-      required:
-        - status
-        - response
-      properties:
-        status:
-          const: ok
-        response:
-          $ref: "#/components/schemas/user"
       additionalProperties: false
     unknownEventReply:
       type: object

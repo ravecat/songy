@@ -98,7 +98,9 @@
   const participants = $derived(game?.participants ?? {});
   const assumptions = $derived(game?.turn?.assumptions ?? {});
 
-  const activeTimeline = $derived(game?.timelines?.[activePlayerId] ?? []);
+  const activeTimeline = $derived(
+    activePlayerId ? game?.timelines?.[activePlayerId] ?? [] : [],
+  );
 
   let hasInteracted = $state(false);
   let activeCellIndex = $state<number | null>(null);

@@ -133,13 +133,6 @@ defmodule SongyWeb.RoomChannel do
   end
 
   @impl true
-  def handle_in("get_current_user", _payload, socket) do
-    user_id = socket.assigns.current_user_id
-    user = Songy.Core.User.get_user(user_id)
-    {:reply, {:ok, user}, socket}
-  end
-
-  @impl true
   def handle_in("advance_turn", _payload, socket) do
     @room_prefix <> room_id = socket.topic
     current_user_id = socket.assigns.current_user_id

@@ -34,12 +34,6 @@
     pausePlayback: () => Promise.resolve(),
     updateProvider: () => Promise.resolve(),
     getProvider: () => Promise.resolve({ token: "" }),
-    getCurrentUser: () =>
-      Promise.resolve({
-        uuid: "storybook-user",
-        name: "Storybook User",
-        avatar_url: "",
-      }),
   };
 
   setGameContext(context);

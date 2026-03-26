@@ -11,6 +11,14 @@ defmodule SongyWeb.PageControllerTest do
       conn = get(conn, ~p"/")
       assert inertia_component(conn) == "home"
     end
+
+    test "GET / includes shared current user inertia prop", %{conn: conn} do
+      conn = get(conn, ~p"/")
+
+      props = inertia_props(conn)
+      assert props.scope.user.uuid == conn.assigns.current_user.uuid
+      assert props.scope.user.name == conn.assigns.current_user.name
+    end
   end
 
   describe "create/2" do
@@ -84,7 +92,19 @@ defmodule SongyWeb.PageControllerTest do
 
       props = inertia_props(conn)
       assert props.roomId == game.id
-      assert props.provider == :itunes
+      assert props.scope.provider == :itunes
+
+      GameSession.end_game_session(game.id)
+    end
+
+    test "passes current user to inertia", %{conn: conn} do
+      {:ok, game} = GameSession.create_game_session("owner123")
+
+      conn = get(conn, ~p"/#{game.id}")
+
+      props = inertia_props(conn)
+      assert props.scope.user.uuid == conn.assigns.current_user.uuid
+      assert props.scope.user.name == conn.assigns.current_user.name
 
       GameSession.end_game_session(game.id)
     end

@@ -15,49 +15,18 @@
 </script>
 
 <script lang="ts">
-  import { getGameContext } from "~/contexts/game";
-  import Equalizer from "~components/equalizer.svelte";
   import type { Snippet } from "svelte";
 
-  let { children }: { children: Snippet } = $props();
-
-  const session = $derived.by(getGameContext);
+  let { children, currentUser }: { children: Snippet; currentUser: User } =
+    $props();
 
   let context = $state<ScopeContext>({ user: null });
 
   $effect(() => {
-    let active = true;
-
-    void session
-      .getCurrentUser()
-      .then((response) => {
-        if (active) {
-          context.user = response;
-        }
-      })
-      .catch(() => {});
-
-    return () => {
-      active = false;
-    };
+    context.user = currentUser;
   });
 
   setScopeContext(context);
 </script>
 
-{#if !context.user}
-  <div class="scope-loader" role="status" aria-label="Loading">
-    <Equalizer />
-  </div>
-{:else}
-  {@render children?.()}
-{/if}
-
-<style>
-  .scope-loader {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100%;
-  }
-</style>
+{@render children?.()}

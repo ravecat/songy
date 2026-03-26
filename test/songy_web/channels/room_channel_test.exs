@@ -534,30 +534,6 @@ defmodule SongyWeb.RoomChannelTest do
     end
   end
 
-  describe "get_current_user" do
-    test "returns current user data", %{current_user: current_user} do
-      game_id = "game-123"
-
-      Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok,
-         %Game{
-           id: game_id,
-           owner_id: "owner123",
-           status: :waiting,
-           queue: [],
-           cursor: 0,
-           turn: nil
-         }}
-      end)
-
-      {:ok, _, socket} = join_room_channel(current_user, game_id)
-
-      ref = push(socket, "get_current_user", %{})
-      assert_reply ref, :ok, %{uuid: user_uuid}
-      assert user_uuid == current_user.uuid
-    end
-  end
-
   # === GAME ACTION EVENTS ===
 
   describe "make_assumption" do

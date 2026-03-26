@@ -14,6 +14,7 @@ defmodule SongyWeb.Router do
     plug :fetch_current_user
     plug :fetch_current_provider
     plug :put_user_token
+    plug SongyWeb.Plugs.Inertia
   end
 
   pipeline :browser do

@@ -22,5 +22,4 @@ export type { EmptyReply } from "./EmptyReply.js";
 export type { ProviderTokenReply } from "./ProviderTokenReply.js";
 export type { InvalidCredentialsReply } from "./InvalidCredentialsReply.js";
 export type { ProviderNotFoundReply } from "./ProviderNotFoundReply.js";
-export type { CurrentUserReply } from "./CurrentUserReply.js";
 export type { UnknownEventReply } from "./UnknownEventReply.js";

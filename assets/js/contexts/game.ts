@@ -7,7 +7,6 @@ import type {
   StatePayload,
   TimerPayload,
   UpdateProviderPayload,
-  User,
 } from "~contracts";
 
 export type GameConnectionState =
@@ -36,9 +35,6 @@ export interface GameChannelSpec {
     get_provider: {
       reply: { ok: { token: string } };
     };
-    get_current_user: {
-      reply: { ok: User };
-    };
   };
 }
 
@@ -57,7 +53,6 @@ export interface GameSession {
   pausePlayback(): Promise<void>;
   updateProvider(payload: UpdateProviderPayload): Promise<void>;
   getProvider(): Promise<{ token: string }>;
-  getCurrentUser(): Promise<User>;
 }
 
 export type GameContext = GameSession;
