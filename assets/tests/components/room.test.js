@@ -1,13 +1,32 @@
-import { screen, within } from "@testing-library/svelte";
-import { composeStories } from "@storybook/svelte";
+import { render, screen, within } from "@testing-library/svelte";
+import { readable } from "svelte/store";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import * as stories from "~stories/pages/room.stories";
+import * as Inertia from "@inertiajs/svelte";
+import * as GameContext from "~/contexts/game";
+import * as Scope from "~components/scope.svelte";
+import Room from "~components/room.svelte";
 
-const { OwnerLobby, PlayerLobby } = composeStories(stories);
+vi.mock("@inertiajs/svelte", async () => {
+  const actual = await vi.importActual("@inertiajs/svelte");
+
+  return {
+    ...actual,
+    inertia: () => ({
+      destroy() {},
+    }),
+    usePage: vi.fn(),
+  };
+});
 
 describe("Room", () => {
+  let getGameContextSpy;
+  let getScopeContextSpy;
+
   beforeEach(() => {
-    vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => {});
+    getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
+    getScopeContextSpy = vi.spyOn(Scope, "getScopeContext");
+
+    setPage({ qr: "<svg data-testid='room-qr'></svg>" });
 
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
@@ -27,9 +46,31 @@ describe("Room", () => {
     vi.restoreAllMocks();
   });
 
-  describe("Lobby", () => {
-    test("renders owner lobby state", async () => {
-      await OwnerLobby.run();
+  describe("screen", () => {
+    test("renders loading state when game is unavailable", () => {
+      getGameContextSpy.mockReturnValue({
+        game: null,
+      });
+
+      render(Room);
+
+      expect(
+        screen.getByRole("status", { name: "loading" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("main")).not.toBeInTheDocument();
+    });
+
+    test("renders owner lobby state without Storybook", () => {
+      getScopeContextSpy.mockReturnValue({ user: users.alice });
+      getGameContextSpy.mockReturnValue(
+        buildSession({
+          permissions: {
+            can_start_game: true,
+          },
+        }),
+      );
+
+      render(Room);
 
       const players = screen.getByRole("list", { name: "Lobby players" });
 
@@ -49,10 +90,14 @@ describe("Room", () => {
       expect(
         screen.queryByRole("button", { name: "Forward" }),
       ).not.toBeInTheDocument();
+      expect(screen.getByTestId("room-qr")).toBeInTheDocument();
     });
 
-    test("renders player lobby state", async () => {
-      await PlayerLobby.run();
+    test("renders player lobby state without Storybook", () => {
+      getScopeContextSpy.mockReturnValue({ user: users.bob });
+      getGameContextSpy.mockReturnValue(buildSession());
+
+      render(Room);
 
       const players = screen.getByRole("list", { name: "Lobby players" });
 
@@ -75,3 +120,100 @@ describe("Room", () => {
     });
   });
 });
+
+const users = {
+  alice: {
+    uuid: "user-1",
+    name: "Alice",
+    avatar_url: "https://example.com/alice.jpg",
+  },
+  bob: {
+    uuid: "user-2",
+    name: "Bob",
+    avatar_url: "https://example.com/bob.jpg",
+  },
+  carol: {
+    uuid: "user-3",
+    name: "Carol",
+    avatar_url: "https://example.com/carol.jpg",
+  },
+};
+
+const baseGame = {
+  id: "room-1",
+  owner_id: users.alice.uuid,
+  max_participants: 8,
+  max_score: 10,
+  status: "waiting",
+  participants: {
+    [users.alice.uuid]: users.alice,
+    [users.bob.uuid]: users.bob,
+    [users.carol.uuid]: users.carol,
+  },
+  scores: {
+    [users.alice.uuid]: 7,
+    [users.bob.uuid]: 4,
+    [users.carol.uuid]: 6,
+  },
+  player: {
+    is_playback: false,
+  },
+  timelines: {
+    [users.alice.uuid]: [],
+    [users.bob.uuid]: [],
+    [users.carol.uuid]: [],
+  },
+  created_at: "2026-03-23T12:00:00.000Z",
+  queue: [users.alice.uuid, users.bob.uuid, users.carol.uuid],
+  cursor: 0,
+  track: null,
+  turn: null,
+};
+
+const basePermissions = {
+  can_control_playback: false,
+  can_advance_turn: false,
+  can_start_game: false,
+  can_start_turn: false,
+  can_restart_game: false,
+  can_see_assumptions: false,
+  can_make_assumptions: false,
+};
+
+function setPage(props = {}) {
+  Inertia.usePage.mockReturnValue(
+    readable({
+      component: "room",
+      props,
+      url: "/room-1",
+      version: null,
+    }),
+  );
+}
+
+function buildGame(game = {}) {
+  return {
+    ...baseGame,
+    ...game,
+  };
+}
+
+function buildSession({ game = {}, permissions = {} } = {}) {
+  return {
+    game: buildGame(game),
+    permissions: {
+      ...basePermissions,
+      ...permissions,
+    },
+    timer: null,
+    connection: "ready",
+    error: null,
+    startGame: vi.fn().mockResolvedValue(undefined),
+    advanceTurn: vi.fn().mockResolvedValue(undefined),
+    makeAssumption: vi.fn().mockResolvedValue(undefined),
+    startPlayback: vi.fn().mockResolvedValue(undefined),
+    pausePlayback: vi.fn().mockResolvedValue(undefined),
+    updateProvider: vi.fn().mockResolvedValue(undefined),
+    getProvider: vi.fn().mockResolvedValue({ token: "" }),
+  };
+}

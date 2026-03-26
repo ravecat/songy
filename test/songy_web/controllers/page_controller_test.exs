@@ -115,10 +115,13 @@ defmodule SongyWeb.PageControllerTest do
       conn = get(conn, ~p"/#{game.id}")
 
       props = inertia_props(conn)
-      assert is_binary(props.qrSvg)
-      assert props.qrSvg =~ "<svg"
-      assert props.qrSvg =~ "<path"
-      assert props.qrSvg =~ ~s(fill="transparent")
+      assert is_binary(props.qr)
+      assert props.qr =~ "<svg"
+      assert props.qr =~ "<path"
+      assert props.qr =~ ~s(fill="transparent")
+      assert props.qr =~ ~s(viewBox="0 0 )
+      refute props.qr =~ ~r/\swidth="\d+"/
+      refute props.qr =~ ~r/\sheight="\d+"/
 
       GameSession.end_game_session(game.id)
     end

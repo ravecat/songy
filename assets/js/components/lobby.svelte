@@ -1,12 +1,13 @@
 <script lang="ts">
+  import { usePage } from "@inertiajs/svelte";
   import { getGameContext } from "~/contexts/game";
-  import { getQrContext } from "~components/qr_context.svelte";
   import { Link, Copy, Check, Crown } from "lucide-svelte";
   import Vinyl from "~components/vinyl.svelte";
   import Sleeve from "~components/sleeve.svelte";
 
+  const page = usePage<{ qr?: string }>();
+  let { qr = "" } = $derived($page.props);
   const { game } = $derived.by(getGameContext);
-  const { svg: qrSvg } = $derived.by(getQrContext);
 
   const participants = $derived(game?.participants ?? {});
   const queue = $derived(game?.queue ?? []);
@@ -55,9 +56,9 @@
       <Vinyl />
     </div>
     <Sleeve />
-    {#if qrSvg}
+    {#if qr}
       <div class="lobby__qr">
-        {@html qrSvg}
+        {@html qr}
       </div>
     {/if}
   </div>
@@ -198,16 +199,6 @@
     background: var(--color-white);
     border-radius: var(--radius-md);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-  }
-
-  .lobby__qr :global(svg) {
-    display: block;
-    width: 100%;
-    height: 100%;
-  }
-
-  .lobby__qr :global(svg path) {
-    fill: var(--color-text);
   }
 
   @media (min-width: 640px) {

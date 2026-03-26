@@ -31,19 +31,11 @@ defmodule SongyWeb.PageController do
       {:ok, game} ->
         room_url = url(conn, ~p"/#{game.id}")
 
-        {:ok, qr_svg} =
-          room_url
-          |> QRCode.create(:low)
-          |> QRCode.render(:svg, %QRCode.Render.SvgSettings{
-            background_color: "transparent",
-            structure: :minify,
-            flatten: true,
-            quiet_zone: 1
-          })
+        {:ok, qr_svg} = generate_room_qr(room_url)
 
         conn
         |> assign_prop(:room_id, game.id)
-        |> assign_prop(:qr_svg, qr_svg)
+        |> assign_prop(:qr, qr_svg)
         |> render_inertia("room")
 
       {:error, :game_session_not_found} ->
@@ -56,5 +48,37 @@ defmodule SongyWeb.PageController do
         |> put_flash(:error, "Failed to access game session: #{reason}")
         |> redirect(to: ~p"/")
     end
+  end
+
+  defp generate_room_qr(room_url) do
+    room_url
+    |> QRCode.create(:low)
+    |> QRCode.render(:svg, %QRCode.Render.SvgSettings{
+      background_color: "transparent",
+      structure: :minify,
+      flatten: true,
+      quiet_zone: 1
+    })
+    |> then(fn
+      {:ok, svg} ->
+        {:ok,
+         case Regex.run(~r/width="(\d+)"/, svg, capture: :all_but_first) do
+           [size] ->
+             svg
+             |> String.replace(~r/\swidth="\d+"/, "")
+             |> String.replace(~r/\sheight="\d+"/, "")
+             |> String.replace(
+               "<svg ",
+               ~s(<svg viewBox="0 0 #{size} #{size}" ),
+               global: false
+             )
+
+           _ ->
+             svg
+         end}
+
+      error ->
+        error
+    end)
   end
 end

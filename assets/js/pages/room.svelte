@@ -4,7 +4,6 @@
   import GameProvider from "~components/game_provider.svelte";
   import Room from "~components/room.svelte";
   import MediaProvider from "~components/media_provider.svelte";
-  import QrContext from "~components/qr_context.svelte";
   import type { User } from "~contracts";
 
   interface ScopeProps {
@@ -14,19 +13,16 @@
 
   interface Props {
     roomId: string;
-    qrSvg: string;
     scope: ScopeProps;
   }
 
-  let { roomId, qrSvg, scope }: Props = $props();
+  let { roomId, scope }: Props = $props();
 </script>
 
 <GameProvider {socket} topic={`room:${roomId}`}>
   <MediaProvider provider={scope.provider}>
-    <QrContext svg={qrSvg}>
-      <Scope currentUser={scope.user}>
-        <Room />
-      </Scope>
-    </QrContext>
+    <Scope currentUser={scope.user}>
+      <Room />
+    </Scope>
   </MediaProvider>
 </GameProvider>
