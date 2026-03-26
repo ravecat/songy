@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
-import { TURN_PHASE } from "~shared/types/turn";
 import * as GameContext from "~/contexts/game";
 import * as Scope from "~components/scope.svelte";
 
@@ -29,7 +28,7 @@ describe("Turn waiting view", () => {
         queue: ["user-1", "user-2"],
         cursor: 0,
         turn: {
-          phase: TURN_PHASE.WAITING,
+          phase: "waiting",
           assumptions: {},
           winner_id: null,
         },

@@ -1,9 +1,11 @@
 import { render, screen, within } from "@testing-library/svelte";
+import { fireEvent } from "@testing-library/svelte";
 import { readable } from "svelte/store";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import * as Inertia from "@inertiajs/svelte";
 import * as GameContext from "~/contexts/game";
 import * as Scope from "~components/scope.svelte";
+import Lobby from "~components/lobby.svelte";
 import Room from "~components/room.svelte";
 
 vi.mock("@inertiajs/svelte", async () => {
@@ -117,6 +119,148 @@ describe("Room", () => {
       expect(
         screen.queryByRole("button", { name: "Start game" }),
       ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("lobby", () => {
+    test("renders lobby structure with players list and share button", () => {
+      getGameContextSpy.mockReturnValue({
+        game: buildGame(),
+      });
+
+      render(Lobby);
+
+      expect(
+        screen.getByRole("list", { name: "Lobby players" }),
+      ).toBeInTheDocument();
+      expect(screen.getAllByRole("listitem")).toHaveLength(3);
+      expect(
+        screen.getByRole("button", { name: "Copy share link" }),
+      ).toBeInTheDocument();
+    });
+
+    test("displays all participants with avatars and names", () => {
+      getGameContextSpy.mockReturnValue({
+        game: buildGame(),
+      });
+
+      render(Lobby);
+
+      for (const name of ["Alice", "Bob", "Carol"]) {
+        expect(screen.getByAltText(name)).toBeInTheDocument();
+        expect(screen.getByText(name)).toBeInTheDocument();
+      }
+    });
+
+    test("shows crown badge for room owner", () => {
+      getGameContextSpy.mockReturnValue({
+        game: buildGame(),
+      });
+
+      render(Lobby);
+
+      const players = within(
+        screen.getByRole("list", { name: "Lobby players" }),
+      ).getAllByRole("listitem");
+
+      const ownerPlayer = players.find((player) =>
+        within(player).queryByText("Alice"),
+      );
+
+      expect(ownerPlayer).toBeInTheDocument();
+      expect(
+        within(ownerPlayer).getByRole("img", { hidden: true }),
+      ).toBeInTheDocument();
+    });
+
+    test("renders share button with URL", () => {
+      getGameContextSpy.mockReturnValue({
+        game: buildGame(),
+      });
+
+      render(Lobby);
+
+      const shareButton = screen.getByRole("button", {
+        name: "Copy share link",
+      });
+
+      expect(
+        within(shareButton).getByText(/example\.com\/game\/abc123/),
+      ).toBeInTheDocument();
+    });
+
+    test("renders QR svg when page props provide it", () => {
+      getGameContextSpy.mockReturnValue({
+        game: buildGame(),
+      });
+      setPage({ qr: "<svg data-testid='qr-svg'></svg>" });
+
+      render(Lobby);
+
+      expect(screen.getByTestId("qr-svg")).toBeInTheDocument();
+    });
+
+    test("copies URL to clipboard on share button click", async () => {
+      getGameContextSpy.mockReturnValue({
+        game: buildGame(),
+      });
+
+      render(Lobby);
+
+      await fireEvent.click(
+        screen.getByRole("button", { name: "Copy share link" }),
+      );
+
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        "https://example.com/game/abc123",
+      );
+    });
+
+    test("shows copied state after clicking share button", async () => {
+      getGameContextSpy.mockReturnValue({
+        game: buildGame(),
+      });
+
+      render(Lobby);
+
+      const shareButton = screen.getByRole("button", {
+        name: "Copy share link",
+      });
+
+      await fireEvent.click(shareButton);
+
+      expect(screen.getByText("Copied!")).toBeInTheDocument();
+      expect(shareButton).toBeDisabled();
+    });
+
+    test("handles empty participants list", () => {
+      getGameContextSpy.mockReturnValue({
+        game: buildGame({
+          participants: {},
+          queue: [],
+        }),
+      });
+
+      render(Lobby);
+
+      const players = screen.getByRole("list", { name: "Lobby players" });
+      expect(within(players).queryAllByRole("listitem")).toHaveLength(0);
+    });
+
+    test("handles missing game context gracefully", () => {
+      getGameContextSpy.mockReturnValue({
+        game: null,
+      });
+
+      render(Lobby);
+
+      expect(
+        screen.getByRole("list", { name: "Lobby players" }),
+      ).toBeInTheDocument();
+      expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+      expect(
+        screen.getByRole("button", { name: "Copy share link" }),
+      ).toBeInTheDocument();
     });
   });
 });

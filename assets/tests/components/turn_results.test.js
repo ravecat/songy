@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
-import { TURN_PHASE } from "~shared/types/turn";
 import * as GameContext from "~/contexts/game";
 
 import TurnResults from "~components/turn_results.svelte";
@@ -50,7 +49,7 @@ describe("TurnResults", () => {
         track: mockTrack,
         participants: mockParticipants,
         turn: {
-          phase: TURN_PHASE.RESULTS,
+          phase: "results",
           assumptions: mockAssumptions,
           winner_id: "user-1",
         },
@@ -70,7 +69,7 @@ describe("TurnResults", () => {
         track: mockTrack,
         participants: mockParticipants,
         turn: {
-          phase: TURN_PHASE.RESULTS,
+          phase: "results",
           assumptions: mockAssumptions,
           winner_id: "user-1",
         },
@@ -97,7 +96,7 @@ describe("TurnResults", () => {
         track: mockTrack,
         participants: mockParticipants,
         turn: {
-          phase: TURN_PHASE.RESULTS,
+          phase: "results",
           assumptions: mockAssumptions,
           winner_id: "user-1",
         },
@@ -116,7 +115,7 @@ describe("TurnResults", () => {
         track: mockTrack,
         participants: mockParticipants,
         turn: {
-          phase: TURN_PHASE.RESULTS,
+          phase: "results",
           assumptions: mockAssumptions,
           winner_id: "user-1",
         },
@@ -140,7 +139,7 @@ describe("TurnResults", () => {
         track: mockTrack,
         participants: mockParticipants,
         turn: {
-          phase: TURN_PHASE.RESULTS,
+          phase: "results",
           assumptions: mockAssumptions,
           winner_id: "user-1",
         },
@@ -164,7 +163,7 @@ describe("TurnResults", () => {
         track: mockTrack,
         participants: mockParticipants,
         turn: {
-          phase: TURN_PHASE.RESULTS,
+          phase: "results",
           assumptions: mockAssumptions,
           winner_id: null,
         },

@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
-import { TURN_PHASE } from "~shared/types/turn";
 import * as GameContext from "~/contexts/game";
 import * as Scope from "~components/scope.svelte";
 
@@ -52,7 +51,7 @@ describe("Game", () => {
           ],
         },
         turn: {
-          phase: TURN_PHASE.READY,
+          phase: "ready",
           assumptions: {},
           winner_id: null,
         },
@@ -84,7 +83,7 @@ describe("Game", () => {
       },
     };
 
-    mockChannelContext.game.turn.phase = TURN_PHASE.READY;
+    mockChannelContext.game.turn.phase = "ready";
 
     getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockReturnValue(mockChannelContext);
@@ -104,7 +103,7 @@ describe("Game", () => {
       },
     };
 
-    mockChannelContext.game.turn.phase = TURN_PHASE.READY;
+    mockChannelContext.game.turn.phase = "ready";
 
     getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockReturnValue(mockChannelContext);
@@ -124,7 +123,7 @@ describe("Game", () => {
       },
     };
 
-    mockChannelContext.game.turn.phase = TURN_PHASE.WAITING;
+    mockChannelContext.game.turn.phase = "waiting";
     mockChannelContext.permissions.can_start_turn = true;
 
     getScopeContextSpy.mockReturnValue(mockScopeContext);
@@ -143,7 +142,7 @@ describe("Game", () => {
       },
     };
 
-    mockChannelContext.game.turn.phase = TURN_PHASE.WAITING;
+    mockChannelContext.game.turn.phase = "waiting";
 
     getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockReturnValue(mockChannelContext);
@@ -161,7 +160,7 @@ describe("Game", () => {
       },
     };
 
-    mockChannelContext.game.turn.phase = TURN_PHASE.RESULTS;
+    mockChannelContext.game.turn.phase = "results";
     mockChannelContext.game.track = {
       id: "track-1",
       title: "Test Track",
