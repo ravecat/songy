@@ -39,6 +39,7 @@ axios.defaults.xsrfHeaderName = "x-csrf-token";
 const pages = import.meta.glob("./pages/**/*.svelte", { eager: true });
 
 createInertiaApp({
+  title: (title) => (title ? `${title} - Songy` : "Songy"),
   progress: {
     delay: 250,
     color: "#29d",

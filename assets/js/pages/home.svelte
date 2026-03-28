@@ -4,11 +4,8 @@
   let { tracks } = $props();
 </script>
 
-<svelte:head>
-  <title>Songy - Music Game</title>
-</svelte:head>
-
 <h1 class="sr-only">Songy - Music Game</h1>
+
 <div class="landing">
   <div class="landing__covers">
     <Deferred data="tracks">
