@@ -1,3 +1,7 @@
+<script module>
+  export { default as layout } from "~/layout.svelte";
+</script>
+
 <script>
   import { inertia, Deferred } from "@inertiajs/svelte";
 
@@ -39,9 +43,7 @@
           <span class="hero__word">beats</span>
         </span>?
       </h2>
-      <p class="hero__description">
-        Challenge friends. Rank tracks. Win.
-      </p>
+      <p class="hero__description">Challenge friends. Rank tracks. Win.</p>
       <form use:inertia={{ href: "/create", method: "post" }}>
         <button type="submit" class="btn btn-quick-start w-3xs">
           Quick game
@@ -50,7 +52,6 @@
     </div>
   </div>
 </div>
-
 
 <style>
   .landing {
@@ -164,13 +165,16 @@
   }
 
   @keyframes word-rotate {
-    0%, 20% {
+    0%,
+    20% {
       transform: translateY(0);
     }
-    33%, 53% {
+    33%,
+    53% {
       transform: translateY(-100%);
     }
-    66%, 86% {
+    66%,
+    86% {
       transform: translateY(-200%);
     }
     100% {
@@ -224,10 +228,14 @@
     }
 
     .landing__covers::after {
-      content: '';
+      content: "";
       position: absolute;
       inset: 0;
-      background: radial-gradient(circle at center, transparent 20%, rgb(0 0 0 / 0.7));
+      background: radial-gradient(
+        circle at center,
+        transparent 20%,
+        rgb(0 0 0 / 0.7)
+      );
       pointer-events: none;
     }
 

@@ -19,7 +19,7 @@ declare module "@inertiajs/core" {
     sharedPageProps: {
       scope: {
         user: User;
-        provider: string | null;
+        provider: "itunes" | "spotify" | "apple" | null;
       };
     };
   }

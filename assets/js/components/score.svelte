@@ -1,14 +1,13 @@
 <script lang="ts">
   import { getGameContext } from "~/contexts/game";
-  import { getScopeContext } from "~components/scope.svelte";
+  import { currentUser } from "~/stores/scope";
   import { Star } from "lucide-svelte";
 
   const { game } = $derived.by(getGameContext);
-  const { user } = $derived.by(getScopeContext);
 
   const score = $derived.by(() => {
-    if (!user?.uuid || !game?.scores) return 0;
-    return game.scores[user.uuid] ?? 0;
+    if (!$currentUser?.uuid || !game?.scores) return 0;
+    return game.scores[$currentUser.uuid] ?? 0;
   });
 </script>
 

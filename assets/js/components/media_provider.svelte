@@ -1,10 +1,13 @@
 <script lang="ts">
+  import type { SharedPageProps } from "@inertiajs/core";
   import type { Snippet } from "svelte";
   import DefaultMediaProvider from "~components/default_media_provider.svelte";
   import Spotify from "~components/spotify.svelte";
 
+  type Provider = NonNullable<SharedPageProps["scope"]["provider"]>;
+
   interface Props {
-    provider?: string;
+    provider?: Provider;
     children?: Snippet;
   }
 

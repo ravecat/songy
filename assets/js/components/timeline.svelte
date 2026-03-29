@@ -81,7 +81,7 @@
 <script lang="ts">
   import TrackCard from "~components/track_card.svelte";
   import { getGameContext } from "~/contexts/game";
-  import { getScopeContext } from "~components/scope.svelte";
+  import { currentUser } from "~/stores/scope";
   import { fade } from "svelte/transition";
   import { ChevronLeft, ChevronRight } from "lucide-svelte";
   import type { Track, User } from "~contracts";
@@ -93,7 +93,6 @@
 
   const session = $derived.by(getGameContext);
   const game = $derived(session.game);
-  const { user: currentUser } = $derived.by(getScopeContext);
   const activePlayerId = $derived(game?.queue?.[game?.cursor]);
   const participants = $derived(game?.participants ?? {});
   const assumptions = $derived(game?.turn?.assumptions ?? {});
@@ -113,7 +112,7 @@
       const position = i + assumptionsCountBefore;
       const userId = assumptions[position];
       const user = userId ? participants[userId] : undefined;
-      const isCurrentUser = user?.uuid === currentUser?.uuid;
+      const isCurrentUser = user?.uuid === $currentUser?.uuid;
 
       if (user) {
         items.push({ kind: "assumption", position, user });
@@ -198,7 +197,7 @@
     {#each cells as cell, index (index)}
       {@const isSlot = cell.kind === "slot"}
       {@const isOwnAssumption =
-        cell.kind === "assumption" && cell.user.uuid === currentUser?.uuid}
+        cell.kind === "assumption" && cell.user.uuid === $currentUser?.uuid}
       {@const isSnap = isSlot || isOwnAssumption}
       {@const isActive = hasInteracted && activeCellIndex === index}
       <div
