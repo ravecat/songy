@@ -4,9 +4,18 @@ import { readable } from "svelte/store";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import * as Inertia from "@inertiajs/svelte";
 import * as GameContext from "~/contexts/game";
-import * as Scope from "~components/scope.svelte";
+import { currentUser } from "~/stores/scope";
 import Lobby from "~components/lobby.svelte";
 import Room from "~components/room.svelte";
+
+vi.mock("~/stores/scope", async () => {
+  const { writable } = await import("svelte/store");
+
+  return {
+    currentUser: writable(null),
+    provider: writable(undefined),
+  };
+});
 
 vi.mock("@inertiajs/svelte", async () => {
   const actual = await vi.importActual("@inertiajs/svelte");
@@ -22,11 +31,10 @@ vi.mock("@inertiajs/svelte", async () => {
 
 describe("Room", () => {
   let getGameContextSpy;
-  let getScopeContextSpy;
 
   beforeEach(() => {
     getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
-    getScopeContextSpy = vi.spyOn(Scope, "getScopeContext");
+    currentUser.set(users.alice);
 
     setPage({ qr: "<svg data-testid='room-qr'></svg>" });
 
@@ -51,7 +59,7 @@ describe("Room", () => {
   describe("screen", () => {
     test("renders loading state when game is unavailable", () => {
       getGameContextSpy.mockReturnValue({
-        game: null,
+        snapshot: null,
       });
 
       render(Room);
@@ -63,7 +71,7 @@ describe("Room", () => {
     });
 
     test("renders owner lobby state without Storybook", () => {
-      getScopeContextSpy.mockReturnValue({ user: users.alice });
+      currentUser.set(users.alice);
       getGameContextSpy.mockReturnValue(
         buildSession({
           permissions: {
@@ -96,7 +104,7 @@ describe("Room", () => {
     });
 
     test("renders player lobby state without Storybook", () => {
-      getScopeContextSpy.mockReturnValue({ user: users.bob });
+      currentUser.set(users.bob);
       getGameContextSpy.mockReturnValue(buildSession());
 
       render(Room);
@@ -125,7 +133,10 @@ describe("Room", () => {
   describe("lobby", () => {
     test("renders lobby structure with players list and share button", () => {
       getGameContextSpy.mockReturnValue({
-        game: buildGame(),
+        snapshot: {
+          game: buildGame(),
+          permissions: { ...basePermissions },
+        },
       });
 
       render(Lobby);
@@ -141,7 +152,10 @@ describe("Room", () => {
 
     test("displays all participants with avatars and names", () => {
       getGameContextSpy.mockReturnValue({
-        game: buildGame(),
+        snapshot: {
+          game: buildGame(),
+          permissions: { ...basePermissions },
+        },
       });
 
       render(Lobby);
@@ -154,7 +168,10 @@ describe("Room", () => {
 
     test("shows crown badge for room owner", () => {
       getGameContextSpy.mockReturnValue({
-        game: buildGame(),
+        snapshot: {
+          game: buildGame(),
+          permissions: { ...basePermissions },
+        },
       });
 
       render(Lobby);
@@ -175,7 +192,10 @@ describe("Room", () => {
 
     test("renders share button with URL", () => {
       getGameContextSpy.mockReturnValue({
-        game: buildGame(),
+        snapshot: {
+          game: buildGame(),
+          permissions: { ...basePermissions },
+        },
       });
 
       render(Lobby);
@@ -191,7 +211,10 @@ describe("Room", () => {
 
     test("renders QR svg when page props provide it", () => {
       getGameContextSpy.mockReturnValue({
-        game: buildGame(),
+        snapshot: {
+          game: buildGame(),
+          permissions: { ...basePermissions },
+        },
       });
       setPage({ qr: "<svg data-testid='qr-svg'></svg>" });
 
@@ -202,7 +225,10 @@ describe("Room", () => {
 
     test("copies URL to clipboard on share button click", async () => {
       getGameContextSpy.mockReturnValue({
-        game: buildGame(),
+        snapshot: {
+          game: buildGame(),
+          permissions: { ...basePermissions },
+        },
       });
 
       render(Lobby);
@@ -218,7 +244,10 @@ describe("Room", () => {
 
     test("shows copied state after clicking share button", async () => {
       getGameContextSpy.mockReturnValue({
-        game: buildGame(),
+        snapshot: {
+          game: buildGame(),
+          permissions: { ...basePermissions },
+        },
       });
 
       render(Lobby);
@@ -235,10 +264,13 @@ describe("Room", () => {
 
     test("handles empty participants list", () => {
       getGameContextSpy.mockReturnValue({
-        game: buildGame({
-          participants: {},
-          queue: [],
-        }),
+        snapshot: {
+          game: buildGame({
+            participants: {},
+            queue: [],
+          }),
+          permissions: { ...basePermissions },
+        },
       });
 
       render(Lobby);
@@ -249,7 +281,7 @@ describe("Room", () => {
 
     test("handles missing game context gracefully", () => {
       getGameContextSpy.mockReturnValue({
-        game: null,
+        snapshot: null,
       });
 
       render(Lobby);
@@ -344,12 +376,13 @@ function buildGame(game = {}) {
 
 function buildSession({ game = {}, permissions = {} } = {}) {
   return {
-    game: buildGame(game),
-    permissions: {
-      ...basePermissions,
-      ...permissions,
+    snapshot: {
+      game: buildGame(game),
+      permissions: {
+        ...basePermissions,
+        ...permissions,
+      },
     },
-    timer: null,
     connection: "ready",
     error: null,
     startGame: vi.fn().mockResolvedValue(undefined),

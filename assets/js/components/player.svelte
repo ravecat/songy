@@ -4,8 +4,8 @@
   import { inertia } from "@inertiajs/svelte";
 
   const session = $derived.by(getGameContext);
-  const game = $derived(session.game);
-  const permissions = $derived(session.permissions);
+  const game = $derived(session.snapshot?.game ?? null);
+  const permissions = $derived(session.snapshot?.permissions ?? null);
   const isPlayback = $derived(game?.player?.is_playback);
 
   const handlePlayback = () => {

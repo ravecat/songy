@@ -7,7 +7,8 @@
   import Score from "~components/score.svelte";
   import Timer from "~components/timer.svelte";
 
-  const { game } = $derived.by(getGameContext);
+  const session = $derived.by(getGameContext);
+  const game = $derived(session.snapshot?.game ?? null);
 </script>
 
 <div class="room">

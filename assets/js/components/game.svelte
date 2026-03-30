@@ -5,7 +5,8 @@
   import TurnResults from "~components/turn_results.svelte";
   import Lobby from "~components/lobby.svelte";
 
-  const { game } = $derived.by(getGameContext);
+  const session = $derived.by(getGameContext);
+  const game = $derived(session.snapshot?.game ?? null);
   const phase = $derived(game?.turn?.phase);
   const status = $derived(game?.status);
 </script>

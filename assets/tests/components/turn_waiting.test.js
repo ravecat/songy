@@ -1,50 +1,48 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
 import * as GameContext from "~/contexts/game";
-import * as Scope from "~components/scope.svelte";
 
 import TurnWaiting from "~components/turn_waiting.svelte";
 
 describe("Turn waiting view", () => {
   let mockChannelContext;
-  let getScopeContextSpy;
   let getGameContextSpy;
 
   beforeEach(() => {
     mockChannelContext = {
-      game: {
-        participants: {
-          "user-1": {
-            uuid: "user-1",
-            name: "Alice",
-            avatar_url: "https://example.com/alice.jpg",
+      snapshot: {
+        game: {
+          participants: {
+            "user-1": {
+              uuid: "user-1",
+              name: "Alice",
+              avatar_url: "https://example.com/alice.jpg",
+            },
+            "user-2": {
+              uuid: "user-2",
+              name: "Bob",
+              avatar_url: "https://example.com/bob.jpg",
+            },
           },
-          "user-2": {
-            uuid: "user-2",
-            name: "Bob",
-            avatar_url: "https://example.com/bob.jpg",
+          queue: ["user-1", "user-2"],
+          cursor: 0,
+          turn: {
+            phase: "waiting",
+            assumptions: {},
+            winner_id: null,
           },
         },
-        queue: ["user-1", "user-2"],
-        cursor: 0,
-        turn: {
-          phase: "waiting",
-          assumptions: {},
-          winner_id: null,
+        permissions: {
+          can_start_turn: false,
+          can_control_playback: false,
+          can_advance_turn: false,
+          can_start_game: false,
+          can_restart_game: false,
+          can_see_assumptions: false,
+          can_make_assumptions: false,
         },
-      },
-      permissions: {
-        can_start_turn: false,
-        can_control_playback: false,
-        can_advance_turn: false,
-        can_start_game: false,
-        can_restart_game: false,
-        can_see_assumptions: false,
-        can_make_assumptions: false,
       },
     };
-
-    getScopeContextSpy = vi.spyOn(Scope, "getScopeContext");
     getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
   });
 
@@ -53,22 +51,16 @@ describe("Turn waiting view", () => {
   });
 
   test("displays personalized message when current user is active player", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "user-1",
-        name: "Alice",
-      },
-    };
-
     const mockContextActive = {
       ...mockChannelContext,
-      permissions: {
-        ...mockChannelContext.permissions,
-        can_start_turn: true,
+      snapshot: {
+        ...mockChannelContext.snapshot,
+        permissions: {
+          ...mockChannelContext.snapshot.permissions,
+          can_start_turn: true,
+        },
       },
     };
-
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockReturnValue(mockContextActive);
 
     render(TurnWaiting);
@@ -82,22 +74,16 @@ describe("Turn waiting view", () => {
   });
 
   test("does not render controls when current user is not active player", () => {
-    const nonActiveUserContext = {
-      user: {
-        uuid: "user-2",
-        name: "Bob",
-      },
-    };
-
     const mockContextNotActive = {
       ...mockChannelContext,
-      permissions: {
-        ...mockChannelContext.permissions,
-        can_start_turn: false,
+      snapshot: {
+        ...mockChannelContext.snapshot,
+        permissions: {
+          ...mockChannelContext.snapshot.permissions,
+          can_start_turn: false,
+        },
       },
     };
-
-    getScopeContextSpy.mockReturnValue(nonActiveUserContext);
     getGameContextSpy.mockReturnValue(mockContextNotActive);
 
     render(TurnWaiting);
@@ -107,24 +93,18 @@ describe("Turn waiting view", () => {
   });
 
   test("displays second player when cursor is 1", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "user-2",
-        name: "Bob",
-      },
-    };
-
-    mockChannelContext.game.cursor = 1;
+    mockChannelContext.snapshot.game.cursor = 1;
 
     const mockContextActive = {
       ...mockChannelContext,
-      permissions: {
-        ...mockChannelContext.permissions,
-        can_start_turn: true,
+      snapshot: {
+        ...mockChannelContext.snapshot,
+        permissions: {
+          ...mockChannelContext.snapshot.permissions,
+          can_start_turn: true,
+        },
       },
     };
-
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockReturnValue(mockContextActive);
 
     render(TurnWaiting);
@@ -135,24 +115,18 @@ describe("Turn waiting view", () => {
   });
 
   test("shows active player info but hides button when different user is viewing", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "user-1",
-        name: "Alice",
-      },
-    };
-
-    mockChannelContext.game.cursor = 1;
+    mockChannelContext.snapshot.game.cursor = 1;
 
     const mockContextNonActive = {
       ...mockChannelContext,
-      permissions: {
-        ...mockChannelContext.permissions,
-        can_start_turn: false,
+      snapshot: {
+        ...mockChannelContext.snapshot,
+        permissions: {
+          ...mockChannelContext.snapshot.permissions,
+          can_start_turn: false,
+        },
       },
     };
-
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockReturnValue(mockContextNonActive);
 
     render(TurnWaiting);
@@ -163,14 +137,6 @@ describe("Turn waiting view", () => {
   });
 
   test("throws error when gameContext is missing", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "user-1",
-        name: "Alice",
-      },
-    };
-
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockImplementation(() => {
       throw new Error("getGameContext() must be called within a game context");
     });

@@ -1,22 +1,7 @@
 import { render, screen } from "@testing-library/svelte";
-import { tick } from "svelte";
-import { afterEach, describe, expect, test, vi } from "vitest";
-import TimerProviderFixture from "../fixtures/timer_provider_fixture.svelte";
-import socket from "~/socket";
-
-vi.mock("~/socket", async () => {
-  const { Socket } = await import("phoenix");
-
-  return {
-    default: new Socket("/socket", {}),
-  };
-});
-
-function getReceiveHandler(push, status) {
-  return push.receive.mock.calls
-    .filter(([currentStatus]) => currentStatus === status)
-    .at(-1)?.[1];
-}
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import Timer from "~components/timer.svelte";
+import * as GameContext from "~/contexts/game";
 
 function buildStatePayload(phase = "challenging") {
   return {
@@ -38,6 +23,7 @@ function buildStatePayload(phase = "challenging") {
         phase,
         assumptions: {},
         winner_id: null,
+        deadline_at_ms: phase === "challenging" ? Date.now() + 12_000 : null,
       },
     },
     permissions: {
@@ -52,42 +38,58 @@ function buildStatePayload(phase = "challenging") {
   };
 }
 
+function buildSession(phase = "challenging") {
+  return {
+    snapshot: buildStatePayload(phase),
+    connection: "ready",
+    error: null,
+    startGame: vi.fn(),
+    advanceTurn: vi.fn(),
+    makeAssumption: vi.fn(),
+    startPlayback: vi.fn(),
+    pausePlayback: vi.fn(),
+    dispose: vi.fn(),
+  };
+}
+
 describe("Timer", () => {
-  afterEach(() => {
-    vi.clearAllMocks();
+  let getGameContextSpy;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+    getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
   });
 
-  test("does not render when seconds is null", async () => {
-    render(TimerProviderFixture, {
-      topic: "room:test-room",
-    });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
 
-    const channel = socket.channel.mock.results[0].value;
-    const push = channel.join.mock.results[0].value;
-    const okHandler = getReceiveHandler(push, "ok");
+  test("does not render outside the challenging phase", () => {
+    getGameContextSpy.mockReturnValue(buildSession("ready"));
 
-    okHandler(buildStatePayload());
-    await tick();
+    render(Timer);
 
     expect(screen.queryByRole("timer")).not.toBeInTheDocument();
   });
 
-  test("renders remaining seconds", async () => {
-    render(TimerProviderFixture, {
-      topic: "room:test-room",
-    });
+  test("renders remaining seconds", () => {
+    getGameContextSpy.mockReturnValue(buildSession());
 
-    const channel = socket.channel.mock.results[0].value;
-    const push = channel.join.mock.results[0].value;
-    const okHandler = getReceiveHandler(push, "ok");
-    const timerHandler = channel.on.mock.calls.find(
-      ([event]) => event === "timer",
-    )?.[1];
-
-    okHandler(buildStatePayload());
-    timerHandler({ remaining: 12 });
-    await tick();
+    render(Timer);
 
     expect(screen.getByRole("timer")).toHaveTextContent("12");
+  });
+
+  test("counts down locally from deadline_at_ms", async () => {
+    getGameContextSpy.mockReturnValue(buildSession());
+
+    render(Timer);
+
+    vi.advanceTimersByTime(1_000);
+    await Promise.resolve();
+
+    expect(screen.getByRole("timer")).toHaveTextContent("11");
   });
 });

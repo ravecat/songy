@@ -2,11 +2,45 @@
   import { getGameContext } from "~/contexts/game";
 
   const session = $derived.by(getGameContext);
-  const game = $derived(session.game);
-  const phase = $derived(game?.turn?.phase);
+  const snapshot = $derived(session.snapshot);
+  const game = $derived(snapshot?.game ?? null);
+  const turn = $derived(game?.turn ?? null);
+  const phase = $derived(turn?.phase);
+  const deadlineAtMs = $derived.by(() => {
+    if (turn?.phase !== "challenging") {
+      return null;
+    }
 
+    return turn.deadline_at_ms ?? null;
+  });
+
+  let nowMs = $state(Date.now());
   let total = $state<number | null>(null);
-  const seconds = $derived.by(() => session.timer ?? null);
+
+  $effect(() => {
+    if (deadlineAtMs === null) {
+      total = null;
+      return;
+    }
+
+    nowMs = Date.now();
+
+    const interval = setInterval(() => {
+      nowMs = Date.now();
+    }, 250);
+
+    return () => {
+      clearInterval(interval);
+    };
+  });
+
+  const seconds = $derived.by(() => {
+    if (deadlineAtMs === null) {
+      return null;
+    }
+
+    return Math.max(0, Math.ceil((deadlineAtMs - nowMs) / 1_000));
+  });
 
   $effect(() => {
     if (phase !== "challenging" || seconds === null) {

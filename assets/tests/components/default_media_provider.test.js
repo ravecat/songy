@@ -27,28 +27,27 @@ describe("DefaultMediaProvider component", () => {
     );
 
     mockGameContext = {
-      game: {
-        track: {
-          id: "1440783454",
-          title: "Firestarter",
-          artist: "The Prodigy",
-          year: 1996,
-          meta: {
-            preview_url: "https://audio-ssl.itunes.apple.com/preview.m4a",
+      snapshot: {
+        game: {
+          track: {
+            id: "1440783454",
+            title: "Firestarter",
+            artist: "The Prodigy",
+            year: 1996,
+            meta: {
+              preview_url: "https://audio-ssl.itunes.apple.com/preview.m4a",
+            },
+          },
+          player: {
+            is_playback: false,
           },
         },
-        player: {
-          is_playback: false,
+        permissions: {
+          can_control_playback: true,
         },
+        timer: null,
       },
-      channel: {
-        push: vi.fn().mockReturnValue({
-          receive: vi.fn().mockReturnThis(),
-        }),
-      },
-      permissions: {
-        can_control_playback: true,
-      },
+      pausePlayback: vi.fn().mockResolvedValue(undefined),
     };
 
     getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
@@ -125,7 +124,7 @@ describe("DefaultMediaProvider component", () => {
   });
 
   test("handles missing preview_url gracefully", () => {
-    mockGameContext.game.track.meta = {};
+    mockGameContext.snapshot.game.track.meta = {};
 
     getGameContextSpy.mockReturnValue(mockGameContext);
 
@@ -144,12 +143,15 @@ describe("DefaultMediaProvider component", () => {
 
     const updatedGameContext = {
       ...mockGameContext,
-      game: {
-        ...mockGameContext.game,
-        track: {
-          ...mockGameContext.game.track,
-          meta: {
-            preview_url: "https://new-preview-url.m4a",
+      snapshot: {
+        ...mockGameContext.snapshot,
+        game: {
+          ...mockGameContext.snapshot.game,
+          track: {
+            ...mockGameContext.snapshot.game.track,
+            meta: {
+              preview_url: "https://new-preview-url.m4a",
+            },
           },
         },
       },
@@ -162,7 +164,7 @@ describe("DefaultMediaProvider component", () => {
   });
 
   test("calls play when is_playback is true", () => {
-    mockGameContext.game.player.is_playback = true;
+    mockGameContext.snapshot.game.player.is_playback = true;
     getGameContextSpy.mockReturnValue(mockGameContext);
 
     render(DefaultMediaProvider);
@@ -171,7 +173,7 @@ describe("DefaultMediaProvider component", () => {
   });
 
   test("calls pause when is_playback is false", () => {
-    mockGameContext.game.player.is_playback = false;
+    mockGameContext.snapshot.game.player.is_playback = false;
     getGameContextSpy.mockReturnValue(mockGameContext);
 
     render(DefaultMediaProvider);
@@ -182,7 +184,7 @@ describe("DefaultMediaProvider component", () => {
   test("handles play errors gracefully", () => {
     playSpy.mockRejectedValue(new Error("Playback failed"));
     getGameContextSpy.mockReturnValue(mockGameContext);
-    mockGameContext.game.player.is_playback = true;
+    mockGameContext.snapshot.game.player.is_playback = true;
 
     expect(() => {
       render(DefaultMediaProvider);
@@ -190,7 +192,7 @@ describe("DefaultMediaProvider component", () => {
   });
 
   test("renders when game context is missing player", () => {
-    delete mockGameContext.game.player;
+    delete mockGameContext.snapshot.game.player;
     getGameContextSpy.mockReturnValue(mockGameContext);
 
     const { container } = render(DefaultMediaProvider);
@@ -200,7 +202,7 @@ describe("DefaultMediaProvider component", () => {
   });
 
   test("handles both preview_url and url being undefined", () => {
-    mockGameContext.game.track.meta = undefined;
+    mockGameContext.snapshot.game.track.meta = undefined;
     getGameContextSpy.mockReturnValue(mockGameContext);
 
     const { container } = render(DefaultMediaProvider);
@@ -211,7 +213,7 @@ describe("DefaultMediaProvider component", () => {
   });
 
   test("handles empty meta object", () => {
-    mockGameContext.game.track.meta = {};
+    mockGameContext.snapshot.game.track.meta = {};
     getGameContextSpy.mockReturnValue(mockGameContext);
 
     const { container } = render(DefaultMediaProvider);
@@ -221,7 +223,7 @@ describe("DefaultMediaProvider component", () => {
   });
 
   test("works with valid track data but missing player state", () => {
-    delete mockGameContext.game.player;
+    delete mockGameContext.snapshot.game.player;
     getGameContextSpy.mockReturnValue(mockGameContext);
 
     const { container } = render(DefaultMediaProvider);
@@ -238,13 +240,13 @@ describe("DefaultMediaProvider component", () => {
 
     render(DefaultMediaProvider);
 
-    mockGameContext.game.player.is_playback = true;
+    mockGameContext.snapshot.game.player.is_playback = true;
     getGameContextSpy.mockReturnValue(mockGameContext);
     render(DefaultMediaProvider);
 
     expect(playSpy).toHaveBeenCalled();
 
-    mockGameContext.game.player.is_playback = false;
+    mockGameContext.snapshot.game.player.is_playback = false;
     getGameContextSpy.mockReturnValue(mockGameContext);
     render(DefaultMediaProvider);
 

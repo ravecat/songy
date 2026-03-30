@@ -92,6 +92,11 @@ export const statePayload = z
                   "Map keyed by JSON stringified zero-based positions. Values are user ids.\n",
                 ),
               winner_id: z.union([z.string(), z.null()]),
+              deadline_at_ms: z
+                .union([z.number().int().gte(0), z.null()])
+                .describe(
+                  "Authoritative challenging-phase deadline as Unix epoch time in milliseconds. Null outside time-bound phases.\n",
+                ),
             })
             .strict()
             .describe("JSON-encoded `Songy.Core.Turn`"),

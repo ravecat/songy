@@ -1,63 +1,61 @@
 import { render, screen, fireEvent } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
 import * as GameContext from "~/contexts/game";
-import * as Scope from "~components/scope.svelte";
 
 import Player from "~components/player.svelte";
 
 describe("Player", () => {
   let mockChannelContext;
-  let getScopeContextSpy;
   let getGameContextSpy;
   const ownerUser = { uuid: "user-1", name: "Alice" };
   const playerUser = { uuid: "user-2", name: "Bob" };
 
-  const renderForUser = (user) => {
-    getScopeContextSpy.mockReturnValue({ user });
+  const renderForUser = (_user) => {
     getGameContextSpy.mockReturnValue(mockChannelContext);
     render(Player);
   };
 
   beforeEach(() => {
     mockChannelContext = {
-      game: {
-        owner_id: "user-1",
-        participants: {
-          "user-1": {
-            uuid: "user-1",
-            name: "Alice",
-            avatar_url: "https://example.com/alice.jpg",
+      snapshot: {
+        game: {
+          owner_id: "user-1",
+          participants: {
+            "user-1": {
+              uuid: "user-1",
+              name: "Alice",
+              avatar_url: "https://example.com/alice.jpg",
+            },
+            "user-2": {
+              uuid: "user-2",
+              name: "Bob",
+              avatar_url: "https://example.com/bob.jpg",
+            },
           },
-          "user-2": {
-            uuid: "user-2",
-            name: "Bob",
-            avatar_url: "https://example.com/bob.jpg",
+          queue: ["user-1", "user-2"],
+          cursor: 0,
+          status: "waiting",
+          turn: null,
+          player: {
+            is_playback: false,
           },
         },
-        queue: ["user-1", "user-2"],
-        cursor: 0,
-        status: "waiting",
-        turn: null,
-        player: {
-          is_playback: false,
+        permissions: {
+          can_control_playback: false,
+          can_advance_turn: false,
+          can_start_game: false,
+          can_start_turn: false,
+          can_restart_game: false,
+          can_see_assumptions: false,
+          can_make_assumptions: false,
         },
-      },
-      permissions: {
-        can_control_playback: false,
-        can_advance_turn: false,
-        can_start_game: false,
-        can_start_turn: false,
-        can_restart_game: false,
-        can_see_assumptions: false,
-        can_make_assumptions: false,
+        timer: null,
       },
       startGame: vi.fn().mockResolvedValue(undefined),
       advanceTurn: vi.fn().mockResolvedValue(undefined),
       startPlayback: vi.fn().mockResolvedValue(undefined),
       pausePlayback: vi.fn().mockResolvedValue(undefined),
     };
-
-    getScopeContextSpy = vi.spyOn(Scope, "getScopeContext");
     getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
   });
 
@@ -85,13 +83,13 @@ describe("Player", () => {
 
   describe("waiting game | none turn", () => {
     beforeEach(() => {
-      mockChannelContext.game.status = "waiting";
-      mockChannelContext.game.turn = null;
+      mockChannelContext.snapshot.game.status = "waiting";
+      mockChannelContext.snapshot.game.turn = null;
     });
 
     describe("owner", () => {
       test("shows start game button in right slot", () => {
-        mockChannelContext.permissions.can_start_game = true;
+        mockChannelContext.snapshot.permissions.can_start_game = true;
 
         renderForUser(ownerUser);
 
@@ -109,7 +107,7 @@ describe("Player", () => {
       });
 
       test("starts game when start is clicked", async () => {
-        mockChannelContext.permissions.can_start_game = true;
+        mockChannelContext.snapshot.permissions.can_start_game = true;
 
         renderForUser(ownerUser);
 
@@ -134,8 +132,8 @@ describe("Player", () => {
 
   describe("in progress game | waiting turn", () => {
     beforeEach(() => {
-      mockChannelContext.game.status = "in_progress";
-      mockChannelContext.game.turn = {
+      mockChannelContext.snapshot.game.status = "in_progress";
+      mockChannelContext.snapshot.game.turn = {
         phase: "waiting",
         assumptions: {},
         winner_id: null,
@@ -144,7 +142,7 @@ describe("Player", () => {
 
     describe("owner", () => {
       test("advances turn when ready is clicked", async () => {
-        mockChannelContext.permissions.can_start_turn = true;
+        mockChannelContext.snapshot.permissions.can_start_turn = true;
 
         renderForUser(ownerUser);
 
@@ -154,7 +152,7 @@ describe("Player", () => {
       });
 
       test("disables play button during waiting phase", () => {
-        mockChannelContext.permissions.can_control_playback = false;
+        mockChannelContext.snapshot.permissions.can_control_playback = false;
 
         renderForUser(ownerUser);
 
@@ -167,11 +165,11 @@ describe("Player", () => {
 
     describe("player", () => {
       beforeEach(() => {
-        mockChannelContext.game.cursor = 1;
+        mockChannelContext.snapshot.game.cursor = 1;
       });
 
       test("disables play button during waiting phase", () => {
-        mockChannelContext.permissions.can_control_playback = false;
+        mockChannelContext.snapshot.permissions.can_control_playback = false;
 
         renderForUser(playerUser);
 
@@ -185,8 +183,8 @@ describe("Player", () => {
 
   describe("in progress game | ready turn", () => {
     beforeEach(() => {
-      mockChannelContext.game.status = "in_progress";
-      mockChannelContext.game.turn = {
+      mockChannelContext.snapshot.game.status = "in_progress";
+      mockChannelContext.snapshot.game.turn = {
         phase: "ready",
         assumptions: {},
         winner_id: null,
@@ -195,7 +193,7 @@ describe("Player", () => {
 
     describe("owner", () => {
       test("shows disabled forward button without advance permission", () => {
-        mockChannelContext.permissions.can_control_playback = true;
+        mockChannelContext.snapshot.permissions.can_control_playback = true;
 
         renderForUser(ownerUser);
 
@@ -210,12 +208,12 @@ describe("Player", () => {
 
     describe("player", () => {
       beforeEach(() => {
-        mockChannelContext.game.cursor = 1;
+        mockChannelContext.snapshot.game.cursor = 1;
       });
 
       test("shows disabled forward button without advance permission", () => {
-        mockChannelContext.permissions.can_control_playback = true;
-        mockChannelContext.permissions.can_advance_turn = false;
+        mockChannelContext.snapshot.permissions.can_control_playback = true;
+        mockChannelContext.snapshot.permissions.can_advance_turn = false;
 
         renderForUser(playerUser);
 
@@ -228,8 +226,8 @@ describe("Player", () => {
       });
 
       test("shows enabled forward button with advance permission", () => {
-        mockChannelContext.permissions.can_control_playback = true;
-        mockChannelContext.permissions.can_advance_turn = true;
+        mockChannelContext.snapshot.permissions.can_control_playback = true;
+        mockChannelContext.snapshot.permissions.can_advance_turn = true;
 
         renderForUser(playerUser);
 
@@ -244,8 +242,8 @@ describe("Player", () => {
 
     describe("challenger", () => {
       test("shows disabled forward button without advance permission", () => {
-        mockChannelContext.permissions.can_control_playback = false;
-        mockChannelContext.permissions.can_advance_turn = false;
+        mockChannelContext.snapshot.permissions.can_control_playback = false;
+        mockChannelContext.snapshot.permissions.can_advance_turn = false;
 
         renderForUser(playerUser);
 
@@ -261,10 +259,10 @@ describe("Player", () => {
 
   describe("finished game", () => {
     beforeEach(() => {
-      mockChannelContext.game.status = "finished";
-      mockChannelContext.game.turn = null;
-      mockChannelContext.permissions.can_restart_game = true;
-      mockChannelContext.permissions.can_control_playback = true;
+      mockChannelContext.snapshot.game.status = "finished";
+      mockChannelContext.snapshot.game.turn = null;
+      mockChannelContext.snapshot.permissions.can_restart_game = true;
+      mockChannelContext.snapshot.permissions.can_control_playback = true;
     });
 
     test("shows play again button in left slot", () => {
@@ -294,7 +292,7 @@ describe("Player", () => {
 
   describe("play button aria-pressed", () => {
     test("sets aria-pressed=false when not playing", () => {
-      mockChannelContext.game.player.is_playback = false;
+      mockChannelContext.snapshot.game.player.is_playback = false;
 
       renderForUser(ownerUser);
 
@@ -304,8 +302,8 @@ describe("Player", () => {
     });
 
     test("sets aria-pressed=true when playing", () => {
-      mockChannelContext.game.player.is_playback = true;
-      mockChannelContext.permissions.can_control_playback = true;
+      mockChannelContext.snapshot.game.player.is_playback = true;
+      mockChannelContext.snapshot.permissions.can_control_playback = true;
 
       renderForUser(ownerUser);
 
@@ -317,8 +315,8 @@ describe("Player", () => {
 
   describe("playback events", () => {
     test("pushes start_playback when paused", async () => {
-      mockChannelContext.game.player.is_playback = false;
-      mockChannelContext.permissions.can_control_playback = true;
+      mockChannelContext.snapshot.game.player.is_playback = false;
+      mockChannelContext.snapshot.permissions.can_control_playback = true;
 
       renderForUser(ownerUser);
 
@@ -328,8 +326,8 @@ describe("Player", () => {
     });
 
     test("pushes pause_playback when playing", async () => {
-      mockChannelContext.game.player.is_playback = true;
-      mockChannelContext.permissions.can_control_playback = true;
+      mockChannelContext.snapshot.game.player.is_playback = true;
+      mockChannelContext.snapshot.permissions.can_control_playback = true;
 
       renderForUser(ownerUser);
 

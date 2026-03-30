@@ -27,7 +27,7 @@
   });
 </script>
 
-{#if session.game}
+{#if session.snapshot}
   {@render children?.()}
 {:else if session.connection === "error" && session.error}
   <div class="game-channel__error" role="alert">

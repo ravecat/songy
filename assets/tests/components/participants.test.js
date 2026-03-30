@@ -16,12 +16,14 @@ describe("Participants component", () => {
 
   test("displays correct participant count", () => {
     const mockChannelContext = {
-      game: {
-        participants: [
-          { uuid: "user-1", name: "Alice", avatar_url: "https://example.com/alice.jpg" },
-          { uuid: "user-2", name: "Bob", avatar_url: "https://example.com/bob.jpg" },
-          { uuid: "user-3", name: "Charlie", avatar_url: "https://example.com/charlie.jpg" },
-        ],
+      snapshot: {
+        game: {
+          participants: [
+            { uuid: "user-1", name: "Alice", avatar_url: "https://example.com/alice.jpg" },
+            { uuid: "user-2", name: "Bob", avatar_url: "https://example.com/bob.jpg" },
+            { uuid: "user-3", name: "Charlie", avatar_url: "https://example.com/charlie.jpg" },
+          ],
+        },
       },
     };
 
@@ -35,8 +37,10 @@ describe("Participants component", () => {
 
   test("displays 0 when no participants", () => {
     const emptyChannelContext = {
-      game: {
-        participants: [],
+      snapshot: {
+        game: {
+          participants: [],
+        },
       },
     };
 
@@ -49,10 +53,12 @@ describe("Participants component", () => {
 
   test("displays 1 player singular form", () => {
     const singleParticipantContext = {
-      game: {
-        participants: [
-          { uuid: "user-1", name: "Alice", avatar_url: "https://example.com/alice.jpg" },
-        ],
+      snapshot: {
+        game: {
+          participants: [
+            { uuid: "user-1", name: "Alice", avatar_url: "https://example.com/alice.jpg" },
+          ],
+        },
       },
     };
 
@@ -66,7 +72,7 @@ describe("Participants component", () => {
 
   test("handles null game gracefully", () => {
     const nullGameContext = {
-      game: null,
+      snapshot: null,
     };
 
     getGameContextSpy.mockReturnValue(nullGameContext);
@@ -78,7 +84,9 @@ describe("Participants component", () => {
 
   test("handles undefined participants gracefully", () => {
     const undefinedParticipantsContext = {
-      game: {},
+      snapshot: {
+        game: {},
+      },
     };
 
     getGameContextSpy.mockReturnValue(undefinedParticipantsContext);
@@ -90,10 +98,12 @@ describe("Participants component", () => {
 
   test("renders Users icon", () => {
     const mockChannelContext = {
-      game: {
-        participants: [
-          { uuid: "user-1", name: "Alice", avatar_url: "https://example.com/alice.jpg" },
-        ],
+      snapshot: {
+        game: {
+          participants: [
+            { uuid: "user-1", name: "Alice", avatar_url: "https://example.com/alice.jpg" },
+          ],
+        },
       },
     };
 

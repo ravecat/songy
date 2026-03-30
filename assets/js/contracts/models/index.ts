@@ -8,7 +8,6 @@ export type { JoinPayload } from "./JoinPayload.js";
 export type { JoinReply } from "./JoinReply.js";
 export type { PhxSystemPayload } from "./PhxSystemPayload.js";
 export type { StatePayload } from "./StatePayload.js";
-export type { TimerPayload } from "./TimerPayload.js";
 export type { Game } from "./Game.js";
 export type { User } from "./User.js";
 export type { Player } from "./Player.js";

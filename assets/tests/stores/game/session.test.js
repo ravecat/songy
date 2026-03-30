@@ -30,6 +30,7 @@ function buildStatePayload(phase = "challenging") {
         phase,
         assumptions: {},
         winner_id: null,
+        deadline_at_ms: phase === "challenging" ? 1_735_689_600_000 : null,
       },
     },
     permissions: {
@@ -48,7 +49,6 @@ function buildTransport() {
   let resolveJoin;
   let failureHandler;
   let stateHandler;
-  let timerHandler;
   const join = new Promise((resolve) => {
     resolveJoin = resolve;
   });
@@ -62,10 +62,6 @@ function buildTransport() {
     subscribe: vi.fn((event, callback) => {
       if (event === "state") {
         stateHandler = callback;
-      }
-
-      if (event === "timer") {
-        timerHandler = callback;
       }
 
       return vi.fn();
@@ -92,9 +88,6 @@ function buildTransport() {
     emitSnapshot(payload) {
       stateHandler(payload);
     },
-    emitTimer(remaining) {
-      timerHandler({ remaining });
-    },
     emitTransportError(error) {
       failureHandler({
         kind: "error",
@@ -113,7 +106,7 @@ describe("createGameSession", () => {
   test("starts in connecting state", () => {
     const session = createGameSession({ transport: buildTransport() });
 
-    expect(session.state).toBeNull();
+    expect(session.snapshot).toBeNull();
     expect(session.connection).toBe("connecting");
     expect(session.error).toBeNull();
   });
@@ -130,11 +123,6 @@ describe("createGameSession", () => {
       "state",
       expect.any(Function),
     );
-    expect(transport.subscribe).toHaveBeenNthCalledWith(
-      2,
-      "timer",
-      expect.any(Function),
-    );
   });
 
   test("maps join snapshot into the public session", async () => {
@@ -145,45 +133,25 @@ describe("createGameSession", () => {
     transport.resolveJoinOk(payload);
     await Promise.resolve();
 
-    expect(session.state).toStrictEqual(payload);
-    expect(session.game).toStrictEqual(payload.game);
-    expect(session.permissions).toStrictEqual(payload.permissions);
+    expect(session.snapshot).toStrictEqual({
+      game: payload.game,
+      permissions: payload.permissions,
+    });
     expect(session.connection).toBe("ready");
   });
 
-  test("maps transport snapshot and timer into the public session", () => {
+  test("maps transport snapshot into the public session", () => {
     const transport = buildTransport();
     const session = createGameSession({ transport });
     const payload = buildStatePayload();
 
     transport.emitSnapshot(payload);
-    transport.emitTimer(9);
 
-    expect(session.state).toStrictEqual(payload);
-    expect(session.game).toStrictEqual(payload.game);
-    expect(session.permissions).toStrictEqual(payload.permissions);
-    expect(session.timer).toBe(9);
+    expect(session.snapshot).toStrictEqual({
+      game: payload.game,
+      permissions: payload.permissions,
+    });
     expect(session.connection).toBe("ready");
-  });
-
-  test("keeps timer during challenging phase", () => {
-    const transport = buildTransport();
-    const session = createGameSession({ transport });
-
-    transport.emitTimer(12);
-    transport.emitSnapshot(buildStatePayload("challenging"));
-
-    expect(session.timer).toBe(12);
-  });
-
-  test("clears timer when snapshot phase is not challenging", () => {
-    const transport = buildTransport();
-    const session = createGameSession({ transport });
-
-    transport.emitTimer(12);
-    transport.emitSnapshot(buildStatePayload("results"));
-
-    expect(session.timer).toBeNull();
   });
 
   test("maps recoverable failure after snapshot to reconnecting", () => {

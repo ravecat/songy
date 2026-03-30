@@ -9,8 +9,8 @@ info:
     (`room:{room_id}`) over the authenticated user socket.
 
     The specification models Phoenix protocol events (`phx_join`, `phx_reply`,
-    `phx_error`, `phx_close`) together with application events (`state`,
-    `timer`, and room actions such as `start_game` or `get_provider`).
+    `phx_error`, `phx_close`) together with application events (`state` and
+    room actions such as `start_game` or `get_provider`).
   license:
     name: MIT
   tags:
@@ -58,8 +58,8 @@ channels:
       Phoenix Channel for a single Songy game room.
 
       The channel is stateful: the server returns the initial room snapshot in
-      the join reply, pushes `state` after subsequent state transitions, and
-      pushes `timer` once per second during the challenging phase.
+      the join reply and pushes `state` after subsequent state transitions.
+      Challenging-phase timer data is embedded in `game.turn.deadline_at_ms`.
     parameters:
       room_id:
         description: Human-readable room identifier, for example `happy-tiger-42`
@@ -74,8 +74,6 @@ channels:
         $ref: "#/components/messages/phxClose"
       stateOut:
         $ref: "#/components/messages/stateOut"
-      timerOut:
-        $ref: "#/components/messages/timerOut"
       startGame:
         $ref: "#/components/messages/startGame"
       startPlayback:
@@ -265,16 +263,6 @@ operations:
       permission flags.
     messages:
       - $ref: "#/channels/gameRoom/messages/stateOut"
-  receiveTimer:
-    action: receive
-    channel:
-      $ref: "#/channels/gameRoom"
-    summary: Receive countdown ticks during the challenging phase
-    description: |
-      Server pushes `timer` once per second while the room is in the
-      challenging phase. `remaining` is expressed in whole seconds.
-    messages:
-      - $ref: "#/channels/gameRoom/messages/timerOut"
   receiveError:
     action: receive
     channel:
@@ -409,17 +397,6 @@ components:
               can_restart_game: false
               can_see_assumptions: false
               can_make_assumptions: false
-    timerOut:
-      name: timer
-      title: Timer Tick
-      summary: Challenging-phase countdown tick
-      contentType: application/json
-      payload:
-        $ref: "#/components/schemas/timerPayload"
-      examples:
-        - name: remaining-7-seconds
-          payload:
-            remaining: 7
     startGame:
       name: start_game
       title: Start Game
@@ -688,16 +665,6 @@ components:
         permissions:
           $ref: "#/components/schemas/permissions"
       additionalProperties: false
-    timerPayload:
-      type: object
-      required:
-        - remaining
-      properties:
-        remaining:
-          type: integer
-          minimum: 0
-          description: Remaining time in whole seconds
-      additionalProperties: false
     game:
       type: object
       description: JSON-encoded `Songy.Core.Game` snapshot
@@ -804,6 +771,7 @@ components:
         - phase
         - assumptions
         - winner_id
+        - deadline_at_ms
       properties:
         phase:
           type: string
@@ -823,6 +791,14 @@ components:
           oneOf:
             - type: string
             - type: "null"
+        deadline_at_ms:
+          oneOf:
+            - type: integer
+              minimum: 0
+            - type: "null"
+          description: >
+            Authoritative challenging-phase deadline as Unix epoch time in
+            milliseconds. Null outside time-bound phases.
       additionalProperties: false
     track:
       type: object

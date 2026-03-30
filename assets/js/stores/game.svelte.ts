@@ -2,7 +2,6 @@ import type {
   AssumptionPayload,
   JoinReply,
   StatePayload,
-  TimerPayload,
 } from "~contracts";
 import {
   createTransport,
@@ -17,11 +16,13 @@ export type GameConnectionState =
   | "closed"
   | "error";
 
+export interface GameSnapshot {
+  readonly game: StatePayload["game"];
+  readonly permissions: StatePayload["permissions"];
+}
+
 export interface GameSession {
-  readonly state: StatePayload | null;
-  readonly game: StatePayload["game"] | null;
-  readonly permissions: StatePayload["permissions"] | null;
-  readonly timer: number | null;
+  readonly snapshot: GameSnapshot | null;
   readonly connection: GameConnectionState;
   readonly error: unknown;
 
@@ -36,7 +37,6 @@ export interface GameSession {
 export interface GameChannelSpec {
   on: {
     state: StatePayload;
-    timer: TimerPayload;
   };
   join: {
     ok: Extract<JoinReply, { status: "ok" }>["response"];
@@ -109,8 +109,7 @@ export function createGameSession(
       payload: options.payload,
     });
 
-  let state = $state<StatePayload | null>(null);
-  let timer = $state<number | null>(null);
+  let snapshot = $state<GameSnapshot | null>(null);
   let error = $state<unknown>(null);
   let connection = $state<GameConnectionState>("connecting");
   const teardowns: Array<() => void> = [];
@@ -122,17 +121,12 @@ export function createGameSession(
   }
 
   function applySnapshot(payload: StatePayload) {
-    state = payload;
+    snapshot = {
+      game: payload.game,
+      permissions: payload.permissions,
+    };
     error = null;
     connection = "ready";
-
-    if (payload.game.turn?.phase !== "challenging") {
-      timer = null;
-    }
-  }
-
-  function applyTimerSync(remaining: number) {
-    timer = remaining;
   }
 
   function applyFailure(nextError: unknown, recoverable: boolean) {
@@ -140,7 +134,7 @@ export function createGameSession(
       return;
     }
 
-    if (recoverable && state) {
+    if (recoverable && snapshot !== null) {
       setFailure(nextError, "reconnecting");
       return;
     }
@@ -168,12 +162,6 @@ export function createGameSession(
 
   teardowns.push(
     transport.subscribe("state", applySnapshot),
-  );
-
-  teardowns.push(
-    transport.subscribe("timer", ({ remaining }) => {
-      applyTimerSync(remaining);
-    }),
   );
 
   void transport.join().then((result) => {
@@ -220,17 +208,8 @@ export function createGameSession(
   }
 
   return {
-    get state() {
-      return state;
-    },
-    get game() {
-      return state?.game ?? null;
-    },
-    get permissions() {
-      return state?.permissions ?? null;
-    },
-    get timer() {
-      return timer;
+    get snapshot() {
+      return snapshot;
     },
     get connection() {
       return connection;

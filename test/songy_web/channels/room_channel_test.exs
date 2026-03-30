@@ -119,28 +119,38 @@ defmodule SongyWeb.RoomChannelTest do
     end
   end
 
-  describe "timer updates" do
-    test "pushes timer when channel receives a timer message", %{current_user: current_user} do
+  describe "challenging deadline" do
+    test "includes deadline_at_ms in state push", %{current_user: current_user} do
       game_id = "game-123"
+      deadline_at_ms = System.system_time(:millisecond) + 5_000
 
-      game_state = %Game{
+      initial_game = %Game{
+        id: game_id,
+        owner_id: "owner123",
+        status: :waiting,
+        queue: [],
+        cursor: 0,
+        turn: nil
+      }
+
+      challenging_game = %Game{
         id: game_id,
         owner_id: "owner123",
         status: :in_progress,
         queue: [],
         cursor: 0,
-        turn: %Turn{phase: :challenging}
+        turn: %Turn{phase: :challenging, assumptions: %{}, winner_id: nil, deadline_at_ms: deadline_at_ms}
       }
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok, game_state}
+        {:ok, initial_game}
       end)
 
       {:ok, _, socket} = join_room_channel(current_user, game_id)
 
-      send(socket.channel_pid, {:timer, 7})
+      send(socket.channel_pid, {:state, challenging_game})
 
-      assert_push "timer", %{remaining: 7}
+      assert_push "state", %{game: %{turn: %{deadline_at_ms: ^deadline_at_ms}}, permissions: _permissions}
     end
   end
 

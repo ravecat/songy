@@ -3,7 +3,8 @@
   import Vinyl from "~components/vinyl.svelte";
   import Sleeve from "~components/sleeve.svelte";
 
-  const { game } = $derived.by(getGameContext);
+  const session = $derived.by(getGameContext);
+  const game = $derived(session.snapshot?.game ?? null);
   const track = $derived(game?.track);
 
   const participants = $derived(game?.participants ?? {});

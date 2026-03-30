@@ -897,7 +897,7 @@ defmodule Songy.Boundary.GameTest do
     end
   end
 
-  describe ":in_progress - :challenging - timer broadcast" do
+  describe ":in_progress - :challenging - deadline" do
     setup %{game_id: game_id, owner: owner} do
       original_timeout = Application.get_env(:songy, :challenging_phase_timeout)
       Application.put_env(:songy, :challenging_phase_timeout, 50)
@@ -928,12 +928,13 @@ defmodule Songy.Boundary.GameTest do
       :ok
     end
 
-    test "broadcasts at least one timer tick", %{game_id: game_id, owner: owner} do
+    test "broadcasts challenging state with deadline_at_ms", %{game_id: game_id, owner: owner} do
       {:ok, _} = Game.advance_turn(game_id, owner.uuid)
 
-      assert_receive {:timer, remaining}, 100
-      assert is_integer(remaining)
-      assert remaining >= 0
+      assert_receive {:state, game}, 100
+      assert game.turn.phase == :challenging
+      assert is_integer(game.turn.deadline_at_ms)
+      assert game.turn.deadline_at_ms >= System.system_time(:millisecond)
     end
   end
 

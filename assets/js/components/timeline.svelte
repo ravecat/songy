@@ -92,7 +92,7 @@
   type TimelineCell = SlotCell | TrackCell | AssumptionCell;
 
   const session = $derived.by(getGameContext);
-  const game = $derived(session.game);
+  const game = $derived(session.snapshot?.game ?? null);
   const activePlayerId = $derived(game?.queue?.[game?.cursor]);
   const participants = $derived(game?.participants ?? {});
   const assumptions = $derived(game?.turn?.assumptions ?? {});

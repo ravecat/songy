@@ -159,7 +159,7 @@ defmodule Songy.Boundary.Game do
       game = %{
         data
         | status: :in_progress,
-          turn: %Core.Turn{phase: :waiting, assumptions: %{}}
+          turn: %Core.Turn{phase: :waiting, assumptions: %{}, deadline_at_ms: nil}
       }
 
       {:next_state, {:in_progress, :waiting}, game, [{:reply, from, {:ok, game}}, {:next_event, :internal, :broadcast}]}
@@ -237,35 +237,12 @@ defmodule Songy.Boundary.Game do
           {data, nil}
       end
 
-    updated_game = %{updated_game | turn: %{turn | phase: :results, winner_id: winner_id}}
+    updated_game = %{
+      updated_game
+      | turn: %{turn | phase: :results, winner_id: winner_id, deadline_at_ms: nil}
+    }
 
     {:next_state, {:in_progress, :results}, updated_game, [{:next_event, :internal, :broadcast}]}
-  end
-
-  def handle_event(
-        {:timeout, :timer},
-        {:tick, deadline_ms},
-        {:in_progress, :challenging},
-        data
-      ) do
-    now_ms = System.system_time(:millisecond)
-    remaining = max(0, div(deadline_ms - now_ms + 999, 1_000))
-
-    Phoenix.PubSub.local_broadcast(
-      Songy.PubSub,
-      "room:#{data.id}",
-      {:timer, remaining}
-    )
-
-    if remaining > 0 do
-      {:keep_state, data, [{{:timeout, :timer}, 1_000, {:tick, deadline_ms}}]}
-    else
-      {:keep_state, data}
-    end
-  end
-
-  def handle_event({:timeout, :timer}, _payload, _state, data) do
-    {:keep_state, data}
   end
 
   def handle_event(:info, _event, {:in_progress, _phase}, data) do
@@ -304,15 +281,14 @@ defmodule Songy.Boundary.Game do
     with :ok <- Songy.Authorization.can?(:advance_turn, user_id, data) do
       Logger.debug("Game #{data.id}: Advancing turn phase")
 
-      updated_game = %{data | turn: %{turn | phase: :challenging}}
       timeout_ms = Application.fetch_env!(:songy, :challenging_phase_timeout)
       deadline_ms = System.system_time(:millisecond) + timeout_ms
+      updated_game = %{data | turn: %{turn | phase: :challenging, deadline_at_ms: deadline_ms}}
 
       {:next_state, {:in_progress, :challenging}, updated_game,
        [
          {:reply, from, {:ok, updated_game}},
          {:next_event, :internal, :broadcast},
-         {{:timeout, :timer}, 0, {:tick, deadline_ms}},
          {{:timeout, :challenging}, timeout_ms, :auto_advance}
        ]}
     else
@@ -347,7 +323,7 @@ defmodule Songy.Boundary.Game do
         | player: Core.Player.set_playback(data.player, false),
           track: track,
           cursor: next_cursor,
-          turn: %Core.Turn{phase: :waiting, assumptions: %{}}
+          turn: %Core.Turn{phase: :waiting, assumptions: %{}, deadline_at_ms: nil}
       }
 
       {:next_state, {:in_progress, :waiting}, updated_game,

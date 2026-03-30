@@ -1,73 +1,87 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
 import * as GameContext from "~/contexts/game";
-import * as Scope from "~components/scope.svelte";
+import { currentUser } from "~/stores/scope";
 
 import Game from "~components/game.svelte";
 
+vi.mock("~/stores/scope", async () => {
+  const { writable } = await import("svelte/store");
+
+  return {
+    currentUser: writable(null),
+    provider: writable(undefined),
+  };
+});
+
 describe("Game", () => {
   let mockChannelContext;
-  let getScopeContextSpy;
   let getGameContextSpy;
 
   beforeEach(() => {
+    currentUser.set({
+      uuid: "user-1",
+      name: "Alice",
+    });
+
     mockChannelContext = {
-      game: {
-        participants: {
-          "user-1": {
-            uuid: "user-1",
-            name: "Alice",
-            avatar_url: "https://example.com/alice.jpg",
-          },
-          "user-2": {
-            uuid: "user-2",
-            name: "Bob",
-            avatar_url: "https://example.com/bob.jpg",
-          },
-        },
-        queue: ["user-1", "user-2"],
-        cursor: 0,
-        track: null,
-        timelines: {
-          "user-1": [
-            {
-              id: "timeline-track",
-              title: "Timeline Track",
-              artist: "Timeline Artist",
-              year: 2019,
-              cover_url: null,
-              meta: {},
+      snapshot: {
+        game: {
+          participants: {
+            "user-1": {
+              uuid: "user-1",
+              name: "Alice",
+              avatar_url: "https://example.com/alice.jpg",
             },
-          ],
-          "user-2": [
-            {
-              id: "timeline-track",
-              title: "Timeline Track",
-              artist: "Timeline Artist",
-              year: 2019,
-              cover_url: null,
-              meta: {},
+            "user-2": {
+              uuid: "user-2",
+              name: "Bob",
+              avatar_url: "https://example.com/bob.jpg",
             },
-          ],
+          },
+          queue: ["user-1", "user-2"],
+          cursor: 0,
+          track: null,
+          timelines: {
+            "user-1": [
+              {
+                id: "timeline-track",
+                title: "Timeline Track",
+                artist: "Timeline Artist",
+                year: 2019,
+                cover_url: null,
+                meta: {},
+              },
+            ],
+            "user-2": [
+              {
+                id: "timeline-track",
+                title: "Timeline Track",
+                artist: "Timeline Artist",
+                year: 2019,
+                cover_url: null,
+                meta: {},
+              },
+            ],
+          },
+          turn: {
+            phase: "ready",
+            assumptions: {},
+            winner_id: null,
+          },
         },
-        turn: {
-          phase: "ready",
-          assumptions: {},
-          winner_id: null,
+        permissions: {
+          can_start_turn: false,
+          can_control_playback: false,
+          can_advance_turn: false,
+          can_start_game: false,
+          can_restart_game: false,
+          can_see_assumptions: false,
+          can_make_assumptions: false,
         },
-      },
-      permissions: {
-        can_start_turn: false,
-        can_control_playback: false,
-        can_advance_turn: false,
-        can_start_game: false,
-        can_restart_game: false,
-        can_see_assumptions: false,
-        can_make_assumptions: false,
+        timer: null,
       },
     };
-
-    getScopeContextSpy = vi.spyOn(Scope, "getScopeContext");
     getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
   });
 
@@ -76,16 +90,9 @@ describe("Game", () => {
   });
 
   test("renders timeline details for active player in ready phase", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "user-1",
-        name: "Alice",
-      },
-    };
+    mockChannelContext.snapshot.game.turn.phase = "ready";
 
-    mockChannelContext.game.turn.phase = "ready";
-
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
+    currentUser.set({ uuid: "user-1", name: "Alice" });
     getGameContextSpy.mockReturnValue(mockChannelContext);
 
     render(Game);
@@ -96,16 +103,9 @@ describe("Game", () => {
   });
 
   test("renders timeline details for passive player in ready phase", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "user-2",
-        name: "Bob",
-      },
-    };
+    mockChannelContext.snapshot.game.turn.phase = "ready";
 
-    mockChannelContext.game.turn.phase = "ready";
-
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
+    currentUser.set({ uuid: "user-2", name: "Bob" });
     getGameContextSpy.mockReturnValue(mockChannelContext);
 
     render(Game);
@@ -116,17 +116,9 @@ describe("Game", () => {
   });
 
   test("displays waiting view on waiting phase", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "user-1",
-        name: "Alice",
-      },
-    };
+    mockChannelContext.snapshot.game.turn.phase = "waiting";
+    mockChannelContext.snapshot.permissions.can_start_turn = true;
 
-    mockChannelContext.game.turn.phase = "waiting";
-    mockChannelContext.permissions.can_start_turn = true;
-
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockReturnValue(mockChannelContext);
 
     render(Game);
@@ -135,16 +127,8 @@ describe("Game", () => {
   });
 
   test("displays waiting view for passive player", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "user-2",
-        name: "Bob",
-      },
-    };
+    mockChannelContext.snapshot.game.turn.phase = "waiting";
 
-    mockChannelContext.game.turn.phase = "waiting";
-
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockReturnValue(mockChannelContext);
 
     render(Game);
@@ -153,15 +137,8 @@ describe("Game", () => {
   });
 
   test("displays results view on results phase", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "test-user-uuid",
-        name: "Test User",
-      },
-    };
-
-    mockChannelContext.game.turn.phase = "results";
-    mockChannelContext.game.track = {
+    mockChannelContext.snapshot.game.turn.phase = "results";
+    mockChannelContext.snapshot.game.track = {
       id: "track-1",
       title: "Test Track",
       artist: "Test Artist",
@@ -172,7 +149,6 @@ describe("Game", () => {
       },
     };
 
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockReturnValue(mockChannelContext);
 
     render(Game);
@@ -183,16 +159,8 @@ describe("Game", () => {
   });
 
   test("renders nothing when turn phase is undefined", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "test-user-uuid",
-        name: "Test User",
-      },
-    };
+    mockChannelContext.snapshot.game.turn = undefined;
 
-    mockChannelContext.game.turn = undefined;
-
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockReturnValue(mockChannelContext);
 
     render(Game);
@@ -201,19 +169,11 @@ describe("Game", () => {
   });
 
   test("renders nothing when state is undefined", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "test-user-uuid",
-        name: "Test User",
-      },
-    };
-
-    mockChannelContext.game = {
+    mockChannelContext.snapshot.game = {
       participants: {},
       turn: undefined,
     };
 
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockReturnValue(mockChannelContext);
 
     render(Game);
@@ -223,16 +183,8 @@ describe("Game", () => {
   });
 
   test("renders nothing when turn phase is null", () => {
-    const mockScopeContext = {
-      user: {
-        uuid: "test-user-uuid",
-        name: "Test User",
-      },
-    };
+    mockChannelContext.snapshot.game.turn.phase = null;
 
-    mockChannelContext.game.turn.phase = null;
-
-    getScopeContextSpy.mockReturnValue(mockScopeContext);
     getGameContextSpy.mockReturnValue(mockChannelContext);
 
     render(Game);
@@ -253,16 +205,8 @@ describe("Game", () => {
   test.each(["turn_countdown", "", "unknown_phase", 123, {}, []])(
     "renders nothing for invalid phase: %s",
     (phase) => {
-      const mockScopeContext = {
-        user: {
-          uuid: "test-user-uuid",
-          name: "Test User",
-        },
-      };
+      mockChannelContext.snapshot.game.turn.phase = phase;
 
-      mockChannelContext.game.turn.phase = phase;
-
-      getScopeContextSpy.mockReturnValue(mockScopeContext);
       getGameContextSpy.mockReturnValue(mockChannelContext);
 
       render(Game);

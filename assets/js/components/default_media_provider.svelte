@@ -9,8 +9,8 @@
   let { children }: Props = $props();
 
   const session = $derived.by(getGameContext);
-  const game = $derived(session.game);
-  const permissions = $derived(session.permissions);
+  const game = $derived(session.snapshot?.game ?? null);
+  const permissions = $derived(session.snapshot?.permissions ?? null);
 
   const src = $derived.by(() => {
     const previewUrl = game?.track?.meta?.preview_url;

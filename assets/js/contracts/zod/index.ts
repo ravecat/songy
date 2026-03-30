@@ -8,7 +8,6 @@ export { joinPayload } from "./joinPayloadSchema.js";
 export { joinReply } from "./joinReplySchema.js";
 export { phxSystemPayload } from "./phxSystemPayloadSchema.js";
 export { statePayload } from "./statePayloadSchema.js";
-export { timerPayload } from "./timerPayloadSchema.js";
 export { game } from "./gameSchema.js";
 export { user } from "./userSchema.js";
 export { player } from "./playerSchema.js";

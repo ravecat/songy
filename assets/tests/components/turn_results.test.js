@@ -45,13 +45,15 @@ describe("TurnResults", () => {
 
   test("renders track info", () => {
     getGameContextSpy.mockReturnValue({
-      game: {
-        track: mockTrack,
-        participants: mockParticipants,
-        turn: {
-          phase: "results",
-          assumptions: mockAssumptions,
-          winner_id: "user-1",
+      snapshot: {
+        game: {
+          track: mockTrack,
+          participants: mockParticipants,
+          turn: {
+            phase: "results",
+            assumptions: mockAssumptions,
+            winner_id: "user-1",
+          },
         },
       },
     });
@@ -65,13 +67,15 @@ describe("TurnResults", () => {
 
   test("displays all challengers avatars", () => {
     getGameContextSpy.mockReturnValue({
-      game: {
-        track: mockTrack,
-        participants: mockParticipants,
-        turn: {
-          phase: "results",
-          assumptions: mockAssumptions,
-          winner_id: "user-1",
+      snapshot: {
+        game: {
+          track: mockTrack,
+          participants: mockParticipants,
+          turn: {
+            phase: "results",
+            assumptions: mockAssumptions,
+            winner_id: "user-1",
+          },
         },
       },
     });
@@ -92,13 +96,15 @@ describe("TurnResults", () => {
 
   test("displays challenger names", () => {
     getGameContextSpy.mockReturnValue({
-      game: {
-        track: mockTrack,
-        participants: mockParticipants,
-        turn: {
-          phase: "results",
-          assumptions: mockAssumptions,
-          winner_id: "user-1",
+      snapshot: {
+        game: {
+          track: mockTrack,
+          participants: mockParticipants,
+          turn: {
+            phase: "results",
+            assumptions: mockAssumptions,
+            winner_id: "user-1",
+          },
         },
       },
     });
@@ -111,13 +117,15 @@ describe("TurnResults", () => {
 
   test("highlights winner with score badge", () => {
     getGameContextSpy.mockReturnValue({
-      game: {
-        track: mockTrack,
-        participants: mockParticipants,
-        turn: {
-          phase: "results",
-          assumptions: mockAssumptions,
-          winner_id: "user-1",
+      snapshot: {
+        game: {
+          track: mockTrack,
+          participants: mockParticipants,
+          turn: {
+            phase: "results",
+            assumptions: mockAssumptions,
+            winner_id: "user-1",
+          },
         },
       },
     });
@@ -135,13 +143,15 @@ describe("TurnResults", () => {
 
   test("only one challenger is marked as winner", () => {
     getGameContextSpy.mockReturnValue({
-      game: {
-        track: mockTrack,
-        participants: mockParticipants,
-        turn: {
-          phase: "results",
-          assumptions: mockAssumptions,
-          winner_id: "user-1",
+      snapshot: {
+        game: {
+          track: mockTrack,
+          participants: mockParticipants,
+          turn: {
+            phase: "results",
+            assumptions: mockAssumptions,
+            winner_id: "user-1",
+          },
         },
       },
     });
@@ -159,13 +169,15 @@ describe("TurnResults", () => {
 
   test("handles missing winner - no winner highlighted", () => {
     getGameContextSpy.mockReturnValue({
-      game: {
-        track: mockTrack,
-        participants: mockParticipants,
-        turn: {
-          phase: "results",
-          assumptions: mockAssumptions,
-          winner_id: null,
+      snapshot: {
+        game: {
+          track: mockTrack,
+          participants: mockParticipants,
+          turn: {
+            phase: "results",
+            assumptions: mockAssumptions,
+            winner_id: null,
+          },
         },
       },
     });
