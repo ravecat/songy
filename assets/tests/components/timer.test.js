@@ -12,6 +12,12 @@ vi.mock("~/socket", async () => {
   };
 });
 
+function getReceiveHandler(push, status) {
+  return push.receive.mock.calls
+    .filter(([currentStatus]) => currentStatus === status)
+    .at(-1)?.[1];
+}
+
 function buildStatePayload(phase = "challenging") {
   return {
     game: {
@@ -53,15 +59,12 @@ describe("Timer", () => {
 
   test("does not render when seconds is null", async () => {
     render(TimerProviderFixture, {
-      socket,
       topic: "room:test-room",
     });
 
     const channel = socket.channel.mock.results[0].value;
     const push = channel.join.mock.results[0].value;
-    const okHandler = push.receive.mock.calls.find(
-      ([status]) => status === "ok",
-    )?.[1];
+    const okHandler = getReceiveHandler(push, "ok");
 
     okHandler(buildStatePayload());
     await tick();
@@ -71,15 +74,12 @@ describe("Timer", () => {
 
   test("renders remaining seconds", async () => {
     render(TimerProviderFixture, {
-      socket,
       topic: "room:test-room",
     });
 
     const channel = socket.channel.mock.results[0].value;
     const push = channel.join.mock.results[0].value;
-    const okHandler = push.receive.mock.calls.find(
-      ([status]) => status === "ok",
-    )?.[1];
+    const okHandler = getReceiveHandler(push, "ok");
     const timerHandler = channel.on.mock.calls.find(
       ([event]) => event === "timer",
     )?.[1];

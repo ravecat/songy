@@ -1,30 +1,30 @@
 <script lang="ts">
-  import type { Socket } from "phoenix";
   import { untrack } from "svelte";
   import Equalizer from "~components/equalizer.svelte";
   import { setGameContext } from "~/contexts/game";
-  import { createGameSession } from "~/shared/game_session.svelte";
+  import { createGameSession } from "~/stores/game.svelte";
   import type { Snippet } from "svelte";
 
   interface Props {
-    socket: Socket;
     topic: string;
     children?: Snippet;
   }
 
-  let { children, socket, topic }: Props = $props();
+  let { children, topic }: Props = $props();
 
-  const { socket: initialSocket, topic: initialTopic } = untrack(() => ({
-    socket,
-    topic,
-  }));
+  const initialTopic = untrack(() => topic);
 
   const session = createGameSession({
-    socket: initialSocket,
     topic: initialTopic,
   });
 
   setGameContext(session);
+
+  $effect(() => {
+    return () => {
+      session.dispose();
+    };
+  });
 </script>
 
 {#if session.game}

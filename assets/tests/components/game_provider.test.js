@@ -12,6 +12,12 @@ vi.mock("~/socket", async () => {
   };
 });
 
+function getReceiveHandler(push, status) {
+  return push.receive.mock.calls
+    .filter(([currentStatus]) => currentStatus === status)
+    .at(-1)?.[1];
+}
+
 function buildStatePayload() {
   return {
     game: {
@@ -50,7 +56,6 @@ describe("GameProvider", () => {
 
   test("joins to channel with provided topic", () => {
     const { unmount } = render(GameProvider, {
-      socket,
       topic: "room:test-room",
     });
 
@@ -61,7 +66,6 @@ describe("GameProvider", () => {
 
   test("listens state event", () => {
     const { unmount } = render(GameProvider, {
-      socket,
       topic: "room:test-room",
     });
 
@@ -77,7 +81,6 @@ describe("GameProvider", () => {
 
   test("renders loader while waiting for join reply", async () => {
     const { unmount } = render(GameProvider, {
-      socket,
       topic: "room:test-room",
     });
 
@@ -91,15 +94,12 @@ describe("GameProvider", () => {
 
   test("hides loader after receiving join reply", async () => {
     const { unmount } = render(GameProvider, {
-      socket,
       topic: "room:test-room",
     });
 
     const channel = socket.channel.mock.results.at(-1).value;
     const push = channel.join.mock.results[0].value;
-    const okHandler = push.receive.mock.calls.find(
-      ([status]) => status === "ok",
-    )?.[1];
+    const okHandler = getReceiveHandler(push, "ok");
 
     expect(okHandler).toEqual(expect.any(Function));
 
@@ -117,15 +117,12 @@ describe("GameProvider", () => {
 
   test("renders error screen when join fails with reason", async () => {
     const { unmount } = render(GameProvider, {
-      socket,
       topic: "room:test-room",
     });
 
     const channel = socket.channel.mock.results.at(-1).value;
     const push = channel.join.mock.results[0].value;
-    const errorHandler = push.receive.mock.calls.find(
-      ([status]) => status === "error",
-    )?.[1];
+    const errorHandler = getReceiveHandler(push, "error");
 
     expect(errorHandler).toEqual(expect.any(Function));
 
@@ -145,15 +142,12 @@ describe("GameProvider", () => {
 
   test("renders error screen when join times out", async () => {
     const { unmount } = render(GameProvider, {
-      socket,
       topic: "room:test-room",
     });
 
     const channel = socket.channel.mock.results.at(-1).value;
     const push = channel.join.mock.results[0].value;
-    const timeoutHandler = push.receive.mock.calls.find(
-      ([status]) => status === "timeout",
-    )?.[1];
+    const timeoutHandler = getReceiveHandler(push, "timeout");
 
     expect(timeoutHandler).toEqual(expect.any(Function));
 
@@ -170,7 +164,6 @@ describe("GameProvider", () => {
 
   test("renders error screen when channel closes unexpectedly", async () => {
     const { unmount } = render(GameProvider, {
-      socket,
       topic: "room:test-room",
     });
 
@@ -191,15 +184,12 @@ describe("GameProvider", () => {
 
   test("ignores close after join succeeded", async () => {
     const { unmount } = render(GameProvider, {
-      socket,
       topic: "room:test-room",
     });
 
     const channel = socket.channel.mock.results.at(-1).value;
     const push = channel.join.mock.results[0].value;
-    const okHandler = push.receive.mock.calls.find(
-      ([status]) => status === "ok",
-    )?.[1];
+    const okHandler = getReceiveHandler(push, "ok");
     const onClose = channel.onClose.mock.calls[0]?.[0];
 
     okHandler(buildStatePayload());
@@ -218,7 +208,6 @@ describe("GameProvider", () => {
 
   test("leaves channel on unmount", () => {
     const { unmount } = render(GameProvider, {
-      socket,
       topic: "room:test-room",
     });
 

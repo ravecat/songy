@@ -3,8 +3,9 @@
 </script>
 
 <script lang="ts">
-  import socket from "~/socket";
   import GameProvider from "~components/game_provider.svelte";
+  import MediaProvider from "~components/media_provider.svelte";
+  import { provider } from "~/stores/scope";
   import Room from "~components/room.svelte";
 
   interface Props {
@@ -14,6 +15,8 @@
   let { roomId }: Props = $props();
 </script>
 
-<GameProvider {socket} topic={`room:${roomId}`}>
-  <Room />
+<GameProvider topic={`room:${roomId}`}>
+  <MediaProvider provider={$provider}>
+    <Room />
+  </MediaProvider>
 </GameProvider>
