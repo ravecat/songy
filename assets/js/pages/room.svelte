@@ -5,7 +5,6 @@
 <script lang="ts">
   import GameProvider from "~components/game_provider.svelte";
   import MediaProvider from "~components/media_provider.svelte";
-  import { provider } from "~/stores/scope";
   import Room from "~components/room.svelte";
 
   interface Props {
@@ -16,7 +15,7 @@
 </script>
 
 <GameProvider topic={`room:${roomId}`}>
-  <MediaProvider provider={$provider}>
+  <MediaProvider>
     <Room />
   </MediaProvider>
 </GameProvider>

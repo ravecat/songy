@@ -239,16 +239,14 @@ describe("createGameSession", () => {
     transport.push.mockResolvedValueOnce(undefined);
     transport.push.mockResolvedValueOnce({
       status: "ok",
-      response: { token: "test-token" },
+      response: undefined,
     });
 
     await expect(session.startGame()).resolves.toBeUndefined();
-    await expect(session.getProvider()).resolves.toEqual({
-      token: "test-token",
-    });
+    await expect(session.advanceTurn()).resolves.toBeUndefined();
 
     expect(transport.push).toHaveBeenNthCalledWith(1, "start_game", {});
-    expect(transport.push).toHaveBeenNthCalledWith(2, "get_provider", {});
+    expect(transport.push).toHaveBeenNthCalledWith(2, "advance_turn", {});
   });
 
   test("disposes projection and transport only once", () => {

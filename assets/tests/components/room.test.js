@@ -357,7 +357,5 @@ function buildSession({ game = {}, permissions = {} } = {}) {
     makeAssumption: vi.fn().mockResolvedValue(undefined),
     startPlayback: vi.fn().mockResolvedValue(undefined),
     pausePlayback: vi.fn().mockResolvedValue(undefined),
-    updateProvider: vi.fn().mockResolvedValue(undefined),
-    getProvider: vi.fn().mockResolvedValue({ token: "" }),
   };
 }

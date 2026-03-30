@@ -3,7 +3,6 @@ import type {
   JoinReply,
   StatePayload,
   TimerPayload,
-  UpdateProviderPayload,
 } from "~contracts";
 import {
   createTransport,
@@ -31,8 +30,6 @@ export interface GameSession {
   makeAssumption(position: number): Promise<void>;
   startPlayback(): Promise<void>;
   pausePlayback(): Promise<void>;
-  updateProvider(payload: UpdateProviderPayload): Promise<void>;
-  getProvider(): Promise<{ token: string }>;
   dispose(): void;
 }
 
@@ -59,13 +56,6 @@ export interface GameChannelSpec {
     };
     pause_playback: {
       reply: { ok: void };
-    };
-    update_provider: {
-      payload: UpdateProviderPayload;
-      reply: { ok: void };
-    };
-    get_provider: {
-      reply: { ok: { token: string } };
     };
   };
 }
@@ -102,8 +92,6 @@ const commandsWithReplies = new Set<GameCommand>([
   "make_assumption",
   "start_playback",
   "pause_playback",
-  "update_provider",
-  "get_provider",
 ]);
 
 function timeoutError(event: string) {
@@ -265,12 +253,6 @@ export function createGameSession(
     },
     pausePlayback() {
       return command("pause_playback", {});
-    },
-    updateProvider(payload: UpdateProviderPayload) {
-      return command("update_provider", payload);
-    },
-    getProvider() {
-      return command("get_provider", {});
     },
     dispose() {
       if (disposed) {
