@@ -153,6 +153,35 @@ describe("Game", () => {
     expect(screen.getByText("2020")).toBeInTheDocument();
   });
 
+  test("displays finished view on finished status even with stale results phase", () => {
+    mockChannelContext.snapshot.game.status = "finished";
+    mockChannelContext.snapshot.game.scores = {
+      "user-1": 10,
+      "user-2": 7,
+    };
+    mockChannelContext.snapshot.game.turn.phase = "results";
+    mockChannelContext.snapshot.game.track = {
+      id: "track-1",
+      title: "Test Track",
+      artist: "Test Artist",
+      year: 2020,
+      cover_url: "https://example.com/cover.jpg",
+      meta: {
+        preview_url: "https://example.com/preview.mp3",
+      },
+    };
+
+    renderWithSession();
+
+    expect(
+      screen.getByRole("heading", { name: "Alice wins" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("list", { name: "Final leaderboard" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Test Artist")).not.toBeInTheDocument();
+  });
+
   test("renders nothing when turn phase is undefined", () => {
     mockChannelContext.snapshot.game.turn = undefined;
 

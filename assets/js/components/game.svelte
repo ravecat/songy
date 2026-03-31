@@ -1,5 +1,6 @@
 <script lang="ts">
   import { getGameContext } from "~/contexts/game";
+  import GameFinished from "~components/game_finished.svelte";
   import TurnWaiting from "~components/turn_waiting.svelte";
   import Timeline from "~components/timeline.svelte";
   import TurnResults from "~components/turn_results.svelte";
@@ -11,7 +12,9 @@
   const status = $derived(game?.status);
 </script>
 
-{#if status === "waiting"}
+{#if status === "finished"}
+  <GameFinished />
+{:else if status === "waiting"}
   <Lobby />
 {:else if phase === "waiting"}
   <TurnWaiting />
