@@ -20,6 +20,11 @@ export default mergeConfig(
     test: {
       globals: true,
       exclude: ['node_modules', 'dist'],
+      coverage: {
+        provider: 'v8',
+        reporter: ['text', 'json', 'html', 'clover', 'lcov'],
+        reportsDirectory: './coverage',
+      },
       projects: [
         {
           extends: true,
