@@ -2,8 +2,8 @@ import type {
   Channel,
   Push,
   PushStatus,
-  Socket,
 } from "phoenix";
+import socket from "~/transport/socket";
 
 type EmptyPayload = Record<string, never>;
 
@@ -125,7 +125,6 @@ export interface Transport<TSpec extends TransportSpec> {
 }
 
 interface TransportOptions {
-  socket: Socket;
   topic: string;
   payload?: object;
   onError?: Parameters<Channel["onError"]>[0];
@@ -175,7 +174,7 @@ const transportTransitions: Record<TransportStatus, readonly TransportStatus[]> 
 export function createTransport<TSpec extends TransportSpec>(
   options: TransportOptions,
 ): Transport<TSpec> {
-  const channel = options.socket.channel(
+  const channel = socket.channel(
     options.topic,
     options.payload ?? {},
   ) as TypedChannel<TSpec>;

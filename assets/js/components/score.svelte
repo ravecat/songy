@@ -3,8 +3,8 @@
   import { currentUser } from "~/stores/scope";
   import { Star } from "lucide-svelte";
 
-  const session = $derived.by(getGameContext);
-  const game = $derived(session.snapshot?.game ?? null);
+  const session = getGameContext();
+  const game = $derived($session.snapshot?.game ?? null);
 
   const score = $derived.by(() => {
     if (!$currentUser?.uuid || !game?.scores) return 0;

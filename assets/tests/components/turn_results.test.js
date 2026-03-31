@@ -1,12 +1,10 @@
 import { render, screen } from "@testing-library/svelte";
-import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
-import * as GameContext from "~/contexts/game";
+import { expect, test, describe } from "vitest";
+import GameContextFixture from "../fixtures/game_context_fixture.svelte";
 
 import TurnResults from "~components/turn_results.svelte";
 
 describe("TurnResults", () => {
-  let getGameContextSpy;
-
   const mockTrack = {
     id: "track-1",
     title: "Bohemian Rhapsody",
@@ -35,16 +33,15 @@ describe("TurnResults", () => {
     "2": "user-2",
   };
 
-  beforeEach(() => {
-    getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+  function renderWithSession(session) {
+    return render(GameContextFixture, {
+      component: TurnResults,
+      session,
+    });
+  }
 
   test("renders track info", () => {
-    getGameContextSpy.mockReturnValue({
+    renderWithSession({
       snapshot: {
         game: {
           track: mockTrack,
@@ -57,8 +54,6 @@ describe("TurnResults", () => {
         },
       },
     });
-
-    render(TurnResults);
 
     expect(screen.getByText("Queen")).toBeInTheDocument();
     expect(screen.getByText("Bohemian Rhapsody")).toBeInTheDocument();
@@ -66,7 +61,7 @@ describe("TurnResults", () => {
   });
 
   test("displays all challengers avatars", () => {
-    getGameContextSpy.mockReturnValue({
+    renderWithSession({
       snapshot: {
         game: {
           track: mockTrack,
@@ -79,8 +74,6 @@ describe("TurnResults", () => {
         },
       },
     });
-
-    render(TurnResults);
 
     const aliceAvatar = screen.getByAltText("Alice");
     const bobAvatar = screen.getByAltText("Bob");
@@ -95,7 +88,7 @@ describe("TurnResults", () => {
   });
 
   test("displays challenger names", () => {
-    getGameContextSpy.mockReturnValue({
+    renderWithSession({
       snapshot: {
         game: {
           track: mockTrack,
@@ -108,15 +101,13 @@ describe("TurnResults", () => {
         },
       },
     });
-
-    render(TurnResults);
 
     expect(screen.getByText("Alice")).toBeInTheDocument();
     expect(screen.getByText("Bob")).toBeInTheDocument();
   });
 
   test("highlights winner with score badge", () => {
-    getGameContextSpy.mockReturnValue({
+    renderWithSession({
       snapshot: {
         game: {
           track: mockTrack,
@@ -129,8 +120,6 @@ describe("TurnResults", () => {
         },
       },
     });
-
-    render(TurnResults);
 
     const challengers = screen.getAllByRole("listitem");
     const winner = challengers.find(
@@ -142,7 +131,7 @@ describe("TurnResults", () => {
   });
 
   test("only one challenger is marked as winner", () => {
-    getGameContextSpy.mockReturnValue({
+    renderWithSession({
       snapshot: {
         game: {
           track: mockTrack,
@@ -156,8 +145,6 @@ describe("TurnResults", () => {
       },
     });
 
-    render(TurnResults);
-
     const challengers = screen.getAllByRole("listitem");
     const winners = challengers.filter(
       (el) => el.getAttribute("aria-current") === "true",
@@ -168,7 +155,7 @@ describe("TurnResults", () => {
   });
 
   test("handles missing winner - no winner highlighted", () => {
-    getGameContextSpy.mockReturnValue({
+    renderWithSession({
       snapshot: {
         game: {
           track: mockTrack,
@@ -181,8 +168,6 @@ describe("TurnResults", () => {
         },
       },
     });
-
-    render(TurnResults);
 
     const challengers = screen.getAllByRole("listitem");
     const winners = challengers.filter(

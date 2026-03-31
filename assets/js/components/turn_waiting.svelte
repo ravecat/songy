@@ -1,9 +1,9 @@
 <script lang="ts">
   import { getGameContext } from "~/contexts/game";
 
-  const session = $derived.by(getGameContext);
-  const game = $derived(session.snapshot?.game ?? null);
-  const permissions = $derived(session.snapshot?.permissions ?? null);
+  const session = getGameContext();
+  const game = $derived($session.snapshot?.game ?? null);
+  const permissions = $derived($session.snapshot?.permissions ?? null);
 
   const activePlayer = $derived(game!.participants[game!.queue[game!.cursor]]);
 </script>

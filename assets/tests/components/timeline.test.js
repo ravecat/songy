@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
-import * as GameContext from "~/contexts/game";
 import { currentUser } from "~/stores/scope";
+import GameContextFixture from "../fixtures/game_context_fixture.svelte";
 
 import Timeline from "~components/timeline.svelte";
 
@@ -16,6 +16,13 @@ vi.mock("~/stores/scope", async () => {
 
 describe("Timeline", () => {
   let mockGameContext;
+
+  function renderWithSession(session = mockGameContext) {
+    return render(GameContextFixture, {
+      component: Timeline,
+      session,
+    });
+  }
 
   beforeEach(() => {
     mockGameContext = {
@@ -102,10 +109,7 @@ describe("Timeline", () => {
       mockGameContext.snapshot.game.timelines["current-user-123"][1],
     ];
 
-    const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    const { container } = render(Timeline);
+    const { container } = renderWithSession();
 
     const hiddenCards = container.querySelectorAll('[aria-label="Hidden track card"][aria-hidden="false"]');
     expect(hiddenCards.length).toBeGreaterThanOrEqual(1);
@@ -114,10 +118,7 @@ describe("Timeline", () => {
   test("hides track card when can_make_assumptions is false", () => {
     mockGameContext.snapshot.permissions.can_make_assumptions = false;
 
-    const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    const { container } = render(Timeline);
+    const { container } = renderWithSession();
 
     const timelineTrack1 = screen.getAllByText("Timeline Track 1");
     const timelineTrack2 = screen.getAllByText("Timeline Track 2");
@@ -132,10 +133,7 @@ describe("Timeline", () => {
   test("hides track card when permissions is undefined", () => {
     mockGameContext.snapshot.permissions = undefined;
 
-    const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    const { container } = render(Timeline);
+    const { container } = renderWithSession();
 
     expect(screen.getAllByText("Timeline Track 1").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Timeline Track 2").length).toBeGreaterThan(0);
@@ -147,10 +145,7 @@ describe("Timeline", () => {
   test("hides track card when permissions is null", () => {
     mockGameContext.snapshot.permissions = null;
 
-    const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    const { container } = render(Timeline);
+    const { container } = renderWithSession();
 
     expect(screen.getAllByText("Timeline Track 1").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Timeline Track 2").length).toBeGreaterThan(0);
@@ -166,10 +161,7 @@ describe("Timeline", () => {
       "1": "current-user-123",
     };
 
-    const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    const { container } = render(Timeline);
+    const { container } = renderWithSession();
 
     // Should show 1 hidden card: assumption slot with user avatar
     const hiddenCards = container.querySelectorAll('[aria-label="Hidden track card"][aria-hidden="false"]');
@@ -189,10 +181,7 @@ describe("Timeline", () => {
       mockGameContext.snapshot.game.timelines["current-user-123"][1],
     ];
 
-    const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    const { container } = render(Timeline);
+    const { container } = renderWithSession();
 
     // Should show 1 hidden card: assumption slot with user avatar
     const hiddenCards = container.querySelectorAll('[aria-label="Hidden track card"][aria-hidden="false"]');
@@ -204,10 +193,7 @@ describe("Timeline", () => {
     mockGameContext.snapshot.permissions.can_make_assumptions = false;
     mockGameContext.snapshot.permissions.can_see_assumptions = true;
 
-    const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    const { container } = render(Timeline);
+    const { container } = renderWithSession();
 
     const hiddenCards = container.querySelectorAll('[aria-label="Hidden track card"][aria-hidden="false"]');
     expect(hiddenCards.length).toBe(0);
@@ -219,10 +205,7 @@ describe("Timeline", () => {
   test("renders timeline tracks regardless of can_make_assumptions", () => {
     mockGameContext.snapshot.permissions.can_make_assumptions = false;
 
-    const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    render(Timeline);
+    renderWithSession();
 
     expect(screen.getAllByText("Timeline Track 1").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Timeline Track 2").length).toBeGreaterThan(0);
@@ -234,15 +217,11 @@ describe("Timeline", () => {
     mockGameContext.snapshot.game.track = null;
     mockGameContext.snapshot.permissions.can_make_assumptions = true;
 
-    const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    render(Timeline);
+    const { container } = renderWithSession();
 
     expect(screen.getAllByText("Timeline Track 1").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Timeline Track 2").length).toBeGreaterThan(0);
 
-    const { container } = render(Timeline);
     const hiddenCards = container.querySelectorAll('[aria-label="Hidden track card"][aria-hidden="false"]');
     expect(hiddenCards.length).toBe(0);
   });
@@ -253,10 +232,7 @@ describe("Timeline", () => {
       "0": "current-user-123",
     };
 
-    const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    const { container } = render(Timeline);
+    const { container } = renderWithSession();
 
     const avatars = container.querySelectorAll('img[src="https://example.com/avatar.jpg"]');
     expect(avatars.length).toBeGreaterThan(0);
@@ -266,11 +242,9 @@ describe("Timeline", () => {
     function renderTimeline(assumptions, scopeUser) {
       mockGameContext.snapshot.permissions.can_make_assumptions = true;
       mockGameContext.snapshot.game.turn.assumptions = assumptions;
-
-      vi.spyOn(GameContext, "getGameContext").mockReturnValue(mockGameContext);
       currentUser.set(scopeUser);
 
-      return render(Timeline);
+      return renderWithSession();
     }
 
     const scopeUser = {
@@ -356,10 +330,7 @@ describe("Timeline", () => {
       "0": "current-user-123",
     };
 
-    const getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    const { container } = render(Timeline);
+    const { container } = renderWithSession();
 
     // Timeline: [A, B] (2 tracks)
     // With assumption at position 0:

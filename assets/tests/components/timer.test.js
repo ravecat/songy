@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/svelte";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import Timer from "~components/timer.svelte";
-import * as GameContext from "~/contexts/game";
+import GameContextFixture from "../fixtures/game_context_fixture.svelte";
 
 function buildStatePayload(phase = "challenging") {
   return {
@@ -41,7 +41,7 @@ function buildStatePayload(phase = "challenging") {
 function buildSession(phase = "challenging") {
   return {
     snapshot: buildStatePayload(phase),
-    connection: "ready",
+    status: "ready",
     error: null,
     startGame: vi.fn(),
     advanceTurn: vi.fn(),
@@ -53,12 +53,16 @@ function buildSession(phase = "challenging") {
 }
 
 describe("Timer", () => {
-  let getGameContextSpy;
+  function renderWithSession(session) {
+    return render(GameContextFixture, {
+      component: Timer,
+      session,
+    });
+  }
 
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
-    getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
   });
 
   afterEach(() => {
@@ -67,25 +71,19 @@ describe("Timer", () => {
   });
 
   test("does not render outside the challenging phase", () => {
-    getGameContextSpy.mockReturnValue(buildSession("ready"));
-
-    render(Timer);
+    renderWithSession(buildSession("ready"));
 
     expect(screen.queryByRole("timer")).not.toBeInTheDocument();
   });
 
   test("renders remaining seconds", () => {
-    getGameContextSpy.mockReturnValue(buildSession());
-
-    render(Timer);
+    renderWithSession(buildSession());
 
     expect(screen.getByRole("timer")).toHaveTextContent("12");
   });
 
   test("counts down locally from deadline_at_ms", async () => {
-    getGameContextSpy.mockReturnValue(buildSession());
-
-    render(Timer);
+    renderWithSession(buildSession());
 
     vi.advanceTimersByTime(1_000);
     await Promise.resolve();

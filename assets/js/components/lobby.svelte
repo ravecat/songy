@@ -7,8 +7,8 @@
 
   const page = usePage<{ qr?: string }>();
   let { qr = "" } = $derived($page.props);
-  const session = $derived.by(getGameContext);
-  const game = $derived(session.snapshot?.game ?? null);
+  const session = getGameContext();
+  const game = $derived($session.snapshot?.game ?? null);
 
   const participants = $derived(game?.participants ?? {});
   const queue = $derived(game?.queue ?? []);

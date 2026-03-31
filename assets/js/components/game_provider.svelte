@@ -2,7 +2,11 @@
   import { untrack } from "svelte";
   import Equalizer from "~components/equalizer.svelte";
   import { setGameContext } from "~/contexts/game";
-  import { createGameSession } from "~/stores/game.svelte";
+  import { createTransport } from "~/transport/channel";
+  import {
+    createGameSession,
+    type GameChannelSpec,
+  } from "~/stores/game";
   import type { Snippet } from "svelte";
 
   interface Props {
@@ -12,11 +16,11 @@
 
   let { children, topic }: Props = $props();
 
-  const initialTopic = untrack(() => topic);
-
-  const session = createGameSession({
-    topic: initialTopic,
+  const transport = createTransport<GameChannelSpec>({
+    topic: untrack(() => topic),
   });
+
+  const session = createGameSession(transport);
 
   setGameContext(session);
 
@@ -27,16 +31,16 @@
   });
 </script>
 
-{#if session.snapshot}
+{#if $session.snapshot}
   {@render children?.()}
-{:else if session.connection === "error" && session.error}
+{:else if $session.status === "failed" && $session.error}
   <div class="game-channel__error" role="alert">
     <p class="text-lg font-semibold">Room unavailable</p>
     <p class="opacity-70">
-      {typeof session.error === "object" &&
-      session.error &&
-      "reason" in session.error
-        ? `Reason: ${session.error.reason}`
+      {typeof $session.error === "object" &&
+      $session.error &&
+      "reason" in $session.error
+        ? `Reason: ${$session.error.reason}`
         : "Failed to load game state."}
     </p>
     <a class="btn btn-primary mt-4" href="/">Back home</a>

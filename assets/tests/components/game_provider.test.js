@@ -2,9 +2,9 @@ import { render, screen } from "@testing-library/svelte";
 import { tick } from "svelte";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import GameProvider from "~components/game_provider.svelte";
-import socket from "~/socket";
+import socket from "~/transport/socket";
 
-vi.mock("~/socket", async () => {
+vi.mock("~/transport/socket", async () => {
   const { Socket } = await import("phoenix");
 
   return {

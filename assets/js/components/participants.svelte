@@ -2,8 +2,8 @@
   import { getGameContext } from "~/contexts/game";
   import { Users } from "lucide-svelte";
 
-  const session = $derived.by(getGameContext);
-  const game = $derived(session.snapshot?.game ?? null);
+  const session = getGameContext();
+  const game = $derived($session.snapshot?.game ?? null);
 
   const playerCount = $derived(
     game?.participants ? Object.keys(game.participants).length : 0,

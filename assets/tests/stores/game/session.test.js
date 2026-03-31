@@ -1,14 +1,7 @@
+import { get } from "svelte/store";
 import { describe, expect, test, vi } from "vitest";
 
-vi.mock("~/socket", async () => {
-  const { Socket } = await import("phoenix");
-
-  return {
-    default: new Socket("/socket", {}),
-  };
-});
-
-import { createGameSession } from "~/stores/game.svelte";
+import { createGameSession } from "~/stores/game";
 
 function buildStatePayload(phase = "challenging") {
   return {
@@ -103,18 +96,19 @@ function buildTransport() {
 }
 
 describe("createGameSession", () => {
-  test("starts in connecting state", () => {
-    const session = createGameSession({ transport: buildTransport() });
+  test("starts in loading state", () => {
+    const session = createGameSession(buildTransport());
+    const state = get(session);
 
-    expect(session.snapshot).toBeNull();
-    expect(session.connection).toBe("connecting");
-    expect(session.error).toBeNull();
+    expect(state.snapshot).toBeNull();
+    expect(state.status).toBe("loading");
+    expect(state.error).toBeNull();
   });
 
   test("subscribes to transport immediately", () => {
     const transport = buildTransport();
 
-    createGameSession({ transport });
+    createGameSession(transport);
 
     expect(transport.join).toHaveBeenCalledTimes(1);
     expect(transport.onFailure).toHaveBeenCalledTimes(1);
@@ -127,82 +121,76 @@ describe("createGameSession", () => {
 
   test("maps join snapshot into the public session", async () => {
     const transport = buildTransport();
-    const session = createGameSession({ transport });
+    const session = createGameSession(transport);
     const payload = buildStatePayload();
 
     transport.resolveJoinOk(payload);
     await Promise.resolve();
 
-    expect(session.snapshot).toStrictEqual({
-      game: payload.game,
-      permissions: payload.permissions,
-    });
-    expect(session.connection).toBe("ready");
+    expect(get(session).snapshot).toStrictEqual(payload);
+    expect(get(session).status).toBe("ready");
   });
 
   test("maps transport snapshot into the public session", () => {
     const transport = buildTransport();
-    const session = createGameSession({ transport });
+    const session = createGameSession(transport);
     const payload = buildStatePayload();
 
     transport.emitSnapshot(payload);
 
-    expect(session.snapshot).toStrictEqual({
-      game: payload.game,
-      permissions: payload.permissions,
-    });
-    expect(session.connection).toBe("ready");
+    expect(get(session).snapshot).toStrictEqual(payload);
+    expect(get(session).status).toBe("ready");
   });
 
-  test("maps recoverable failure after snapshot to reconnecting", () => {
+  test("maps recoverable failure after snapshot to stale", () => {
     const transport = buildTransport();
-    const session = createGameSession({ transport });
+    const session = createGameSession(transport);
     const error = new Error("channel closed");
 
     transport.emitSnapshot(buildStatePayload());
     transport.emitTransportError(error);
 
-    expect(session.connection).toBe("reconnecting");
-    expect(session.error).toBe(error);
+    expect(get(session).status).toBe("stale");
+    expect(get(session).error).toBe(error);
   });
 
-  test("maps transport failure before first snapshot to error", () => {
+  test("maps transport failure before first snapshot to failed", () => {
     const transport = buildTransport();
-    const session = createGameSession({ transport });
+    const session = createGameSession(transport);
     const error = new Error("join rejected");
 
     transport.emitTransportError(error);
 
-    expect(session.connection).toBe("error");
-    expect(session.error).toBe(error);
+    expect(get(session).status).toBe("failed");
+    expect(get(session).error).toBe(error);
   });
 
-  test("maps join rejection before first snapshot to error", async () => {
+  test("maps join rejection before first snapshot to failed", async () => {
     const transport = buildTransport();
-    const session = createGameSession({ transport });
+    const session = createGameSession(transport);
     const error = { reason: "game_not_found" };
 
     transport.resolveJoinError(error);
     await Promise.resolve();
 
-    expect(session.connection).toBe("error");
-    expect(session.error).toEqual(error);
+    expect(get(session).status).toBe("failed");
+    expect(get(session).error).toEqual(error);
   });
 
-  test("maps join timeout before first snapshot to error", async () => {
+  test("maps join timeout before first snapshot to failed", async () => {
     const transport = buildTransport();
-    const session = createGameSession({ transport });
+    const session = createGameSession(transport);
 
     transport.resolveJoinTimeout();
     await Promise.resolve();
 
-    expect(session.connection).toBe("error");
-    expect(session.error).toEqual(new Error("Connection timed out"));
+    expect(get(session).status).toBe("failed");
+    expect(get(session).error).toEqual(new Error("Connection timed out"));
   });
 
   test("delegates commands to the transport", async () => {
     const transport = buildTransport();
-    const session = createGameSession({ transport });
+    const session = createGameSession(transport);
 
     transport.push.mockResolvedValueOnce(undefined);
     transport.push.mockResolvedValueOnce({
@@ -219,12 +207,12 @@ describe("createGameSession", () => {
 
   test("disposes projection and transport only once", () => {
     const transport = buildTransport();
-    const session = createGameSession({ transport });
+    const session = createGameSession(transport);
 
     session.dispose();
     session.dispose();
 
-    expect(session.connection).toBe("closed");
+    expect(get(session).status).toBe("disposed");
     expect(transport.dispose).toHaveBeenCalledTimes(1);
   });
 });

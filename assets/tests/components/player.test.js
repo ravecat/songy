@@ -1,18 +1,19 @@
 import { render, screen, fireEvent } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
-import * as GameContext from "~/contexts/game";
+import GameContextFixture from "../fixtures/game_context_fixture.svelte";
 
 import Player from "~components/player.svelte";
 
 describe("Player", () => {
   let mockChannelContext;
-  let getGameContextSpy;
   const ownerUser = { uuid: "user-1", name: "Alice" };
   const playerUser = { uuid: "user-2", name: "Bob" };
 
   const renderForUser = (_user) => {
-    getGameContextSpy.mockReturnValue(mockChannelContext);
-    render(Player);
+    render(GameContextFixture, {
+      component: Player,
+      session: mockChannelContext,
+    });
   };
 
   beforeEach(() => {
@@ -56,7 +57,6 @@ describe("Player", () => {
       startPlayback: vi.fn().mockResolvedValue(undefined),
       pausePlayback: vi.fn().mockResolvedValue(undefined),
     };
-    getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
   });
 
   afterEach(() => {

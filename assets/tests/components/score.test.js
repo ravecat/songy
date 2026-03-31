@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/svelte";
 import { describe, expect, test, beforeEach, afterEach, vi } from "vitest";
-import * as GameContext from "~/contexts/game";
 import { currentUser } from "~/stores/scope";
 import Score from "~components/score.svelte";
+import GameContextFixture from "../fixtures/game_context_fixture.svelte";
 
 vi.mock("~/stores/scope", async () => {
   const { writable } = await import("svelte/store");
@@ -16,7 +16,12 @@ vi.mock("~/stores/scope", async () => {
 describe("Score", () => {
   let mockGameContext;
   let mockScopeContext;
-  let getGameContextSpy;
+  function renderWithSession(session) {
+    return render(GameContextFixture, {
+      component: Score,
+      session,
+    });
+  }
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -38,7 +43,6 @@ describe("Score", () => {
       },
     };
 
-    getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     currentUser.set(mockScopeContext.user);
   });
 
@@ -49,9 +53,7 @@ describe("Score", () => {
   test("renders score from game context", () => {
     mockGameContext.snapshot.game.scores = { "user-1": 3 };
 
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    render(Score);
+    renderWithSession(mockGameContext);
 
     expect(
       screen.getByRole("button", { name: "Your score: 3" })
@@ -62,9 +64,7 @@ describe("Score", () => {
   test("returns 0 when user score is not defined", () => {
     mockGameContext.snapshot.game.scores = { "user-2": 5 };
 
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    render(Score);
+    renderWithSession(mockGameContext);
 
     expect(screen.getByText("0")).toBeInTheDocument();
   });
@@ -72,9 +72,7 @@ describe("Score", () => {
   test("returns 0 when scores object is undefined", () => {
     mockGameContext.snapshot.game.scores = undefined;
 
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    render(Score);
+    renderWithSession(mockGameContext);
 
     expect(screen.getByText("0")).toBeInTheDocument();
   });
@@ -82,9 +80,7 @@ describe("Score", () => {
   test("updates score when game context changes", () => {
     mockGameContext.snapshot.game.scores = { "user-1": 7 };
 
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    render(Score);
+    renderWithSession(mockGameContext);
 
     expect(
       screen.getByRole("button", { name: "Your score: 7" })
@@ -92,9 +88,7 @@ describe("Score", () => {
 
     // Simulating score update by updating the mock and re-rendering
     mockGameContext.snapshot.game.scores = { "user-1": 12 };
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    render(Score);
+    renderWithSession(mockGameContext);
 
     expect(
       screen.getByRole("button", { name: "Your score: 12" })

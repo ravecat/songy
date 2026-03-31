@@ -3,9 +3,9 @@
   import { Play, Pause, SkipForward, RotateCcw } from "lucide-svelte";
   import { inertia } from "@inertiajs/svelte";
 
-  const session = $derived.by(getGameContext);
-  const game = $derived(session.snapshot?.game ?? null);
-  const permissions = $derived(session.snapshot?.permissions ?? null);
+  const session = getGameContext();
+  const game = $derived($session.snapshot?.game ?? null);
+  const permissions = $derived($session.snapshot?.permissions ?? null);
   const isPlayback = $derived(game?.player?.is_playback);
 
   const handlePlayback = () => {

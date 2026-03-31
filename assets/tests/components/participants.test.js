@@ -1,14 +1,15 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
-import * as GameContext from "~/contexts/game";
 import Participants from "~components/participants.svelte";
+import GameContextFixture from "../fixtures/game_context_fixture.svelte";
 
 describe("Participants component", () => {
-  let getGameContextSpy;
-
-  beforeEach(() => {
-    getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
-  });
+  function renderWithSession(session) {
+    return render(GameContextFixture, {
+      component: Participants,
+      session,
+    });
+  }
 
   afterEach(() => {
     vi.restoreAllMocks();
@@ -27,9 +28,7 @@ describe("Participants component", () => {
       },
     };
 
-    getGameContextSpy.mockReturnValue(mockChannelContext);
-
-    render(Participants);
+    renderWithSession(mockChannelContext);
 
     expect(screen.getByText("3")).toBeInTheDocument();
     expect(screen.getByLabelText("3 players online")).toBeInTheDocument();
@@ -44,9 +43,7 @@ describe("Participants component", () => {
       },
     };
 
-    getGameContextSpy.mockReturnValue(emptyChannelContext);
-
-    render(Participants);
+    renderWithSession(emptyChannelContext);
 
     expect(screen.getByText("0")).toBeInTheDocument();
   });
@@ -62,9 +59,7 @@ describe("Participants component", () => {
       },
     };
 
-    getGameContextSpy.mockReturnValue(singleParticipantContext);
-
-    render(Participants);
+    renderWithSession(singleParticipantContext);
 
     expect(screen.getByText("1")).toBeInTheDocument();
     expect(screen.getByLabelText("1 player online")).toBeInTheDocument();
@@ -75,9 +70,7 @@ describe("Participants component", () => {
       snapshot: null,
     };
 
-    getGameContextSpy.mockReturnValue(nullGameContext);
-
-    render(Participants);
+    renderWithSession(nullGameContext);
 
     expect(screen.getByText("0")).toBeInTheDocument();
   });
@@ -89,9 +82,7 @@ describe("Participants component", () => {
       },
     };
 
-    getGameContextSpy.mockReturnValue(undefinedParticipantsContext);
-
-    render(Participants);
+    renderWithSession(undefinedParticipantsContext);
 
     expect(screen.getByText("0")).toBeInTheDocument();
   });
@@ -107,9 +98,7 @@ describe("Participants component", () => {
       },
     };
 
-    getGameContextSpy.mockReturnValue(mockChannelContext);
-
-    const { container } = render(Participants);
+    const { container } = renderWithSession(mockChannelContext);
 
     const svg = container.querySelector('svg');
     expect(svg).toBeInTheDocument();

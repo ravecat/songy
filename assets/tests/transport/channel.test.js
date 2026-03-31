@@ -1,6 +1,14 @@
-import { describe, expect, test, vi } from "vitest";
-import { Socket } from "phoenix";
-import { createTransport } from "~shared/transport";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+import socket from "~/transport/socket";
+import { createTransport } from "~/transport/channel";
+
+vi.mock("~/transport/socket", async () => {
+  const { Socket } = await import("phoenix");
+
+  return {
+    default: new Socket("/socket", {}),
+  };
+});
 
 function getReceiveHandler(push, status) {
   return push.receive.mock.calls
@@ -9,13 +17,15 @@ function getReceiveHandler(push, status) {
 }
 
 describe("createTransport", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   test("subscribes to channel events and returns an unsubscribe function", () => {
-    const socket = new Socket("/socket", {});
     const transport = createTransport({
-      socket,
       topic: "room:test-room",
     });
-    const channel = socket.channel.mock.results[0].value;
+    const channel = socket.channel.mock.results.at(-1).value;
     const handler = vi.fn();
 
     channel.on.mockImplementationOnce(() => 7);
@@ -30,15 +40,13 @@ describe("createTransport", () => {
   });
 
   test("registers join receive handlers", () => {
-    const socket = new Socket("/socket", {});
     const transport = createTransport({
-      socket,
       topic: "room:test-room",
     });
 
     void transport.join();
 
-    const channel = socket.channel.mock.results[0].value;
+    const channel = socket.channel.mock.results.at(-1).value;
     const push = channel.join.mock.results[0].value;
 
     expect(channel.join).toHaveBeenCalledTimes(1);
@@ -48,16 +56,14 @@ describe("createTransport", () => {
   });
 
   test("registers push receive handlers", () => {
-    const socket = new Socket("/socket", {});
     const transport = createTransport({
-      socket,
       topic: "room:test-room",
     });
 
     void transport.join();
     void transport.push("advance_turn", {});
 
-    const channel = socket.channel.mock.results[0].value;
+    const channel = socket.channel.mock.results.at(-1).value;
     const push = channel.push.mock.results[0].value;
 
     expect(channel.push).toHaveBeenCalledWith("advance_turn", {}, undefined);
@@ -67,17 +73,15 @@ describe("createTransport", () => {
   });
 
   test("registers close and error handlers", () => {
-    const socket = new Socket("/socket", {});
     const onClose = vi.fn();
     const onError = vi.fn();
     const transport = createTransport({
-      socket,
       topic: "room:test-room",
       onClose,
       onError,
     });
 
-    const channel = socket.channel.mock.results[0].value;
+    const channel = socket.channel.mock.results.at(-1).value;
     const closeHandler = channel.onClose.mock.calls[0]?.[0];
     const errorHandler = channel.onError.mock.calls[0]?.[0];
 
@@ -93,13 +97,11 @@ describe("createTransport", () => {
   });
 
   test("disposes the channel only once", () => {
-    const socket = new Socket("/socket", {});
     const transport = createTransport({
-      socket,
       topic: "room:test-room",
     });
 
-    const channel = socket.channel.mock.results[0].value;
+    const channel = socket.channel.mock.results.at(-1).value;
 
     transport.dispose();
     transport.dispose();
@@ -108,12 +110,10 @@ describe("createTransport", () => {
   });
 
   test("tracks join lifecycle state", async () => {
-    const socket = new Socket("/socket", {});
     const transport = createTransport({
-      socket,
       topic: "room:test-room",
     });
-    const channel = socket.channel.mock.results[0].value;
+    const channel = socket.channel.mock.results.at(-1).value;
 
     expect(transport.status).toBe("idle");
 
@@ -134,13 +134,11 @@ describe("createTransport", () => {
   });
 
   test("tracks failed join lifecycle state", async () => {
-    const socket = new Socket("/socket", {});
     const transport = createTransport({
-      socket,
       topic: "room:test-room",
     });
     const pending = transport.join();
-    const channel = socket.channel.mock.results[0].value;
+    const channel = socket.channel.mock.results.at(-1).value;
     const push = channel.join.mock.results[0].value;
     const errorHandler = getReceiveHandler(push, "error");
 
@@ -154,9 +152,7 @@ describe("createTransport", () => {
   });
 
   test("rejects push before join", () => {
-    const socket = new Socket("/socket", {});
     const transport = createTransport({
-      socket,
       topic: "room:test-room",
     });
 

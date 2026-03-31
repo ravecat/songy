@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
-import * as GameContext from "~/contexts/game";
 import { currentUser } from "~/stores/scope";
+import GameContextFixture from "../fixtures/game_context_fixture.svelte";
 
 import Game from "~components/game.svelte";
 
@@ -16,7 +16,13 @@ vi.mock("~/stores/scope", async () => {
 
 describe("Game", () => {
   let mockChannelContext;
-  let getGameContextSpy;
+
+  function renderWithSession(session = mockChannelContext) {
+    return render(GameContextFixture, {
+      component: Game,
+      session,
+    });
+  }
 
   beforeEach(() => {
     currentUser.set({
@@ -82,7 +88,6 @@ describe("Game", () => {
         timer: null,
       },
     };
-    getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
   });
 
   afterEach(() => {
@@ -93,9 +98,7 @@ describe("Game", () => {
     mockChannelContext.snapshot.game.turn.phase = "ready";
 
     currentUser.set({ uuid: "user-1", name: "Alice" });
-    getGameContextSpy.mockReturnValue(mockChannelContext);
-
-    render(Game);
+    renderWithSession();
 
     expect(screen.getAllByText("Timeline Track")).toHaveLength(2);
     expect(screen.getAllByText("Timeline Artist")).toHaveLength(2);
@@ -106,9 +109,7 @@ describe("Game", () => {
     mockChannelContext.snapshot.game.turn.phase = "ready";
 
     currentUser.set({ uuid: "user-2", name: "Bob" });
-    getGameContextSpy.mockReturnValue(mockChannelContext);
-
-    render(Game);
+    renderWithSession();
 
     expect(screen.getAllByText("Timeline Track")).toHaveLength(2);
     expect(screen.getAllByText("Timeline Artist")).toHaveLength(2);
@@ -119,9 +120,7 @@ describe("Game", () => {
     mockChannelContext.snapshot.game.turn.phase = "waiting";
     mockChannelContext.snapshot.permissions.can_start_turn = true;
 
-    getGameContextSpy.mockReturnValue(mockChannelContext);
-
-    render(Game);
+    renderWithSession();
 
     expect(screen.getByText("It's your turn")).toBeInTheDocument();
   });
@@ -129,9 +128,7 @@ describe("Game", () => {
   test("displays waiting view for passive player", () => {
     mockChannelContext.snapshot.game.turn.phase = "waiting";
 
-    getGameContextSpy.mockReturnValue(mockChannelContext);
-
-    render(Game);
+    renderWithSession();
 
     expect(screen.getByText("Alice turn")).toBeInTheDocument();
   });
@@ -149,9 +146,7 @@ describe("Game", () => {
       },
     };
 
-    getGameContextSpy.mockReturnValue(mockChannelContext);
-
-    render(Game);
+    renderWithSession();
 
     expect(screen.getByText("Test Artist")).toBeInTheDocument();
     expect(screen.getByText("Test Track")).toBeInTheDocument();
@@ -161,9 +156,7 @@ describe("Game", () => {
   test("renders nothing when turn phase is undefined", () => {
     mockChannelContext.snapshot.game.turn = undefined;
 
-    getGameContextSpy.mockReturnValue(mockChannelContext);
-
-    render(Game);
+    renderWithSession();
 
     expect(screen.queryByText("Alice")).not.toBeInTheDocument();
   });
@@ -174,9 +167,7 @@ describe("Game", () => {
       turn: undefined,
     };
 
-    getGameContextSpy.mockReturnValue(mockChannelContext);
-
-    render(Game);
+    renderWithSession();
 
     expect(screen.queryByText("waiting")).not.toBeInTheDocument();
     expect(screen.queryByText("Alice")).not.toBeInTheDocument();
@@ -185,21 +176,15 @@ describe("Game", () => {
   test("renders nothing when turn phase is null", () => {
     mockChannelContext.snapshot.game.turn.phase = null;
 
-    getGameContextSpy.mockReturnValue(mockChannelContext);
-
-    render(Game);
+    renderWithSession();
 
     expect(screen.queryByText("Alice")).not.toBeInTheDocument();
   });
 
   test("throws error when gameContext is missing", () => {
-    getGameContextSpy.mockImplementation(() => {
-      throw new Error("getGameContext() must be called within a game context");
-    });
-
     expect(() => {
       render(Game);
-    }).toThrow("getGameContext() must be called within a game context");
+    }).toThrow();
   });
 
   test.each(["turn_countdown", "", "unknown_phase", 123, {}, []])(
@@ -207,9 +192,7 @@ describe("Game", () => {
     (phase) => {
       mockChannelContext.snapshot.game.turn.phase = phase;
 
-      getGameContextSpy.mockReturnValue(mockChannelContext);
-
-      render(Game);
+      renderWithSession();
 
       expect(screen.queryByText("Alice")).not.toBeInTheDocument();
     }

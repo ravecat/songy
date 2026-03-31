@@ -1,12 +1,18 @@
 import { render, screen } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
-import * as GameContext from "~/contexts/game";
+import GameContextFixture from "../fixtures/game_context_fixture.svelte";
 
 import TurnWaiting from "~components/turn_waiting.svelte";
 
 describe("Turn waiting view", () => {
   let mockChannelContext;
-  let getGameContextSpy;
+
+  function renderWithSession(session) {
+    return render(GameContextFixture, {
+      component: TurnWaiting,
+      session,
+    });
+  }
 
   beforeEach(() => {
     mockChannelContext = {
@@ -43,7 +49,6 @@ describe("Turn waiting view", () => {
         },
       },
     };
-    getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
   });
 
   afterEach(() => {
@@ -61,9 +66,7 @@ describe("Turn waiting view", () => {
         },
       },
     };
-    getGameContextSpy.mockReturnValue(mockContextActive);
-
-    render(TurnWaiting);
+    renderWithSession(mockContextActive);
 
     expect(screen.getByText("It's your turn")).toBeInTheDocument();
     expect(screen.getByAltText("Alice")).toBeInTheDocument();
@@ -84,9 +87,7 @@ describe("Turn waiting view", () => {
         },
       },
     };
-    getGameContextSpy.mockReturnValue(mockContextNotActive);
-
-    render(TurnWaiting);
+    renderWithSession(mockContextNotActive);
 
     expect(screen.getByText("Alice turn")).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
@@ -105,9 +106,7 @@ describe("Turn waiting view", () => {
         },
       },
     };
-    getGameContextSpy.mockReturnValue(mockContextActive);
-
-    render(TurnWaiting);
+    renderWithSession(mockContextActive);
 
     expect(screen.getByText("It's your turn")).toBeInTheDocument();
     expect(screen.getByAltText("Bob")).toBeInTheDocument();
@@ -127,9 +126,7 @@ describe("Turn waiting view", () => {
         },
       },
     };
-    getGameContextSpy.mockReturnValue(mockContextNonActive);
-
-    render(TurnWaiting);
+    renderWithSession(mockContextNonActive);
 
     expect(screen.getByText("Bob turn")).toBeInTheDocument();
     expect(screen.getByAltText("Bob")).toBeInTheDocument();
@@ -137,13 +134,9 @@ describe("Turn waiting view", () => {
   });
 
   test("throws error when gameContext is missing", () => {
-    getGameContextSpy.mockImplementation(() => {
-      throw new Error("getGameContext() must be called within a game context");
-    });
-
     expect(() => {
       render(TurnWaiting);
-    }).toThrow("getGameContext() must be called within a game context");
+    }).toThrow();
   });
 
 });

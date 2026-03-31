@@ -3,10 +3,10 @@ import { fireEvent } from "@testing-library/svelte";
 import { readable } from "svelte/store";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import * as Inertia from "@inertiajs/svelte";
-import * as GameContext from "~/contexts/game";
 import { currentUser } from "~/stores/scope";
 import Lobby from "~components/lobby.svelte";
 import Room from "~components/room.svelte";
+import GameContextFixture from "../fixtures/game_context_fixture.svelte";
 
 vi.mock("~/stores/scope", async () => {
   const { writable } = await import("svelte/store");
@@ -30,10 +30,21 @@ vi.mock("@inertiajs/svelte", async () => {
 });
 
 describe("Room", () => {
-  let getGameContextSpy;
+  function renderRoom(session) {
+    return render(GameContextFixture, {
+      component: Room,
+      session,
+    });
+  }
+
+  function renderLobby(session) {
+    return render(GameContextFixture, {
+      component: Lobby,
+      session,
+    });
+  }
 
   beforeEach(() => {
-    getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
     currentUser.set(users.alice);
 
     setPage({ qr: "<svg data-testid='room-qr'></svg>" });
@@ -58,11 +69,9 @@ describe("Room", () => {
 
   describe("screen", () => {
     test("renders loading state when game is unavailable", () => {
-      getGameContextSpy.mockReturnValue({
+      renderRoom({
         snapshot: null,
       });
-
-      render(Room);
 
       expect(
         screen.getByRole("status", { name: "loading" }),
@@ -72,15 +81,11 @@ describe("Room", () => {
 
     test("renders owner lobby state without Storybook", () => {
       currentUser.set(users.alice);
-      getGameContextSpy.mockReturnValue(
-        buildSession({
-          permissions: {
-            can_start_game: true,
-          },
-        }),
-      );
-
-      render(Room);
+      renderRoom(buildSession({
+        permissions: {
+          can_start_game: true,
+        },
+      }));
 
       const players = screen.getByRole("list", { name: "Lobby players" });
 
@@ -105,9 +110,7 @@ describe("Room", () => {
 
     test("renders player lobby state without Storybook", () => {
       currentUser.set(users.bob);
-      getGameContextSpy.mockReturnValue(buildSession());
-
-      render(Room);
+      renderRoom(buildSession());
 
       const players = screen.getByRole("list", { name: "Lobby players" });
 
@@ -132,14 +135,12 @@ describe("Room", () => {
 
   describe("lobby", () => {
     test("renders lobby structure with players list and share button", () => {
-      getGameContextSpy.mockReturnValue({
+      renderLobby({
         snapshot: {
           game: buildGame(),
           permissions: { ...basePermissions },
         },
       });
-
-      render(Lobby);
 
       expect(
         screen.getByRole("list", { name: "Lobby players" }),
@@ -151,14 +152,12 @@ describe("Room", () => {
     });
 
     test("displays all participants with avatars and names", () => {
-      getGameContextSpy.mockReturnValue({
+      renderLobby({
         snapshot: {
           game: buildGame(),
           permissions: { ...basePermissions },
         },
       });
-
-      render(Lobby);
 
       for (const name of ["Alice", "Bob", "Carol"]) {
         expect(screen.getByAltText(name)).toBeInTheDocument();
@@ -167,14 +166,12 @@ describe("Room", () => {
     });
 
     test("shows crown badge for room owner", () => {
-      getGameContextSpy.mockReturnValue({
+      renderLobby({
         snapshot: {
           game: buildGame(),
           permissions: { ...basePermissions },
         },
       });
-
-      render(Lobby);
 
       const players = within(
         screen.getByRole("list", { name: "Lobby players" }),
@@ -191,14 +188,12 @@ describe("Room", () => {
     });
 
     test("renders share button with URL", () => {
-      getGameContextSpy.mockReturnValue({
+      renderLobby({
         snapshot: {
           game: buildGame(),
           permissions: { ...basePermissions },
         },
       });
-
-      render(Lobby);
 
       const shareButton = screen.getByRole("button", {
         name: "Copy share link",
@@ -210,28 +205,24 @@ describe("Room", () => {
     });
 
     test("renders QR svg when page props provide it", () => {
-      getGameContextSpy.mockReturnValue({
+      setPage({ qr: "<svg data-testid='qr-svg'></svg>" });
+      renderLobby({
         snapshot: {
           game: buildGame(),
           permissions: { ...basePermissions },
         },
       });
-      setPage({ qr: "<svg data-testid='qr-svg'></svg>" });
-
-      render(Lobby);
 
       expect(screen.getByTestId("qr-svg")).toBeInTheDocument();
     });
 
     test("copies URL to clipboard on share button click", async () => {
-      getGameContextSpy.mockReturnValue({
+      renderLobby({
         snapshot: {
           game: buildGame(),
           permissions: { ...basePermissions },
         },
       });
-
-      render(Lobby);
 
       await fireEvent.click(
         screen.getByRole("button", { name: "Copy share link" }),
@@ -243,14 +234,12 @@ describe("Room", () => {
     });
 
     test("shows copied state after clicking share button", async () => {
-      getGameContextSpy.mockReturnValue({
+      renderLobby({
         snapshot: {
           game: buildGame(),
           permissions: { ...basePermissions },
         },
       });
-
-      render(Lobby);
 
       const shareButton = screen.getByRole("button", {
         name: "Copy share link",
@@ -263,7 +252,7 @@ describe("Room", () => {
     });
 
     test("handles empty participants list", () => {
-      getGameContextSpy.mockReturnValue({
+      renderLobby({
         snapshot: {
           game: buildGame({
             participants: {},
@@ -273,18 +262,14 @@ describe("Room", () => {
         },
       });
 
-      render(Lobby);
-
       const players = screen.getByRole("list", { name: "Lobby players" });
       expect(within(players).queryAllByRole("listitem")).toHaveLength(0);
     });
 
     test("handles missing game context gracefully", () => {
-      getGameContextSpy.mockReturnValue({
+      renderLobby({
         snapshot: null,
       });
-
-      render(Lobby);
 
       expect(
         screen.getByRole("list", { name: "Lobby players" }),
@@ -383,7 +368,7 @@ function buildSession({ game = {}, permissions = {} } = {}) {
         ...permissions,
       },
     },
-    connection: "ready",
+    status: "ready",
     error: null,
     startGame: vi.fn().mockResolvedValue(undefined),
     advanceTurn: vi.fn().mockResolvedValue(undefined),

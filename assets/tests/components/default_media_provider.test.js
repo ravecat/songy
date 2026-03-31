@@ -1,15 +1,21 @@
 import { render } from "@testing-library/svelte";
 import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
-import * as GameContext from "~/contexts/game";
 import DefaultMediaProvider from "~components/default_media_provider.svelte";
+import GameContextFixture from "../fixtures/game_context_fixture.svelte";
 
 describe("DefaultMediaProvider component", () => {
   let mockGameContext;
-  let getGameContextSpy;
   let playSpy;
   let pauseSpy;
   let loadSpy;
   let addEventListenerSpy;
+
+  function renderWithSession(session = mockGameContext) {
+    return render(GameContextFixture, {
+      component: DefaultMediaProvider,
+      session,
+    });
+  }
 
   beforeEach(() => {
     playSpy = vi
@@ -49,8 +55,6 @@ describe("DefaultMediaProvider component", () => {
       },
       pausePlayback: vi.fn().mockResolvedValue(undefined),
     };
-
-    getGameContextSpy = vi.spyOn(GameContext, "getGameContext");
   });
 
   afterEach(() => {
@@ -58,18 +62,14 @@ describe("DefaultMediaProvider component", () => {
   });
 
   test("renders audio element", () => {
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    const { container } = render(DefaultMediaProvider);
+    const { container } = renderWithSession();
 
     const audio = container.querySelector("audio");
     expect(audio).toBeInTheDocument();
   });
 
   test("sets audio src from track preview_url", () => {
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    const { container } = render(DefaultMediaProvider);
+    const { container } = renderWithSession();
 
     const audio = container.querySelector("audio");
     expect(audio).toHaveAttribute(
@@ -79,25 +79,19 @@ describe("DefaultMediaProvider component", () => {
   });
 
   test("renders without error when children snippet is provided", () => {
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
     expect(() => {
-      render(DefaultMediaProvider);
+      renderWithSession();
     }).not.toThrow();
   });
 
   test("calls load on mount", () => {
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    render(DefaultMediaProvider);
+    renderWithSession();
 
     expect(loadSpy).toHaveBeenCalled();
   });
 
   test("has onended event handler", () => {
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    render(DefaultMediaProvider);
+    renderWithSession();
 
     const call = addEventListenerSpy.mock.calls.find((c) => c[0] === "ended");
     expect(call).toBeDefined();
@@ -106,18 +100,14 @@ describe("DefaultMediaProvider component", () => {
   });
 
   test("has correct preload attribute", () => {
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    const { container } = render(DefaultMediaProvider);
+    const { container } = renderWithSession();
 
     const audio = container.querySelector("audio");
     expect(audio).toHaveAttribute("preload", "auto");
   });
 
   test("audio element is hidden via style", () => {
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    const { container } = render(DefaultMediaProvider);
+    const { container } = renderWithSession();
 
     const audio = container.querySelector("audio");
     expect(audio).toHaveStyle("display: none;");
@@ -125,10 +115,7 @@ describe("DefaultMediaProvider component", () => {
 
   test("handles missing preview_url gracefully", () => {
     mockGameContext.snapshot.game.track.meta = {};
-
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    const { container } = render(DefaultMediaProvider);
+    const { container } = renderWithSession();
 
     const audio = container.querySelector("audio");
     expect(audio).toBeInTheDocument();
@@ -137,9 +124,7 @@ describe("DefaultMediaProvider component", () => {
 
 
   test("loads when preview_url changes", () => {
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    render(DefaultMediaProvider);
+    renderWithSession();
 
     const updatedGameContext = {
       ...mockGameContext,
@@ -157,45 +142,37 @@ describe("DefaultMediaProvider component", () => {
       },
     };
 
-    getGameContextSpy.mockReturnValue(updatedGameContext);
-    render(DefaultMediaProvider);
+    renderWithSession(updatedGameContext);
 
     expect(loadSpy).toHaveBeenCalled();
   });
 
   test("calls play when is_playback is true", () => {
     mockGameContext.snapshot.game.player.is_playback = true;
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    render(DefaultMediaProvider);
+    renderWithSession();
 
     expect(playSpy).toHaveBeenCalled();
   });
 
   test("calls pause when is_playback is false", () => {
     mockGameContext.snapshot.game.player.is_playback = false;
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    render(DefaultMediaProvider);
+    renderWithSession();
 
     expect(pauseSpy).toHaveBeenCalled();
   });
 
   test("handles play errors gracefully", () => {
     playSpy.mockRejectedValue(new Error("Playback failed"));
-    getGameContextSpy.mockReturnValue(mockGameContext);
     mockGameContext.snapshot.game.player.is_playback = true;
 
     expect(() => {
-      render(DefaultMediaProvider);
+      renderWithSession();
     }).not.toThrow();
   });
 
   test("renders when game context is missing player", () => {
     delete mockGameContext.snapshot.game.player;
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    const { container } = render(DefaultMediaProvider);
+    const { container } = renderWithSession();
 
     const audio = container.querySelector("audio");
     expect(audio).toBeInTheDocument();
@@ -203,9 +180,7 @@ describe("DefaultMediaProvider component", () => {
 
   test("handles both preview_url and url being undefined", () => {
     mockGameContext.snapshot.game.track.meta = undefined;
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    const { container } = render(DefaultMediaProvider);
+    const { container } = renderWithSession();
 
     const audio = container.querySelector("audio");
     expect(audio).toBeInTheDocument();
@@ -214,9 +189,7 @@ describe("DefaultMediaProvider component", () => {
 
   test("handles empty meta object", () => {
     mockGameContext.snapshot.game.track.meta = {};
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    const { container } = render(DefaultMediaProvider);
+    const { container } = renderWithSession();
 
     const audio = container.querySelector("audio");
     expect(audio).toBeInTheDocument();
@@ -224,9 +197,7 @@ describe("DefaultMediaProvider component", () => {
 
   test("works with valid track data but missing player state", () => {
     delete mockGameContext.snapshot.game.player;
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    const { container } = render(DefaultMediaProvider);
+    const { container } = renderWithSession();
 
     const audio = container.querySelector("audio");
     expect(audio).toBeInTheDocument();
@@ -236,19 +207,15 @@ describe("DefaultMediaProvider component", () => {
   });
 
   test("toggles playback correctly", () => {
-    getGameContextSpy.mockReturnValue(mockGameContext);
-
-    render(DefaultMediaProvider);
+    renderWithSession();
 
     mockGameContext.snapshot.game.player.is_playback = true;
-    getGameContextSpy.mockReturnValue(mockGameContext);
-    render(DefaultMediaProvider);
+    renderWithSession();
 
     expect(playSpy).toHaveBeenCalled();
 
     mockGameContext.snapshot.game.player.is_playback = false;
-    getGameContextSpy.mockReturnValue(mockGameContext);
-    render(DefaultMediaProvider);
+    renderWithSession();
 
     expect(pauseSpy).toHaveBeenCalled();
   });

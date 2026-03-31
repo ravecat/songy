@@ -1,8 +1,8 @@
 <script lang="ts">
   import { getGameContext } from "~/contexts/game";
 
-  const session = $derived.by(getGameContext);
-  const snapshot = $derived(session.snapshot);
+  const session = getGameContext();
+  const snapshot = $derived($session.snapshot);
   const game = $derived(snapshot?.game ?? null);
   const turn = $derived(game?.turn ?? null);
   const phase = $derived(turn?.phase);

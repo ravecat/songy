@@ -3,29 +3,28 @@ import type {
   JoinReply,
   StatePayload,
 } from "~contracts";
+import type { Readable } from "svelte/store";
+import { writable } from "svelte/store";
 import {
-  createTransport,
   type Transport,
-} from "~/shared/transport";
-import socket from "~/socket";
+} from "~/transport/channel";
 
-export type GameConnectionState =
-  | "connecting"
+export type GameSessionStatus =
+  | "loading"
   | "ready"
-  | "reconnecting"
-  | "closed"
-  | "error";
+  | "stale"
+  | "failed"
+  | "disposed";
 
-export interface GameSnapshot {
-  readonly game: StatePayload["game"];
-  readonly permissions: StatePayload["permissions"];
+export type GameSnapshot = StatePayload;
+
+export interface GameSessionState {
+  readonly snapshot: GameSnapshot | null;
+  readonly status: GameSessionStatus;
+  readonly error: unknown;
 }
 
-export interface GameSession {
-  readonly snapshot: GameSnapshot | null;
-  readonly connection: GameConnectionState;
-  readonly error: unknown;
-
+export interface GameSessionStore extends Readable<GameSessionState> {
   startGame(): Promise<void>;
   advanceTurn(): Promise<void>;
   makeAssumption(position: number): Promise<void>;
@@ -61,6 +60,7 @@ export interface GameChannelSpec {
 }
 
 export type GameCommand = keyof GameChannelSpec["push"] & string;
+type GameReplyCommand = Exclude<GameCommand, "start_game">;
 
 export type GameCommandPayload<TEvent extends GameCommand> =
   GameChannelSpec["push"][TEvent] extends { payload: infer TPayload extends object }
@@ -74,72 +74,56 @@ export type GameCommandResult<TEvent extends GameCommand> =
   ? TOk
   : void;
 
-interface GameSessionTransportOptions {
-  transport: Transport<GameChannelSpec>;
-}
-
-interface GameSessionTopicOptions {
-  topic: string;
-  payload?: object;
-}
-
-type GameSessionOptions =
-  | GameSessionTransportOptions
-  | GameSessionTopicOptions;
-
-const commandsWithReplies = new Set<GameCommand>([
-  "advance_turn",
-  "make_assumption",
-  "start_playback",
-  "pause_playback",
-]);
-
 function timeoutError(event: string) {
   return new Error(`${event} timed out`);
 }
 
 export function createGameSession(
-  options: GameSessionOptions,
-): GameSession {
-  const transport = "transport" in options
-    ? options.transport
-    : createTransport<GameChannelSpec>({
-      socket,
-      topic: options.topic,
-      payload: options.payload,
-    });
-
-  let snapshot = $state<GameSnapshot | null>(null);
-  let error = $state<unknown>(null);
-  let connection = $state<GameConnectionState>("connecting");
+  transport: Transport<GameChannelSpec>,
+): GameSessionStore {
+  const initialState: GameSessionState = {
+    snapshot: null,
+    status: "loading",
+    error: null,
+  };
+  const store = writable<GameSessionState>(initialState);
+  const { subscribe, set } = store;
   const teardowns: Array<() => void> = [];
   let disposed = false;
+  let state = initialState;
 
-  function setFailure(nextError: unknown, nextConnection: GameConnectionState) {
-    error = nextError;
-    connection = nextConnection;
+  function setState(nextState: GameSessionState) {
+    state = nextState;
+    set(nextState);
   }
 
-  function applySnapshot(payload: StatePayload) {
-    snapshot = {
-      game: payload.game,
-      permissions: payload.permissions,
-    };
-    error = null;
-    connection = "ready";
+  function onSnapshot(payload: StatePayload) {
+    setState({
+      snapshot: payload,
+      status: "ready",
+      error: null,
+    });
   }
 
   function applyFailure(nextError: unknown, recoverable: boolean) {
-    if (connection === "closed") {
+    if (state.status === "disposed") {
       return;
     }
 
-    if (recoverable && snapshot !== null) {
-      setFailure(nextError, "reconnecting");
+    if (recoverable && state.snapshot !== null) {
+      setState({
+        ...state,
+        status: "stale",
+        error: nextError,
+      });
       return;
     }
 
-    setFailure(nextError, "error");
+    setState({
+      ...state,
+      status: "failed",
+      error: nextError,
+    });
   }
 
   teardowns.push(
@@ -161,7 +145,7 @@ export function createGameSession(
   );
 
   teardowns.push(
-    transport.subscribe("state", applySnapshot),
+    transport.subscribe("state", onSnapshot),
   );
 
   void transport.join().then((result) => {
@@ -171,7 +155,7 @@ export function createGameSession(
 
     switch (result.status) {
       case "ok":
-        applySnapshot(result.response);
+        onSnapshot(result.response);
         return;
 
       case "error":
@@ -184,15 +168,10 @@ export function createGameSession(
     }
   });
 
-  function command<TEvent extends GameCommand>(
+  function pushAndExpectOk<TEvent extends GameReplyCommand>(
     event: TEvent,
     payload: GameCommandPayload<TEvent>,
   ): Promise<GameCommandResult<TEvent>> {
-    if (!commandsWithReplies.has(event)) {
-      void transport.push(event, payload);
-      return Promise.resolve(undefined as GameCommandResult<TEvent>);
-    }
-
     return transport.push(event, payload).then((result) => {
       switch (result.status) {
         case "ok":
@@ -208,30 +187,23 @@ export function createGameSession(
   }
 
   return {
-    get snapshot() {
-      return snapshot;
-    },
-    get connection() {
-      return connection;
-    },
-    get error() {
-      return error;
-    },
+    subscribe,
 
     startGame() {
-      return command("start_game", {});
+      void transport.push("start_game", {});
+      return Promise.resolve();
     },
     advanceTurn() {
-      return command("advance_turn", {});
+      return pushAndExpectOk("advance_turn", {});
     },
     makeAssumption(position: number) {
-      return command("make_assumption", { position });
+      return pushAndExpectOk("make_assumption", { position });
     },
     startPlayback() {
-      return command("start_playback", {});
+      return pushAndExpectOk("start_playback", {});
     },
     pausePlayback() {
-      return command("pause_playback", {});
+      return pushAndExpectOk("pause_playback", {});
     },
     dispose() {
       if (disposed) {
@@ -244,7 +216,10 @@ export function createGameSession(
         teardown();
       }
 
-      connection = "closed";
+      setState({
+        ...state,
+        status: "disposed",
+      });
       transport.dispose();
     },
   };
