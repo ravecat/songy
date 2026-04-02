@@ -1,22 +1,13 @@
 import { render, screen } from "@testing-library/svelte";
-import { tick } from "svelte";
-import { afterEach, describe, expect, test, vi } from "vitest";
-import GameProvider from "~components/game_provider.svelte";
-import socket from "~/transport/socket";
+import { writable } from "svelte/store";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
-vi.mock("~/transport/socket", async () => {
-  const { Socket } = await import("phoenix");
+vi.mock("~/stores/game", () => ({
+  createGameSession: vi.fn(),
+}));
 
-  return {
-    default: new Socket("/socket", {}),
-  };
-});
-
-function getReceiveHandler(push, status) {
-  return push.receive.mock.calls
-    .filter(([currentStatus]) => currentStatus === status)
-    .at(-1)?.[1];
-}
+import GameProviderFixture from "../fixtures/game_provider_fixture.svelte";
+import { createGameSession } from "~/stores/game";
 
 function buildStatePayload() {
   return {
@@ -48,86 +39,88 @@ function buildStatePayload() {
   };
 }
 
+function createMockSession(initialState = {
+  snapshot: null,
+  status: "loading",
+  error: null,
+}) {
+  const store = writable(initialState);
+
+  return {
+    commands: {
+      startGame: vi.fn(),
+      advanceTurn: vi.fn(),
+      makeAssumption: vi.fn(),
+      startPlayback: vi.fn(),
+      pausePlayback: vi.fn(),
+    },
+    setState(nextState) {
+      store.set(nextState);
+    },
+    subscribe: store.subscribe,
+  };
+}
+
 describe("GameProvider", () => {
-  afterEach(() => {
+  beforeEach(() => {
     vi.clearAllMocks();
-    vi.useRealTimers();
   });
 
-  test("joins to channel with provided topic", () => {
-    const { unmount } = render(GameProvider, {
+  test("creates a game session for the provided topic", () => {
+    vi.mocked(createGameSession).mockReturnValue(createMockSession());
+
+    render(GameProviderFixture, {
       topic: "room:test-room",
     });
 
-    expect(socket.channel).toHaveBeenCalledWith("room:test-room", {});
-
-    unmount();
+    expect(createGameSession).toHaveBeenCalledWith("room:test-room");
   });
 
-  test("listens state event", () => {
-    const { unmount } = render(GameProvider, {
+  test("passes the created session to children through context", () => {
+    const session = createMockSession({
+      snapshot: buildStatePayload(),
+      status: "ready",
+      error: null,
+    });
+    const onSession = vi.fn();
+
+    vi.mocked(createGameSession).mockReturnValue(session);
+
+    render(GameProviderFixture, {
       topic: "room:test-room",
+      onSession,
     });
 
-    const channel = socket.channel.mock.results[0].value;
-
-    expect(channel.on).toHaveBeenCalledWith(
-      "state",
-      expect.any(Function),
-    );
-
-    unmount();
+    expect(screen.getByTestId("game-provider-child")).toBeInTheDocument();
+    expect(onSession).toHaveBeenCalledWith(session);
   });
 
-  test("renders loader while waiting for join reply", async () => {
-    const { unmount } = render(GameProvider, {
+  test("renders loader while the session is loading", () => {
+    vi.mocked(createGameSession).mockReturnValue(createMockSession());
+
+    render(GameProviderFixture, {
       topic: "room:test-room",
     });
-
-    await tick();
 
     expect(screen.getByRole("status", { name: "loading" })).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-
-    unmount();
   });
 
-  test("hides loader after receiving join reply", async () => {
-    const { unmount } = render(GameProvider, {
+  test("renders connect errors with the server reason", () => {
+    vi.mocked(createGameSession).mockReturnValue(createMockSession({
+      snapshot: null,
+      status: "failed",
+      error: {
+        kind: "connect_error",
+        cause: {
+          reason: "game_not_found",
+        },
+      },
+    }));
+
+    render(GameProviderFixture, {
       topic: "room:test-room",
     });
-
-    const channel = socket.channel.mock.results.at(-1).value;
-    const push = channel.join.mock.results[0].value;
-    const okHandler = getReceiveHandler(push, "ok");
-
-    expect(okHandler).toEqual(expect.any(Function));
-
-    okHandler(buildStatePayload());
-
-    await tick();
-
-    expect(
-      screen.queryByRole("status", { name: "loading" }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-
-    unmount();
-  });
-
-  test("renders error screen when join fails with reason", async () => {
-    const { unmount } = render(GameProvider, {
-      topic: "room:test-room",
-    });
-
-    const channel = socket.channel.mock.results.at(-1).value;
-    const push = channel.join.mock.results[0].value;
-    const errorHandler = getReceiveHandler(push, "error");
-
-    expect(errorHandler).toEqual(expect.any(Function));
-
-    errorHandler({ reason: "game_not_found" });
-    await tick();
 
     expect(screen.getByRole("alert")).toBeInTheDocument();
     expect(screen.getByText("Room unavailable")).toBeInTheDocument();
@@ -136,84 +129,22 @@ describe("GameProvider", () => {
       "href",
       "/",
     );
-
-    unmount();
   });
 
-  test("renders error screen when join times out", async () => {
-    const { unmount } = render(GameProvider, {
+  test("renders a generic message for non-connect failures", () => {
+    vi.mocked(createGameSession).mockReturnValue(createMockSession({
+      snapshot: null,
+      status: "failed",
+      error: {
+        kind: "transport_close",
+      },
+    }));
+
+    render(GameProviderFixture, {
       topic: "room:test-room",
     });
-
-    const channel = socket.channel.mock.results.at(-1).value;
-    const push = channel.join.mock.results[0].value;
-    const timeoutHandler = getReceiveHandler(push, "timeout");
-
-    expect(timeoutHandler).toEqual(expect.any(Function));
-
-    timeoutHandler();
-
-    await tick();
 
     expect(screen.getByRole("alert")).toBeInTheDocument();
-    expect(screen.getByText("Room unavailable")).toBeInTheDocument();
     expect(screen.getByText("Failed to load game state.")).toBeInTheDocument();
-
-    unmount();
-  });
-
-  test("renders error screen when channel closes unexpectedly", async () => {
-    const { unmount } = render(GameProvider, {
-      topic: "room:test-room",
-    });
-
-    const channel = socket.channel.mock.results.at(-1).value;
-    const onClose = channel.onClose.mock.calls[0]?.[0];
-
-    expect(onClose).toEqual(expect.any(Function));
-
-    onClose();
-    await tick();
-
-    expect(screen.getByRole("alert")).toBeInTheDocument();
-    expect(screen.getByText("Room unavailable")).toBeInTheDocument();
-    expect(screen.getByText("Failed to load game state.")).toBeInTheDocument();
-
-    unmount();
-  });
-
-  test("ignores close after join succeeded", async () => {
-    const { unmount } = render(GameProvider, {
-      topic: "room:test-room",
-    });
-
-    const channel = socket.channel.mock.results.at(-1).value;
-    const push = channel.join.mock.results[0].value;
-    const okHandler = getReceiveHandler(push, "ok");
-    const onClose = channel.onClose.mock.calls[0]?.[0];
-
-    okHandler(buildStatePayload());
-    await tick();
-
-    onClose();
-    await tick();
-
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("status", { name: "loading" }),
-    ).not.toBeInTheDocument();
-
-    unmount();
-  });
-
-  test("leaves channel on unmount", () => {
-    const { unmount } = render(GameProvider, {
-      topic: "room:test-room",
-    });
-
-    const channel = socket.channel.mock.results.at(-1).value;
-    unmount();
-
-    expect(channel.leave).toHaveBeenCalledTimes(1);
   });
 });

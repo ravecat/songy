@@ -1,7 +1,7 @@
 import { expect, test, vi, beforeEach, afterEach } from "vitest";
 import { flushSync } from "svelte";
 import { useSpotifyPlayer } from "~/shared/hooks/spotify.svelte";
-import Spotify from "~mocks/spotify";
+import Spotify from "../../__mocks__/spotify.js";
 
 vi.stubGlobal("Spotify", Spotify);
 

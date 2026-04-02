@@ -20,7 +20,6 @@
       "~shared/*": ["js/shared/*"],
       "~stories/*": ["stories/*"],
       "~types/*": ["js/shared/types/*"],
-      "~mocks/*": ["__mocks__/*"],
       "~priv/*": ["../priv/*"],
       "~e2e/*": ["e2e/*"]
     },

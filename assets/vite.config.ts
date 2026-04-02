@@ -35,7 +35,6 @@ export default {
       "~shared": path.resolve(assetsDir, "js/shared"),
       "~stories": path.resolve(assetsDir, "stories"),
       "~types": path.resolve(assetsDir, "js/shared/types"),
-      "~mocks": path.resolve(assetsDir, "__mocks__"),
       "~components": path.resolve(assetsDir, "js/components"),
       "~icons": path.resolve(assetsDir, "icons"),
       "~priv": path.resolve(projectRoot, "priv"),

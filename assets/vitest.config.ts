@@ -13,9 +13,6 @@ export default mergeConfig(
   defineConfig({
     resolve: {
       conditions: ['svelte', 'browser', 'import', 'default'],
-      alias: {
-        phoenix: path.resolve(dirname, '__mocks__/phoenix.js'),
-      },
     },
     test: {
       globals: true,

@@ -1,7 +1,12 @@
-import { get } from "svelte/store";
-import { describe, expect, test, vi } from "vitest";
+import { get, writable } from "svelte/store";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+
+vi.mock("~/transport/session", () => ({
+  createSession: vi.fn(),
+}));
 
 import { createGameSession } from "~/stores/game";
+import { createSession } from "~/transport/session";
 
 function buildStatePayload(phase = "challenging") {
   return {
@@ -38,181 +43,139 @@ function buildStatePayload(phase = "challenging") {
   };
 }
 
-function buildTransport() {
-  let resolveJoin;
-  let failureHandler;
-  let stateHandler;
-  const join = new Promise((resolve) => {
-    resolveJoin = resolve;
-  });
+function buildSessionStore() {
+  const initialState = {
+    snapshot: null,
+    status: "loading",
+    error: null,
+  };
+  const store = writable(initialState);
 
   return {
-    join: vi.fn(() => join),
-    onFailure: vi.fn((callback) => {
-      failureHandler = callback;
-      return vi.fn();
-    }),
-    subscribe: vi.fn((event, callback) => {
-      if (event === "state") {
-        stateHandler = callback;
-      }
-
-      return vi.fn();
-    }),
-    push: vi.fn(),
-    dispose: vi.fn(),
-    resolveJoinOk(payload) {
-      resolveJoin({
-        status: "ok",
-        response: payload,
-      });
+    commands: {
+      startGame: vi.fn(),
+      advanceTurn: vi.fn(() => Promise.resolve()),
+      makeAssumption: vi.fn(() => Promise.resolve()),
+      startPlayback: vi.fn(() => Promise.resolve()),
+      pausePlayback: vi.fn(() => Promise.resolve()),
     },
-    resolveJoinError(response) {
-      resolveJoin({
-        status: "error",
-        response,
-      });
+    setState(nextState) {
+      store.set(nextState);
     },
-    resolveJoinTimeout() {
-      resolveJoin({
-        status: "timeout",
-      });
-    },
-    emitSnapshot(payload) {
-      stateHandler(payload);
-    },
-    emitTransportError(error) {
-      failureHandler({
-        kind: "error",
-        error,
-      });
-    },
-    emitTransportClose() {
-      failureHandler({
-        kind: "close",
-      });
-    },
+    subscribe: store.subscribe,
   };
 }
 
 describe("createGameSession", () => {
-  test("starts in loading state", () => {
-    const session = createGameSession(buildTransport());
-    const state = get(session);
-
-    expect(state.snapshot).toBeNull();
-    expect(state.status).toBe("loading");
-    expect(state.error).toBeNull();
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  test("subscribes to transport immediately", () => {
-    const transport = buildTransport();
+  test("returns the session store from createSession unchanged", () => {
+    const sessionStore = buildSessionStore();
 
-    createGameSession(transport);
+    vi.mocked(createSession).mockReturnValue(sessionStore);
 
-    expect(transport.join).toHaveBeenCalledTimes(1);
-    expect(transport.onFailure).toHaveBeenCalledTimes(1);
-    expect(transport.subscribe).toHaveBeenNthCalledWith(
-      1,
-      "state",
-      expect.any(Function),
+    const session = createGameSession("room:test-room");
+
+    expect(session).toBe(sessionStore);
+  });
+
+  test("creates session with the game channel config", () => {
+    const sessionStore = buildSessionStore();
+
+    vi.mocked(createSession).mockReturnValue(sessionStore);
+
+    createGameSession("room:test-room");
+
+    expect(createSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        topic: "room:test-room",
+        connect: expect.objectContaining({
+          error: expect.any(Function),
+          timeout: expect.any(Function),
+        }),
+        events: {
+          state: expect.any(Function),
+        },
+        commands: expect.objectContaining({
+          startGame: expect.objectContaining({
+            event: "start_game",
+            payload: expect.any(Function),
+          }),
+          advanceTurn: expect.objectContaining({
+            event: "advance_turn",
+            payload: expect.any(Function),
+            ok: expect.any(Function),
+            error: expect.any(Function),
+            timeout: expect.any(Function),
+          }),
+          makeAssumption: expect.objectContaining({
+            event: "make_assumption",
+            payload: expect.any(Function),
+            ok: expect.any(Function),
+            error: expect.any(Function),
+            timeout: expect.any(Function),
+          }),
+          startPlayback: expect.objectContaining({
+            event: "start_playback",
+            payload: expect.any(Function),
+            ok: expect.any(Function),
+            error: expect.any(Function),
+            timeout: expect.any(Function),
+          }),
+          pausePlayback: expect.objectContaining({
+            event: "pause_playback",
+            payload: expect.any(Function),
+            ok: expect.any(Function),
+            error: expect.any(Function),
+            timeout: expect.any(Function),
+          }),
+        }),
+      }),
     );
   });
 
-  test("maps join snapshot into the public session", async () => {
-    const transport = buildTransport();
-    const session = createGameSession(transport);
+  test("keeps the generic store state shape", () => {
+    const sessionStore = buildSessionStore();
     const payload = buildStatePayload();
 
-    transport.resolveJoinOk(payload);
-    await Promise.resolve();
+    vi.mocked(createSession).mockReturnValue(sessionStore);
 
-    expect(get(session).snapshot).toStrictEqual(payload);
-    expect(get(session).status).toBe("ready");
-  });
+    const session = createGameSession("room:test-room");
 
-  test("maps transport snapshot into the public session", () => {
-    const transport = buildTransport();
-    const session = createGameSession(transport);
-    const payload = buildStatePayload();
-
-    transport.emitSnapshot(payload);
-
-    expect(get(session).snapshot).toStrictEqual(payload);
-    expect(get(session).status).toBe("ready");
-  });
-
-  test("maps recoverable failure after snapshot to stale", () => {
-    const transport = buildTransport();
-    const session = createGameSession(transport);
-    const error = new Error("channel closed");
-
-    transport.emitSnapshot(buildStatePayload());
-    transport.emitTransportError(error);
-
-    expect(get(session).status).toBe("stale");
-    expect(get(session).error).toBe(error);
-  });
-
-  test("maps transport failure before first snapshot to failed", () => {
-    const transport = buildTransport();
-    const session = createGameSession(transport);
-    const error = new Error("join rejected");
-
-    transport.emitTransportError(error);
-
-    expect(get(session).status).toBe("failed");
-    expect(get(session).error).toBe(error);
-  });
-
-  test("maps join rejection before first snapshot to failed", async () => {
-    const transport = buildTransport();
-    const session = createGameSession(transport);
-    const error = { reason: "game_not_found" };
-
-    transport.resolveJoinError(error);
-    await Promise.resolve();
-
-    expect(get(session).status).toBe("failed");
-    expect(get(session).error).toEqual(error);
-  });
-
-  test("maps join timeout before first snapshot to failed", async () => {
-    const transport = buildTransport();
-    const session = createGameSession(transport);
-
-    transport.resolveJoinTimeout();
-    await Promise.resolve();
-
-    expect(get(session).status).toBe("failed");
-    expect(get(session).error).toEqual(new Error("Connection timed out"));
-  });
-
-  test("delegates commands to the transport", async () => {
-    const transport = buildTransport();
-    const session = createGameSession(transport);
-
-    transport.push.mockResolvedValueOnce(undefined);
-    transport.push.mockResolvedValueOnce({
-      status: "ok",
-      response: undefined,
+    sessionStore.setState({
+      snapshot: payload,
+      status: "ready",
+      error: null,
     });
 
-    await expect(session.startGame()).resolves.toBeUndefined();
-    await expect(session.advanceTurn()).resolves.toBeUndefined();
-
-    expect(transport.push).toHaveBeenNthCalledWith(1, "start_game", {});
-    expect(transport.push).toHaveBeenNthCalledWith(2, "advance_turn", {});
+    expect(get(session)).toEqual({
+      snapshot: payload,
+      status: "ready",
+      error: null,
+    });
   });
 
-  test("disposes projection and transport only once", () => {
-    const transport = buildTransport();
-    const session = createGameSession(transport);
+  test("passes through generic session errors unchanged", () => {
+    const sessionStore = buildSessionStore();
+    const error = {
+      kind: "connect_error",
+      cause: {
+        reason: "game_not_found",
+      },
+    };
 
-    session.dispose();
-    session.dispose();
+    vi.mocked(createSession).mockReturnValue(sessionStore);
 
-    expect(get(session).status).toBe("disposed");
-    expect(transport.dispose).toHaveBeenCalledTimes(1);
+    const session = createGameSession("room:test-room");
+
+    sessionStore.setState({
+      snapshot: null,
+      status: "failed",
+      error,
+    });
+
+    expect(get(session).error).toEqual(error);
   });
 });

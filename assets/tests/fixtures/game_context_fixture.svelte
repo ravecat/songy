@@ -1,16 +1,19 @@
 <script lang="ts">
+  import type { StatePayload } from "~contracts";
   import { setGameContext } from "~/contexts/game";
+  import type { GameCommandResult, GameSessionState } from "~/stores/game";
 
   interface SessionLike {
-    snapshot?: unknown;
-    status?: string;
-    error?: unknown;
-    startGame?: () => Promise<void>;
-    advanceTurn?: () => Promise<void>;
-    makeAssumption?: (position: number) => Promise<void>;
-    startPlayback?: () => Promise<void>;
-    pausePlayback?: () => Promise<void>;
-    dispose?: () => void;
+    snapshot?: StatePayload | null;
+    status?: GameSessionState["status"];
+    error?: GameSessionState["error"];
+    commands?: Partial<{
+      startGame: () => void;
+      advanceTurn: () => Promise<GameCommandResult>;
+      makeAssumption: (position: number) => Promise<GameCommandResult>;
+      startPlayback: () => Promise<GameCommandResult>;
+      pausePlayback: () => Promise<GameCommandResult>;
+    }>;
   }
 
   interface Props {
@@ -19,7 +22,10 @@
     session?: SessionLike;
   }
 
-  const noop = async () => {};
+  const noop = async (): Promise<GameCommandResult> => ({
+    status: "ok",
+    payload: undefined,
+  });
 
   let {
     component: Component,
@@ -27,7 +33,7 @@
     session = {},
   }: Props = $props();
 
-  function getState() {
+  function getState(): GameSessionState {
     return {
       snapshot: session.snapshot ?? null,
       status: session.status ?? (session.snapshot ? "ready" : "loading"),
@@ -40,12 +46,14 @@
       run(getState());
       return () => {};
     },
-    startGame: () => (session.startGame ?? noop)(),
-    advanceTurn: () => (session.advanceTurn ?? noop)(),
-    makeAssumption: (position) => (session.makeAssumption ?? noop)(position),
-    startPlayback: () => (session.startPlayback ?? noop)(),
-    pausePlayback: () => (session.pausePlayback ?? noop)(),
-    dispose: () => (session.dispose ?? (() => {}))(),
+    commands: {
+      startGame: () => (session.commands?.startGame ?? (() => {}))(),
+      advanceTurn: () => (session.commands?.advanceTurn ?? noop)(),
+      makeAssumption: (position) =>
+        (session.commands?.makeAssumption ?? noop)(position),
+      startPlayback: () => (session.commands?.startPlayback ?? noop)(),
+      pausePlayback: () => (session.commands?.pausePlayback ?? noop)(),
+    },
   });
 </script>
 

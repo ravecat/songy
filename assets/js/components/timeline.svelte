@@ -179,7 +179,7 @@
     const position = closest?.element.dataset.position;
     if (!position) return;
 
-    void session.makeAssumption(Number(position)).catch(() => {});
+    void session.commands.makeAssumption(Number(position)).catch(() => {});
   }
 </script>
 

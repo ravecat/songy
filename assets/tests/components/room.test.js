@@ -370,10 +370,12 @@ function buildSession({ game = {}, permissions = {} } = {}) {
     },
     status: "ready",
     error: null,
-    startGame: vi.fn().mockResolvedValue(undefined),
-    advanceTurn: vi.fn().mockResolvedValue(undefined),
-    makeAssumption: vi.fn().mockResolvedValue(undefined),
-    startPlayback: vi.fn().mockResolvedValue(undefined),
-    pausePlayback: vi.fn().mockResolvedValue(undefined),
+    commands: {
+      startGame: vi.fn(),
+      advanceTurn: vi.fn().mockResolvedValue(undefined),
+      makeAssumption: vi.fn().mockResolvedValue(undefined),
+      startPlayback: vi.fn().mockResolvedValue(undefined),
+      pausePlayback: vi.fn().mockResolvedValue(undefined),
+    },
   };
 }

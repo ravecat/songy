@@ -43,11 +43,13 @@ function buildSession(phase = "challenging") {
     snapshot: buildStatePayload(phase),
     status: "ready",
     error: null,
-    startGame: vi.fn(),
-    advanceTurn: vi.fn(),
-    makeAssumption: vi.fn(),
-    startPlayback: vi.fn(),
-    pausePlayback: vi.fn(),
+    commands: {
+      startGame: vi.fn(),
+      advanceTurn: vi.fn(),
+      makeAssumption: vi.fn(),
+      startPlayback: vi.fn(),
+      pausePlayback: vi.fn(),
+    },
     dispose: vi.fn(),
   };
 }

@@ -52,10 +52,12 @@ describe("Player", () => {
         },
         timer: null,
       },
-      startGame: vi.fn().mockResolvedValue(undefined),
-      advanceTurn: vi.fn().mockResolvedValue(undefined),
-      startPlayback: vi.fn().mockResolvedValue(undefined),
-      pausePlayback: vi.fn().mockResolvedValue(undefined),
+      commands: {
+        startGame: vi.fn(),
+        advanceTurn: vi.fn().mockResolvedValue(undefined),
+        startPlayback: vi.fn().mockResolvedValue(undefined),
+        pausePlayback: vi.fn().mockResolvedValue(undefined),
+      },
     };
   });
 
@@ -115,7 +117,7 @@ describe("Player", () => {
           screen.getByRole("button", { name: "Start game" }),
         );
 
-        expect(mockChannelContext.startGame).toHaveBeenCalled();
+        expect(mockChannelContext.commands.startGame).toHaveBeenCalled();
       });
     });
 
@@ -148,7 +150,7 @@ describe("Player", () => {
 
         await fireEvent.click(screen.getByRole("button", { name: "Ready" }));
 
-        expect(mockChannelContext.advanceTurn).toHaveBeenCalled();
+        expect(mockChannelContext.commands.advanceTurn).toHaveBeenCalled();
       });
 
       test("disables play button during waiting phase", () => {
@@ -322,7 +324,7 @@ describe("Player", () => {
 
       await fireEvent.click(screen.getByRole("button", { name: "Play track" }));
 
-      expect(mockChannelContext.startPlayback).toHaveBeenCalled();
+      expect(mockChannelContext.commands.startPlayback).toHaveBeenCalled();
     });
 
     test("pushes pause_playback when playing", async () => {
@@ -335,7 +337,7 @@ describe("Player", () => {
         screen.getByRole("button", { name: "Pause track" }),
       );
 
-      expect(mockChannelContext.pausePlayback).toHaveBeenCalled();
+      expect(mockChannelContext.commands.pausePlayback).toHaveBeenCalled();
     });
   });
 });

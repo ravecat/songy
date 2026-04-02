@@ -2,11 +2,8 @@
   import { untrack } from "svelte";
   import Equalizer from "~components/equalizer.svelte";
   import { setGameContext } from "~/contexts/game";
-  import { createTransport } from "~/transport/channel";
-  import {
-    createGameSession,
-    type GameChannelSpec,
-  } from "~/stores/game";
+  import { createGameSession } from "~/stores/game";
+  import type { SessionError } from "~/transport/session";
   import type { Snippet } from "svelte";
 
   interface Props {
@@ -16,19 +13,22 @@
 
   let { children, topic }: Props = $props();
 
-  const transport = createTransport<GameChannelSpec>({
-    topic: untrack(() => topic),
-  });
+  const session = createGameSession(untrack(() => topic));
 
-  const session = createGameSession(transport);
+  function getErrorMessage(error: SessionError) {
+    if (
+      error.kind === "connect_error" &&
+      typeof error.cause === "object" &&
+      error.cause !== null &&
+      "reason" in error.cause
+    ) {
+      return `Reason: ${String(error.cause.reason)}`;
+    }
+
+    return "Failed to load game state.";
+  }
 
   setGameContext(session);
-
-  $effect(() => {
-    return () => {
-      session.dispose();
-    };
-  });
 </script>
 
 {#if $session.snapshot}
@@ -36,13 +36,7 @@
 {:else if $session.status === "failed" && $session.error}
   <div class="game-channel__error" role="alert">
     <p class="text-lg font-semibold">Room unavailable</p>
-    <p class="opacity-70">
-      {typeof $session.error === "object" &&
-      $session.error &&
-      "reason" in $session.error
-        ? `Reason: ${$session.error.reason}`
-        : "Failed to load game state."}
-    </p>
+    <p class="opacity-70">{getErrorMessage($session.error)}</p>
     <a class="btn btn-primary mt-4" href="/">Back home</a>
   </div>
 {:else}
