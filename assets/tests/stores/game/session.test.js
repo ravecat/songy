@@ -8,41 +8,6 @@ vi.mock("~/transport/session", () => ({
 import { createGameSession } from "~/stores/game";
 import { createSession } from "~/transport/session";
 
-function buildStatePayload(phase = "challenging") {
-  return {
-    game: {
-      id: "game-1",
-      owner_id: "owner-1",
-      max_participants: 8,
-      max_score: 10,
-      status: "in_progress",
-      participants: {},
-      scores: {},
-      player: null,
-      timelines: {},
-      created_at: "2026-01-01T00:00:00Z",
-      queue: [],
-      cursor: 0,
-      track: null,
-      turn: {
-        phase,
-        assumptions: {},
-        winner_id: null,
-        deadline_at_ms: phase === "challenging" ? 1_735_689_600_000 : null,
-      },
-    },
-    permissions: {
-      can_control_playback: false,
-      can_advance_turn: false,
-      can_start_game: false,
-      can_start_turn: false,
-      can_restart_game: false,
-      can_see_assumptions: false,
-      can_make_assumptions: false,
-    },
-  };
-}
-
 function buildSessionStore() {
   const initialState = {
     snapshot: null,
@@ -138,7 +103,7 @@ describe("createGameSession", () => {
 
   test("keeps the generic store state shape", () => {
     const sessionStore = buildSessionStore();
-    const payload = buildStatePayload();
+    const payload = { id: "state-1" };
 
     vi.mocked(createSession).mockReturnValue(sessionStore);
 

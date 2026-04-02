@@ -37,8 +37,8 @@ export default mergeConfig(
           extends: true,
           test: {
             name: 'browser',
-            include: ['tests/browser/**/*.browser.{test,spec}.{js,ts}'],
-            setupFiles: ['./tests/setup.browser.ts'],
+            include: ['tests/**/*.browser.{test,spec}.{js,ts}'],
+            setupFiles: ['vitest-browser-svelte'],
             browser: {
               enabled: true,
               headless: true,
