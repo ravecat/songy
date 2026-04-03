@@ -1,6 +1,6 @@
 import { createContext } from "svelte";
 import type {
-  GameSessionStore,
+  createGameSession,
 } from "~/stores/game";
 
-export const [getGameContext, setGameContext] = createContext<GameSessionStore>();
+export const [getGameContext, setGameContext] = createContext<ReturnType<typeof createGameSession>>();

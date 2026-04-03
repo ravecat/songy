@@ -19,10 +19,10 @@ function buildSessionStore() {
   return {
     commands: {
       startGame: vi.fn(),
-      advanceTurn: vi.fn(() => Promise.resolve()),
-      makeAssumption: vi.fn(() => Promise.resolve()),
-      startPlayback: vi.fn(() => Promise.resolve()),
-      pausePlayback: vi.fn(() => Promise.resolve()),
+      advanceTurn: vi.fn(),
+      makeAssumption: vi.fn(),
+      startPlayback: vi.fn(),
+      pausePlayback: vi.fn(),
     },
     setState(nextState) {
       store.set(nextState);
@@ -56,45 +56,24 @@ describe("createGameSession", () => {
     expect(createSession).toHaveBeenCalledWith(
       expect.objectContaining({
         topic: "room:test-room",
-        connect: expect.objectContaining({
-          error: expect.any(Function),
-          timeout: expect.any(Function),
-        }),
         events: {
           state: expect.any(Function),
         },
         commands: expect.objectContaining({
           startGame: expect.objectContaining({
             event: "start_game",
-            payload: expect.any(Function),
           }),
           advanceTurn: expect.objectContaining({
             event: "advance_turn",
-            payload: expect.any(Function),
-            ok: expect.any(Function),
-            error: expect.any(Function),
-            timeout: expect.any(Function),
           }),
           makeAssumption: expect.objectContaining({
             event: "make_assumption",
-            payload: expect.any(Function),
-            ok: expect.any(Function),
-            error: expect.any(Function),
-            timeout: expect.any(Function),
           }),
           startPlayback: expect.objectContaining({
             event: "start_playback",
-            payload: expect.any(Function),
-            ok: expect.any(Function),
-            error: expect.any(Function),
-            timeout: expect.any(Function),
           }),
           pausePlayback: expect.objectContaining({
             event: "pause_playback",
-            payload: expect.any(Function),
-            ok: expect.any(Function),
-            error: expect.any(Function),
-            timeout: expect.any(Function),
           }),
         }),
       }),

@@ -3,7 +3,6 @@
   import Equalizer from "~components/equalizer.svelte";
   import { setGameContext } from "~/contexts/game";
   import { createGameSession } from "~/stores/game";
-  import type { SessionError } from "~/transport/session";
   import type { Snippet } from "svelte";
 
   interface Props {
@@ -15,28 +14,23 @@
 
   const session = createGameSession(untrack(() => topic));
 
-  function getErrorMessage(error: SessionError) {
-    if (
-      error.kind === "connect_error" &&
-      typeof error.cause === "object" &&
-      error.cause !== null &&
-      "reason" in error.cause
-    ) {
-      return `Reason: ${String(error.cause.reason)}`;
-    }
-
-    return "Failed to load game state.";
-  }
-
   setGameContext(session);
 </script>
 
 {#if $session.snapshot}
   {@render children?.()}
 {:else if $session.status === "failed" && $session.error}
+  {@const error = $session.error}
   <div class="game-channel__error" role="alert">
     <p class="text-lg font-semibold">Room unavailable</p>
-    <p class="opacity-70">{getErrorMessage($session.error)}</p>
+    <p class="opacity-70">
+      {error.kind === "connect_error" &&
+      typeof error.cause === "object" &&
+      error.cause !== null &&
+      "reason" in error.cause
+        ? `Reason: ${String(error.cause.reason)}`
+        : "Failed to load game state."}
+    </p>
     <a class="btn btn-primary mt-4" href="/">Back home</a>
   </div>
 {:else}

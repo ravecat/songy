@@ -1,7 +1,13 @@
 <script lang="ts">
   import type { StatePayload } from "~contracts";
   import { setGameContext } from "~/contexts/game";
-  import type { GameCommandResult, GameSessionState } from "~/stores/game";
+  import type { createGameSession } from "~/stores/game";
+
+  type GameSession = ReturnType<typeof createGameSession>;
+  type GameSessionState =
+    Parameters<GameSession["subscribe"]>[0] extends (value: infer TValue) => unknown
+      ? TValue
+      : never;
 
   interface SessionLike {
     snapshot?: StatePayload | null;
@@ -9,10 +15,10 @@
     error?: GameSessionState["error"];
     commands?: Partial<{
       startGame: () => void;
-      advanceTurn: () => Promise<GameCommandResult>;
-      makeAssumption: (position: number) => Promise<GameCommandResult>;
-      startPlayback: () => Promise<GameCommandResult>;
-      pausePlayback: () => Promise<GameCommandResult>;
+      advanceTurn: () => void;
+      makeAssumption: (payload: { position: number }) => void;
+      startPlayback: () => void;
+      pausePlayback: () => void;
     }>;
   }
 
@@ -21,11 +27,6 @@
     componentProps?: Record<string, unknown>;
     session?: SessionLike;
   }
-
-  const noop = async (): Promise<GameCommandResult> => ({
-    status: "ok",
-    payload: undefined,
-  });
 
   let {
     component: Component,
@@ -48,11 +49,11 @@
     },
     commands: {
       startGame: () => (session.commands?.startGame ?? (() => {}))(),
-      advanceTurn: () => (session.commands?.advanceTurn ?? noop)(),
-      makeAssumption: (position) =>
-        (session.commands?.makeAssumption ?? noop)(position),
-      startPlayback: () => (session.commands?.startPlayback ?? noop)(),
-      pausePlayback: () => (session.commands?.pausePlayback ?? noop)(),
+      advanceTurn: () => (session.commands?.advanceTurn ?? (() => {}))(),
+      makeAssumption: (payload) =>
+        (session.commands?.makeAssumption ?? (() => {}))(payload),
+      startPlayback: () => (session.commands?.startPlayback ?? (() => {}))(),
+      pausePlayback: () => (session.commands?.pausePlayback ?? (() => {}))(),
     },
   });
 </script>

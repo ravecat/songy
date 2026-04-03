@@ -1,12 +1,7 @@
 import { get } from "svelte/store";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import socket from "~/transport/socket";
-import {
-  createSession,
-  type CommandReply,
-  type SessionConfig,
-  type SessionSpec,
-} from "~/transport/session";
+import { createSession } from "~/transport/session";
 
 vi.mock("~/transport/socket", async () => {
   const { Socket } = await import("../../__mocks__/phoenix.js");
@@ -16,7 +11,7 @@ vi.mock("~/transport/socket", async () => {
   };
 });
 
-interface CounterSessionSpec extends SessionSpec {
+interface CounterSessionSpec {
   snapshot: {
     count: number;
   };
@@ -37,12 +32,31 @@ interface CounterSessionSpec extends SessionSpec {
     };
   };
   commands: {
-    ping(): void;
-    save(count: number): Promise<
-      CommandReply<"accepted" | "validation_failed" | "timeout", string>
-    >;
+    ping: {
+      event: "ping";
+    };
+    setCount: {
+      event: "set_count";
+      payload: {
+        count: number;
+      };
+    };
+    save: {
+      event: "save";
+      payload: {
+        count: number;
+      };
+      reply: {
+        accepted: string;
+        validation_failed: string;
+        timeout: string;
+      };
+    };
   };
 }
+
+type CounterSessionConfig =
+  Parameters<typeof createSession<CounterSessionSpec>>[0];
 
 function getChannel() {
   const channel = vi.mocked(socket.channel).mock.results.at(-1)?.value;
@@ -139,7 +153,7 @@ async function flushMicrotasks() {
 }
 
 function config(
-  overrides: Partial<SessionConfig<CounterSessionSpec>> = {},
+  overrides: Partial<CounterSessionConfig> = {},
 ) {
   return {
     topic: "room:test-room",
@@ -153,18 +167,19 @@ function config(
     commands: {
       ping: {
         event: "ping",
-        payload: () => ({}),
+      },
+      setCount: {
+        event: "set_count",
       },
       save: {
         event: "save",
-        payload: (count: number) => ({ count }),
-        accepted: (reply: { id: string }) => reply.id,
-        validation_failed: (reply: { reason: string }) => reply.reason,
+        accepted: (reply) => (reply as { id: string }).id,
+        validation_failed: (reply) => (reply as { reason: string }).reason,
         timeout: () => "timed_out",
       },
     },
     ...overrides,
-  } satisfies SessionConfig<CounterSessionSpec>;
+  } satisfies CounterSessionConfig;
 }
 
 describe("createSession", () => {
@@ -174,7 +189,7 @@ describe("createSession", () => {
 
   test("starts in loading state and joins on first subscribe", () => {
     const session = createSession<CounterSessionSpec>(config());
-    const unsubscribe = session.subscribe(() => {});
+    const unsubscribe = session.subscribe(() => { });
     const channel = getChannel();
 
     expect(get(session)).toEqual({
@@ -188,11 +203,11 @@ describe("createSession", () => {
     unsubscribe();
   });
 
-  test("supports initialSnapshot before connect reply arrives", () => {
+  test("supports snapshot before connect reply arrives", () => {
     const session = createSession<CounterSessionSpec>(config({
-      initialSnapshot: { count: 2 },
+      snapshot: { count: 2 },
     }));
-    const unsubscribe = session.subscribe(() => {});
+    const unsubscribe = session.subscribe(() => { });
 
     expect(get(session)).toEqual({
       snapshot: { count: 2 },
@@ -205,14 +220,14 @@ describe("createSession", () => {
 
   test("lets connect.ok derive from current snapshot", async () => {
     const session = createSession<CounterSessionSpec>(config({
-      initialSnapshot: { count: 2 },
+      snapshot: { count: 2 },
       connect: {
         ok: (snapshot, reply) => ({
           count: (snapshot?.count ?? 0) + reply.count,
         }),
       },
     }));
-    const unsubscribe = session.subscribe(() => {});
+    const unsubscribe = session.subscribe(() => { });
     const channel = getChannel();
 
     expect(get(session)).toEqual({
@@ -239,7 +254,7 @@ describe("createSession", () => {
         error: (reply) => new Error(reply.reason),
       },
     }));
-    const unsubscribe = session.subscribe(() => {});
+    const unsubscribe = session.subscribe(() => { });
     const channel = getChannel();
 
     triggerJoin(channel, "error", { reason: "game_not_found" });
@@ -259,7 +274,7 @@ describe("createSession", () => {
 
   test("uses default timeout error for connect timeout", async () => {
     const session = createSession<CounterSessionSpec>(config());
-    const unsubscribe = session.subscribe(() => {});
+    const unsubscribe = session.subscribe(() => { });
     const channel = getChannel();
 
     triggerJoin(channel, "timeout");
@@ -279,7 +294,7 @@ describe("createSession", () => {
 
   test("event reducers update snapshot while session is ready", async () => {
     const session = createSession<CounterSessionSpec>(config());
-    const unsubscribe = session.subscribe(() => {});
+    const unsubscribe = session.subscribe(() => { });
     const channel = getChannel();
 
     triggerJoin(channel, "ok", { count: 1 });
@@ -298,7 +313,7 @@ describe("createSession", () => {
 
   test("event reducers clear transport degradation after a stale transition", async () => {
     const session = createSession<CounterSessionSpec>(config());
-    const unsubscribe = session.subscribe(() => {});
+    const unsubscribe = session.subscribe(() => { });
     const channel = getChannel();
 
     triggerJoin(channel, "ok", { count: 1 });
@@ -326,7 +341,7 @@ describe("createSession", () => {
 
   test("transport close without snapshot fails the session", () => {
     const session = createSession<CounterSessionSpec>(config());
-    const unsubscribe = session.subscribe(() => {});
+    const unsubscribe = session.subscribe(() => { });
     const channel = getChannel();
 
     emitTransportClose(channel);
@@ -344,7 +359,7 @@ describe("createSession", () => {
 
   test("signal commands push and return void", async () => {
     const session = createSession<CounterSessionSpec>(config());
-    const unsubscribe = session.subscribe(() => {});
+    const unsubscribe = session.subscribe(() => { });
     const channel = getChannel();
 
     triggerJoin(channel, "ok", { count: 1 });
@@ -359,15 +374,32 @@ describe("createSession", () => {
     unsubscribe();
   });
 
-  test("reply-aware commands resolve mapped reply envelopes", async () => {
+  test("signal commands pass object payload through by default", async () => {
     const session = createSession<CounterSessionSpec>(config());
-    const unsubscribe = session.subscribe(() => {});
+    const unsubscribe = session.subscribe(() => { });
     const channel = getChannel();
 
     triggerJoin(channel, "ok", { count: 1 });
     await flushMicrotasks();
 
-    const pending = session.commands.save(5);
+    expect(session.commands.setCount({ count: 9 })).toBeUndefined();
+    expect(getLastPush(channel)).toMatchObject({
+      event: "set_count",
+      payload: { count: 9 },
+    });
+
+    unsubscribe();
+  });
+
+  test("reply-aware commands resolve mapped reply envelopes", async () => {
+    const session = createSession<CounterSessionSpec>(config());
+    const unsubscribe = session.subscribe(() => { });
+    const channel = getChannel();
+
+    triggerJoin(channel, "ok", { count: 1 });
+    await flushMicrotasks();
+
+    const pending = session.commands.save({ count: 5 });
 
     expect(getLastPush(channel)).toMatchObject({
       event: "save",
@@ -386,13 +418,13 @@ describe("createSession", () => {
 
   test("reply-aware commands keep arbitrary statuses as resolved results", async () => {
     const session = createSession<CounterSessionSpec>(config());
-    const unsubscribe = session.subscribe(() => {});
+    const unsubscribe = session.subscribe(() => { });
     const channel = getChannel();
 
     triggerJoin(channel, "ok", { count: 1 });
     await flushMicrotasks();
 
-    const pending = session.commands.save(5);
+    const pending = session.commands.save({ count: 5 });
 
     triggerReply(getLastPush(channel).push, "validation_failed", {
       reason: "too_early",
@@ -408,7 +440,7 @@ describe("createSession", () => {
 
   test("last unsubscribe removes local handlers before leave", async () => {
     const session = createSession<CounterSessionSpec>(config());
-    const unsubscribe = session.subscribe(() => {});
+    const unsubscribe = session.subscribe(() => { });
     const channel = getChannel();
 
     triggerJoin(channel, "ok", { count: 2 });

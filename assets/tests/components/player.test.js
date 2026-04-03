@@ -54,9 +54,9 @@ describe("Player", () => {
       },
       commands: {
         startGame: vi.fn(),
-        advanceTurn: vi.fn().mockResolvedValue(undefined),
-        startPlayback: vi.fn().mockResolvedValue(undefined),
-        pausePlayback: vi.fn().mockResolvedValue(undefined),
+        advanceTurn: vi.fn(),
+        startPlayback: vi.fn(),
+        pausePlayback: vi.fn(),
       },
     };
   });

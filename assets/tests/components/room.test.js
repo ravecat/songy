@@ -372,10 +372,10 @@ function buildSession({ game = {}, permissions = {} } = {}) {
     error: null,
     commands: {
       startGame: vi.fn(),
-      advanceTurn: vi.fn().mockResolvedValue(undefined),
-      makeAssumption: vi.fn().mockResolvedValue(undefined),
-      startPlayback: vi.fn().mockResolvedValue(undefined),
-      pausePlayback: vi.fn().mockResolvedValue(undefined),
+      advanceTurn: vi.fn(),
+      makeAssumption: vi.fn(),
+      startPlayback: vi.fn(),
+      pausePlayback: vi.fn(),
     },
   };
 }

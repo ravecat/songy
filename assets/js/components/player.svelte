@@ -9,21 +9,19 @@
   const isPlayback = $derived(game?.player?.is_playback);
 
   const handlePlayback = () => {
-    void (
-      isPlayback
-        ? session.commands.pausePlayback()
-        : session.commands.startPlayback()
-    ).catch(() => {});
+    if (isPlayback) {
+      session.commands.pausePlayback();
+    } else {
+      session.commands.startPlayback();
+    }
   };
 
   const handleStartGame = () => {
-    try {
-      session.commands.startGame();
-    } catch {}
+    session.commands.startGame();
   };
 
   const handleAdvanceTurn = () => {
-    void session.commands.advanceTurn().catch(() => {});
+    session.commands.advanceTurn();
   };
 
   const rightBtn = $derived.by(() => {

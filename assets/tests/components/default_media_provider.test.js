@@ -54,7 +54,7 @@ describe("DefaultMediaProvider component", () => {
         timer: null,
       },
       commands: {
-        pausePlayback: vi.fn().mockResolvedValue(undefined),
+        pausePlayback: vi.fn(),
       },
     };
   });

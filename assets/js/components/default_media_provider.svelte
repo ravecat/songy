@@ -78,7 +78,7 @@
     audioElement.currentTime = 0;
 
     if (permissions?.can_control_playback) {
-      void session.commands.pausePlayback().catch(() => {});
+      session.commands.pausePlayback();
     }
   };
 </script>
