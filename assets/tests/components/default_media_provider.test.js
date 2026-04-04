@@ -53,9 +53,7 @@ describe("DefaultMediaProvider component", () => {
         },
         timer: null,
       },
-      commands: {
-        pausePlayback: vi.fn(),
-      },
+      pausePlayback: vi.fn(),
     };
   });
 

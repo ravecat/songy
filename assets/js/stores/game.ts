@@ -1,31 +1,11 @@
 import type { StatePayload } from "~contracts";
-import { createSession } from "~/transport/session";
+import { createSession } from "~/transport/store";
 
 export interface GameSessionSpec {
   events: {
     state: StatePayload;
   };
   snapshot: StatePayload;
-  commands: {
-    startGame: {
-      event: "start_game";
-    };
-    advanceTurn: {
-      event: "advance_turn";
-    };
-    makeAssumption: {
-      event: "make_assumption";
-      payload: {
-        position: number;
-      };
-    };
-    startPlayback: {
-      event: "start_playback";
-    };
-    pausePlayback: {
-      event: "pause_playback";
-    };
-  };
 }
 
 export function createGameSession(topic: string) {
@@ -34,22 +14,21 @@ export function createGameSession(topic: string) {
     events: {
       state: (_snapshot, payload) => payload,
     },
-    commands: {
-      startGame: {
-        event: "start_game",
-      },
-      advanceTurn: {
-        event: "advance_turn",
-      },
-      makeAssumption: {
-        event: "make_assumption",
-      },
-      startPlayback: {
-        event: "start_playback",
-      },
-      pausePlayback: {
-        event: "pause_playback",
-      },
+  }).extend(({ push }) => ({
+    startGame() {
+      push("start_game", {});
     },
-  });
+    advanceTurn() {
+      push("advance_turn", {});
+    },
+    makeAssumption(position: number) {
+      push("make_assumption", { position });
+    },
+    startPlayback() {
+      push("start_playback", {});
+    },
+    pausePlayback() {
+      push("pause_playback", {});
+    },
+  }));
 }

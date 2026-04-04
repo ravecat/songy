@@ -370,12 +370,10 @@ function buildSession({ game = {}, permissions = {} } = {}) {
     },
     status: "ready",
     error: null,
-    commands: {
-      startGame: vi.fn(),
-      advanceTurn: vi.fn(),
-      makeAssumption: vi.fn(),
-      startPlayback: vi.fn(),
-      pausePlayback: vi.fn(),
-    },
+    startGame: vi.fn(),
+    advanceTurn: vi.fn(),
+    makeAssumption: vi.fn(),
+    startPlayback: vi.fn(),
+    pausePlayback: vi.fn(),
   };
 }

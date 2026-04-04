@@ -1,12 +1,12 @@
 import { get, writable } from "svelte/store";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-vi.mock("~/transport/session", () => ({
+vi.mock("~/transport/store", () => ({
   createSession: vi.fn(),
 }));
 
 import { createGameSession } from "~/stores/game";
-import { createSession } from "~/transport/session";
+import { createSession } from "~/transport/store";
 
 function buildSessionStore() {
   const initialState = {
@@ -15,19 +15,23 @@ function buildSessionStore() {
     error: null,
   };
   const store = writable(initialState);
+  const push = vi.fn();
+  const sessionStore = {
+    push,
+    subscribe: store.subscribe,
+  };
 
   return {
-    commands: {
-      startGame: vi.fn(),
-      advanceTurn: vi.fn(),
-      makeAssumption: vi.fn(),
-      startPlayback: vi.fn(),
-      pausePlayback: vi.fn(),
+    ...sessionStore,
+    extend(build) {
+      return {
+        ...build(sessionStore),
+        subscribe: store.subscribe,
+      };
     },
     setState(nextState) {
       store.set(nextState);
     },
-    subscribe: store.subscribe,
   };
 }
 
@@ -36,14 +40,23 @@ describe("createGameSession", () => {
     vi.clearAllMocks();
   });
 
-  test("returns the session store from createSession unchanged", () => {
+  test("returns the session state with bound actions", () => {
     const sessionStore = buildSessionStore();
 
     vi.mocked(createSession).mockReturnValue(sessionStore);
 
     const session = createGameSession("room:test-room");
 
-    expect(session).toBe(sessionStore);
+    expect(session).toEqual(
+      expect.objectContaining({
+        subscribe: sessionStore.subscribe,
+        startGame: expect.any(Function),
+        advanceTurn: expect.any(Function),
+        makeAssumption: expect.any(Function),
+        startPlayback: expect.any(Function),
+        pausePlayback: expect.any(Function),
+      }),
+    );
   });
 
   test("creates session with the game channel config", () => {
@@ -59,25 +72,30 @@ describe("createGameSession", () => {
         events: {
           state: expect.any(Function),
         },
-        commands: expect.objectContaining({
-          startGame: expect.objectContaining({
-            event: "start_game",
-          }),
-          advanceTurn: expect.objectContaining({
-            event: "advance_turn",
-          }),
-          makeAssumption: expect.objectContaining({
-            event: "make_assumption",
-          }),
-          startPlayback: expect.objectContaining({
-            event: "start_playback",
-          }),
-          pausePlayback: expect.objectContaining({
-            event: "pause_playback",
-          }),
-        }),
       }),
     );
+  });
+
+  test("pushes game actions through the session store", () => {
+    const sessionStore = buildSessionStore();
+
+    vi.mocked(createSession).mockReturnValue(sessionStore);
+
+    const session = createGameSession("room:test-room");
+
+    session.startGame();
+    session.advanceTurn();
+    session.makeAssumption(7);
+    session.startPlayback();
+    session.pausePlayback();
+
+    expect(sessionStore.push).toHaveBeenNthCalledWith(1, "start_game", {});
+    expect(sessionStore.push).toHaveBeenNthCalledWith(2, "advance_turn", {});
+    expect(sessionStore.push).toHaveBeenNthCalledWith(3, "make_assumption", {
+      position: 7,
+    });
+    expect(sessionStore.push).toHaveBeenNthCalledWith(4, "start_playback", {});
+    expect(sessionStore.push).toHaveBeenNthCalledWith(5, "pause_playback", {});
   });
 
   test("keeps the generic store state shape", () => {

@@ -10,18 +10,18 @@
 
   const handlePlayback = () => {
     if (isPlayback) {
-      session.commands.pausePlayback();
+      session.pausePlayback();
     } else {
-      session.commands.startPlayback();
+      session.startPlayback();
     }
   };
 
   const handleStartGame = () => {
-    session.commands.startGame();
+    session.startGame();
   };
 
   const handleAdvanceTurn = () => {
-    session.commands.advanceTurn();
+    session.advanceTurn();
   };
 
   const rightBtn = $derived.by(() => {
