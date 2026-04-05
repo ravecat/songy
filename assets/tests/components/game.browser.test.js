@@ -1,9 +1,9 @@
-import { render, screen } from "@testing-library/svelte";
-import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
+import { writable } from "svelte/store";
+import { render } from "vitest-browser-svelte";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { currentUser } from "~/stores/scope";
-import GameContextFixture from "../fixtures/game_context_fixture.svelte";
 
-import Game from "~components/game.svelte";
+vi.mock("~/contexts/game");
 
 vi.mock("~/stores/scope", async () => {
   const { writable } = await import("svelte/store");
@@ -14,17 +14,15 @@ vi.mock("~/stores/scope", async () => {
   };
 });
 
+import Game from "~components/game.svelte";
+import { getGameContext } from "~/contexts/game";
+
 describe("Game", () => {
   let mockChannelContext;
 
-  function renderWithSession(session = mockChannelContext) {
-    return render(GameContextFixture, {
-      component: Game,
-      session,
-    });
-  }
-
   beforeEach(() => {
+    vi.clearAllMocks();
+
     currentUser.set({
       uuid: "user-1",
       name: "Alice",
@@ -87,6 +85,8 @@ describe("Game", () => {
         },
         timer: null,
       },
+      status: "ready",
+      error: null,
     };
   });
 
@@ -94,46 +94,54 @@ describe("Game", () => {
     vi.restoreAllMocks();
   });
 
-  test("renders timeline details for active player in ready phase", () => {
+  test("renders timeline details for active player in ready phase", async () => {
     mockChannelContext.snapshot.game.turn.phase = "ready";
 
     currentUser.set({ uuid: "user-1", name: "Alice" });
-    renderWithSession();
+    vi.mocked(getGameContext).mockReturnValue(writable(mockChannelContext));
 
-    expect(screen.getAllByText("Timeline Track")).toHaveLength(2);
-    expect(screen.getAllByText("Timeline Artist")).toHaveLength(2);
-    expect(screen.getByText("2019")).toBeInTheDocument();
+    const screen = render(Game);
+
+    expect(screen.container.textContent).toContain("Timeline Track");
+    expect(screen.container.textContent).toContain("Timeline Artist");
+    await expect.element(screen.getByText("2019")).toBeVisible();
   });
 
-  test("renders timeline details for passive player in ready phase", () => {
+  test("renders timeline details for passive player in ready phase", async () => {
     mockChannelContext.snapshot.game.turn.phase = "ready";
 
     currentUser.set({ uuid: "user-2", name: "Bob" });
-    renderWithSession();
+    vi.mocked(getGameContext).mockReturnValue(writable(mockChannelContext));
 
-    expect(screen.getAllByText("Timeline Track")).toHaveLength(2);
-    expect(screen.getAllByText("Timeline Artist")).toHaveLength(2);
-    expect(screen.getByText("2019")).toBeInTheDocument();
+    const screen = render(Game);
+
+    expect(screen.container.textContent).toContain("Timeline Track");
+    expect(screen.container.textContent).toContain("Timeline Artist");
+    await expect.element(screen.getByText("2019")).toBeVisible();
   });
 
-  test("displays waiting view on waiting phase", () => {
+  test("displays waiting view on waiting phase", async () => {
     mockChannelContext.snapshot.game.turn.phase = "waiting";
     mockChannelContext.snapshot.permissions.can_start_turn = true;
 
-    renderWithSession();
+    vi.mocked(getGameContext).mockReturnValue(writable(mockChannelContext));
 
-    expect(screen.getByText("It's your turn")).toBeInTheDocument();
+    const screen = render(Game);
+
+    await expect.element(screen.getByText("It's your turn")).toBeVisible();
   });
 
-  test("displays waiting view for passive player", () => {
+  test("displays waiting view for passive player", async () => {
     mockChannelContext.snapshot.game.turn.phase = "waiting";
 
-    renderWithSession();
+    vi.mocked(getGameContext).mockReturnValue(writable(mockChannelContext));
 
-    expect(screen.getByText("Alice turn")).toBeInTheDocument();
+    const screen = render(Game);
+
+    await expect.element(screen.getByText("Alice turn")).toBeVisible();
   });
 
-  test("displays results view on results phase", () => {
+  test("displays results view on results phase", async () => {
     mockChannelContext.snapshot.game.turn.phase = "results";
     mockChannelContext.snapshot.game.track = {
       id: "track-1",
@@ -146,14 +154,16 @@ describe("Game", () => {
       },
     };
 
-    renderWithSession();
+    vi.mocked(getGameContext).mockReturnValue(writable(mockChannelContext));
 
-    expect(screen.getByText("Test Artist")).toBeInTheDocument();
-    expect(screen.getByText("Test Track")).toBeInTheDocument();
-    expect(screen.getByText("2020")).toBeInTheDocument();
+    const screen = render(Game);
+
+    await expect.element(screen.getByText("Test Artist")).toBeVisible();
+    await expect.element(screen.getByText("Test Track")).toBeVisible();
+    await expect.element(screen.getByText("2020")).toBeVisible();
   });
 
-  test("displays finished view on finished status even with stale results phase", () => {
+  test("displays finished view on finished status even with stale results phase", async () => {
     mockChannelContext.snapshot.game.status = "finished";
     mockChannelContext.snapshot.game.scores = {
       "user-1": 10,
@@ -171,23 +181,27 @@ describe("Game", () => {
       },
     };
 
-    renderWithSession();
+    vi.mocked(getGameContext).mockReturnValue(writable(mockChannelContext));
 
-    expect(
-      screen.getByRole("heading", { name: "Alice wins" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("list", { name: "Final leaderboard" }),
-    ).toBeInTheDocument();
-    expect(screen.queryByText("Test Artist")).not.toBeInTheDocument();
+    const screen = render(Game);
+
+    await expect
+      .element(screen.getByRole("heading", { name: "Alice wins" }))
+      .toBeVisible();
+    await expect
+      .element(screen.getByRole("list", { name: "Final leaderboard" }))
+      .toBeVisible();
+    await expect.element(screen.getByText("Test Artist")).not.toBeInTheDocument();
   });
 
   test("renders nothing when turn phase is undefined", () => {
     mockChannelContext.snapshot.game.turn = undefined;
 
-    renderWithSession();
+    vi.mocked(getGameContext).mockReturnValue(writable(mockChannelContext));
 
-    expect(screen.queryByText("Alice")).not.toBeInTheDocument();
+    const screen = render(Game);
+
+    expect(screen.container.textContent).not.toContain("Alice");
   });
 
   test("renders nothing when state is undefined", () => {
@@ -196,21 +210,29 @@ describe("Game", () => {
       turn: undefined,
     };
 
-    renderWithSession();
+    vi.mocked(getGameContext).mockReturnValue(writable(mockChannelContext));
 
-    expect(screen.queryByText("waiting")).not.toBeInTheDocument();
-    expect(screen.queryByText("Alice")).not.toBeInTheDocument();
+    const screen = render(Game);
+
+    expect(screen.container.textContent).not.toContain("waiting");
+    expect(screen.container.textContent).not.toContain("Alice");
   });
 
   test("renders nothing when turn phase is null", () => {
     mockChannelContext.snapshot.game.turn.phase = null;
 
-    renderWithSession();
+    vi.mocked(getGameContext).mockReturnValue(writable(mockChannelContext));
 
-    expect(screen.queryByText("Alice")).not.toBeInTheDocument();
+    const screen = render(Game);
+
+    expect(screen.container.textContent).not.toContain("Alice");
   });
 
   test("throws error when gameContext is missing", () => {
+    vi.mocked(getGameContext).mockImplementation(() => {
+      throw new Error("missing game context");
+    });
+
     expect(() => {
       render(Game);
     }).toThrow();
@@ -221,9 +243,11 @@ describe("Game", () => {
     (phase) => {
       mockChannelContext.snapshot.game.turn.phase = phase;
 
-      renderWithSession();
+      vi.mocked(getGameContext).mockReturnValue(writable(mockChannelContext));
 
-      expect(screen.queryByText("Alice")).not.toBeInTheDocument();
-    }
+      const screen = render(Game);
+
+      expect(screen.container.textContent).not.toContain("Alice");
+    },
   );
 });

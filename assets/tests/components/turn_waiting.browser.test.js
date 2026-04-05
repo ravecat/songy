@@ -1,18 +1,14 @@
-import { render, screen } from "@testing-library/svelte";
-import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
-import GameContextFixture from "../fixtures/game_context_fixture.svelte";
+import { writable } from "svelte/store";
+import { render } from "vitest-browser-svelte";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
+vi.mock("~/contexts/game");
 
 import TurnWaiting from "~components/turn_waiting.svelte";
+import { getGameContext } from "~/contexts/game";
 
 describe("Turn waiting view", () => {
   let mockChannelContext;
-
-  function renderWithSession(session) {
-    return render(GameContextFixture, {
-      component: TurnWaiting,
-      session,
-    });
-  }
 
   beforeEach(() => {
     mockChannelContext = {
@@ -55,7 +51,7 @@ describe("Turn waiting view", () => {
     vi.restoreAllMocks();
   });
 
-  test("displays personalized message when current user is active player", () => {
+  test("displays personalized message when current user is active player", async () => {
     const mockContextActive = {
       ...mockChannelContext,
       snapshot: {
@@ -66,17 +62,24 @@ describe("Turn waiting view", () => {
         },
       },
     };
-    renderWithSession(mockContextActive);
+    vi.mocked(getGameContext).mockReturnValue(
+      writable({
+        ...mockContextActive,
+        status: "ready",
+        error: null,
+      }),
+    );
 
-    expect(screen.getByText("It's your turn")).toBeInTheDocument();
-    expect(screen.getByAltText("Alice")).toBeInTheDocument();
-    expect(screen.getByAltText("Alice")).toHaveAttribute(
+    const screen = render(TurnWaiting);
+
+    await expect.element(screen.getByText("It's your turn")).toBeVisible();
+    await expect.element(screen.getByAltText("Alice")).toHaveAttribute(
       "src",
       "https://example.com/alice.jpg",
     );
   });
 
-  test("does not render controls when current user is not active player", () => {
+  test("does not render controls when current user is not active player", async () => {
     const mockContextNotActive = {
       ...mockChannelContext,
       snapshot: {
@@ -87,13 +90,21 @@ describe("Turn waiting view", () => {
         },
       },
     };
-    renderWithSession(mockContextNotActive);
+    vi.mocked(getGameContext).mockReturnValue(
+      writable({
+        ...mockContextNotActive,
+        status: "ready",
+        error: null,
+      }),
+    );
 
-    expect(screen.getByText("Alice turn")).toBeInTheDocument();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    const screen = render(TurnWaiting);
+
+    await expect.element(screen.getByText("Alice turn")).toBeVisible();
+    await expect.element(screen.getByRole("button")).not.toBeInTheDocument();
   });
 
-  test("displays second player when cursor is 1", () => {
+  test("displays second player when cursor is 1", async () => {
     mockChannelContext.snapshot.game.cursor = 1;
 
     const mockContextActive = {
@@ -106,14 +117,25 @@ describe("Turn waiting view", () => {
         },
       },
     };
-    renderWithSession(mockContextActive);
+    vi.mocked(getGameContext).mockReturnValue(
+      writable({
+        ...mockContextActive,
+        status: "ready",
+        error: null,
+      }),
+    );
 
-    expect(screen.getByText("It's your turn")).toBeInTheDocument();
-    expect(screen.getByAltText("Bob")).toBeInTheDocument();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    const screen = render(TurnWaiting);
+
+    await expect.element(screen.getByText("It's your turn")).toBeVisible();
+    await expect.element(screen.getByAltText("Bob")).toHaveAttribute(
+      "src",
+      "https://example.com/bob.jpg",
+    );
+    await expect.element(screen.getByRole("button")).not.toBeInTheDocument();
   });
 
-  test("shows active player info but hides button when different user is viewing", () => {
+  test("shows active player info but hides button when different user is viewing", async () => {
     mockChannelContext.snapshot.game.cursor = 1;
 
     const mockContextNonActive = {
@@ -126,17 +148,31 @@ describe("Turn waiting view", () => {
         },
       },
     };
-    renderWithSession(mockContextNonActive);
+    vi.mocked(getGameContext).mockReturnValue(
+      writable({
+        ...mockContextNonActive,
+        status: "ready",
+        error: null,
+      }),
+    );
 
-    expect(screen.getByText("Bob turn")).toBeInTheDocument();
-    expect(screen.getByAltText("Bob")).toBeInTheDocument();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    const screen = render(TurnWaiting);
+
+    await expect.element(screen.getByText("Bob turn")).toBeVisible();
+    await expect.element(screen.getByAltText("Bob")).toHaveAttribute(
+      "src",
+      "https://example.com/bob.jpg",
+    );
+    await expect.element(screen.getByRole("button")).not.toBeInTheDocument();
   });
 
   test("throws error when gameContext is missing", () => {
+    vi.mocked(getGameContext).mockImplementation(() => {
+      throw new Error("missing game context");
+    });
+
     expect(() => {
       render(TurnWaiting);
     }).toThrow();
   });
-
 });

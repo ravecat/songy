@@ -41,7 +41,12 @@ export default {
     },
   },
   optimizeDeps: {
-    include: ["storybook/test", "redaxios"],
+    include: [
+      "storybook/test",
+      "redaxios",
+      "lucide-svelte",
+      "@inertiajs/svelte",
+    ],
     exclude: ["axios"],
   },
   build: {

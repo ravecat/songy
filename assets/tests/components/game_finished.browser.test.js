@@ -1,20 +1,17 @@
-import { render, screen, within } from "@testing-library/svelte";
-import { beforeEach, describe, expect, test } from "vitest";
-import GameContextFixture from "../fixtures/game_context_fixture.svelte";
+import { writable } from "svelte/store";
+import { render } from "vitest-browser-svelte";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+
+vi.mock("~/contexts/game");
 
 import GameFinished from "~components/game_finished.svelte";
+import { getGameContext } from "~/contexts/game";
 
 describe("GameFinished", () => {
   let snapshot;
 
-  function renderWithSession(session = { snapshot }) {
-    return render(GameContextFixture, {
-      component: GameFinished,
-      session,
-    });
-  }
-
   beforeEach(() => {
+    vi.clearAllMocks();
     snapshot = {
       game: {
         id: "game-1",
@@ -71,44 +68,63 @@ describe("GameFinished", () => {
     };
   });
 
-  test("shows winner and target score", () => {
-    renderWithSession();
+  test("shows winner and target score", async () => {
+    vi.mocked(getGameContext).mockReturnValue(
+      writable({
+        snapshot,
+        status: "ready",
+        error: null,
+      }),
+    );
 
-    expect(
-      screen.getByRole("heading", { name: "Bob wins" }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("10/10 points")).toBeInTheDocument();
-    expect(screen.getByText("Target 10")).toBeInTheDocument();
+    const screen = render(GameFinished);
+
+    await expect
+      .element(screen.getByRole("heading", { name: "Bob wins" }))
+      .toBeVisible();
+    await expect.element(screen.getByText("10/10 points")).toBeVisible();
+    await expect.element(screen.getByText("Target 10")).toBeVisible();
   });
 
   test("sorts leaderboard by score descending", () => {
-    renderWithSession();
+    vi.mocked(getGameContext).mockReturnValue(
+      writable({
+        snapshot,
+        status: "ready",
+        error: null,
+      }),
+    );
 
-    const leaderboard = within(
-      screen.getByRole("list", { name: "Final leaderboard" }),
-    ).getAllByRole("listitem");
+    const { container } = render(GameFinished);
 
-    expect(within(leaderboard[0]).getByText("Bob")).toBeInTheDocument();
-    expect(within(leaderboard[1]).getByText("Alice")).toBeInTheDocument();
-    expect(within(leaderboard[2]).getByText("Carol")).toBeInTheDocument();
-    expect(leaderboard[0]).toHaveAttribute("aria-current", "true");
+    const leaderboard = Array.from(container.querySelectorAll(".game-finished__entry"));
+
+    expect(leaderboard).toHaveLength(3);
+    expect(leaderboard[0]?.textContent).toContain("Bob");
+    expect(leaderboard[1]?.textContent).toContain("Alice");
+    expect(leaderboard[2]?.textContent).toContain("Carol");
+    expect(leaderboard[0]?.getAttribute("aria-current")).toBe("true");
   });
 
   test("falls back to user id when participant payload is missing", () => {
     delete snapshot.game.participants["user-3"];
 
-    renderWithSession();
+    vi.mocked(getGameContext).mockReturnValue(
+      writable({
+        snapshot,
+        status: "ready",
+        error: null,
+      }),
+    );
 
-    const leaderboard = within(
-      screen.getByRole("list", { name: "Final leaderboard" }),
-    ).getAllByRole("listitem");
+    const { container } = render(GameFinished);
+
+    const leaderboard = Array.from(container.querySelectorAll(".game-finished__entry"));
     const missingParticipantRow = leaderboard[2];
 
-    expect(within(missingParticipantRow).getByText("user-3")).toBeInTheDocument();
+    expect(missingParticipantRow?.textContent).toContain("user-3");
     expect(
-      within(missingParticipantRow).getByText("3", {
-        selector: ".game-finished__entry-score",
-      }),
-    ).toBeInTheDocument();
+      missingParticipantRow?.querySelector(".game-finished__entry-score")?.textContent,
+    ).toBe("3");
   });
 });
