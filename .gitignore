@@ -43,6 +43,7 @@ node_modules/
 /assets/playwright-report/
 /assets/e2e/test-results/
 /assets/e2e/playwright-report/
+/assets/tests/**/__screenshots__/
 
 # Ignore tools artifacts.
 .elixir_ls/
