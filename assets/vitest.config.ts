@@ -28,7 +28,6 @@ export default mergeConfig(
           test: {
             name: 'unit',
             environment: 'jsdom',
-            setupFiles: ['./tests/setup.js'],
             include: ['tests/**/*.{test,spec}.{js,ts}'],
             exclude: ['tests/**/*.browser.{test,spec}.{js,ts}'],
           },
