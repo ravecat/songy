@@ -1,4 +1,5 @@
 import type { User } from "~contracts";
+import type { MessageRef, PushStatus } from "phoenix";
 import "@inertiajs/core";
 
 /**
@@ -8,7 +9,7 @@ import "@inertiajs/core";
  * Import this file to make window.userToken available.
  */
 
-export {};
+export { };
 
 declare module "@inertiajs/core" {
   interface InertiaConfig {
@@ -26,6 +27,19 @@ declare module "@inertiajs/core" {
 }
 
 declare global {
+  type PhoenixReplyStatus = Exclude<PushStatus, "timeout">;
+
+  type PhoenixFrame<
+    TPayload = unknown,
+    TEvent extends string = string,
+  > = [
+    MessageRef | null,
+    MessageRef | null,
+    string,
+    TEvent,
+    TPayload,
+  ];
+
   interface Window {
     /** User authentication token for Phoenix socket */
     userToken?: string;
