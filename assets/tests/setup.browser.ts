@@ -1,18 +1,14 @@
-import { afterAll, afterEach, beforeAll } from "vitest";
+import { afterAll, afterEach } from "vitest";
 import { worker } from "./msw";
 
-let workerStart: Promise<unknown> | null = null;
+window.userToken = "vitest-browser-user-token";
 
-beforeAll(() => {
-  window.userToken = "vitest-browser-user-token";
-
-  workerStart ??= worker.start({
-    onUnhandledRequest: "bypass",
-    quiet: true,
-  });
-
-  return workerStart;
+let workerStart: Promise<unknown> | null = worker.start({
+  onUnhandledRequest: "bypass",
+  quiet: true,
 });
+
+await workerStart;
 
 afterEach(() => {
   worker.resetHandlers();
