@@ -1,9 +1,17 @@
 import * as Phoenix from "phoenix";
+import type { MessageRef, PushStatus } from "phoenix";
 
-interface Envelope<
-  TPayload = unknown,
-  TEvent extends string = string,
-> {
+export type PhoenixReplyStatus = Exclude<PushStatus, "timeout">;
+
+export type PhoenixFrame<TPayload = unknown, TEvent extends string = string> = [
+  MessageRef | null,
+  MessageRef | null,
+  string,
+  TEvent,
+  TPayload,
+];
+
+interface Envelope<TPayload = unknown, TEvent extends string = string> {
   join_ref: PhoenixFrame<TPayload, TEvent>[0];
   ref: PhoenixFrame<TPayload, TEvent>[1];
   topic: PhoenixFrame<TPayload, TEvent>[2];
@@ -14,15 +22,11 @@ interface Envelope<
 interface Serializer {
   decode(
     payload: string | ArrayBuffer,
-    callback: (
-      decoded: Envelope,
-    ) => void,
+    callback: (decoded: Envelope) => void,
   ): void;
   encode(
     message: Envelope,
-    callback: (
-      encoded: string | ArrayBuffer,
-    ) => void,
+    callback: (encoded: string | ArrayBuffer) => void,
   ): void;
 }
 
@@ -43,6 +47,34 @@ export function parseFrame(data: unknown): PhoenixFrame {
   });
 
   return frame;
+}
+
+export function pushTo(
+  topic: PhoenixFrame[2],
+  {
+    event,
+    payload,
+  }: {
+    event: string;
+    payload: unknown;
+  },
+) {
+  let encoded!: string | ArrayBuffer;
+
+  serializer.encode(
+    {
+      join_ref: null,
+      ref: null,
+      topic,
+      event,
+      payload,
+    },
+    (next) => {
+      encoded = next;
+    },
+  );
+
+  return encoded;
 }
 
 export function replyTo(

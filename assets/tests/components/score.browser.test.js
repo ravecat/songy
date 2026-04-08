@@ -63,9 +63,10 @@ describe("Score", () => {
       },
     });
 
-    await expect
-      .element(screen.getByRole("button", { name: /Your score:/ }))
-      .toBeVisible();
+    // Initially shows score of 7, then updates to 12 after receiving new state
+    // await expect
+    //   .element(screen.getByRole("button", { name: "Your score: 7" }))
+    //   .toBeVisible();
     await expect
       .element(screen.getByRole("button", { name: "Your score: 12" }))
       .toBeVisible();

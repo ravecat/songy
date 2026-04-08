@@ -1,6 +1,9 @@
-import * as Phoenix from "phoenix";
-
-import { replyTo } from "./phoenix";
+import {
+  pushTo,
+  replyTo,
+  type PhoenixFrame,
+  type PhoenixReplyStatus,
+} from "./phoenix";
 import {
   emptyLobbySnapshot,
   finishedMissingParticipantSnapshot,
@@ -48,33 +51,10 @@ type Reply = {
   response: unknown;
 };
 
-interface Envelope<
-  TPayload = unknown,
-  TEvent extends string = string,
-> {
-  join_ref: PhoenixFrame<TPayload, TEvent>[0];
-  ref: PhoenixFrame<TPayload, TEvent>[1];
-  topic: PhoenixFrame<TPayload, TEvent>[2];
-  event: TEvent;
-  payload: TPayload;
-}
-
-interface Serializer {
-  encode(
-    message: Envelope,
-    callback: (
-      encoded: string | ArrayBuffer,
-    ) => void,
-  ): void;
-}
-
 type Handler = (
   client: { send: (data: string | ArrayBuffer) => void },
   frame: PhoenixFrame,
 ) => void;
-
-const serializer = (Phoenix as unknown as { Serializer: Serializer })
-  .Serializer;
 
 const okReply: Reply = {
   status: "ok",
@@ -180,23 +160,7 @@ export const handlers: Record<string, Record<string, Handler>> = {
       const [, , topic] = frame;
 
       client.send(replyTo(frame, { status: "ok", response: score7Snapshot }));
-
-      let encoded!: string | ArrayBuffer;
-
-      serializer.encode(
-        {
-          join_ref: null,
-          ref: null,
-          topic,
-          event: "state",
-          payload: score12Snapshot,
-        },
-        (next) => {
-          encoded = next;
-        },
-      );
-
-      client.send(encoded);
+      client.send(pushTo(topic, { event: "state", payload: score12Snapshot }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -293,23 +257,7 @@ export const handlers: Record<string, Record<string, Handler>> = {
       const [, , topic] = frame;
 
       client.send(replyTo(frame, okReply));
-
-      let encoded!: string | ArrayBuffer;
-
-      serializer.encode(
-        {
-          join_ref: null,
-          ref: null,
-          topic,
-          event: "state",
-          payload: waitingActiveSnapshot,
-        },
-        (next) => {
-          encoded = next;
-        },
-      );
-
-      client.send(encoded);
+      client.send(pushTo(topic, { event: "state", payload: waitingActiveSnapshot }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -323,23 +271,7 @@ export const handlers: Record<string, Record<string, Handler>> = {
       const [, , topic] = frame;
 
       client.send(replyTo(frame, okReply));
-
-      let encoded!: string | ArrayBuffer;
-
-      serializer.encode(
-        {
-          join_ref: null,
-          ref: null,
-          topic,
-          event: "state",
-          payload: readyControlsSnapshot,
-        },
-        (next) => {
-          encoded = next;
-        },
-      );
-
-      client.send(encoded);
+      client.send(pushTo(topic, { event: "state", payload: readyControlsSnapshot }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -369,23 +301,7 @@ export const handlers: Record<string, Record<string, Handler>> = {
       const [, , topic] = frame;
 
       client.send(replyTo(frame, okReply));
-
-      let encoded!: string | ArrayBuffer;
-
-      serializer.encode(
-        {
-          join_ref: null,
-          ref: null,
-          topic,
-          event: "state",
-          payload: readyPlayingSnapshot,
-        },
-        (next) => {
-          encoded = next;
-        },
-      );
-
-      client.send(encoded);
+      client.send(pushTo(topic, { event: "state", payload: readyPlayingSnapshot }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -399,23 +315,7 @@ export const handlers: Record<string, Record<string, Handler>> = {
       const [, , topic] = frame;
 
       client.send(replyTo(frame, okReply));
-
-      let encoded!: string | ArrayBuffer;
-
-      serializer.encode(
-        {
-          join_ref: null,
-          ref: null,
-          topic,
-          event: "state",
-          payload: readyControlsSnapshot,
-        },
-        (next) => {
-          encoded = next;
-        },
-      );
-
-      client.send(encoded);
+      client.send(pushTo(topic, { event: "state", payload: readyControlsSnapshot }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -512,22 +412,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
       client.send(replyTo(frame, { status: "ok", response: mediaSnapshot }));
 
       queueMicrotask(() => {
-        let encoded!: string | ArrayBuffer;
-
-        serializer.encode(
-          {
-            join_ref: null,
-            ref: null,
-            topic,
-            event: "state",
-            payload: mediaPreviewUpdatedSnapshot,
-          },
-          (next) => {
-            encoded = next;
-          },
-        );
-
-        client.send(encoded);
+        client.send(pushTo(topic, {
+          event: "state",
+          payload: mediaPreviewUpdatedSnapshot,
+        }));
       });
     },
     phx_leave(client, frame) {
@@ -542,23 +430,7 @@ export const handlers: Record<string, Record<string, Handler>> = {
       const [, , topic] = frame;
 
       client.send(replyTo(frame, okReply));
-
-      let encoded!: string | ArrayBuffer;
-
-      serializer.encode(
-        {
-          join_ref: null,
-          ref: null,
-          topic,
-          event: "state",
-          payload: mediaSnapshot,
-        },
-        (next) => {
-          encoded = next;
-        },
-      );
-
-      client.send(encoded);
+      client.send(pushTo(topic, { event: "state", payload: mediaSnapshot }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -587,40 +459,16 @@ export const handlers: Record<string, Record<string, Handler>> = {
       client.send(replyTo(frame, { status: "ok", response: mediaSnapshot }));
 
       queueMicrotask(() => {
-        let encoded!: string | ArrayBuffer;
-
-        serializer.encode(
-          {
-            join_ref: null,
-            ref: null,
-            topic,
-            event: "state",
-            payload: mediaPlayingSnapshot,
-          },
-          (next) => {
-            encoded = next;
-          },
-        );
-
-        client.send(encoded);
+        client.send(pushTo(topic, {
+          event: "state",
+          payload: mediaPlayingSnapshot,
+        }));
 
         queueMicrotask(() => {
-          let nextEncoded!: string | ArrayBuffer;
-
-          serializer.encode(
-            {
-              join_ref: null,
-              ref: null,
-              topic,
-              event: "state",
-              payload: mediaSnapshot,
-            },
-            (next) => {
-              nextEncoded = next;
-            },
-          );
-
-          client.send(nextEncoded);
+          client.send(pushTo(topic, {
+            event: "state",
+            payload: mediaSnapshot,
+          }));
         });
       });
     },
@@ -643,22 +491,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
       client.send(replyTo(frame, { status: "ok", response: readySnapshot }));
 
       queueMicrotask(() => {
-        let encoded!: string | ArrayBuffer;
-
-        serializer.encode(
-          {
-            join_ref: null,
-            ref: null,
-            topic,
-            event: "state",
-            payload: timerUpdatedSnapshot,
-          },
-          (next) => {
-            encoded = next;
-          },
-        );
-
-        client.send(encoded);
+        client.send(pushTo(topic, {
+          event: "state",
+          payload: timerUpdatedSnapshot,
+        }));
       });
     },
     phx_leave(client, frame) {
