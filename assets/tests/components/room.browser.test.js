@@ -1,6 +1,6 @@
 import Room from "~pages/room.svelte";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { users } from "../mock/room/fixtures";
+import { users } from "~fixtures/users";
 import { render } from "../inertia";
 
 describe("Room", () => {

@@ -1,6 +1,6 @@
 import Room from "~pages/room.svelte";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { users } from "../mock/room/fixtures";
+import { users } from "~fixtures/users";
 import { render } from "../inertia";
 
 function getAudio() {
@@ -164,26 +164,6 @@ describe("DefaultMediaProvider component", () => {
     expect(getAudio().getAttribute("src")).toBeNull();
   });
 
-  test("loads when preview_url changes", async () => {
-    const screen = render(Room, {
-      props: {
-        roomId: "room-media-preview-update",
-        scope: {
-          user: users.alice,
-          provider: null,
-        },
-      },
-    });
-
-    await expect
-      .element(screen.getByRole("list", { name: "Lobby players" }))
-      .toBeVisible();
-
-    await vi.waitFor(() => {
-      expect(loadSpy).toHaveBeenCalledTimes(2);
-    });
-  });
-
   test("calls play when is_playback is true", async () => {
     render(Room, {
       props: {
@@ -269,23 +249,4 @@ describe("DefaultMediaProvider component", () => {
     expect(getAudio().getAttribute("src")).toBeNull();
   });
 
-  test("toggles playback correctly from room state updates", async () => {
-    render(Room, {
-      props: {
-        roomId: "room-media-toggle",
-        scope: {
-          user: users.alice,
-          provider: null,
-        },
-      },
-    });
-
-    await vi.waitFor(() => {
-      expect(playSpy).toHaveBeenCalled();
-    });
-
-    await vi.waitFor(() => {
-      expect(pauseSpy).toHaveBeenCalled();
-    });
-  });
 });

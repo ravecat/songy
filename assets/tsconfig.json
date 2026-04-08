@@ -18,6 +18,7 @@
       "~pages/*": ["js/pages/*"],
       "~components/*": ["js/components/*"],
       "~shared/*": ["js/shared/*"],
+      "~fixtures/*": ["fixtures/*"],
       "~stories/*": ["stories/*"],
       "~types/*": ["js/shared/types/*"],
       "~priv/*": ["../priv/*"],

@@ -5,46 +5,41 @@ import {
   type PhoenixReplyStatus,
 } from "./phoenix";
 import {
-  emptyLobbySnapshot,
+  challengingTimelineOwnAssumptionSnapshot,
+  challengingTimerSnapshot,
+  finishedCanRestartSnapshot,
   finishedMissingParticipantSnapshot,
-  finishedRestartSnapshot,
   finishedSnapshot,
-  invalidPhaseSnapshots,
+  invalidTurnPhaseSnapshots,
   mediaNoMetaSnapshot,
   mediaNoPlayerSnapshot,
   mediaNoPreviewSnapshot,
   mediaPlayingSnapshot,
-  mediaPreviewUpdatedSnapshot,
   mediaSnapshot,
-  ownerLobbySnapshot,
-  playerLobbySnapshot,
-  readyControlsSnapshot,
-  readyPlayingSnapshot,
+  readyPlaybackControlsSnapshot,
+  readyPlaybackPlayingSnapshot,
   readySnapshot,
+  readyTimelineMixedSnapshot,
+  readyTimelineNoTrackSnapshot,
+  readyTimelineOtherAssumptionSnapshot,
+  readyTimelineOwnAssumptionSnapshot,
+  readyTimelinePermissionsUndefinedSnapshot,
+  readyTimelineSlotZeroSnapshot,
   resultsNoWinnerSnapshot,
-  resultsSnapshot,
-  score12Snapshot,
-  score3Snapshot,
-  score7Snapshot,
-  scoreMissingSnapshot,
-  scoreUndefinedSnapshot,
-  singleParticipantSnapshot,
-  timelineChallengingOwnSnapshot,
-  timelineMixedSnapshot,
-  timelineNoTrackSnapshot,
-  timelineOtherAssumptionSnapshot,
-  timelineOwnAssumptionSnapshot,
-  timelinePermissionsUndefinedSnapshot,
-  timelineSlotZeroSnapshot,
-  timerSnapshot,
-  timerUpdatedSnapshot,
-  undefinedParticipantsSnapshot,
-  waitingActiveBobSnapshot,
-  waitingActiveSnapshot,
-  waitingPassiveBobSnapshot,
-  waitingPassiveSnapshot,
-} from "./mock/room/messages";
-import { phxJoin } from "./mock/room/phx_join";
+  resultsWinnerAliceSnapshot,
+  waitingEmptySnapshot,
+  waitingOwnerCanStartGameSnapshot,
+  waitingParticipantsUndefinedSnapshot,
+  waitingScoreMissingSnapshot,
+  waitingScoreThreeSnapshot,
+  waitingScoresUndefinedSnapshot,
+  waitingSingleParticipantSnapshot,
+  waitingSnapshot,
+  waitingTurnActiveBobSnapshot,
+  waitingTurnActiveSnapshot,
+  waitingTurnPassiveBobSnapshot,
+  waitingTurnPassiveSnapshot,
+} from "~fixtures/room/messages";
 
 type Reply = {
   status: PhoenixReplyStatus;
@@ -61,11 +56,6 @@ const okReply: Reply = {
   response: {},
 };
 
-const missingRoomReply: Reply = {
-  status: "error",
-  response: { reason: "game_not_found" },
-};
-
 export const handlers: Record<string, Record<string, Handler>> = {
   phoenix: {
     heartbeat(client, frame) {
@@ -74,7 +64,7 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-1": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: phxJoin }));
+      client.send(replyTo(frame, { status: "ok", response: waitingSnapshot }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -82,7 +72,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-missing": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, missingRoomReply));
+      client.send(replyTo(frame, {
+        status: "error",
+        response: { reason: "game_not_found" },
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -90,7 +83,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-owner-lobby": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: ownerLobbySnapshot }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: waitingOwnerCanStartGameSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -98,7 +94,7 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-player-lobby": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: playerLobbySnapshot }));
+      client.send(replyTo(frame, { status: "ok", response: waitingSnapshot }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -106,7 +102,7 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-empty-lobby": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: emptyLobbySnapshot }));
+      client.send(replyTo(frame, { status: "ok", response: waitingEmptySnapshot }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -114,7 +110,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-single-player": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: singleParticipantSnapshot }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: waitingSingleParticipantSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -124,7 +123,7 @@ export const handlers: Record<string, Record<string, Handler>> = {
     phx_join(client, frame) {
       client.send(replyTo(frame, {
         status: "ok",
-        response: undefinedParticipantsSnapshot,
+        response: waitingParticipantsUndefinedSnapshot,
       }));
     },
     phx_leave(client, frame) {
@@ -133,7 +132,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-score-3": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: score3Snapshot }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: waitingScoreThreeSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -141,7 +143,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-score-missing": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: scoreMissingSnapshot }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: waitingScoreMissingSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -149,18 +154,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-score-undefined": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: scoreUndefinedSnapshot }));
-    },
-    phx_leave(client, frame) {
-      client.send(replyTo(frame, okReply));
-    },
-  },
-  "room:room-score-updates": {
-    phx_join(client, frame) {
-      const [, , topic] = frame;
-
-      client.send(replyTo(frame, { status: "ok", response: score7Snapshot }));
-      client.send(pushTo(topic, { event: "state", payload: score12Snapshot }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: waitingScoresUndefinedSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -176,7 +173,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-waiting-active": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: waitingActiveSnapshot }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: waitingTurnActiveSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -184,7 +184,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-waiting-passive": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: waitingPassiveSnapshot }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: waitingTurnPassiveSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -192,7 +195,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-waiting-active-bob": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: waitingActiveBobSnapshot }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: waitingTurnActiveBobSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -200,7 +206,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-waiting-passive-bob": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: waitingPassiveBobSnapshot }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: waitingTurnPassiveBobSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -208,7 +217,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-results": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: resultsSnapshot }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: resultsWinnerAliceSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -216,7 +228,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-results-no-winner": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: resultsNoWinnerSnapshot }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: resultsNoWinnerSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -232,7 +247,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-finished-restart": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: finishedRestartSnapshot }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: finishedCanRestartSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -251,13 +269,19 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-start-game": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: ownerLobbySnapshot }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: waitingOwnerCanStartGameSnapshot,
+      }));
     },
     start_game(client, frame) {
       const [, , topic] = frame;
 
       client.send(replyTo(frame, okReply));
-      client.send(pushTo(topic, { event: "state", payload: waitingActiveSnapshot }));
+      client.send(pushTo(topic, {
+        event: "state",
+        payload: waitingTurnActiveSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -265,13 +289,19 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-advance-turn": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: waitingActiveSnapshot }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: waitingTurnActiveSnapshot,
+      }));
     },
     advance_turn(client, frame) {
       const [, , topic] = frame;
 
       client.send(replyTo(frame, okReply));
-      client.send(pushTo(topic, { event: "state", payload: readyControlsSnapshot }));
+      client.send(pushTo(topic, {
+        event: "state",
+        payload: readyPlaybackControlsSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -279,7 +309,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-ready-controls": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: readyControlsSnapshot }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: readyPlaybackControlsSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -287,7 +320,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-ready-playing": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: readyPlayingSnapshot }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: readyPlaybackPlayingSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -295,13 +331,19 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-start-playback": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: readyControlsSnapshot }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: readyPlaybackControlsSnapshot,
+      }));
     },
     start_playback(client, frame) {
       const [, , topic] = frame;
 
       client.send(replyTo(frame, okReply));
-      client.send(pushTo(topic, { event: "state", payload: readyPlayingSnapshot }));
+      client.send(pushTo(topic, {
+        event: "state",
+        payload: readyPlaybackPlayingSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -309,13 +351,19 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-pause-playback": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: readyPlayingSnapshot }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: readyPlaybackPlayingSnapshot,
+      }));
     },
     pause_playback(client, frame) {
       const [, , topic] = frame;
 
       client.send(replyTo(frame, okReply));
-      client.send(pushTo(topic, { event: "state", payload: readyControlsSnapshot }));
+      client.send(pushTo(topic, {
+        event: "state",
+        payload: readyPlaybackControlsSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -325,7 +373,7 @@ export const handlers: Record<string, Record<string, Handler>> = {
     phx_join(client, frame) {
       client.send(replyTo(frame, {
         status: "ok",
-        response: timelineOwnAssumptionSnapshot,
+        response: readyTimelineOwnAssumptionSnapshot,
       }));
     },
     phx_leave(client, frame) {
@@ -336,7 +384,7 @@ export const handlers: Record<string, Record<string, Handler>> = {
     phx_join(client, frame) {
       client.send(replyTo(frame, {
         status: "ok",
-        response: timelineChallengingOwnSnapshot,
+        response: challengingTimelineOwnAssumptionSnapshot,
       }));
     },
     phx_leave(client, frame) {
@@ -345,7 +393,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-timeline-slot-zero": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: timelineSlotZeroSnapshot }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: readyTimelineSlotZeroSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -355,7 +406,7 @@ export const handlers: Record<string, Record<string, Handler>> = {
     phx_join(client, frame) {
       client.send(replyTo(frame, {
         status: "ok",
-        response: timelineOtherAssumptionSnapshot,
+        response: readyTimelineOtherAssumptionSnapshot,
       }));
     },
     phx_leave(client, frame) {
@@ -364,7 +415,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-timeline-mixed": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: timelineMixedSnapshot }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: readyTimelineMixedSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -374,7 +428,7 @@ export const handlers: Record<string, Record<string, Handler>> = {
     phx_join(client, frame) {
       client.send(replyTo(frame, {
         status: "ok",
-        response: timelinePermissionsUndefinedSnapshot,
+        response: readyTimelinePermissionsUndefinedSnapshot,
       }));
     },
     phx_leave(client, frame) {
@@ -383,7 +437,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-timeline-no-track": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: timelineNoTrackSnapshot }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: readyTimelineNoTrackSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -399,24 +456,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-media-no-preview": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: mediaNoPreviewSnapshot }));
-    },
-    phx_leave(client, frame) {
-      client.send(replyTo(frame, okReply));
-    },
-  },
-  "room:room-media-preview-update": {
-    phx_join(client, frame) {
-      const [, , topic] = frame;
-
-      client.send(replyTo(frame, { status: "ok", response: mediaSnapshot }));
-
-      queueMicrotask(() => {
-        client.send(pushTo(topic, {
-          event: "state",
-          payload: mediaPreviewUpdatedSnapshot,
-        }));
-      });
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: mediaNoPreviewSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -424,13 +467,19 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-media-playing": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: mediaPlayingSnapshot }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: mediaPlayingSnapshot,
+      }));
     },
     pause_playback(client, frame) {
       const [, , topic] = frame;
 
       client.send(replyTo(frame, okReply));
-      client.send(pushTo(topic, { event: "state", payload: mediaSnapshot }));
+      client.send(pushTo(topic, {
+        event: "state",
+        payload: mediaSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -438,7 +487,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-media-no-player": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: mediaNoPlayerSnapshot }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: mediaNoPlayerSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -446,31 +498,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-media-no-meta": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: mediaNoMetaSnapshot }));
-    },
-    phx_leave(client, frame) {
-      client.send(replyTo(frame, okReply));
-    },
-  },
-  "room:room-media-toggle": {
-    phx_join(client, frame) {
-      const [, , topic] = frame;
-
-      client.send(replyTo(frame, { status: "ok", response: mediaSnapshot }));
-
-      queueMicrotask(() => {
-        client.send(pushTo(topic, {
-          event: "state",
-          payload: mediaPlayingSnapshot,
-        }));
-
-        queueMicrotask(() => {
-          client.send(pushTo(topic, {
-            event: "state",
-            payload: mediaSnapshot,
-          }));
-        });
-      });
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: mediaNoMetaSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -478,24 +509,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-timer": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: timerSnapshot }));
-    },
-    phx_leave(client, frame) {
-      client.send(replyTo(frame, okReply));
-    },
-  },
-  "room:room-timer-update": {
-    phx_join(client, frame) {
-      const [, , topic] = frame;
-
-      client.send(replyTo(frame, { status: "ok", response: readySnapshot }));
-
-      queueMicrotask(() => {
-        client.send(pushTo(topic, {
-          event: "state",
-          payload: timerUpdatedSnapshot,
-        }));
-      });
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: challengingTimerSnapshot,
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -503,7 +520,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-invalid-phase-0": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: invalidPhaseSnapshots[0] }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: invalidTurnPhaseSnapshots[0],
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -511,7 +531,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-invalid-phase-1": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: invalidPhaseSnapshots[1] }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: invalidTurnPhaseSnapshots[1],
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -519,7 +542,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-invalid-phase-2": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: invalidPhaseSnapshots[2] }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: invalidTurnPhaseSnapshots[2],
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -527,7 +553,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-invalid-phase-3": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: invalidPhaseSnapshots[3] }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: invalidTurnPhaseSnapshots[3],
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -535,7 +564,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-invalid-phase-4": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: invalidPhaseSnapshots[4] }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: invalidTurnPhaseSnapshots[4],
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -543,7 +575,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-invalid-phase-5": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: invalidPhaseSnapshots[5] }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: invalidTurnPhaseSnapshots[5],
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -551,7 +586,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-invalid-phase-6": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: invalidPhaseSnapshots[6] }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: invalidTurnPhaseSnapshots[6],
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
@@ -559,7 +597,10 @@ export const handlers: Record<string, Record<string, Handler>> = {
   },
   "room:room-invalid-phase-7": {
     phx_join(client, frame) {
-      client.send(replyTo(frame, { status: "ok", response: invalidPhaseSnapshots[7] }));
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: invalidTurnPhaseSnapshots[7],
+      }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));

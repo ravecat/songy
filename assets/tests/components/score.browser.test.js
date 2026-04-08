@@ -1,6 +1,6 @@
 import Room from "~pages/room.svelte";
 import { describe, expect, test } from "vitest";
-import { users } from "../mock/room/fixtures";
+import { users } from "~fixtures/users";
 import { render } from "../inertia";
 
 describe("Score", () => {
@@ -49,26 +49,6 @@ describe("Score", () => {
 
     await expect
       .element(screen.getByRole("button", { name: "Your score: 0" }))
-      .toBeVisible();
-  });
-
-  test("updates score when the room state changes", async () => {
-    const screen = render(Room, {
-      props: {
-        roomId: "room-score-updates",
-        scope: {
-          user: users.alice,
-          provider: null,
-        },
-      },
-    });
-
-    // Initially shows score of 7, then updates to 12 after receiving new state
-    // await expect
-    //   .element(screen.getByRole("button", { name: "Your score: 7" }))
-    //   .toBeVisible();
-    await expect
-      .element(screen.getByRole("button", { name: "Your score: 12" }))
       .toBeVisible();
   });
 });

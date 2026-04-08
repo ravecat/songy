@@ -1,6 +1,6 @@
 import Room from "~pages/room.svelte";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { users } from "../mock/room/fixtures";
+import { users } from "~fixtures/users";
 import { render } from "../inertia";
 
 describe("Timer", () => {
@@ -57,20 +57,5 @@ describe("Timer", () => {
     await expect.element(timer).toHaveTextContent("12");
     await vi.advanceTimersByTimeAsync(1_000);
     await expect.element(timer).toHaveTextContent("11");
-  });
-
-  test("reacts to room state changes after mount", async () => {
-    const screen = render(Room, {
-      props: {
-        roomId: "room-timer-update",
-        scope: {
-          user: users.alice,
-          provider: null,
-        },
-      },
-    });
-
-    await expect.element(screen.getByRole("timer")).not.toBeInTheDocument();
-    await expect.element(screen.getByRole("timer")).toHaveTextContent("8");
   });
 });

@@ -1,6 +1,6 @@
 import Room from "~pages/room.svelte";
 import { describe, expect, test } from "vitest";
-import { users } from "../mock/room/fixtures";
+import { users } from "~fixtures/users";
 import { render } from "../inertia";
 
 function getHiddenCards(container) {
