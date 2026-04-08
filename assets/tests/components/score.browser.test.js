@@ -1,132 +1,73 @@
-import { writable } from "svelte/store";
-import { render } from "vitest-browser-svelte";
-import { describe, expect, test, beforeEach, afterEach, vi } from "vitest";
-import { currentUser } from "~/stores/scope";
-import Score from "~components/score.svelte";
-import { getGameContext } from "~/contexts/game";
-
-vi.mock("~/contexts/game");
-
-vi.mock("~/stores/scope", async () => {
-  const { writable } = await import("svelte/store");
-
-  return {
-    currentUser: writable(null),
-    provider: writable(undefined),
-  };
-});
+import Room from "~pages/room.svelte";
+import { describe, expect, test } from "vitest";
+import { users } from "../mock/room/fixtures";
+import { render } from "../inertia";
 
 describe("Score", () => {
-  let mockGameContext;
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-
-    mockGameContext = {
-      snapshot: {
-        game: {
-          scores: {},
+  test("renders score from room session", async () => {
+    const screen = render(Room, {
+      props: {
+        roomId: "room-score-3",
+        scope: {
+          user: users.alice,
+          provider: null,
         },
-        permissions: null,
-        timer: null,
       },
-    };
-
-    currentUser.set({
-      uuid: "user-1",
-      name: "Alice",
     });
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  test("renders score from game context", async () => {
-    mockGameContext.snapshot.game.scores = { "user-1": 3 };
-
-    vi.mocked(getGameContext).mockReturnValue(
-      writable({
-        ...mockGameContext,
-        status: "ready",
-        error: null,
-      }),
-    );
-
-    const screen = render(Score);
 
     await expect
       .element(screen.getByRole("button", { name: "Your score: 3" }))
       .toBeVisible();
-    await expect.element(screen.getByText("3")).toBeVisible();
   });
 
   test("returns 0 when user score is not defined", async () => {
-    mockGameContext.snapshot.game.scores = { "user-2": 5 };
+    const screen = render(Room, {
+      props: {
+        roomId: "room-score-missing",
+        scope: {
+          user: users.alice,
+          provider: null,
+        },
+      },
+    });
 
-    vi.mocked(getGameContext).mockReturnValue(
-      writable({
-        ...mockGameContext,
-        status: "ready",
-        error: null,
-      }),
-    );
-
-    const screen = render(Score);
-
-    await expect.element(screen.getByText("0")).toBeVisible();
+    await expect
+      .element(screen.getByRole("button", { name: "Your score: 0" }))
+      .toBeVisible();
   });
 
   test("returns 0 when scores object is undefined", async () => {
-    mockGameContext.snapshot.game.scores = undefined;
-
-    vi.mocked(getGameContext).mockReturnValue(
-      writable({
-        ...mockGameContext,
-        status: "ready",
-        error: null,
-      }),
-    );
-
-    const screen = render(Score);
-
-    await expect.element(screen.getByText("0")).toBeVisible();
-  });
-
-  test("updates score when game context changes", async () => {
-    const session = writable({
-      snapshot: {
-        game: {
-          scores: { "user-1": 7 },
+    const screen = render(Room, {
+      props: {
+        roomId: "room-score-undefined",
+        scope: {
+          user: users.alice,
+          provider: null,
         },
-        permissions: null,
-        timer: null,
       },
     });
-
-    vi.mocked(getGameContext).mockReturnValue(session);
-
-    const screen = render(Score);
 
     await expect
-      .element(screen.getByRole("button", { name: "Your score: 7" }))
+      .element(screen.getByRole("button", { name: "Your score: 0" }))
       .toBeVisible();
+  });
 
-    session.set({
-      snapshot: {
-        game: {
-          scores: { "user-1": 12 },
+  test("updates score when the room state changes", async () => {
+    const screen = render(Room, {
+      props: {
+        roomId: "room-score-updates",
+        scope: {
+          user: users.alice,
+          provider: null,
         },
-        permissions: null,
-        timer: null,
       },
-      status: "ready",
-      error: null,
     });
 
+    await expect
+      .element(screen.getByRole("button", { name: /Your score:/ }))
+      .toBeVisible();
     await expect
       .element(screen.getByRole("button", { name: "Your score: 12" }))
       .toBeVisible();
-    await expect.element(screen.getByText("12")).toBeVisible();
   });
 });

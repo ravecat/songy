@@ -1,19 +1,16 @@
-import { writable } from "svelte/store";
-import { render } from "vitest-browser-svelte";
-import { expect, test, describe, beforeEach, vi, afterEach } from "vitest";
+import Room from "~pages/room.svelte";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { users } from "../mock/room/fixtures";
+import { render } from "../inertia";
 
-vi.mock("~/contexts/game");
-
-import DefaultMediaProvider from "~components/default_media_provider.svelte";
-import { getGameContext } from "~/contexts/game";
+function getAudio() {
+  return document.body.querySelector("audio");
+}
 
 describe("DefaultMediaProvider component", () => {
-  let mockGameContext;
-  let session;
   let playSpy;
   let pauseSpy;
   let loadSpy;
-  let addEventListenerSpy;
 
   beforeEach(() => {
     playSpy = vi
@@ -25,125 +22,162 @@ describe("DefaultMediaProvider component", () => {
     loadSpy = vi
       .spyOn(HTMLMediaElement.prototype, "load")
       .mockImplementation(() => {});
-    addEventListenerSpy = vi.spyOn(
-      HTMLMediaElement.prototype,
-      "addEventListener",
-    );
-
-    mockGameContext = {
-      snapshot: {
-        game: {
-          track: {
-            id: "1440783454",
-            title: "Firestarter",
-            artist: "The Prodigy",
-            year: 1996,
-            meta: {
-              preview_url: "https://audio-ssl.itunes.apple.com/preview.m4a",
-            },
-          },
-          player: {
-            is_playback: false,
-          },
-        },
-        permissions: {
-          can_control_playback: true,
-        },
-        timer: null,
-      },
-      status: "ready",
-      error: null,
-    };
-
-    session = writable(mockGameContext);
-    vi.mocked(getGameContext).mockReturnValue(session);
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  test("renders audio element", () => {
-    const { container } = render(DefaultMediaProvider);
+  test("renders audio element", async () => {
+    const screen = render(Room, {
+      props: {
+        roomId: "room-media",
+        scope: {
+          user: users.alice,
+          provider: null,
+        },
+      },
+    });
 
-    const audio = container.querySelector("audio");
-    expect(audio).not.toBeNull();
+    await expect
+      .element(screen.getByRole("list", { name: "Lobby players" }))
+      .toBeVisible();
+
+    expect(getAudio()).not.toBeNull();
   });
 
-  test("sets audio src from track preview_url", () => {
-    const { container } = render(DefaultMediaProvider);
+  test("sets audio src from track preview_url", async () => {
+    const screen = render(Room, {
+      props: {
+        roomId: "room-media",
+        scope: {
+          user: users.alice,
+          provider: null,
+        },
+      },
+    });
 
-    const audio = container.querySelector("audio");
-    expect(audio).toHaveAttribute(
+    await expect
+      .element(screen.getByRole("list", { name: "Lobby players" }))
+      .toBeVisible();
+
+    expect(getAudio()).toHaveAttribute(
       "src",
       "https://audio-ssl.itunes.apple.com/preview.m4a",
     );
   });
 
-  test("renders without error when children snippet is provided", () => {
-    expect(() => {
-      render(DefaultMediaProvider);
-    }).not.toThrow();
-  });
-
-  test("calls load on mount", () => {
-    render(DefaultMediaProvider);
-
-    expect(loadSpy).toHaveBeenCalled();
-  });
-
-  test("has onended event handler", () => {
-    render(DefaultMediaProvider);
-
-    const call = addEventListenerSpy.mock.calls.find((c) => c[0] === "ended");
-    expect(call).toBeDefined();
-    expect(call[0]).toBe("ended");
-    expect(typeof call[1]).toBe("function");
-  });
-
-  test("has correct preload attribute", () => {
-    const { container } = render(DefaultMediaProvider);
-
-    const audio = container.querySelector("audio");
-    expect(audio).toHaveAttribute("preload", "auto");
-  });
-
-  test("audio element is hidden via style", () => {
-    const { container } = render(DefaultMediaProvider);
-
-    const audio = container.querySelector("audio");
-    expect(audio).toHaveStyle("display: none;");
-  });
-
-  test("handles missing preview_url gracefully", () => {
-    mockGameContext.snapshot.game.track.meta = {};
-    const { container } = render(DefaultMediaProvider);
-
-    const audio = container.querySelector("audio");
-    expect(audio).not.toBeNull();
-    expect(audio.getAttribute("src")).toBeNull();
-  });
-
-
-  test("loads when preview_url changes", async () => {
-    render(DefaultMediaProvider);
-
-    session.set({
-      snapshot: {
-        ...mockGameContext.snapshot,
-        game: {
-          ...mockGameContext.snapshot.game,
-          track: {
-            ...mockGameContext.snapshot.game.track,
-            meta: {
-              preview_url: "https://new-preview-url.m4a",
-            },
-          },
+  test("calls load on mount", async () => {
+    const screen = render(Room, {
+      props: {
+        roomId: "room-media",
+        scope: {
+          user: users.alice,
+          provider: null,
         },
       },
-      status: "ready",
-      error: null,
     });
+
+    await expect
+      .element(screen.getByRole("list", { name: "Lobby players" }))
+      .toBeVisible();
+
+    await vi.waitFor(() => {
+      expect(loadSpy).toHaveBeenCalled();
+    });
+  });
+
+  test("pauses playback when the preview ends", async () => {
+    const screen = render(Room, {
+      props: {
+        roomId: "room-media-playing",
+        scope: {
+          user: users.alice,
+          provider: null,
+        },
+      },
+    });
+
+    await expect
+      .element(screen.getByRole("button", { name: "Pause track" }))
+      .toBeVisible();
+
+    getAudio().dispatchEvent(new Event("ended"));
+
+    await expect
+      .element(screen.getByRole("button", { name: "Play track" }))
+      .toBeVisible();
+  });
+
+  test("has correct preload attribute", async () => {
+    const screen = render(Room, {
+      props: {
+        roomId: "room-media",
+        scope: {
+          user: users.alice,
+          provider: null,
+        },
+      },
+    });
+
+    await expect
+      .element(screen.getByRole("list", { name: "Lobby players" }))
+      .toBeVisible();
+
+    expect(getAudio()).toHaveAttribute("preload", "auto");
+  });
+
+  test("audio element is hidden via style", async () => {
+    const screen = render(Room, {
+      props: {
+        roomId: "room-media",
+        scope: {
+          user: users.alice,
+          provider: null,
+        },
+      },
+    });
+
+    await expect
+      .element(screen.getByRole("list", { name: "Lobby players" }))
+      .toBeVisible();
+
+    expect(getAudio()).toHaveStyle("display: none;");
+  });
+
+  test("handles missing preview_url gracefully", async () => {
+    const screen = render(Room, {
+      props: {
+        roomId: "room-media-no-preview",
+        scope: {
+          user: users.alice,
+          provider: null,
+        },
+      },
+    });
+
+    await expect
+      .element(screen.getByRole("list", { name: "Lobby players" }))
+      .toBeVisible();
+
+    expect(getAudio()).not.toBeNull();
+    expect(getAudio().getAttribute("src")).toBeNull();
+  });
+
+  test("loads when preview_url changes", async () => {
+    const screen = render(Room, {
+      props: {
+        roomId: "room-media-preview-update",
+        scope: {
+          user: users.alice,
+          provider: null,
+        },
+      },
+    });
+
+    await expect
+      .element(screen.getByRole("list", { name: "Lobby players" }))
+      .toBeVisible();
 
     await vi.waitFor(() => {
       expect(loadSpy).toHaveBeenCalledTimes(2);
@@ -151,8 +185,15 @@ describe("DefaultMediaProvider component", () => {
   });
 
   test("calls play when is_playback is true", async () => {
-    mockGameContext.snapshot.game.player.is_playback = true;
-    render(DefaultMediaProvider);
+    render(Room, {
+      props: {
+        roomId: "room-media-playing",
+        scope: {
+          user: users.alice,
+          provider: null,
+        },
+      },
+    });
 
     await vi.waitFor(() => {
       expect(playSpy).toHaveBeenCalled();
@@ -160,8 +201,15 @@ describe("DefaultMediaProvider component", () => {
   });
 
   test("calls pause when is_playback is false", async () => {
-    mockGameContext.snapshot.game.player.is_playback = false;
-    render(DefaultMediaProvider);
+    render(Room, {
+      props: {
+        roomId: "room-media",
+        scope: {
+          user: users.alice,
+          provider: null,
+        },
+      },
+    });
 
     await vi.waitFor(() => {
       expect(pauseSpy).toHaveBeenCalled();
@@ -170,81 +218,71 @@ describe("DefaultMediaProvider component", () => {
 
   test("handles play errors gracefully", () => {
     playSpy.mockRejectedValue(new Error("Playback failed"));
-    mockGameContext.snapshot.game.player.is_playback = true;
 
     expect(() => {
-      render(DefaultMediaProvider);
+      render(Room, {
+        props: {
+          roomId: "room-media-playing",
+          scope: {
+            user: users.alice,
+            provider: null,
+          },
+        },
+      });
     }).not.toThrow();
   });
 
-  test("renders when game context is missing player", () => {
-    delete mockGameContext.snapshot.game.player;
-    const { container } = render(DefaultMediaProvider);
-
-    const audio = container.querySelector("audio");
-    expect(audio).not.toBeNull();
-  });
-
-  test("handles both preview_url and url being undefined", () => {
-    mockGameContext.snapshot.game.track.meta = undefined;
-    const { container } = render(DefaultMediaProvider);
-
-    const audio = container.querySelector("audio");
-    expect(audio).not.toBeNull();
-    expect(audio.getAttribute("src")).toBeNull();
-  });
-
-  test("handles empty meta object", () => {
-    mockGameContext.snapshot.game.track.meta = {};
-    const { container } = render(DefaultMediaProvider);
-
-    const audio = container.querySelector("audio");
-    expect(audio).not.toBeNull();
-  });
-
-  test("works with valid track data but missing player state", () => {
-    delete mockGameContext.snapshot.game.player;
-    const { container } = render(DefaultMediaProvider);
-
-    const audio = container.querySelector("audio");
-    expect(audio).not.toBeNull();
-    expect(audio.getAttribute("src")).toBe(
-      "https://audio-ssl.itunes.apple.com/preview.m4a",
-    );
-  });
-
-  test("toggles playback correctly", async () => {
-    render(DefaultMediaProvider);
-
-    session.update((current) => ({
-      ...current,
-      snapshot: {
-        ...current.snapshot,
-        game: {
-          ...current.snapshot.game,
-          player: {
-            is_playback: true,
-          },
+  test("renders when player state is missing", async () => {
+    const screen = render(Room, {
+      props: {
+        roomId: "room-media-no-player",
+        scope: {
+          user: users.alice,
+          provider: null,
         },
       },
-    }));
+    });
+
+    await expect
+      .element(screen.getByRole("list", { name: "Lobby players" }))
+      .toBeVisible();
+
+    expect(getAudio()).not.toBeNull();
+  });
+
+  test("handles undefined track meta gracefully", async () => {
+    const screen = render(Room, {
+      props: {
+        roomId: "room-media-no-meta",
+        scope: {
+          user: users.alice,
+          provider: null,
+        },
+      },
+    });
+
+    await expect
+      .element(screen.getByRole("list", { name: "Lobby players" }))
+      .toBeVisible();
+
+    expect(getAudio()).not.toBeNull();
+    expect(getAudio().getAttribute("src")).toBeNull();
+  });
+
+  test("toggles playback correctly from room state updates", async () => {
+    render(Room, {
+      props: {
+        roomId: "room-media-toggle",
+        scope: {
+          user: users.alice,
+          provider: null,
+        },
+      },
+    });
 
     await vi.waitFor(() => {
       expect(playSpy).toHaveBeenCalled();
     });
-
-    session.update((current) => ({
-      ...current,
-      snapshot: {
-        ...current.snapshot,
-        game: {
-          ...current.snapshot.game,
-          player: {
-            is_playback: false,
-          },
-        },
-      },
-    }));
 
     await vi.waitFor(() => {
       expect(pauseSpy).toHaveBeenCalled();
