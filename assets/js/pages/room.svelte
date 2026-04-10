@@ -6,10 +6,7 @@
   import GameProvider from "~components/game_provider.svelte";
   import MediaProvider from "~components/media_provider.svelte";
   import Room from "~components/room.svelte";
-
-  interface Props {
-    roomId: string;
-  }
+  import type { Props } from "./room.types";
 
   let { roomId }: Props = $props();
 </script>

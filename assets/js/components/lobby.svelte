@@ -4,8 +4,9 @@
   import { Link, Copy, Check, Crown } from "lucide-svelte";
   import Vinyl from "~components/vinyl.svelte";
   import Sleeve from "~components/sleeve.svelte";
+  import type { Props } from "~pages/room.types";
 
-  const page = usePage<{ qr?: string }>();
+  const page = usePage<Props>();
   let { qr = "" } = $derived($page.props);
   const session = getGameContext();
   const game = $derived($session.snapshot?.game ?? null);

@@ -6,7 +6,7 @@ import { parseFrame } from "./phoenix";
 
 const socket = ws.link(`//${window.location.host}/socket/websocket`);
 
-export const worker = setupWorker(
+export const socketHandlers = [
   socket.addEventListener("connection", ({ client }) => {
     client.addEventListener("message", (event) => {
       const frame = parseFrame(event.data);
@@ -21,4 +21,6 @@ export const worker = setupWorker(
       console.warn("[MSW] Unhandled WS frame", frame);
     });
   }),
-);
+];
+
+export const worker = setupWorker(...socketHandlers);

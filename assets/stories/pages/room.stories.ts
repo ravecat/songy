@@ -1,32 +1,65 @@
-import type { Meta } from "@storybook/svelte-vite";
+import { users } from "~fixtures/users";
+import type { Meta, StoryObj } from "@storybook/svelte-vite";
 
-/*
- * Intentionally kept as a placeholder.
- *
- * The previous version tried to storybook the Room Inertia page by mocking
- * page-adjacent runtime through decorators and context injection. That gave us
- * convenient visual states, but it also coupled the story to internal page
- * composition details instead of the actual integration boundary.
- *
- * Before re-enabling real stories for this page, revisit the strategy:
- * - decide whether the target is the Room screen component or the Inertia page
- * - define where Inertia/page state should be mocked
- * - define how socket/channel session state should be injected or simulated
- * - avoid inventing a fake production seam only for Storybook
- *
- * Keep this file so the decision stays visible in the codebase.
- */
+import Room from "~pages/room.svelte";
+import type { Props } from "~pages/room.types";
 
 const meta = {
   title: "Pages/Room",
+  component: Room,
   parameters: {
-    docs: {
-      description: {
-        component:
-          "Placeholder only. Revisit the Storybook strategy for Inertia pages before re-enabling Room stories.",
-      },
+    inertia: {},
+  },
+  args: {
+    roomId: "room-owner-lobby",
+    scope: {
+      user: users.alice,
+      provider: null,
     },
   },
-} satisfies Meta;
+} satisfies Meta<Props>;
 
 export default meta;
+
+type Story = StoryObj<Props>;
+
+export const OwnerLobby: Story = {
+  args: {
+    roomId: "room-owner-lobby",
+    qr: "<svg data-testid='room-qr'></svg>",
+    scope: {
+      user: users.alice,
+      provider: null,
+    },
+  },
+};
+
+export const PlayerLobby: Story = {
+  args: {
+    roomId: "room-player-lobby",
+    scope: {
+      user: users.bob,
+      provider: null,
+    },
+  },
+};
+
+export const ReadyControls: Story = {
+  args: {
+    roomId: "room-ready-controls",
+    scope: {
+      user: users.alice,
+      provider: null,
+    },
+  },
+};
+
+export const MissingRoom: Story = {
+  args: {
+    roomId: "room-missing",
+    scope: {
+      user: users.alice,
+      provider: null,
+    },
+  },
+};
