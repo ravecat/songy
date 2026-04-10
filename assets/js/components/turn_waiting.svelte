@@ -1,11 +1,11 @@
 <script lang="ts">
   import { getGameContext } from "~/contexts/game";
+  import { currentUser } from "~/stores/scope";
 
   const session = getGameContext();
   const game = $derived($session.snapshot?.game ?? null);
-  const permissions = $derived($session.snapshot?.permissions ?? null);
-
   const activePlayer = $derived(game!.participants[game!.queue[game!.cursor]]);
+  const isCurrentUserActive = $derived(activePlayer?.uuid === $currentUser?.uuid);
 </script>
 
 <div class="turn-waiting" role="region" aria-label="Turn waiting">
@@ -18,9 +18,7 @@
       </div>
     </div>
     <h2 class="turn-waiting__title">
-      {permissions?.can_start_turn
-        ? "It's your turn"
-        : `${activePlayer.name} turn`}
+      {isCurrentUserActive ? "It's your turn" : `${activePlayer.name} turn`}
     </h2>
   </div>
 </div>

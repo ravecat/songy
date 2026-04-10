@@ -75,4 +75,23 @@ describe("Turn waiting view", () => {
       users.bob.avatar_url,
     );
   });
+
+  test("displays passive message for the owner when another player is active", async () => {
+    const screen = render(Room, {
+      props: {
+        roomId: "room-waiting-active-bob",
+        scope: {
+          user: users.alice,
+          provider: null,
+        },
+      },
+    });
+
+    await expect.element(screen.getByText("Bob turn")).toBeVisible();
+    await expect.element(screen.getByText("It's your turn")).not.toBeInTheDocument();
+    await expect.element(screen.getByAltText("Bob")).toHaveAttribute(
+      "src",
+      users.bob.avatar_url,
+    );
+  });
 });
