@@ -16,7 +16,7 @@ defmodule SongyWeb.Presence do
     {:ok, %{}}
   end
 
-  def handle_metas(@room_prefix <> _room_id = topic, %{joins: joins, leaves: leaves}, _, state) do
+  def handle_metas(@room_prefix <> _room_id = topic, %{joins: joins, leaves: leaves}, presences, state) do
     # Emit participant join events
     for {user_id, _} <- joins do
       Phoenix.PubSub.local_broadcast(
@@ -27,7 +27,7 @@ defmodule SongyWeb.Presence do
     end
 
     # Emit participant leave events
-    for {user_id, _} <- leaves do
+    for {user_id, _} <- leaves, not present?(presences, user_id) do
       Phoenix.PubSub.local_broadcast(
         Songy.PubSub,
         @presence_prefix <> topic,
@@ -36,6 +36,13 @@ defmodule SongyWeb.Presence do
     end
 
     {:ok, state}
+  end
+
+  defp present?(presences, user_id) do
+    case Map.get(presences, user_id) do
+      %{metas: [_ | _]} -> true
+      _ -> false
+    end
   end
 
   def subscribe(room_id),
