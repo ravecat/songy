@@ -7,12 +7,19 @@ import "../css/app.css";
 import "./preview.css";
 
 const storybookUserToken = "storybook-user-token";
+
 window.userToken ??= storybookUserToken;
 
 initialize(
   {
     onUnhandledRequest: "bypass",
     quiet: true,
+    serviceWorker: {
+      url: new URL(
+        "mockServiceWorker.js",
+        new URL(".", window.location.href),
+      ).pathname,
+    },
   },
   socketHandlers as unknown as RequestHandler[],
 );
