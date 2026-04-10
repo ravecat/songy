@@ -289,6 +289,15 @@ export const readyPlaybackPlayingSnapshot = {
   },
 };
 
+export const readyPlaybackControlsBobSnapshot = {
+  ...readyPlaybackControlsSnapshot,
+  game: {
+    ...readyPlaybackControlsSnapshot.game,
+    queue: [users.alice.uuid, users.bob.uuid, users.carol.uuid],
+    cursor: 1,
+  },
+};
+
 export const readyTimelineOwnAssumptionSnapshot = {
   ...readySnapshot,
   permissions: {
@@ -509,6 +518,37 @@ export const challengingTimerSnapshot = {
       phase: "challenging",
       deadline_at_ms: Date.parse("2026-01-01T00:00:12.000Z"),
     },
+  },
+};
+
+export const challengingActiveBobSnapshot = {
+  ...challengingTimerSnapshot,
+  game: {
+    ...challengingTimerSnapshot.game,
+    queue: [users.alice.uuid, users.bob.uuid, users.carol.uuid],
+    cursor: 1,
+  },
+};
+
+export const challengingPlaybackControlsBobSnapshot = {
+  ...challengingActiveBobSnapshot,
+  permissions: {
+    ...waitingSnapshot.permissions,
+    can_control_playback: true,
+  },
+};
+
+export const resultsControlsBobSnapshot = {
+  ...resultsWinnerAliceSnapshot,
+  permissions: {
+    ...waitingSnapshot.permissions,
+    can_control_playback: true,
+    can_advance_turn: true,
+  },
+  game: {
+    ...resultsWinnerAliceSnapshot.game,
+    queue: [users.alice.uuid, users.bob.uuid, users.carol.uuid],
+    cursor: 1,
   },
 };
 

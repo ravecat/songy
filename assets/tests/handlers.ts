@@ -6,6 +6,8 @@ import {
 } from "./phoenix";
 import {
   challengingTimelineOwnAssumptionSnapshot,
+  challengingActiveBobSnapshot,
+  challengingPlaybackControlsBobSnapshot,
   challengingTimerSnapshot,
   finishedCanRestartSnapshot,
   finishedMissingParticipantSnapshot,
@@ -17,6 +19,7 @@ import {
   mediaPlayingSnapshot,
   mediaSnapshot,
   readyPlaybackControlsSnapshot,
+  readyPlaybackControlsBobSnapshot,
   readyPlaybackPlayingSnapshot,
   readySnapshot,
   readyTimelineMixedSnapshot,
@@ -26,6 +29,7 @@ import {
   readyTimelinePermissionsUndefinedSnapshot,
   readyTimelineSlotZeroSnapshot,
   resultsNoWinnerSnapshot,
+  resultsControlsBobSnapshot,
   resultsWinnerAliceSnapshot,
   waitingEmptySnapshot,
   waitingOwnerCanStartGameSnapshot,
@@ -329,6 +333,17 @@ export const handlers: Record<string, Record<string, Handler>> = {
       client.send(replyTo(frame, okReply));
     },
   },
+  "room:room-ready-controls-bob": {
+    phx_join(client, frame) {
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: readyPlaybackControlsBobSnapshot,
+      }));
+    },
+    phx_leave(client, frame) {
+      client.send(replyTo(frame, okReply));
+    },
+  },
   "room:room-start-playback": {
     phx_join(client, frame) {
       client.send(replyTo(frame, {
@@ -512,6 +527,39 @@ export const handlers: Record<string, Record<string, Handler>> = {
       client.send(replyTo(frame, {
         status: "ok",
         response: challengingTimerSnapshot,
+      }));
+    },
+    phx_leave(client, frame) {
+      client.send(replyTo(frame, okReply));
+    },
+  },
+  "room:room-challenging-active-bob": {
+    phx_join(client, frame) {
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: challengingActiveBobSnapshot,
+      }));
+    },
+    phx_leave(client, frame) {
+      client.send(replyTo(frame, okReply));
+    },
+  },
+  "room:room-challenging-controls-bob": {
+    phx_join(client, frame) {
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: challengingPlaybackControlsBobSnapshot,
+      }));
+    },
+    phx_leave(client, frame) {
+      client.send(replyTo(frame, okReply));
+    },
+  },
+  "room:room-results-controls-bob": {
+    phx_join(client, frame) {
+      client.send(replyTo(frame, {
+        status: "ok",
+        response: resultsControlsBobSnapshot,
       }));
     },
     phx_leave(client, frame) {
