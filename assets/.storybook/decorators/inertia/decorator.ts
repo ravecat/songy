@@ -2,7 +2,7 @@ import type { PageProps } from "@inertiajs/core";
 import type { Decorator, StoryContext } from "@storybook/svelte-vite";
 import InertiaPageDecorator from "./page_decorator.svelte";
 
-export interface InertiaParameters {
+interface InertiaParameters {
   name?: string;
   url?: string;
   version?: string | null;

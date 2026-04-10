@@ -13,6 +13,8 @@ export const socketHandlers = [
       const [, , topic, eventName] = frame;
       const handler = handlers[topic]?.[eventName];
 
+      console.log("[MSW] WS frame", { topic, eventName, frame });
+
       if (handler) {
         handler(client, frame);
         return;
