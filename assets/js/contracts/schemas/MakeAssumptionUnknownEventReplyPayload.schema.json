@@ -1,0 +1,23 @@
+{
+  "type": "object",
+  "required": ["status", "response"],
+  "properties": {
+    "status": {
+      "const": "error"
+    },
+    "response": {
+      "type": "object",
+      "required": ["reason", "event"],
+      "properties": {
+        "reason": {
+          "const": "unknown_event"
+        },
+        "event": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

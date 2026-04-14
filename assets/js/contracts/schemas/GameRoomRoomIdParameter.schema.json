@@ -1,0 +1,4 @@
+{
+  "type": "string",
+  "description": "Human-readable room identifier, for example `happy-tiger-42`"
+}

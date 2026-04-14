@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "required": ["status", "response"],
+  "properties": {
+    "status": {
+      "const": "ok"
+    },
+    "response": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

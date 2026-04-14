@@ -1,0 +1,247 @@
+{
+  "type": "object",
+  "description": "JSON-encoded `Songy.Core.Game` snapshot",
+  "required": [
+    "id",
+    "owner_id",
+    "max_participants",
+    "max_score",
+    "status",
+    "participants",
+    "scores",
+    "player",
+    "timelines",
+    "created_at",
+    "queue",
+    "cursor",
+    "track",
+    "turn"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "owner_id": {
+      "type": "string"
+    },
+    "max_participants": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "max_score": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": ["waiting", "in_progress", "finished"]
+    },
+    "participants": {
+      "type": "object",
+      "description": "Connected and known room participants keyed by user id",
+      "additionalProperties": {
+        "type": "object",
+        "description": "JSON-encoded `Songy.Core.User`",
+        "required": ["uuid", "name", "avatar_url"],
+        "properties": {
+          "uuid": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "avatar_url": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "scores": {
+      "type": "object",
+      "description": "Per-user scores keyed by user id",
+      "additionalProperties": {
+        "type": "integer"
+      }
+    },
+    "player": {
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "JSON-encoded `Songy.Core.Player`",
+          "required": ["is_playback"],
+          "properties": {
+            "is_playback": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "timelines": {
+      "type": "object",
+      "description": "Per-user ordered timelines keyed by user id",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "description": "JSON-encoded `Songy.Core.Track`",
+          "required": ["id", "title", "artist", "year", "cover_url", "meta"],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "artist": {
+              "type": "string"
+            },
+            "year": {
+              "type": "integer"
+            },
+            "cover_url": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "meta": {
+              "type": "object",
+              "properties": {
+                "preview_url": {
+                  "type": "string"
+                },
+                "uri": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "queue": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "cursor": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "track": {
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "JSON-encoded `Songy.Core.Track`",
+          "required": ["id", "title", "artist", "year", "cover_url", "meta"],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "artist": {
+              "type": "string"
+            },
+            "year": {
+              "type": "integer"
+            },
+            "cover_url": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "meta": {
+              "type": "object",
+              "properties": {
+                "preview_url": {
+                  "type": "string"
+                },
+                "uri": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "turn": {
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "JSON-encoded `Songy.Core.Turn`",
+          "required": ["phase", "assumptions", "winner_id", "deadline_at_ms"],
+          "properties": {
+            "phase": {
+              "type": "string",
+              "enum": ["waiting", "ready", "challenging", "results"]
+            },
+            "assumptions": {
+              "type": "object",
+              "description": "Map keyed by JSON stringified zero-based positions. Values are user ids.\n",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "winner_id": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "deadline_at_ms": {
+              "oneOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Authoritative challenging-phase deadline as Unix epoch time in milliseconds. Null outside time-bound phases.\n"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "additionalProperties": false
+}

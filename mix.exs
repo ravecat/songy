@@ -116,7 +116,7 @@ defmodule Songy.MixProject do
       "test.e2e.ui": ["bun assets run e2e:ui"],
       "test.e2e.watch": ["bun e2e.watch"],
       storybook: ["bun storybook"],
-      codegen: ["bun asyncapi"],
+      codegen: ["bun assets run codegen"],
       "assets.setup": ["bun.install --if-missing", "bun assets install"],
       "assets.build": ["bun vite build"],
       "assets.deploy": [

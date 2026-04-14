@@ -1,0 +1,17 @@
+{
+  "type": "object",
+  "description": "Query parameters used by the Phoenix JS client during socket connect",
+  "properties": {
+    "vsn": {
+      "type": "string",
+      "const": "2.0.0",
+      "description": "Phoenix serializer version added by the Phoenix client"
+    },
+    "user_token": {
+      "type": "string",
+      "description": "`Phoenix.Token` signed on page render and verified by `SongyWeb.UserSocket.connect/3` with `max_age: 86400`\n"
+    }
+  },
+  "required": ["vsn", "user_token"],
+  "additionalProperties": false
+}

@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "required": ["status", "response"],
+  "properties": {
+    "status": {
+      "const": "error"
+    },
+    "response": {
+      "type": "object",
+      "required": ["reason"],
+      "properties": {
+        "reason": {
+          "const": "provider_not_found"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

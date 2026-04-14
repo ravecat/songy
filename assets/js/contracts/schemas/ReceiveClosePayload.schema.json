@@ -1,0 +1,5 @@
+{
+  "type": "object",
+  "description": "Phoenix protocol payload for lifecycle events",
+  "additionalProperties": true
+}

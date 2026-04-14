@@ -1,0 +1,42 @@
+{
+  "type": "object",
+  "description": "JSON-encoded `Songy.Core.Track`",
+  "required": ["id", "title", "artist", "year", "cover_url", "meta"],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "artist": {
+      "type": "string"
+    },
+    "year": {
+      "type": "integer"
+    },
+    "cover_url": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "preview_url": {
+          "type": "string"
+        },
+        "uri": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

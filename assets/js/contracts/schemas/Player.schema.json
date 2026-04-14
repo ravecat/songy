@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "description": "JSON-encoded `Songy.Core.Player`",
+  "required": ["is_playback"],
+  "properties": {
+    "is_playback": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false
+}

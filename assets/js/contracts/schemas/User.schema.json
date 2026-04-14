@@ -1,0 +1,17 @@
+{
+  "type": "object",
+  "description": "JSON-encoded `Songy.Core.User`",
+  "required": ["uuid", "name", "avatar_url"],
+  "properties": {
+    "uuid": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "avatar_url": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

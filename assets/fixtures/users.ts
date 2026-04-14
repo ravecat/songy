@@ -1,4 +1,4 @@
-import type { User } from "~contracts";
+import type { User } from "~contracts/models";
 
 export const users = {
   alice: {

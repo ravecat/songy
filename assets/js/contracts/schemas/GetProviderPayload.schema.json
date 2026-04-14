@@ -1,0 +1,5 @@
+{
+  "type": "object",
+  "description": "Event without application payload fields",
+  "additionalProperties": false
+}

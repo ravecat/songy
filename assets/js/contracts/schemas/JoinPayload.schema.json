@@ -1,0 +1,5 @@
+{
+  "type": "object",
+  "description": "Join payload accepted by the room channel",
+  "additionalProperties": true
+}

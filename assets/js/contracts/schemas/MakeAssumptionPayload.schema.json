@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "required": ["position"],
+  "properties": {
+    "position": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Zero-based insertion position in the active player's timeline"
+    }
+  },
+  "additionalProperties": false
+}

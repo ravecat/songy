@@ -1,0 +1,41 @@
+{
+  "type": "object",
+  "description": "JSON-encoded `Songy.Core.Turn`",
+  "required": ["phase", "assumptions", "winner_id", "deadline_at_ms"],
+  "properties": {
+    "phase": {
+      "type": "string",
+      "enum": ["waiting", "ready", "challenging", "results"]
+    },
+    "assumptions": {
+      "type": "object",
+      "description": "Map keyed by JSON stringified zero-based positions. Values are user ids.\n",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "winner_id": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "deadline_at_ms": {
+      "oneOf": [
+        {
+          "type": "integer",
+          "minimum": 0
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Authoritative challenging-phase deadline as Unix epoch time in milliseconds. Null outside time-bound phases.\n"
+    }
+  },
+  "additionalProperties": false
+}

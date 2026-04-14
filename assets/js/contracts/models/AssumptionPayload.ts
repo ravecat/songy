@@ -1,5 +1,5 @@
 /**
- * Generated from AsyncAPI spec (asyncapi.yaml).
+ * Generated from AsyncAPI spec.
  * Do not edit manually.
  */
 

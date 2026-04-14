@@ -1,0 +1,37 @@
+{
+  "type": "object",
+  "description": "Caller-specific permissions computed by `Songy.Authorization.permissions/2`",
+  "required": [
+    "can_control_playback",
+    "can_advance_turn",
+    "can_start_game",
+    "can_start_turn",
+    "can_restart_game",
+    "can_see_assumptions",
+    "can_make_assumptions"
+  ],
+  "properties": {
+    "can_control_playback": {
+      "type": "boolean"
+    },
+    "can_advance_turn": {
+      "type": "boolean"
+    },
+    "can_start_game": {
+      "type": "boolean"
+    },
+    "can_start_turn": {
+      "type": "boolean"
+    },
+    "can_restart_game": {
+      "type": "boolean"
+    },
+    "can_see_assumptions": {
+      "type": "boolean"
+    },
+    "can_make_assumptions": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false
+}
