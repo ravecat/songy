@@ -58,13 +58,15 @@
                     "required": ["uuid", "name", "avatar_url"],
                     "properties": {
                       "uuid": {
-                        "type": "string"
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{32}$"
                       },
                       "name": {
                         "type": "string"
                       },
                       "avatar_url": {
-                        "type": "string"
+                        "type": "string",
+                        "format": "uri"
                       }
                     },
                     "additionalProperties": false

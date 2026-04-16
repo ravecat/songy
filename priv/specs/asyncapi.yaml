@@ -750,10 +750,12 @@ components:
       properties:
         uuid:
           type: string
+          pattern: "^[0-9a-f]{32}$"
         name:
           type: string
         avatar_url:
           type: string
+          format: uri
       additionalProperties: false
     player:
       type: object
