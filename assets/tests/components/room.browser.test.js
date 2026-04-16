@@ -132,7 +132,9 @@ describe("Room", () => {
         .toBeVisible();
 
       const players = Array.from(document.body.querySelectorAll(".lobby-player"));
-      const ownerPlayer = players.find((player) => player.textContent?.includes("Alice"));
+      const ownerPlayer = players.find((player) =>
+        player.textContent?.includes(users.alice.name)
+      );
 
       expect(ownerPlayer).toBeDefined();
       expect(ownerPlayer?.querySelector(".lobby-player__badge")).not.toBeNull();

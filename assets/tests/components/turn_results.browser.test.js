@@ -31,15 +31,15 @@ describe("TurnResults", () => {
       },
     });
 
-    await expect.element(screen.getByAltText("Alice")).toHaveAttribute(
+    await expect.element(screen.getByAltText(users.alice.name)).toHaveAttribute(
       "src",
       users.alice.avatar_url,
     );
-    await expect.element(screen.getByAltText("Bob")).toHaveAttribute(
+    await expect.element(screen.getByAltText(users.bob.name)).toHaveAttribute(
       "src",
       users.bob.avatar_url,
     );
-    await expect.element(screen.getByAltText("Carol")).not.toBeInTheDocument();
+    await expect.element(screen.getByAltText(users.carol.name)).not.toBeInTheDocument();
   });
 
   test("displays challenger names", async () => {
@@ -53,8 +53,8 @@ describe("TurnResults", () => {
       },
     });
 
-    await expect.element(screen.getByText("Alice")).toBeVisible();
-    await expect.element(screen.getByText("Bob")).toBeVisible();
+    await expect.element(screen.getByText(users.alice.name)).toBeVisible();
+    await expect.element(screen.getByText(users.bob.name)).toBeVisible();
   });
 
   test("highlights the winner with a score badge", async () => {

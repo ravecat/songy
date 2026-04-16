@@ -67,7 +67,7 @@ describe("Game", () => {
       },
     });
 
-    await expect.element(screen.getByText("Alice turn")).toBeVisible();
+    await expect.element(screen.getByText(`${users.alice.name} turn`)).toBeVisible();
   });
 
   test("displays results view on results phase", async () => {
@@ -98,7 +98,7 @@ describe("Game", () => {
     });
 
     await expect
-      .element(screen.getByRole("heading", { name: "Bob wins" }))
+      .element(screen.getByRole("heading", { name: `${users.bob.name} wins` }))
       .toBeVisible();
     await expect
       .element(screen.getByRole("list", { name: "Final leaderboard" }))

@@ -1,19 +1,23 @@
-import type { User } from "~contracts/models";
+import { userSchema } from "~contracts";
+import { zocker } from "zocker";
 
 export const users = {
-  alice: {
-    uuid: "user-1",
-    name: "Alice",
-    avatar_url: "https://example.com/alice.jpg",
-  },
-  bob: {
-    uuid: "user-2",
-    name: "Bob",
-    avatar_url: "https://example.com/bob.jpg",
-  },
-  carol: {
-    uuid: "user-3",
-    name: "Carol",
-    avatar_url: "https://example.com/carol.jpg",
-  },
-} satisfies Record<string, User>;
+  alice: zocker(userSchema)
+    .supply(
+      userSchema.shape.avatar_url,
+      "https://api.dicebear.com/9.x/thumbs/svg?seed=alice",
+    )
+    .generate(),
+  bob: zocker(userSchema)
+    .supply(
+      userSchema.shape.avatar_url,
+      "https://api.dicebear.com/9.x/thumbs/svg?seed=bob",
+    )
+    .generate(),
+  carol: zocker(userSchema)
+    .supply(
+      userSchema.shape.avatar_url,
+      "https://api.dicebear.com/9.x/thumbs/svg?seed=carol",
+    )
+    .generate(),
+};

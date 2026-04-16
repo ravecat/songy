@@ -204,7 +204,7 @@ describe("Timeline", () => {
       });
 
       await expect
-        .element(screen.getByLabelText("Alice's assumption"))
+        .element(screen.getByLabelText(`${users.alice.name}'s assumption`))
         .toHaveAttribute("data-snap");
     });
 
@@ -220,7 +220,7 @@ describe("Timeline", () => {
       });
 
       await expect
-        .element(screen.getByLabelText("Bob's assumption"))
+        .element(screen.getByLabelText(`${users.bob.name}'s assumption`))
         .not.toHaveAttribute("data-snap");
     });
 

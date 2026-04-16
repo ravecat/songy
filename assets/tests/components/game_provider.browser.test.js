@@ -1,5 +1,6 @@
 import Room from "~pages/room.svelte";
 import { describe, expect, test } from "vitest";
+import { users } from "~fixtures/users";
 import { render } from "../inertia";
 
 describe("game provider", () => {
@@ -8,10 +9,7 @@ describe("game provider", () => {
       props: {
         roomId: "room-1",
         scope: {
-          user: {
-            uuid: "user-1",
-            name: "Alice",
-          },
+          user: users.alice,
           provider: null,
         },
       },
@@ -27,10 +25,7 @@ describe("game provider", () => {
       props: {
         roomId: "room-1",
         scope: {
-          user: {
-            uuid: "user-1",
-            name: "Alice",
-          },
+          user: users.alice,
           provider: null,
         },
       },
@@ -39,7 +34,7 @@ describe("game provider", () => {
     await expect
       .element(screen.getByRole("list", { name: "Lobby players" }))
       .toBeVisible();
-    await expect.element(screen.getByText("Alice")).toBeVisible();
+    await expect.element(screen.getByText(users.alice.name)).toBeVisible();
     await expect
       .element(screen.getByRole("button", { name: "Copy share link" }))
       .toBeVisible();
@@ -50,10 +45,7 @@ describe("game provider", () => {
       props: {
         roomId: "room-missing",
         scope: {
-          user: {
-            uuid: "user-1",
-            name: "Alice",
-          },
+          user: users.alice,
           provider: null,
         },
       },

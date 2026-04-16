@@ -16,7 +16,7 @@ describe("GameFinished", () => {
     });
 
     await expect
-      .element(screen.getByRole("heading", { name: "Bob wins" }))
+      .element(screen.getByRole("heading", { name: `${users.bob.name} wins` }))
       .toBeVisible();
     await expect.element(screen.getByText("10/10 points")).toBeVisible();
     await expect.element(screen.getByText("Target 10")).toBeVisible();
@@ -40,9 +40,9 @@ describe("GameFinished", () => {
     const leaderboard = Array.from(document.body.querySelectorAll(".game-finished__entry"));
 
     expect(leaderboard).toHaveLength(3);
-    expect(leaderboard[0]?.textContent).toContain("Bob");
-    expect(leaderboard[1]?.textContent).toContain("Alice");
-    expect(leaderboard[2]?.textContent).toContain("Carol");
+    expect(leaderboard[0]?.textContent).toContain(users.bob.name);
+    expect(leaderboard[1]?.textContent).toContain(users.alice.name);
+    expect(leaderboard[2]?.textContent).toContain(users.carol.name);
     expect(leaderboard[0]?.getAttribute("aria-current")).toBe("true");
   });
 

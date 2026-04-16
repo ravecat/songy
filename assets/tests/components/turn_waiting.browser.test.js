@@ -16,7 +16,7 @@ describe("Turn waiting view", () => {
     });
 
     await expect.element(screen.getByText("It's your turn")).toBeVisible();
-    await expect.element(screen.getByAltText("Alice")).toHaveAttribute(
+    await expect.element(screen.getByAltText(users.alice.name)).toHaveAttribute(
       "src",
       users.alice.avatar_url,
     );
@@ -33,8 +33,8 @@ describe("Turn waiting view", () => {
       },
     });
 
-    await expect.element(screen.getByText("Alice turn")).toBeVisible();
-    await expect.element(screen.getByAltText("Alice")).toHaveAttribute(
+    await expect.element(screen.getByText(`${users.alice.name} turn`)).toBeVisible();
+    await expect.element(screen.getByAltText(users.alice.name)).toHaveAttribute(
       "src",
       users.alice.avatar_url,
     );
@@ -52,7 +52,7 @@ describe("Turn waiting view", () => {
     });
 
     await expect.element(screen.getByText("It's your turn")).toBeVisible();
-    await expect.element(screen.getByAltText("Bob")).toHaveAttribute(
+    await expect.element(screen.getByAltText(users.bob.name)).toHaveAttribute(
       "src",
       users.bob.avatar_url,
     );
@@ -69,8 +69,8 @@ describe("Turn waiting view", () => {
       },
     });
 
-    await expect.element(screen.getByText("Bob turn")).toBeVisible();
-    await expect.element(screen.getByAltText("Bob")).toHaveAttribute(
+    await expect.element(screen.getByText(`${users.bob.name} turn`)).toBeVisible();
+    await expect.element(screen.getByAltText(users.bob.name)).toHaveAttribute(
       "src",
       users.bob.avatar_url,
     );
@@ -87,9 +87,9 @@ describe("Turn waiting view", () => {
       },
     });
 
-    await expect.element(screen.getByText("Bob turn")).toBeVisible();
+    await expect.element(screen.getByText(`${users.bob.name} turn`)).toBeVisible();
     await expect.element(screen.getByText("It's your turn")).not.toBeInTheDocument();
-    await expect.element(screen.getByAltText("Bob")).toHaveAttribute(
+    await expect.element(screen.getByAltText(users.bob.name)).toHaveAttribute(
       "src",
       users.bob.avatar_url,
     );
