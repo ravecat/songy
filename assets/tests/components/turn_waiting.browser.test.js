@@ -43,7 +43,7 @@ describe("Turn waiting view", () => {
   test("displays second player when cursor is 1", async () => {
     const screen = render(Room, {
       props: {
-        roomId: "room-waiting-active-bob",
+        roomId: "room-waiting-active-player",
         scope: {
           user: users.bob,
           provider: null,
@@ -61,7 +61,7 @@ describe("Turn waiting view", () => {
   test("shows active player info for a different viewer when cursor is 1", async () => {
     const screen = render(Room, {
       props: {
-        roomId: "room-waiting-passive-bob",
+        roomId: "room-waiting-passive-player",
         scope: {
           user: users.alice,
           provider: null,
@@ -79,7 +79,7 @@ describe("Turn waiting view", () => {
   test("displays passive message for the owner when another player is active", async () => {
     const screen = render(Room, {
       props: {
-        roomId: "room-waiting-active-bob",
+        roomId: "room-waiting-active-player",
         scope: {
           user: users.alice,
           provider: null,

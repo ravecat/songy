@@ -6,8 +6,8 @@ import {
 } from "./phoenix";
 import {
   challengingTimelineOwnAssumptionSnapshot,
-  challengingActiveBobSnapshot,
-  challengingPlaybackControlsBobSnapshot,
+  challengingActivePlayerSnapshot,
+  challengingPlaybackControlsActivePlayerSnapshot,
   challengingTimerSnapshot,
   finishedCanRestartSnapshot,
   finishedMissingParticipantSnapshot,
@@ -19,7 +19,7 @@ import {
   mediaPlayingSnapshot,
   mediaSnapshot,
   readyPlaybackControlsSnapshot,
-  readyPlaybackControlsBobSnapshot,
+  readyPlaybackControlsActivePlayerSnapshot,
   readyPlaybackPlayingSnapshot,
   readySnapshot,
   readyTimelineMixedSnapshot,
@@ -28,9 +28,9 @@ import {
   readyTimelineOwnAssumptionSnapshot,
   readyTimelinePermissionsUndefinedSnapshot,
   readyTimelineSlotZeroSnapshot,
+  resultsControlsActivePlayerSnapshot,
   resultsNoWinnerSnapshot,
-  resultsControlsBobSnapshot,
-  resultsWinnerAliceSnapshot,
+  resultsActivePlayerWinsSnapshot,
   waitingEmptySnapshot,
   waitingOwnerCanStartGameSnapshot,
   waitingParticipantsUndefinedSnapshot,
@@ -39,9 +39,9 @@ import {
   waitingScoresUndefinedSnapshot,
   waitingSingleParticipantSnapshot,
   waitingSnapshot,
-  waitingTurnActiveBobSnapshot,
+  waitingTurnActivePlayerSnapshot,
   waitingTurnActiveSnapshot,
-  waitingTurnPassiveBobSnapshot,
+  waitingTurnPassivePlayerSnapshot,
   waitingTurnPassiveSnapshot,
 } from "~fixtures/room/messages";
 
@@ -197,22 +197,22 @@ export const handlers: Record<string, Record<string, Handler>> = {
       client.send(replyTo(frame, okReply));
     },
   },
-  "room:room-waiting-active-bob": {
+  "room:room-waiting-active-player": {
     phx_join(client, frame) {
       client.send(replyTo(frame, {
         status: "ok",
-        response: waitingTurnActiveBobSnapshot,
+        response: waitingTurnActivePlayerSnapshot,
       }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
     },
   },
-  "room:room-waiting-passive-bob": {
+  "room:room-waiting-passive-player": {
     phx_join(client, frame) {
       client.send(replyTo(frame, {
         status: "ok",
-        response: waitingTurnPassiveBobSnapshot,
+        response: waitingTurnPassivePlayerSnapshot,
       }));
     },
     phx_leave(client, frame) {
@@ -223,7 +223,7 @@ export const handlers: Record<string, Record<string, Handler>> = {
     phx_join(client, frame) {
       client.send(replyTo(frame, {
         status: "ok",
-        response: resultsWinnerAliceSnapshot,
+        response: resultsActivePlayerWinsSnapshot,
       }));
     },
     phx_leave(client, frame) {
@@ -333,11 +333,11 @@ export const handlers: Record<string, Record<string, Handler>> = {
       client.send(replyTo(frame, okReply));
     },
   },
-  "room:room-ready-controls-bob": {
+  "room:room-ready-controls-active-player": {
     phx_join(client, frame) {
       client.send(replyTo(frame, {
         status: "ok",
-        response: readyPlaybackControlsBobSnapshot,
+        response: readyPlaybackControlsActivePlayerSnapshot,
       }));
     },
     phx_leave(client, frame) {
@@ -533,33 +533,33 @@ export const handlers: Record<string, Record<string, Handler>> = {
       client.send(replyTo(frame, okReply));
     },
   },
-  "room:room-challenging-active-bob": {
+  "room:room-challenging-active-player": {
     phx_join(client, frame) {
       client.send(replyTo(frame, {
         status: "ok",
-        response: challengingActiveBobSnapshot,
+        response: challengingActivePlayerSnapshot,
       }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
     },
   },
-  "room:room-challenging-controls-bob": {
+  "room:room-challenging-controls-active-player": {
     phx_join(client, frame) {
       client.send(replyTo(frame, {
         status: "ok",
-        response: challengingPlaybackControlsBobSnapshot,
+        response: challengingPlaybackControlsActivePlayerSnapshot,
       }));
     },
     phx_leave(client, frame) {
       client.send(replyTo(frame, okReply));
     },
   },
-  "room:room-results-controls-bob": {
+  "room:room-results-controls-active-player": {
     phx_join(client, frame) {
       client.send(replyTo(frame, {
         status: "ok",
-        response: resultsControlsBobSnapshot,
+        response: resultsControlsActivePlayerSnapshot,
       }));
     },
     phx_leave(client, frame) {

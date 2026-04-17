@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { users } from "~fixtures/users";
 import { render } from "../inertia";
 
+const playerCount = Object.keys(users).length;
+
 describe("Room", () => {
   beforeEach(() => {
     Object.defineProperty(navigator, "clipboard", {
@@ -27,7 +29,7 @@ describe("Room", () => {
       });
 
       await expect
-        .element(screen.getByRole("status", { name: "3 players online" }))
+        .element(screen.getByRole("status", { name: `${playerCount} players online` }))
         .toBeVisible();
       await expect
         .element(screen.getByRole("button", { name: "Copy share link" }))
@@ -42,7 +44,7 @@ describe("Room", () => {
         .element(screen.getByRole("button", { name: "Forward" }))
         .not.toBeInTheDocument();
       await expect.element(screen.getByTestId("room-qr")).toBeVisible();
-      expect(document.body.querySelectorAll(".lobby-player")).toHaveLength(3);
+      expect(document.body.querySelectorAll(".lobby-player")).toHaveLength(playerCount);
     });
 
     test("renders player lobby state from the room page", async () => {
@@ -57,7 +59,7 @@ describe("Room", () => {
       });
 
       await expect
-        .element(screen.getByRole("status", { name: "3 players online" }))
+        .element(screen.getByRole("status", { name: `${playerCount} players online` }))
         .toBeVisible();
       await expect
         .element(screen.getByRole("button", { name: "Copy share link" }))
@@ -71,7 +73,7 @@ describe("Room", () => {
       await expect
         .element(screen.getByRole("button", { name: "Start game" }))
         .not.toBeInTheDocument();
-      expect(document.body.querySelectorAll(".lobby-player")).toHaveLength(3);
+      expect(document.body.querySelectorAll(".lobby-player")).toHaveLength(playerCount);
     });
   });
 
@@ -93,7 +95,7 @@ describe("Room", () => {
       await expect
         .element(screen.getByRole("button", { name: "Copy share link" }))
         .toBeVisible();
-      expect(document.body.querySelectorAll(".lobby-player")).toHaveLength(3);
+      expect(document.body.querySelectorAll(".lobby-player")).toHaveLength(playerCount);
     });
 
     test("displays all participants with avatars and names", async () => {

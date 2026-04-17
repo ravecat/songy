@@ -11,7 +11,7 @@ const meta = {
     inertia: {},
   },
   args: {
-    roomId: "room-challenging-controls-bob",
+    roomId: "room-challenging-controls-active-player",
     scope: {
       user: users.alice,
       provider: null,
@@ -25,7 +25,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Owner: Story = {
   args: {
-    roomId: "room-challenging-controls-bob",
+    roomId: "room-challenging-controls-active-player",
     scope: {
       user: users.alice,
       provider: null,
@@ -35,7 +35,7 @@ export const Owner: Story = {
 
 export const ActivePlayer: Story = {
   args: {
-    roomId: "room-challenging-active-bob",
+    roomId: "room-challenging-active-player",
     scope: {
       user: users.bob,
       provider: null,

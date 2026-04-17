@@ -1,10 +1,19 @@
 import Room from "~pages/room.svelte";
 import { describe, expect, test } from "vitest";
+import {
+  finishedMissingParticipantSnapshot,
+  finishedSnapshot,
+} from "~fixtures/room/messages";
 import { users } from "~fixtures/users";
 import { render } from "../inertia";
 
+const finishedWinner = finishedSnapshot.game.participants[finishedSnapshot.game.turn.winner_id];
+const finishedWinnerScore = finishedSnapshot.game.scores[finishedSnapshot.game.turn.winner_id];
+const finishedMissingParticipantScore =
+  finishedMissingParticipantSnapshot.game.scores[users.carol.uuid];
+
 describe("GameFinished", () => {
-  test("shows winner and target score", async () => {
+  test("shows winner", async () => {
     const screen = render(Room, {
       props: {
         roomId: "room-finished",
@@ -16,10 +25,8 @@ describe("GameFinished", () => {
     });
 
     await expect
-      .element(screen.getByRole("heading", { name: `${users.bob.name} wins` }))
+      .element(screen.getByRole("heading", { name: `${finishedWinner.name} wins` }))
       .toBeVisible();
-    await expect.element(screen.getByText("10/10 points")).toBeVisible();
-    await expect.element(screen.getByText("Target 10")).toBeVisible();
   });
 
   test("sorts leaderboard by score descending", async () => {
@@ -38,12 +45,26 @@ describe("GameFinished", () => {
       .toBeVisible();
 
     const leaderboard = Array.from(document.body.querySelectorAll(".game-finished__entry"));
+    const renderedScores = leaderboard.map((entry) =>
+      Number(entry.querySelector(".game-finished__entry-score")?.textContent),
+    );
 
-    expect(leaderboard).toHaveLength(3);
-    expect(leaderboard[0]?.textContent).toContain(users.bob.name);
-    expect(leaderboard[1]?.textContent).toContain(users.alice.name);
-    expect(leaderboard[2]?.textContent).toContain(users.carol.name);
+    expect(leaderboard).toHaveLength(Object.keys(finishedSnapshot.game.scores).length);
+    expect(leaderboard[0]?.textContent).toContain(finishedWinner.name);
+    expect(leaderboard[0]?.textContent).toContain(String(finishedWinnerScore));
     expect(leaderboard[0]?.getAttribute("aria-current")).toBe("true");
+    expect(renderedScores).toEqual([...renderedScores].sort((left, right) => right - left));
+
+    for (const [userId, score] of Object.entries(finishedSnapshot.game.scores)) {
+      const name = finishedSnapshot.game.participants[userId]?.name ?? userId;
+      const matchingEntry = leaderboard.find(
+        (entry) =>
+          entry.textContent?.includes(name) &&
+          entry.querySelector(".game-finished__entry-score")?.textContent === String(score),
+      );
+
+      expect(matchingEntry).toBeDefined();
+    }
   });
 
   test("falls back to user id when participant payload is missing", async () => {
@@ -62,11 +83,13 @@ describe("GameFinished", () => {
       .toBeVisible();
 
     const leaderboard = Array.from(document.body.querySelectorAll(".game-finished__entry"));
-    const missingParticipantRow = leaderboard[2];
+    const missingParticipantRow = leaderboard.find((entry) =>
+      entry.textContent?.includes(users.carol.uuid),
+    );
 
     expect(missingParticipantRow?.textContent).toContain(users.carol.uuid);
     expect(
       missingParticipantRow?.querySelector(".game-finished__entry-score")?.textContent,
-    ).toBe("3");
+    ).toBe(String(finishedMissingParticipantScore));
   });
 });

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Crown, Star } from "lucide-svelte";
+  import { Crown } from "lucide-svelte";
   import { getGameContext } from "~/contexts/game";
 
   const session = getGameContext();
@@ -7,7 +7,6 @@
   const participants = $derived(game?.participants ?? {});
   const scores = $derived(game?.scores ?? {});
   const queue = $derived(game?.queue ?? []);
-  const maxScore = $derived(game?.max_score ?? 0);
 
   const leaderboard = $derived.by(() => {
     const orderedIds = [...new Set([...queue, ...Object.keys(scores)])];
@@ -45,33 +44,24 @@
 </script>
 
 <section class="game-finished" aria-label="Game finished">
-  <div class="game-finished__hero">
-    <span class="game-finished__eyebrow">Game over</span>
-    <h2 class="game-finished__title">{winner.name} wins</h2>
-    <p class="game-finished__subtitle">{winner.score}/{maxScore} points</p>
+  <div class="game-finished__viewport">
+    <div class="game-finished__hero">
+      <span class="game-finished__eyebrow">Game over</span>
+      <h2 class="game-finished__title">{winner.name} wins</h2>
 
-    <div class="game-finished__winner-badge">
-      {#if winner.avatarUrl}
-        <img
-          src={winner.avatarUrl}
-          alt={winner.name}
-          class="game-finished__winner-avatar"
-        />
-      {:else}
-        <div class="game-finished__winner-fallback" aria-hidden="true">
-          <Crown size={28} strokeWidth={2.25} />
-        </div>
-      {/if}
-    </div>
-  </div>
-
-  <div class="game-finished__card">
-    <div class="game-finished__card-header">
-      <span>Final leaderboard</span>
-      <span class="game-finished__target">
-        <Star size={14} strokeWidth={2.5} />
-        <span>Target {maxScore}</span>
-      </span>
+      <div class="game-finished__winner-badge">
+        {#if winner.avatarUrl}
+          <img
+            src={winner.avatarUrl}
+            alt={winner.name}
+            class="game-finished__winner-avatar"
+          />
+        {:else}
+          <div class="game-finished__winner-fallback" aria-hidden="true">
+            <Crown size={28} strokeWidth={2.25} />
+          </div>
+        {/if}
+      </div>
     </div>
 
     <ol class="game-finished__leaderboard" aria-label="Final leaderboard">
@@ -116,19 +106,35 @@
 
 <style>
   .game-finished {
-    display: grid;
-    align-content: center;
-    justify-items: center;
-    gap: 1.5rem;
+    position: relative;
     width: 100%;
     height: 100%;
-    padding: 1.5rem;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .game-finished__viewport {
+    display: grid;
+    align-content: start;
+    justify-items: center;
+    gap: clamp(0.875rem, 2.4vh, 1.5rem);
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: clamp(0.75rem, 2.4vmin, 1.5rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+  }
+
+  .game-finished__viewport::-webkit-scrollbar {
+    display: none;
   }
 
   .game-finished__hero {
     display: grid;
     justify-items: center;
-    gap: 0.5rem;
+    gap: clamp(0.25rem, 1vh, 0.5rem);
     text-align: center;
   }
 
@@ -142,25 +148,20 @@
 
   .game-finished__title {
     margin: 0;
-    font-size: clamp(2rem, 6vw, 3rem);
+    max-inline-size: min(12ch, 100%);
+    font-size: clamp(1.75rem, 8vw, 3rem);
     line-height: 0.95;
+    text-wrap: balance;
     color: var(--color-white);
-  }
-
-  .game-finished__subtitle {
-    margin: 0;
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 1rem;
   }
 
   .game-finished__winner-badge {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 5.5rem;
-    height: 5.5rem;
-    margin-top: 0.5rem;
-    padding: 0.35rem;
+    width: clamp(4rem, 16vw, 5.5rem);
+    height: clamp(4rem, 16vw, 5.5rem);
+    padding: clamp(0.25rem, 1vw, 0.35rem);
     border-radius: 999px;
     background: linear-gradient(
       145deg,
@@ -184,47 +185,22 @@
     color: #111;
   }
 
-  .game-finished__card {
-    width: min(100%, 32rem);
-    padding: 1rem;
-    border-radius: var(--radius-card);
-    background: rgba(0, 0, 0, 0.28);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(18px);
-  }
-
-  .game-finished__card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 0.875rem;
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 0.875rem;
-    font-weight: var(--font-weight-semibold);
-  }
-
-  .game-finished__target {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    color: var(--color-gold);
-  }
-
   .game-finished__leaderboard {
     margin: 0;
     padding: 0;
     list-style: none;
     display: grid;
-    gap: 0.625rem;
+    align-content: start;
+    width: min(100%, 32rem);
+    gap: clamp(0.5rem, 1.2vh, 0.625rem);
   }
 
   .game-finished__entry {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 0.875rem;
+    gap: clamp(0.625rem, 2vw, 0.75rem);
+    padding: clamp(0.625rem, 1.4vh, 0.75rem) clamp(0.75rem, 2.5vw, 0.875rem);
     border-radius: var(--radius-md);
     background: rgba(255, 255, 255, 0.05);
     color: rgba(255, 255, 255, 0.82);
@@ -251,7 +227,7 @@
   .game-finished__entry-user {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: clamp(0.625rem, 2vw, 0.75rem);
     min-width: 0;
   }
 
@@ -260,8 +236,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 2.5rem;
-    height: 2.5rem;
+    width: clamp(2.125rem, 8vw, 2.5rem);
+    height: clamp(2.125rem, 8vw, 2.5rem);
     flex-shrink: 0;
     border-radius: 999px;
     object-fit: cover;
@@ -280,18 +256,8 @@
   .game-finished__entry-score {
     min-width: 2ch;
     text-align: right;
-    font-size: 1.125rem;
+    font-size: clamp(1rem, 3.6vw, 1.125rem);
     font-weight: var(--font-weight-bold);
     color: var(--color-gold);
-  }
-
-  @media (max-width: 640px) {
-    .game-finished {
-      padding: 1rem;
-    }
-
-    .game-finished__card {
-      width: 100%;
-    }
   }
 </style>

@@ -1,7 +1,28 @@
 import Room from "~pages/room.svelte";
 import { describe, expect, test } from "vitest";
+import {
+  resultsNoWinnerSnapshot,
+  resultsActivePlayerWinsSnapshot,
+} from "~fixtures/room/messages";
 import { users } from "~fixtures/users";
 import { render } from "../inertia";
+
+const resultsAssumptionIds = Object.values(resultsActivePlayerWinsSnapshot.game.turn.assumptions);
+const resultsChallengers = resultsAssumptionIds
+  .map((userId) => resultsActivePlayerWinsSnapshot.game.participants[userId])
+  .filter(Boolean);
+const resultsNonChallengers = Object.values(resultsActivePlayerWinsSnapshot.game.participants).filter(
+  (user) => !resultsAssumptionIds.includes(user.uuid),
+);
+const resultsWinner =
+  resultsActivePlayerWinsSnapshot.game.participants[
+    resultsActivePlayerWinsSnapshot.game.turn.winner_id
+  ];
+
+const noWinnerAssumptionIds = Object.values(resultsNoWinnerSnapshot.game.turn.assumptions);
+const noWinnerChallengers = noWinnerAssumptionIds
+  .map((userId) => resultsNoWinnerSnapshot.game.participants[userId])
+  .filter(Boolean);
 
 describe("TurnResults", () => {
   test("renders track info", async () => {
@@ -31,15 +52,16 @@ describe("TurnResults", () => {
       },
     });
 
-    await expect.element(screen.getByAltText(users.alice.name)).toHaveAttribute(
-      "src",
-      users.alice.avatar_url,
-    );
-    await expect.element(screen.getByAltText(users.bob.name)).toHaveAttribute(
-      "src",
-      users.bob.avatar_url,
-    );
-    await expect.element(screen.getByAltText(users.carol.name)).not.toBeInTheDocument();
+    for (const user of resultsChallengers) {
+      await expect.element(screen.getByAltText(user.name)).toHaveAttribute(
+        "src",
+        user.avatar_url,
+      );
+    }
+
+    for (const user of resultsNonChallengers) {
+      await expect.element(screen.getByAltText(user.name)).not.toBeInTheDocument();
+    }
   });
 
   test("displays challenger names", async () => {
@@ -53,8 +75,9 @@ describe("TurnResults", () => {
       },
     });
 
-    await expect.element(screen.getByText(users.alice.name)).toBeVisible();
-    await expect.element(screen.getByText(users.bob.name)).toBeVisible();
+    for (const user of resultsChallengers) {
+      await expect.element(screen.getByText(user.name)).toBeVisible();
+    }
   });
 
   test("highlights the winner with a score badge", async () => {
@@ -72,13 +95,14 @@ describe("TurnResults", () => {
       .element(screen.getByRole("list", { name: "Result challengers" }))
       .toBeVisible();
 
-    const challengers = Array.from(document.body.querySelectorAll(".results__challenger"));
-    const winner = challengers.find(
+    const renderedChallengers = Array.from(document.body.querySelectorAll(".results__challenger"));
+    const winner = renderedChallengers.find(
       (challenger) => challenger.getAttribute("aria-current") === "true",
     );
 
     expect(winner).toBeDefined();
-    expect(document.body.textContent).toContain("+1");
+    expect(winner?.textContent).toContain(resultsWinner.name);
+    expect(winner?.textContent).toContain("+1");
   });
 
   test("marks only one challenger as winner", async () => {
@@ -96,12 +120,12 @@ describe("TurnResults", () => {
       .element(screen.getByRole("list", { name: "Result challengers" }))
       .toBeVisible();
 
-    const challengers = Array.from(document.body.querySelectorAll(".results__challenger"));
-    const winners = challengers.filter(
+    const renderedChallengers = Array.from(document.body.querySelectorAll(".results__challenger"));
+    const winners = renderedChallengers.filter(
       (challenger) => challenger.getAttribute("aria-current") === "true",
     );
 
-    expect(challengers).toHaveLength(2);
+    expect(renderedChallengers).toHaveLength(resultsChallengers.length);
     expect(winners).toHaveLength(1);
   });
 
@@ -120,11 +144,12 @@ describe("TurnResults", () => {
       .element(screen.getByRole("list", { name: "Result challengers" }))
       .toBeVisible();
 
-    const challengers = Array.from(document.body.querySelectorAll(".results__challenger"));
-    const winners = challengers.filter(
+    const renderedChallengers = Array.from(document.body.querySelectorAll(".results__challenger"));
+    const winners = renderedChallengers.filter(
       (challenger) => challenger.getAttribute("aria-current") === "true",
     );
 
+    expect(renderedChallengers).toHaveLength(noWinnerChallengers.length);
     expect(winners).toHaveLength(0);
     expect(document.body.textContent).not.toContain("+1");
   });

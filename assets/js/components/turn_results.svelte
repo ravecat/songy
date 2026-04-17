@@ -1,6 +1,5 @@
 <script lang="ts">
   import { getGameContext } from "~/contexts/game";
-  import Vinyl from "~components/vinyl.svelte";
   import Sleeve from "~components/sleeve.svelte";
 
   const session = getGameContext();
@@ -21,13 +20,6 @@
 
 <div class="results">
   <div class="results__container">
-    <div class="results__vinyl">
-      <Vinyl>
-        {#if track?.cover_url}
-          <img src={track.cover_url} alt={track.title} class="vinyl-cover" />
-        {/if}
-      </Vinyl>
-    </div>
     <div class="results__sleeve">
       <Sleeve {track} />
     </div>
@@ -65,35 +57,27 @@
   }
 
   .results__container {
+    --record-sleeve-size: clamp(9.5rem, 56vw, 13.75rem);
     position: relative;
-    display: flex;
-    align-items: center;
-  }
-
-  .results__vinyl {
-    position: absolute;
-    left: 110px;
-    width: 200px;
-    height: 200px;
-    z-index: var(--z-base);
+    inline-size: var(--record-sleeve-size);
+    block-size: var(--record-sleeve-size);
+    margin-inline: auto;
   }
 
   .results__sleeve {
+    --sleeve-size: var(--record-sleeve-size);
     position: relative;
     z-index: var(--z-above);
-  }
-
-  .vinyl-cover {
-    width: 100%;
-    height: 100%;
-    border-radius: var(--radius-circle);
-    object-fit: cover;
+    inline-size: var(--record-sleeve-size);
+    block-size: var(--record-sleeve-size);
   }
 
   .results__avatars {
     display: flex;
-    justify-content: space-around;
+    justify-content: center;
     align-items: flex-start;
+    flex-wrap: wrap;
+    max-inline-size: 100%;
     margin-top: var(--spacing-lg);
     gap: var(--spacing-md);
   }
@@ -163,6 +147,8 @@
     color: rgba(255, 255, 255, var(--opacity-emphasis));
     text-align: center;
     overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   @keyframes avatar-pop {

@@ -2,7 +2,6 @@
   import { usePage } from "@inertiajs/svelte";
   import { getGameContext } from "~/contexts/game";
   import { Link, Copy, Check, Crown } from "lucide-svelte";
-  import Vinyl from "~components/vinyl.svelte";
   import Sleeve from "~components/sleeve.svelte";
   import type { Props } from "~pages/room.types";
 
@@ -54,15 +53,14 @@
   </div>
 
   <div class="lobby__record">
-    <div class="lobby__vinyl">
-      <Vinyl />
+    <div class="lobby__sleeve-frame">
+      <Sleeve />
+      {#if qr}
+        <div class="lobby__qr">
+          {@html qr}
+        </div>
+      {/if}
     </div>
-    <Sleeve />
-    {#if qr}
-      <div class="lobby__qr">
-        {@html qr}
-      </div>
-    {/if}
   </div>
 
   <button
@@ -96,8 +94,10 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    justify-self: stretch;
     gap: 1.5rem;
     padding: 1.5rem;
+    width: 100%;
     height: 100%;
   }
 
@@ -173,41 +173,29 @@
   }
 
   .lobby__record {
-    --sleeve-size: 180px;
-    --vinyl-size: 164px;
+    --record-sleeve-size: clamp(9.5rem, 56vw, 13.75rem);
     position: relative;
-    display: flex;
-    align-items: center;
+    inline-size: var(--record-sleeve-size);
+    block-size: var(--record-sleeve-size);
+    margin-inline: auto;
   }
 
-  .lobby__vinyl {
-    position: absolute;
-    left: calc(var(--sleeve-size) * 0.5);
-    width: var(--vinyl-size);
-    height: var(--vinyl-size);
-    z-index: var(--z-base);
-  }
-
-  .lobby__record :global(.sleeve) {
+  .lobby__sleeve-frame {
+    --sleeve-size: var(--record-sleeve-size);
     position: relative;
     z-index: var(--z-above);
+    inline-size: var(--record-sleeve-size);
+    block-size: var(--record-sleeve-size);
   }
 
   .lobby__qr {
     position: absolute;
-    inset: 1rem;
+    inset: clamp(0.75rem, 4vw, 1rem);
     z-index: var(--z-modal);
-    padding: 0.5rem;
+    padding: clamp(0.375rem, 2vw, 0.5rem);
     background: var(--color-white);
     border-radius: var(--radius-md);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-  }
-
-  @media (min-width: 640px) {
-    .lobby__record {
-      --sleeve-size: 220px;
-      --vinyl-size: 200px;
-    }
   }
 
   @media (max-width: 639px) {
@@ -219,10 +207,17 @@
     .lobby__players {
       gap: var(--spacing-sm);
     }
+
+    .lobby-share {
+      inline-size: 17rem;
+    }
   }
 
   .lobby-share {
     position: relative;
+    display: flex;
+    justify-content: center;
+    max-inline-size: 100%;
     padding: 0.875rem 1.5rem;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -238,6 +233,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    min-width: 0;
     gap: 0.75rem;
     transition: opacity var(--transition-fast);
   }
@@ -267,10 +263,12 @@
   }
 
   .lobby-share__url {
+    flex: 1 1 auto;
+    min-width: 0;
     font-family: monospace;
     font-size: 0.875rem;
     opacity: var(--opacity-emphasis);
-    max-width: 230px;
+    max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

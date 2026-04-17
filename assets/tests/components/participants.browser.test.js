@@ -3,6 +3,8 @@ import { describe, expect, test } from "vitest";
 import { users } from "~fixtures/users";
 import { render } from "../inertia";
 
+const playerCount = Object.keys(users).length;
+
 describe("Participants component", () => {
   test("displays correct participant count", async () => {
     const screen = render(Room, {
@@ -16,7 +18,7 @@ describe("Participants component", () => {
     });
 
     await expect
-      .element(screen.getByRole("status", { name: "3 players online" }))
+      .element(screen.getByRole("status", { name: `${playerCount} players online` }))
       .toBeVisible();
   });
 
@@ -80,7 +82,7 @@ describe("Participants component", () => {
     });
 
     await expect
-      .element(screen.getByRole("status", { name: "3 players online" }))
+      .element(screen.getByRole("status", { name: `${playerCount} players online` }))
       .toBeVisible();
     expect(document.body.querySelector("svg.lucide-users")).not.toBeNull();
   });

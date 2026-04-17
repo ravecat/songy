@@ -2,6 +2,56 @@ import { tracks } from "../tracks";
 import { users } from "../users";
 import { basePermissions } from "../permissions";
 
+const defaultUsers = [
+  users.alice,
+  users.bob,
+  users.carol,
+  users.dan,
+  users.erin,
+  users.frank,
+  users.gina,
+];
+
+const defaultParticipants = Object.fromEntries(
+  defaultUsers.map((user) => [user.uuid, user]),
+);
+
+const defaultQueue = defaultUsers.map((user) => user.uuid);
+
+const defaultQueueActivePlayerFirst = [
+  users.bob.uuid,
+  ...defaultQueue.filter((userId) => userId !== users.bob.uuid),
+];
+
+const defaultScores = {
+  [users.alice.uuid]: 8,
+  [users.bob.uuid]: 10,
+  [users.carol.uuid]: 3,
+  [users.dan.uuid]: 9,
+  [users.erin.uuid]: 6,
+  [users.frank.uuid]: 5,
+  [users.gina.uuid]: 4,
+};
+
+const defaultTimelines = {
+  [users.alice.uuid]: [tracks.timelineOne, tracks.timelineTwo],
+  [users.bob.uuid]: [tracks.timelineOne, tracks.timelineTwo],
+  [users.carol.uuid]: [],
+  [users.dan.uuid]: [tracks.timelineTwo],
+  [users.erin.uuid]: [tracks.timelineOne],
+  [users.frank.uuid]: [],
+  [users.gina.uuid]: [tracks.timelineTwo],
+};
+
+const defaultResultsAssumptions = {
+  1: users.alice.uuid,
+  2: users.bob.uuid,
+  3: users.carol.uuid,
+  4: users.dan.uuid,
+  5: users.erin.uuid,
+  6: users.frank.uuid,
+};
+
 export const waitingSnapshot = {
   game: {
     id: "room-1",
@@ -9,26 +59,14 @@ export const waitingSnapshot = {
     max_participants: 8,
     max_score: 10,
     status: "waiting",
-    participants: {
-      [users.alice.uuid]: users.alice,
-      [users.bob.uuid]: users.bob,
-      [users.carol.uuid]: users.carol,
-    },
-    scores: {
-      [users.alice.uuid]: 7,
-      [users.bob.uuid]: 4,
-      [users.carol.uuid]: 6,
-    },
+    participants: defaultParticipants,
+    scores: defaultScores,
     player: {
       is_playback: false,
     },
-    timelines: {
-      [users.alice.uuid]: [tracks.timelineOne, tracks.timelineTwo],
-      [users.bob.uuid]: [tracks.timelineOne, tracks.timelineTwo],
-      [users.carol.uuid]: [],
-    },
+    timelines: defaultTimelines,
     created_at: "2026-03-23T12:00:00.000Z",
-    queue: [users.alice.uuid, users.bob.uuid, users.carol.uuid],
+    queue: defaultQueue,
     cursor: 0,
     track: null,
     turn: null,
@@ -128,7 +166,7 @@ export const waitingTurnActiveSnapshot = {
   game: {
     ...waitingSnapshot.game,
     status: "in_progress",
-    queue: [users.alice.uuid, users.bob.uuid, users.carol.uuid],
+    queue: defaultQueue,
     cursor: 0,
     turn: {
       phase: "waiting",
@@ -143,7 +181,7 @@ export const waitingTurnPassiveSnapshot = {
   game: {
     ...waitingSnapshot.game,
     status: "in_progress",
-    queue: [users.alice.uuid, users.bob.uuid, users.carol.uuid],
+    queue: defaultQueue,
     cursor: 0,
     turn: {
       phase: "waiting",
@@ -153,7 +191,7 @@ export const waitingTurnPassiveSnapshot = {
   },
 };
 
-export const waitingTurnActiveBobSnapshot = {
+export const waitingTurnActivePlayerSnapshot = {
   ...waitingSnapshot,
   permissions: {
     ...waitingSnapshot.permissions,
@@ -162,7 +200,7 @@ export const waitingTurnActiveBobSnapshot = {
   game: {
     ...waitingSnapshot.game,
     status: "in_progress",
-    queue: [users.alice.uuid, users.bob.uuid, users.carol.uuid],
+    queue: defaultQueue,
     cursor: 1,
     turn: {
       phase: "waiting",
@@ -172,12 +210,12 @@ export const waitingTurnActiveBobSnapshot = {
   },
 };
 
-export const waitingTurnPassiveBobSnapshot = {
+export const waitingTurnPassivePlayerSnapshot = {
   ...waitingSnapshot,
   game: {
     ...waitingSnapshot.game,
     status: "in_progress",
-    queue: [users.alice.uuid, users.bob.uuid, users.carol.uuid],
+    queue: defaultQueue,
     cursor: 1,
     turn: {
       phase: "waiting",
@@ -187,7 +225,7 @@ export const waitingTurnPassiveBobSnapshot = {
   },
 };
 
-export const resultsWinnerAliceSnapshot = {
+export const resultsActivePlayerWinsSnapshot = {
   ...waitingSnapshot,
   game: {
     ...waitingSnapshot.game,
@@ -195,10 +233,7 @@ export const resultsWinnerAliceSnapshot = {
     track: tracks.result,
     turn: {
       phase: "results",
-      assumptions: {
-        1: users.alice.uuid,
-        2: users.bob.uuid,
-      },
+      assumptions: defaultResultsAssumptions,
       winner_id: users.alice.uuid,
     },
   },
@@ -212,10 +247,7 @@ export const resultsNoWinnerSnapshot = {
     track: tracks.result,
     turn: {
       phase: "results",
-      assumptions: {
-        1: users.alice.uuid,
-        2: users.bob.uuid,
-      },
+      assumptions: defaultResultsAssumptions,
       winner_id: null,
     },
   },
@@ -226,11 +258,7 @@ export const finishedSnapshot = {
   game: {
     ...waitingSnapshot.game,
     status: "finished",
-    scores: {
-      [users.alice.uuid]: 7,
-      [users.bob.uuid]: 10,
-      [users.carol.uuid]: 3,
-    },
+    scores: defaultScores,
     turn: {
       phase: "results",
       assumptions: {},
@@ -255,6 +283,12 @@ export const finishedMissingParticipantSnapshot = {
     participants: {
       [users.alice.uuid]: users.alice,
       [users.bob.uuid]: users.bob,
+    },
+    queue: [users.alice.uuid, users.bob.uuid, users.carol.uuid],
+    scores: {
+      [users.alice.uuid]: 7,
+      [users.bob.uuid]: 10,
+      [users.carol.uuid]: 3,
     },
   },
 };
@@ -289,11 +323,11 @@ export const readyPlaybackPlayingSnapshot = {
   },
 };
 
-export const readyPlaybackControlsBobSnapshot = {
+export const readyPlaybackControlsActivePlayerSnapshot = {
   ...readyPlaybackControlsSnapshot,
   game: {
     ...readyPlaybackControlsSnapshot.game,
-    queue: [users.alice.uuid, users.bob.uuid, users.carol.uuid],
+    queue: defaultQueue,
     cursor: 1,
   },
 };
@@ -306,7 +340,7 @@ export const readyTimelineOwnAssumptionSnapshot = {
   },
   game: {
     ...readySnapshot.game,
-    queue: [users.alice.uuid, users.bob.uuid, users.carol.uuid],
+    queue: defaultQueue,
     cursor: 0,
     turn: {
       phase: "ready",
@@ -326,7 +360,7 @@ export const challengingTimelineOwnAssumptionSnapshot = {
   },
   game: {
     ...readySnapshot.game,
-    queue: [users.bob.uuid, users.alice.uuid, users.carol.uuid],
+    queue: defaultQueueActivePlayerFirst,
     cursor: 0,
     turn: {
       phase: "challenging",
@@ -346,7 +380,7 @@ export const readyTimelineSlotZeroSnapshot = {
   },
   game: {
     ...readySnapshot.game,
-    queue: [users.alice.uuid, users.bob.uuid, users.carol.uuid],
+    queue: defaultQueue,
     cursor: 0,
     turn: {
       phase: "ready",
@@ -366,7 +400,7 @@ export const readyTimelineOtherAssumptionSnapshot = {
   },
   game: {
     ...readySnapshot.game,
-    queue: [users.alice.uuid, users.bob.uuid, users.carol.uuid],
+    queue: defaultQueue,
     cursor: 0,
     turn: {
       phase: "ready",
@@ -386,7 +420,7 @@ export const readyTimelineMixedSnapshot = {
   },
   game: {
     ...readySnapshot.game,
-    queue: [users.alice.uuid, users.bob.uuid, users.carol.uuid],
+    queue: defaultQueue,
     cursor: 0,
     turn: {
       phase: "ready",
@@ -521,33 +555,33 @@ export const challengingTimerSnapshot = {
   },
 };
 
-export const challengingActiveBobSnapshot = {
+export const challengingActivePlayerSnapshot = {
   ...challengingTimerSnapshot,
   game: {
     ...challengingTimerSnapshot.game,
-    queue: [users.alice.uuid, users.bob.uuid, users.carol.uuid],
+    queue: defaultQueue,
     cursor: 1,
   },
 };
 
-export const challengingPlaybackControlsBobSnapshot = {
-  ...challengingActiveBobSnapshot,
+export const challengingPlaybackControlsActivePlayerSnapshot = {
+  ...challengingActivePlayerSnapshot,
   permissions: {
     ...waitingSnapshot.permissions,
     can_control_playback: true,
   },
 };
 
-export const resultsControlsBobSnapshot = {
-  ...resultsWinnerAliceSnapshot,
+export const resultsControlsActivePlayerSnapshot = {
+  ...resultsActivePlayerWinsSnapshot,
   permissions: {
     ...waitingSnapshot.permissions,
     can_control_playback: true,
     can_advance_turn: true,
   },
   game: {
-    ...resultsWinnerAliceSnapshot.game,
-    queue: [users.alice.uuid, users.bob.uuid, users.carol.uuid],
+    ...resultsActivePlayerWinsSnapshot.game,
+    queue: defaultQueue,
     cursor: 1,
   },
 };

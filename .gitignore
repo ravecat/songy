@@ -61,6 +61,7 @@ context_portal/
 .vscode/
 .idea/
 *.iml
+.codex
 
 # Git worktrees
 .worktrees/
