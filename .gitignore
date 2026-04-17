@@ -36,6 +36,8 @@ songy-*.tar
 npm-debug.log
 node_modules/
 /assets/.vite/
+/assets/.vitest/
+/assets/.vitest-attachments/
 /assets/coverage/
 /assets/stats.html
 /assets/package-lock.json

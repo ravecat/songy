@@ -1,5 +1,6 @@
 import Room from "~pages/room.svelte";
 import { describe, expect, test } from "vitest";
+import { tracks } from "~fixtures/tracks";
 import { users } from "~fixtures/users";
 import { render } from "../inertia";
 
@@ -106,7 +107,7 @@ describe("Player", () => {
     await expect
       .element(screen.getByRole("list", { name: "Timeline" }))
       .toBeVisible();
-    expect(document.body.textContent).toContain("Timeline Track 1");
+    expect(document.body.textContent).toContain(tracks.timelineOne.title);
   });
 
   test("disables the play button when playback control is unavailable", async () => {

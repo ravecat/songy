@@ -1,5 +1,6 @@
 import Room from "~pages/room.svelte";
 import { describe, expect, test } from "vitest";
+import { tracks } from "~fixtures/tracks";
 import { users } from "~fixtures/users";
 import { render } from "../inertia";
 
@@ -18,9 +19,11 @@ describe("Game", () => {
     await expect
       .element(screen.getByRole("list", { name: "Timeline" }))
       .toBeVisible();
-    expect(document.body.textContent).toContain("Timeline Track 1");
-    expect(document.body.textContent).toContain("Artist 1");
-    await expect.element(screen.getByText("2020")).toBeVisible();
+    expect(document.body.textContent).toContain(tracks.timelineOne.title);
+    expect(document.body.textContent).toContain(tracks.timelineOne.artist);
+    await expect
+      .element(screen.getByText(String(tracks.timelineOne.year)))
+      .toBeVisible();
   });
 
   test("renders timeline details for a passive player in ready phase", async () => {
@@ -37,9 +40,11 @@ describe("Game", () => {
     await expect
       .element(screen.getByRole("list", { name: "Timeline" }))
       .toBeVisible();
-    expect(document.body.textContent).toContain("Timeline Track 1");
-    expect(document.body.textContent).toContain("Artist 1");
-    await expect.element(screen.getByText("2020")).toBeVisible();
+    expect(document.body.textContent).toContain(tracks.timelineOne.title);
+    expect(document.body.textContent).toContain(tracks.timelineOne.artist);
+    await expect
+      .element(screen.getByText(String(tracks.timelineOne.year)))
+      .toBeVisible();
   });
 
   test("displays waiting view on waiting phase", async () => {
@@ -81,9 +86,10 @@ describe("Game", () => {
       },
     });
 
-    await expect.element(screen.getByText("Queen")).toBeVisible();
-    await expect.element(screen.getByText("Bohemian Rhapsody")).toBeVisible();
-    await expect.element(screen.getByText("1975")).toBeVisible();
+    await expect.element(screen.getByText(tracks.result.title)).toBeVisible();
+    await expect.element(screen.getByText(String(tracks.result.year))).toBeVisible();
+    expect(document.body.textContent).toContain(tracks.result.artist);
+    expect(document.body.textContent).toContain(tracks.result.title);
   });
 
   test("displays finished view on finished status even with stale results phase", async () => {
@@ -103,7 +109,7 @@ describe("Game", () => {
     await expect
       .element(screen.getByRole("list", { name: "Final leaderboard" }))
       .toBeVisible();
-    await expect.element(screen.getByText("Queen")).not.toBeInTheDocument();
+    expect(document.body.textContent).not.toContain(tracks.result.artist);
   });
 
   test.each(invalidPhaseRoomIds)(

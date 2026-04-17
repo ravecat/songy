@@ -1,5 +1,6 @@
 import Room from "~pages/room.svelte";
 import { describe, expect, test } from "vitest";
+import { tracks } from "~fixtures/tracks";
 import { users } from "~fixtures/users";
 import { render } from "../inertia";
 
@@ -43,8 +44,8 @@ describe("Timeline", () => {
       .element(screen.getByRole("list", { name: "Timeline" }))
       .toBeVisible();
 
-    expect(document.body.textContent).toContain("Timeline Track 1");
-    expect(document.body.textContent).toContain("Timeline Track 2");
+    expect(document.body.textContent).toContain(tracks.timelineOne.title);
+    expect(document.body.textContent).toContain(tracks.timelineTwo.title);
     expect(getHiddenCards(document.body)).toHaveLength(0);
   });
 
@@ -63,7 +64,7 @@ describe("Timeline", () => {
       .element(screen.getByRole("list", { name: "Timeline" }))
       .toBeVisible();
 
-    expect(document.body.textContent).toContain("Timeline Track 1");
+    expect(document.body.textContent).toContain(tracks.timelineOne.title);
     expect(getHiddenCards(document.body)).toHaveLength(0);
   });
 
@@ -118,10 +119,10 @@ describe("Timeline", () => {
       .element(screen.getByRole("list", { name: "Timeline" }))
       .toBeVisible();
 
-    expect(document.body.textContent).toContain("Timeline Track 1");
-    expect(document.body.textContent).toContain("Timeline Track 2");
-    expect(document.body.textContent).toContain("Artist 1");
-    expect(document.body.textContent).toContain("Artist 2");
+    expect(document.body.textContent).toContain(tracks.timelineOne.title);
+    expect(document.body.textContent).toContain(tracks.timelineTwo.title);
+    expect(document.body.textContent).toContain(tracks.timelineOne.artist);
+    expect(document.body.textContent).toContain(tracks.timelineTwo.artist);
   });
 
   test("handles missing current track gracefully", async () => {
@@ -139,7 +140,7 @@ describe("Timeline", () => {
       .element(screen.getByRole("list", { name: "Timeline" }))
       .toBeVisible();
 
-    expect(document.body.textContent).toContain("Timeline Track 1");
+    expect(document.body.textContent).toContain(tracks.timelineOne.title);
     expect(getHiddenCards(document.body)).toHaveLength(0);
   });
 

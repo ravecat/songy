@@ -446,6 +446,14 @@ export const readyTimelineNoTrackSnapshot = {
   },
 };
 
+const playbackTrack = {
+  ...tracks.current,
+  meta: {
+    ...tracks.current.meta,
+    preview_url: "https://audio-ssl.itunes.apple.com/preview.m4a",
+  },
+};
+
 export const mediaSnapshot = {
   ...waitingSnapshot,
   permissions: {
@@ -455,9 +463,9 @@ export const mediaSnapshot = {
   game: {
     ...waitingSnapshot.game,
     track: {
-      ...tracks.media,
+      ...playbackTrack,
       meta: {
-        ...tracks.media.meta,
+        ...playbackTrack.meta,
       },
     },
     player: {
@@ -476,9 +484,9 @@ export const mediaPlayingSnapshot = {
   game: {
     ...waitingSnapshot.game,
     track: {
-      ...tracks.media,
+      ...playbackTrack,
       meta: {
-        ...tracks.media.meta,
+        ...playbackTrack.meta,
       },
     },
     player: {
@@ -497,7 +505,7 @@ export const mediaNoPreviewSnapshot = {
   game: {
     ...waitingSnapshot.game,
     track: {
-      ...tracks.media,
+      ...playbackTrack,
       meta: {},
     },
     player: {
@@ -516,9 +524,9 @@ export const mediaNoPlayerSnapshot = {
   game: {
     ...waitingSnapshot.game,
     track: {
-      ...tracks.media,
+      ...playbackTrack,
       meta: {
-        ...tracks.media.meta,
+        ...playbackTrack.meta,
       },
     },
     player: undefined,
@@ -534,7 +542,7 @@ export const mediaNoMetaSnapshot = {
   game: {
     ...waitingSnapshot.game,
     track: {
-      ...tracks.media,
+      ...playbackTrack,
       meta: undefined,
     },
     player: {

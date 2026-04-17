@@ -4,6 +4,7 @@ import {
   resultsNoWinnerSnapshot,
   resultsActivePlayerWinsSnapshot,
 } from "~fixtures/room/messages";
+import { tracks } from "~fixtures/tracks";
 import { users } from "~fixtures/users";
 import { render } from "../inertia";
 
@@ -36,9 +37,10 @@ describe("TurnResults", () => {
       },
     });
 
-    await expect.element(screen.getByText("Queen")).toBeVisible();
-    await expect.element(screen.getByText("Bohemian Rhapsody")).toBeVisible();
-    await expect.element(screen.getByText("1975")).toBeVisible();
+    await expect.element(screen.getByText(tracks.result.title)).toBeVisible();
+    await expect.element(screen.getByText(String(tracks.result.year))).toBeVisible();
+    expect(document.body.textContent).toContain(tracks.result.artist);
+    expect(document.body.textContent).toContain(tracks.result.title);
   });
 
   test("displays challenger avatars", async () => {
