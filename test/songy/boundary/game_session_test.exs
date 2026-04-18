@@ -48,7 +48,7 @@ defmodule Songy.Boundary.GameSessionTest do
     test "starts supervisor and returns initial state" do
       owner = User.get_user("owner-123")
 
-      assert {:ok, game} = GameSession.create_game_session(owner.uuid)
+      assert {:ok, game} = GameSession.create_game_session(owner.id)
 
       assert GameSession.game_session_exists?(game.id)
 
@@ -60,22 +60,22 @@ defmodule Songy.Boundary.GameSessionTest do
   describe "start_game_session/1" do
     setup do
       owner = User.get_user("owner-1")
-      {:ok, game} = GameSession.create_game_session(owner.uuid)
+      {:ok, game} = GameSession.create_game_session(owner.id)
       {:ok, pid} = Game.lookup_game(game.id)
       :ok = Repatch.allow(self(), pid)
       :ok = Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
 
-      :ok = join_participant(game.id, owner.uuid)
+      :ok = join_participant(game.id, owner.id)
       assert_receive {:state, _game}
       user = User.get_user("player-1")
-      :ok = join_participant(game.id, user.uuid)
+      :ok = join_participant(game.id, user.id)
       assert_receive {:state, _game}
 
       %{game_id: game.id, owner: owner, user: user}
     end
 
     test "starts game and sets turn track", %{game_id: game_id, owner: owner} do
-      assert {:ok, game} = GameSession.start_game_session(game_id, owner.uuid)
+      assert {:ok, game} = GameSession.start_game_session(game_id, owner.id)
 
       assert game.status == :in_progress
       assert %Track{} = game.track
@@ -85,18 +85,18 @@ defmodule Songy.Boundary.GameSessionTest do
   describe "start_playback/2" do
     setup do
       owner = User.get_user("owner-1")
-      {:ok, game} = GameSession.create_game_session(owner.uuid)
+      {:ok, game} = GameSession.create_game_session(owner.id)
       {:ok, pid} = Game.lookup_game(game.id)
       :ok = Repatch.allow(self(), pid)
       :ok = Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
 
-      :ok = join_participant(game.id, owner.uuid)
+      :ok = join_participant(game.id, owner.id)
       assert_receive {:state, _game}
       user = User.get_user("player-1")
-      :ok = join_participant(game.id, user.uuid)
+      :ok = join_participant(game.id, user.id)
       assert_receive {:state, _game}
 
-      {:ok, game} = GameSession.start_game_session(game.id, owner.uuid)
+      {:ok, game} = GameSession.start_game_session(game.id, owner.id)
 
       %{game_id: game.id, owner: owner}
     end
@@ -106,7 +106,7 @@ defmodule Songy.Boundary.GameSessionTest do
       owner_id = game.owner_id
 
       # Transition to ready phase first
-      {:ok, _} = Game.advance_turn(game_id, owner.uuid)
+      {:ok, _} = Game.advance_turn(game_id, owner.id)
 
       assert {:ok, game} = GameSession.start_playback(game_id, owner_id)
       assert game.player.is_playback == true
@@ -116,18 +116,18 @@ defmodule Songy.Boundary.GameSessionTest do
   describe "pause_playback/2" do
     setup do
       owner = User.get_user("owner-1")
-      {:ok, game} = GameSession.create_game_session(owner.uuid)
+      {:ok, game} = GameSession.create_game_session(owner.id)
       {:ok, pid} = Game.lookup_game(game.id)
       :ok = Repatch.allow(self(), pid)
       :ok = Phoenix.PubSub.subscribe(Songy.PubSub, "room:#{game.id}")
 
-      :ok = join_participant(game.id, owner.uuid)
+      :ok = join_participant(game.id, owner.id)
       assert_receive {:state, _game}
       user = User.get_user("player-1")
-      :ok = join_participant(game.id, user.uuid)
+      :ok = join_participant(game.id, user.id)
       assert_receive {:state, _game}
 
-      {:ok, game} = GameSession.start_game_session(game.id, owner.uuid)
+      {:ok, game} = GameSession.start_game_session(game.id, owner.id)
 
       %{game_id: game.id, owner: owner}
     end
@@ -136,7 +136,7 @@ defmodule Songy.Boundary.GameSessionTest do
       {:ok, game} = GameSession.get_state(game_id)
       owner_id = game.owner_id
       # Transition to ready phase first
-      {:ok, _} = Game.advance_turn(game_id, owner.uuid)
+      {:ok, _} = Game.advance_turn(game_id, owner.id)
       {:ok, _} = GameSession.start_playback(game_id, owner_id)
       assert {:ok, game} = GameSession.pause_playback(game_id, owner_id)
       assert game.player.is_playback == false

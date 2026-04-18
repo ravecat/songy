@@ -10,7 +10,7 @@ import { render } from "../inertia";
 const finishedWinner = finishedSnapshot.game.participants[finishedSnapshot.game.turn.winner_id];
 const finishedWinnerScore = finishedSnapshot.game.scores[finishedSnapshot.game.turn.winner_id];
 const finishedMissingParticipantScore =
-  finishedMissingParticipantSnapshot.game.scores[users.carol.uuid];
+  finishedMissingParticipantSnapshot.game.scores[users.carol.id];
 
 describe("GameFinished", () => {
   test("shows winner", async () => {
@@ -84,10 +84,10 @@ describe("GameFinished", () => {
 
     const leaderboard = Array.from(document.body.querySelectorAll(".game-finished__entry"));
     const missingParticipantRow = leaderboard.find((entry) =>
-      entry.textContent?.includes(users.carol.uuid),
+      entry.textContent?.includes(users.carol.id),
     );
 
-    expect(missingParticipantRow?.textContent).toContain(users.carol.uuid);
+    expect(missingParticipantRow?.textContent).toContain(users.carol.id);
     expect(
       missingParticipantRow?.querySelector(".game-finished__entry-score")?.textContent,
     ).toBe(String(finishedMissingParticipantScore));

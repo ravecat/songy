@@ -12,7 +12,7 @@ export interface SocketConnectQuery {
    */
   vsn: "2.0.0";
   /**
-   * `Phoenix.Token` signed on page render and verified by `SongyWeb.UserSocket.connect/3` with `max_age: 86400`
+   * Signed user token issued on page render and accepted during socket authentication with a maximum age of 86400 seconds
    *
    */
   user_token: string;

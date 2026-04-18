@@ -23,12 +23,12 @@ export const joinReplySchema = z.union([
                   z.string(),
                   z
                     .object({
-                      uuid: z.string().regex(new RegExp("^[0-9a-f]{32}$")),
+                      id: z.string().regex(new RegExp("^[0-9a-f]{32}$")),
                       name: z.string(),
                       avatar_url: z.string().url(),
                     })
                     .strict()
-                    .describe("JSON-encoded `Songy.Core.User`"),
+                    .describe("JSON-encoded user"),
                 )
                 .describe(
                   "Connected and known room participants keyed by user id",
@@ -40,7 +40,7 @@ export const joinReplySchema = z.union([
                 z
                   .object({ is_playback: z.boolean() })
                   .strict()
-                  .describe("JSON-encoded `Songy.Core.Player`"),
+                  .describe("JSON-encoded player"),
                 z.null(),
               ]),
               timelines: z
@@ -53,16 +53,16 @@ export const joinReplySchema = z.union([
                         title: z.string(),
                         artist: z.string(),
                         year: z.number().int(),
-                        cover_url: z.union([z.string(), z.null()]),
+                        cover_url: z.union([z.string().url(), z.null()]),
                         meta: z
                           .object({
-                            preview_url: z.string().optional(),
+                            preview_url: z.string().url().optional(),
                             uri: z.string().optional(),
                           })
                           .catchall(z.unknown()),
                       })
                       .strict()
-                      .describe("JSON-encoded `Songy.Core.Track`"),
+                      .describe("JSON-encoded track"),
                   ),
                 )
                 .describe("Per-user ordered timelines keyed by user id"),
@@ -76,16 +76,16 @@ export const joinReplySchema = z.union([
                     title: z.string(),
                     artist: z.string(),
                     year: z.number().int(),
-                    cover_url: z.union([z.string(), z.null()]),
+                    cover_url: z.union([z.string().url(), z.null()]),
                     meta: z
                       .object({
-                        preview_url: z.string().optional(),
+                        preview_url: z.string().url().optional(),
                         uri: z.string().optional(),
                       })
                       .catchall(z.unknown()),
                   })
                   .strict()
-                  .describe("JSON-encoded `Songy.Core.Track`"),
+                  .describe("JSON-encoded track"),
                 z.null(),
               ]),
               turn: z.union([
@@ -110,12 +110,12 @@ export const joinReplySchema = z.union([
                       ),
                   })
                   .strict()
-                  .describe("JSON-encoded `Songy.Core.Turn`"),
+                  .describe("JSON-encoded turn"),
                 z.null(),
               ]),
             })
             .strict()
-            .describe("JSON-encoded `Songy.Core.Game` snapshot"),
+            .describe("JSON-encoded game snapshot"),
           permissions: z
             .object({
               can_control_playback: z.boolean(),
@@ -128,10 +128,11 @@ export const joinReplySchema = z.union([
             })
             .strict()
             .describe(
-              "Caller-specific permissions computed by `Songy.Authorization.permissions/2`",
+              "Caller-specific permissions computed by the authorization layer",
             ),
         })
-        .strict(),
+        .strict()
+        .describe("Authoritative room snapshot sent to the client"),
     })
     .strict(),
   z

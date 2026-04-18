@@ -1,18 +1,18 @@
-import type { StatePayload } from "~contracts";
+import type { SnapshotPayload } from "~contracts";
 import { createSession } from "~/transport/store";
 
 export interface GameSessionSpec {
   events: {
-    state: StatePayload;
+    snapshot: SnapshotPayload;
   };
-  snapshot: StatePayload;
+  snapshot: SnapshotPayload;
 }
 
 export function createGameSession(topic: string) {
   return createSession<GameSessionSpec>({
     topic,
     events: {
-      state: (_snapshot, payload) => payload,
+      snapshot: (_snapshot, payload) => payload,
     },
   }).extend(({ push }) => ({
     startGame() {

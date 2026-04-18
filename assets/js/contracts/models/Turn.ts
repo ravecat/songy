@@ -4,7 +4,7 @@
  */
 
 /**
- * JSON-encoded `Songy.Core.Turn`
+ * JSON-encoded turn
  */
 export interface Turn {
   phase: "waiting" | "ready" | "challenging" | "results";

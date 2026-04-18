@@ -7,8 +7,8 @@
   const game = $derived($session.snapshot?.game ?? null);
 
   const score = $derived.by(() => {
-    if (!$currentUser?.uuid || !game?.scores) return 0;
-    return game.scores[$currentUser.uuid] ?? 0;
+    if (!$currentUser?.id || !game?.scores) return 0;
+    return game.scores[$currentUser.id] ?? 0;
   });
 </script>
 

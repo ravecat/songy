@@ -1,9 +1,9 @@
 {
   "type": "object",
-  "description": "JSON-encoded `Songy.Core.User`",
-  "required": ["uuid", "name", "avatar_url"],
+  "description": "JSON-encoded user",
+  "required": ["id", "name", "avatar_url"],
   "properties": {
-    "uuid": {
+    "id": {
       "type": "string",
       "pattern": "^[0-9a-f]{32}$"
     },

@@ -4,7 +4,7 @@
  */
 
 /**
- * JSON-encoded `Songy.Core.Track`
+ * JSON-encoded track
  */
 export interface Track {
   id: string;

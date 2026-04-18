@@ -88,7 +88,7 @@ defmodule Songy.Boundary.Game do
     call_if_exists(game_id, {:make_assumption, user_id, position}, timeout)
   end
 
-  @doc "Gets the active player UUID from the queue."
+  @doc "Gets the active player id from the queue."
   def get_active_player(game_id, timeout \\ 1_000) do
     call_if_exists(game_id, :get_active_player, timeout)
   end
@@ -464,10 +464,10 @@ defmodule Songy.Boundary.Game do
          {:ok, %Core.Track{} = track} <- Songy.Boundary.Provider.search_random_track(session) do
       updated_game = %{
         data
-        | participants: Map.put(data.participants, user.uuid, user),
-          scores: Map.put(data.scores, user.uuid, 0),
+        | participants: Map.put(data.participants, user.id, user),
+          scores: Map.put(data.scores, user.id, 0),
           queue: data.queue ++ [user_id],
-          timelines: Map.put(data.timelines, user.uuid, [track])
+          timelines: Map.put(data.timelines, user.id, [track])
       }
 
       {:keep_state, updated_game, [{:next_event, :internal, :broadcast}]}
@@ -475,7 +475,7 @@ defmodule Songy.Boundary.Game do
       :rejoined ->
         updated_game = %{
           data
-          | participants: Map.put(data.participants, user.uuid, user)
+          | participants: Map.put(data.participants, user.id, user)
         }
 
         {:keep_state, updated_game, [{:next_event, :internal, :broadcast}]}

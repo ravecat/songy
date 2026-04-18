@@ -9,11 +9,12 @@
         },
         "response": {
           "type": "object",
+          "description": "Authoritative room snapshot sent to the client",
           "required": ["game", "permissions"],
           "properties": {
             "game": {
               "type": "object",
-              "description": "JSON-encoded `Songy.Core.Game` snapshot",
+              "description": "JSON-encoded game snapshot",
               "required": [
                 "id",
                 "owner_id",
@@ -54,10 +55,10 @@
                   "description": "Connected and known room participants keyed by user id",
                   "additionalProperties": {
                     "type": "object",
-                    "description": "JSON-encoded `Songy.Core.User`",
-                    "required": ["uuid", "name", "avatar_url"],
+                    "description": "JSON-encoded user",
+                    "required": ["id", "name", "avatar_url"],
                     "properties": {
-                      "uuid": {
+                      "id": {
                         "type": "string",
                         "pattern": "^[0-9a-f]{32}$"
                       },
@@ -83,7 +84,7 @@
                   "oneOf": [
                     {
                       "type": "object",
-                      "description": "JSON-encoded `Songy.Core.Player`",
+                      "description": "JSON-encoded player",
                       "required": ["is_playback"],
                       "properties": {
                         "is_playback": {
@@ -104,7 +105,7 @@
                     "type": "array",
                     "items": {
                       "type": "object",
-                      "description": "JSON-encoded `Songy.Core.Track`",
+                      "description": "JSON-encoded track",
                       "required": [
                         "id",
                         "title",
@@ -129,7 +130,8 @@
                         "cover_url": {
                           "oneOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "format": "uri"
                             },
                             {
                               "type": "null"
@@ -140,7 +142,8 @@
                           "type": "object",
                           "properties": {
                             "preview_url": {
-                              "type": "string"
+                              "type": "string",
+                              "format": "uri"
                             },
                             "uri": {
                               "type": "string"
@@ -171,7 +174,7 @@
                   "oneOf": [
                     {
                       "type": "object",
-                      "description": "JSON-encoded `Songy.Core.Track`",
+                      "description": "JSON-encoded track",
                       "required": [
                         "id",
                         "title",
@@ -196,7 +199,8 @@
                         "cover_url": {
                           "oneOf": [
                             {
-                              "type": "string"
+                              "type": "string",
+                              "format": "uri"
                             },
                             {
                               "type": "null"
@@ -207,7 +211,8 @@
                           "type": "object",
                           "properties": {
                             "preview_url": {
-                              "type": "string"
+                              "type": "string",
+                              "format": "uri"
                             },
                             "uri": {
                               "type": "string"
@@ -227,7 +232,7 @@
                   "oneOf": [
                     {
                       "type": "object",
-                      "description": "JSON-encoded `Songy.Core.Turn`",
+                      "description": "JSON-encoded turn",
                       "required": [
                         "phase",
                         "assumptions",
@@ -281,7 +286,7 @@
             },
             "permissions": {
               "type": "object",
-              "description": "Caller-specific permissions computed by `Songy.Authorization.permissions/2`",
+              "description": "Caller-specific permissions computed by the authorization layer",
               "required": [
                 "can_control_playback",
                 "can_advance_turn",
@@ -334,7 +339,8 @@
           "required": ["reason"],
           "properties": {
             "reason": {
-              "const": "game_not_found"
+              "type": "string",
+              "enum": ["game_not_found"]
             }
           },
           "additionalProperties": false

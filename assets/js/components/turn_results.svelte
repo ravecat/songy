@@ -25,17 +25,17 @@
     </div>
   </div>
   <div class="results__avatars" role="list" aria-label="Result challengers">
-    {#each challengers as user, i (user.uuid)}
+    {#each challengers as user, i (user.id)}
       <div
         class="results__challenger"
-        class:results__challenger--winner={user.uuid === winnerId}
+        class:results__challenger--winner={user.id === winnerId}
         style="--index: {i}"
         role="listitem"
-        aria-current={user.uuid === winnerId ? "true" : undefined}
+        aria-current={user.id === winnerId ? "true" : undefined}
       >
         <div class="results__frame">
           <img src={user.avatar_url} alt={user.name} class="results__avatar" />
-          {#if user.uuid === winnerId}
+          {#if user.id === winnerId}
             <span class="results__score"> +1 </span>
           {/if}
         </div>

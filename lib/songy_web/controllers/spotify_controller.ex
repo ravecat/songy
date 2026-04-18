@@ -22,7 +22,7 @@ defmodule SongyWeb.SpotifyController do
   end
 
   def callback(conn, %{"code" => code}) do
-    %{assigns: %{current_user: %{uuid: user_id}}} = conn
+    %{assigns: %{current_user: %{id: user_id}}} = conn
 
     with {:ok, provider} <- Songy.Boundary.Provider.Spotify.authenticate(conn, %{"code" => code}),
          :ok <- Songy.Providers.insert(user_id, provider) do
@@ -53,7 +53,7 @@ defmodule SongyWeb.SpotifyController do
   end
 
   def disconnect(conn, _params) do
-    %{assigns: %{current_user: %{uuid: user_id}}} = conn
+    %{assigns: %{current_user: %{id: user_id}}} = conn
     Songy.Providers.remove(user_id)
 
     conn

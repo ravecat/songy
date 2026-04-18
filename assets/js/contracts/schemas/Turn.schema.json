@@ -1,6 +1,6 @@
 {
   "type": "object",
-  "description": "JSON-encoded `Songy.Core.Turn`",
+  "description": "JSON-encoded turn",
   "required": ["phase", "assumptions", "winner_id", "deadline_at_ms"],
   "properties": {
     "phase": {

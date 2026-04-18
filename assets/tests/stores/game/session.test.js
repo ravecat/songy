@@ -70,7 +70,7 @@ describe("createGameSession", () => {
       expect.objectContaining({
         topic: "room:test-room",
         events: {
-          state: expect.any(Function),
+          snapshot: expect.any(Function),
         },
       }),
     );

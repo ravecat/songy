@@ -283,7 +283,7 @@ export const handlers: Record<string, Record<string, Handler>> = {
 
       client.send(replyTo(frame, okReply));
       client.send(pushTo(topic, {
-        event: "state",
+        event: "snapshot",
         payload: waitingTurnActiveSnapshot,
       }));
     },
@@ -303,7 +303,7 @@ export const handlers: Record<string, Record<string, Handler>> = {
 
       client.send(replyTo(frame, okReply));
       client.send(pushTo(topic, {
-        event: "state",
+        event: "snapshot",
         payload: readyPlaybackControlsSnapshot,
       }));
     },
@@ -356,7 +356,7 @@ export const handlers: Record<string, Record<string, Handler>> = {
 
       client.send(replyTo(frame, okReply));
       client.send(pushTo(topic, {
-        event: "state",
+        event: "snapshot",
         payload: readyPlaybackPlayingSnapshot,
       }));
     },
@@ -376,7 +376,7 @@ export const handlers: Record<string, Record<string, Handler>> = {
 
       client.send(replyTo(frame, okReply));
       client.send(pushTo(topic, {
-        event: "state",
+        event: "snapshot",
         payload: readyPlaybackControlsSnapshot,
       }));
     },
@@ -492,7 +492,7 @@ export const handlers: Record<string, Record<string, Handler>> = {
 
       client.send(replyTo(frame, okReply));
       client.send(pushTo(topic, {
-        event: "state",
+        event: "snapshot",
         payload: mediaSnapshot,
       }));
     },

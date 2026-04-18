@@ -21,8 +21,8 @@ defmodule SongyWeb.AuthTest do
       conn = Auth.fetch_current_user(conn, [])
 
       assert %User{} = conn.assigns.current_user
-      assert is_binary(conn.assigns.current_user.uuid)
-      assert String.length(conn.assigns.current_user.uuid) == 32
+      assert is_binary(conn.assigns.current_user.id)
+      assert String.length(conn.assigns.current_user.id) == 32
     end
 
     test "creates new user when session has nil", %{conn: conn} do
@@ -32,12 +32,31 @@ defmodule SongyWeb.AuthTest do
         |> Auth.fetch_current_user([])
 
       assert %User{} = conn.assigns.current_user
-      assert is_binary(conn.assigns.current_user.uuid)
+      assert is_binary(conn.assigns.current_user.id)
+    end
+
+    test "normalizes legacy session users keyed by uuid", %{conn: conn} do
+      legacy_user = %{
+        uuid: "abc123",
+        name: "Legacy Fox",
+        avatar_url: "https://example.test/avatar.svg"
+      }
+
+      conn =
+        conn
+        |> put_session(:current_user, legacy_user)
+        |> Auth.fetch_current_user([])
+
+      assert %User{} = conn.assigns.current_user
+      assert conn.assigns.current_user.id == "abc123"
+      assert conn.assigns.current_user.name == "Legacy Fox"
+      assert conn.assigns.current_user.avatar_url == "https://example.test/avatar.svg"
+      assert get_session(conn, :current_user).id == "abc123"
     end
   end
 
   describe "put_user_token/2" do
-    test "creates user token from user uuid", %{conn: conn} do
+    test "creates user token from user id", %{conn: conn} do
       user = User.new()
 
       conn =
@@ -51,7 +70,7 @@ defmodule SongyWeb.AuthTest do
       {:ok, user_id} =
         Phoenix.Token.verify(SongyWeb.Endpoint, "current_user", conn.assigns.user_token)
 
-      assert user_id == user.uuid
+      assert user_id == user.id
     end
 
     test "works with user from session", %{conn: conn} do
@@ -69,7 +88,7 @@ defmodule SongyWeb.AuthTest do
       {:ok, user_id} =
         Phoenix.Token.verify(SongyWeb.Endpoint, "current_user", conn.assigns.user_token)
 
-      assert user_id == user.uuid
+      assert user_id == user.id
     end
 
     test "generates different tokens for different users", %{conn: conn} do
@@ -89,14 +108,14 @@ defmodule SongyWeb.AuthTest do
       assert conn1.assigns.user_token != conn2.assigns.user_token
 
       # Verify both tokens work correctly
-      {:ok, user_uuid1} =
+      {:ok, user_id1} =
         Phoenix.Token.verify(SongyWeb.Endpoint, "current_user", conn1.assigns.user_token)
 
-      {:ok, user_uuid2} =
+      {:ok, user_id2} =
         Phoenix.Token.verify(SongyWeb.Endpoint, "current_user", conn2.assigns.user_token)
 
-      assert user_uuid1 == user1.uuid
-      assert user_uuid2 == user2.uuid
+      assert user_id1 == user1.id
+      assert user_id2 == user2.id
     end
 
     test "returns conn unchanged when no current_user", %{conn: conn} do
@@ -120,7 +139,7 @@ defmodule SongyWeb.AuthTest do
       {:ok, user_id} =
         Phoenix.Token.verify(SongyWeb.Endpoint, "current_user", conn.assigns.user_token)
 
-      assert user_id == conn.assigns.current_user.uuid
+      assert user_id == conn.assigns.current_user.id
     end
 
     test "preserves existing user through pipeline", %{conn: conn} do
@@ -137,7 +156,7 @@ defmodule SongyWeb.AuthTest do
       {:ok, user_id} =
         Phoenix.Token.verify(SongyWeb.Endpoint, "current_user", conn.assigns.user_token)
 
-      assert user_id == original_user.uuid
+      assert user_id == original_user.id
     end
   end
 
@@ -145,7 +164,7 @@ defmodule SongyWeb.AuthTest do
     test "assigns default provider when ensure creates default", %{conn: conn} do
       user = User.new()
 
-      Repatch.patch(Songy.Providers, :ensure, fn _user_uuid ->
+      Repatch.patch(Songy.Providers, :ensure, fn _user_id ->
         {:ok, Session.normalize!(%Songy.Core.Provider.ITunes{})}
       end)
 
@@ -160,7 +179,7 @@ defmodule SongyWeb.AuthTest do
     test "assigns :spotify when user has Spotify provider", %{conn: conn} do
       user = User.new()
 
-      Repatch.patch(Songy.Providers, :ensure, fn _user_uuid ->
+      Repatch.patch(Songy.Providers, :ensure, fn _user_id ->
         {:ok,
          Session.normalize!(%Songy.Core.Provider.Spotify{
            access_token: "token",
@@ -179,7 +198,7 @@ defmodule SongyWeb.AuthTest do
     test "assigns :itunes when user has ITunes provider", %{conn: conn} do
       user = User.new()
 
-      Repatch.patch(Songy.Providers, :ensure, fn _user_uuid ->
+      Repatch.patch(Songy.Providers, :ensure, fn _user_id ->
         {:ok, Session.normalize!(%Songy.Core.Provider.ITunes{})}
       end)
 
@@ -194,7 +213,7 @@ defmodule SongyWeb.AuthTest do
     test "assigns :apple when user has Apple provider", %{conn: conn} do
       user = User.new()
 
-      Repatch.patch(Songy.Providers, :ensure, fn _user_uuid ->
+      Repatch.patch(Songy.Providers, :ensure, fn _user_id ->
         {:ok, Session.normalize!(%Songy.Core.Provider.Apple{})}
       end)
 
@@ -209,7 +228,7 @@ defmodule SongyWeb.AuthTest do
     test "does not assign provider when ensure returns error", %{conn: conn} do
       user = User.new()
 
-      Repatch.patch(Songy.Providers, :ensure, fn _user_uuid ->
+      Repatch.patch(Songy.Providers, :ensure, fn _user_id ->
         {:error, :network_error}
       end)
 

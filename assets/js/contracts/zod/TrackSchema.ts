@@ -11,13 +11,13 @@ export const trackSchema = z
     title: z.string(),
     artist: z.string(),
     year: z.number().int(),
-    cover_url: z.union([z.string(), z.null()]),
+    cover_url: z.union([z.string().url(), z.null()]),
     meta: z
       .object({
-        preview_url: z.string().optional(),
+        preview_url: z.string().url().optional(),
         uri: z.string().optional(),
       })
       .catchall(z.unknown()),
   })
   .strict()
-  .describe("JSON-encoded `Songy.Core.Track`");
+  .describe("JSON-encoded track");

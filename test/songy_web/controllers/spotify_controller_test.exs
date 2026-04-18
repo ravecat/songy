@@ -101,7 +101,7 @@ defmodule SongyWeb.SpotifyControllerTest do
 
       conn = get conn, ~p"/auth/spotify/callback", %{"code" => "valid_auth_code"}
 
-      assert {:ok, stored_provider} = Songy.Providers.lookup(user.uuid)
+      assert {:ok, stored_provider} = Songy.Providers.lookup(user.id)
       assert %Session{data: %Songy.Core.Provider.Spotify{} = spotify_provider} = stored_provider
       assert spotify_provider.access_token == "successful_token"
       assert spotify_provider.refresh_token == "refresh_token_123"
@@ -141,12 +141,12 @@ defmodule SongyWeb.SpotifyControllerTest do
         expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
       }
 
-      Songy.Providers.insert(user.uuid, provider)
-      assert {:ok, _} = Songy.Providers.lookup(user.uuid)
+      Songy.Providers.insert(user.id, provider)
+      assert {:ok, _} = Songy.Providers.lookup(user.id)
 
       conn = delete(conn, ~p"/auth/spotify/disconnect")
 
-      assert {:error, :not_found} = Songy.Providers.lookup(user.uuid)
+      assert {:error, :not_found} = Songy.Providers.lookup(user.id)
       assert redirected_to(conn) == "/"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Disconnected from Spotify."
     end

@@ -112,7 +112,7 @@
       const position = i + assumptionsCountBefore;
       const userId = assumptions[position];
       const user = userId ? participants[userId] : undefined;
-      const isCurrentUser = user?.uuid === $currentUser?.uuid;
+      const isCurrentUser = user?.id === $currentUser?.id;
 
       if (user) {
         items.push({ kind: "assumption", position, user });
@@ -197,7 +197,7 @@
     {#each cells as cell, index (index)}
       {@const isSlot = cell.kind === "slot"}
       {@const isOwnAssumption =
-        cell.kind === "assumption" && cell.user.uuid === $currentUser?.uuid}
+        cell.kind === "assumption" && cell.user.id === $currentUser?.id}
       {@const isSnap = isSlot || isOwnAssumption}
       {@const isActive = hasInteracted && activeCellIndex === index}
       <div

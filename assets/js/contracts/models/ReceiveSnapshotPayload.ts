@@ -3,9 +3,12 @@
  * Do not edit manually.
  */
 
-export interface ReceiveStatePayload {
+/**
+ * Authoritative room snapshot sent to the client
+ */
+export interface ReceiveSnapshotPayload {
   /**
-   * JSON-encoded `Songy.Core.Game` snapshot
+   * JSON-encoded game snapshot
    */
   game: {
     id: string;
@@ -18,10 +21,10 @@ export interface ReceiveStatePayload {
      */
     participants: {
       /**
-       * JSON-encoded `Songy.Core.User`
+       * JSON-encoded user
        */
       [k: string]: {
-        uuid: string;
+        id: string;
         name: string;
         avatar_url: string;
       };
@@ -85,7 +88,7 @@ export interface ReceiveStatePayload {
     } | null;
   };
   /**
-   * Caller-specific permissions computed by `Songy.Authorization.permissions/2`
+   * Caller-specific permissions computed by the authorization layer
    */
   permissions: {
     can_control_playback: boolean;

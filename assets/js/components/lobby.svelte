@@ -25,12 +25,12 @@
 
 <div class="lobby">
   <div class="lobby__players" role="list" aria-label="Lobby players">
-    {#each queue as uuid, i (uuid)}
-      {@const participant = participants[uuid]}
+    {#each queue as participantId, i (participantId)}
+      {@const participant = participants[participantId]}
       {#if participant}
         <div
           class="lobby-player"
-          class:lobby-player_owner={uuid === ownerId}
+          class:lobby-player_owner={participantId === ownerId}
           style="--index: {i}"
           role="listitem"
         >
@@ -40,7 +40,7 @@
               alt={participant.name}
               class="lobby-player__avatar"
             />
-            {#if uuid === ownerId}
+            {#if participantId === ownerId}
               <div class="lobby-player__badge">
                 <Crown size={16} strokeWidth={2.5} />
               </div>

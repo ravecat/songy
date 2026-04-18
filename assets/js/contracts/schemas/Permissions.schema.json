@@ -1,6 +1,6 @@
 {
   "type": "object",
-  "description": "Caller-specific permissions computed by `Songy.Authorization.permissions/2`",
+  "description": "Caller-specific permissions computed by the authorization layer",
   "required": [
     "can_control_playback",
     "can_advance_turn",

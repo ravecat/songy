@@ -49,7 +49,7 @@ defmodule Songy.Core.Game do
   @typedoc "Unique game identifier"
   @type id :: String.t()
 
-  @typedoc "Game owner UUID"
+  @typedoc "Game owner id"
   @type owner_id :: String.t()
 
   @typedoc "Maximum number of participants allowed"
@@ -136,7 +136,7 @@ defmodule Songy.Core.Game do
   @doc false
   @spec validate_not_duplicate(t(), User.t()) :: :ok | {:error, :already_joined}
   def validate_not_duplicate(%__MODULE__{} = game, %User{} = user) do
-    if Map.has_key?(game.participants, user.uuid) do
+    if Map.has_key?(game.participants, user.id) do
       {:error, :already_joined}
     else
       :ok

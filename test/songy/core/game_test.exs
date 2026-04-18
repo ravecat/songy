@@ -9,7 +9,7 @@ defmodule Songy.Core.GameTest do
   describe "struct" do
     test "creates game with required fields" do
       now = DateTime.utc_now()
-      user = %User{uuid: "user-1", name: "Player1"}
+      user = %User{id: "user-1", name: "Player1"}
 
       game = %Game{
         id: "game-123",
@@ -17,7 +17,7 @@ defmodule Songy.Core.GameTest do
         max_participants: 10,
         max_score: 10,
         status: :waiting,
-        participants: %{user.uuid => user},
+        participants: %{user.id => user},
         scores: %{"user-1" => 5},
         player: Player.new(),
         timelines: %{},
@@ -94,38 +94,38 @@ defmodule Songy.Core.GameTest do
     end
 
     test "validate_not_full returns :ok when below capacity" do
-      user = %User{uuid: "user-1", name: "Player1"}
-      game = base_game(%{participants: %{user.uuid => user}})
+      user = %User{id: "user-1", name: "Player1"}
+      game = base_game(%{participants: %{user.id => user}})
 
       assert :ok = Game.validate_not_full(game)
     end
 
     test "validate_not_full returns error when at capacity" do
-      user1 = %User{uuid: "user-1", name: "Player1"}
-      user2 = %User{uuid: "user-2", name: "Player2"}
-      game = base_game(%{participants: %{user1.uuid => user1, user2.uuid => user2}})
+      user1 = %User{id: "user-1", name: "Player1"}
+      user2 = %User{id: "user-2", name: "Player2"}
+      game = base_game(%{participants: %{user1.id => user1, user2.id => user2}})
 
       assert {:error, :game_full} = Game.validate_not_full(game)
     end
 
     test "validate_not_duplicate detects existing participant" do
-      user1 = %User{uuid: "user-1", name: "Player1"}
-      user2 = %User{uuid: "user-2", name: "Player2"}
-      game = base_game(%{participants: %{user1.uuid => user1}})
+      user1 = %User{id: "user-1", name: "Player1"}
+      user2 = %User{id: "user-2", name: "Player2"}
+      game = base_game(%{participants: %{user1.id => user1}})
 
       assert {:error, :already_joined} = Game.validate_not_duplicate(game, user1)
       assert :ok = Game.validate_not_duplicate(game, user2)
     end
 
     test "validate_min_participants requires at least two participants" do
-      user1 = %User{uuid: "user-1", name: "Player1"}
-      user2 = %User{uuid: "user-2", name: "Player2"}
+      user1 = %User{id: "user-1", name: "Player1"}
+      user2 = %User{id: "user-2", name: "Player2"}
 
       assert {:error, :insufficient_participants} =
-               Game.validate_min_participants(base_game(%{participants: %{user1.uuid => user1}}))
+               Game.validate_min_participants(base_game(%{participants: %{user1.id => user1}}))
 
       assert :ok =
-               Game.validate_min_participants(base_game(%{participants: %{user1.uuid => user1, user2.uuid => user2}}))
+               Game.validate_min_participants(base_game(%{participants: %{user1.id => user1, user2.id => user2}}))
     end
 
     test "valid_assumption? verifies timeline order at position" do

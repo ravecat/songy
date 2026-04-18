@@ -4,7 +4,7 @@
  */
 
 /**
- * JSON-encoded `Songy.Core.Player`
+ * JSON-encoded player
  */
 export interface Player {
   is_playback: boolean;

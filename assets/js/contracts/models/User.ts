@@ -4,10 +4,10 @@
  */
 
 /**
- * JSON-encoded `Songy.Core.User`
+ * JSON-encoded user
  */
 export interface User {
-  uuid: string;
+  id: string;
   name: string;
   avatar_url: string;
 }

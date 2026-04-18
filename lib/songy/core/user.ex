@@ -9,63 +9,63 @@ defmodule Songy.Core.User do
 
   use TypedStruct
 
-  @derive {Jason.Encoder, only: [:uuid, :name, :avatar_url]}
+  @derive {Jason.Encoder, only: [:id, :name, :avatar_url]}
 
-  @uuid_size 16
+  @id_size 16
   @base_avatar_url "https://api.dicebear.com/9.x"
 
   typedstruct do
-    field :uuid, String.t(), enforce: true
+    field :id, String.t(), enforce: true
     field :name, String.t()
     field :avatar_url, String.t()
   end
 
   @doc """
-  Creates a new game user with random UUID.
+  Creates a new game user with a random id.
 
   ## Examples
       iex> User.new()
-      %User{uuid: "a1b2c3d4", name: "Brave Lion"}
+      %User{id: "a1b2c3d4", name: "Brave Lion"}
   """
   @spec new() :: t()
   def new() do
-    uuid = generate_uuid()
+    id = generate_id()
 
     %__MODULE__{
-      uuid: uuid,
-      name: generate_name(uuid),
-      avatar_url: generate_avatar_url(uuid)
+      id: id,
+      name: generate_name(id),
+      avatar_url: generate_avatar_url(id)
     }
   end
 
   @doc """
-  Gets or creates a game user with specified UUID.
-  Uses deterministic data generation based on UUID.
+  Gets or creates a game user with a specified id.
+  Uses deterministic data generation based on the id.
 
   ## Examples
       iex> User.get_user("abc123")
-      %User{uuid: "abc123", name: "Quick Fox", avatar_url: "..."}
+      %User{id: "abc123", name: "Quick Fox", avatar_url: "..."}
 
       iex> User.get_user("abc123")
-      %User{uuid: "abc123", name: "Quick Fox", avatar_url: "..."}  # Same name
+      %User{id: "abc123", name: "Quick Fox", avatar_url: "..."}  # Same name
   """
   @spec get_user(String.t()) :: t()
-  def get_user(uuid) when is_binary(uuid) do
+  def get_user(id) when is_binary(id) do
     %__MODULE__{
-      uuid: uuid,
-      name: generate_name(uuid),
-      avatar_url: generate_avatar_url(uuid)
+      id: id,
+      name: generate_name(id),
+      avatar_url: generate_avatar_url(id)
     }
   end
 
-  defp generate_uuid do
-    @uuid_size
+  defp generate_id do
+    @id_size
     |> :crypto.strong_rand_bytes()
     |> Base.encode16(case: :lower)
   end
 
-  defp generate_name(uuid) do
-    seed = :erlang.phash2(uuid)
+  defp generate_name(id) do
+    seed = :erlang.phash2(id)
 
     UniqueNamesGenerator.generate(
       [:adjectives, :animals],
@@ -73,7 +73,7 @@ defmodule Songy.Core.User do
     )
   end
 
-  defp generate_avatar_url(uuid) do
-    "#{@base_avatar_url}/thumbs/svg?seed=#{uuid}"
+  defp generate_avatar_url(id) do
+    "#{@base_avatar_url}/thumbs/svg?seed=#{id}"
   end
 end

@@ -5,7 +5,7 @@
   const session = getGameContext();
   const game = $derived($session.snapshot?.game ?? null);
   const activePlayer = $derived(game!.participants[game!.queue[game!.cursor]]);
-  const isCurrentUserActive = $derived(activePlayer?.uuid === $currentUser?.uuid);
+  const isCurrentUserActive = $derived(activePlayer?.id === $currentUser?.id);
 </script>
 
 <div class="turn-waiting" role="region" aria-label="Turn waiting">

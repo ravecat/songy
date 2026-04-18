@@ -5,11 +5,10 @@ defmodule SongyWeb.RoomChannelTest do
   alias Songy.Core.Game
   alias Songy.Core.Turn
   alias Songy.Core.User
-  alias Songy.Provider.Session
   alias SongyWeb.Presence
 
   defp join_room_channel(current_user, room_id, assigns \\ %{}) do
-    default_assigns = %{current_user_id: current_user.uuid}
+    default_assigns = %{current_user_id: current_user.id}
 
     SongyWeb.UserSocket
     |> socket("user_id", Map.merge(default_assigns, assigns))
@@ -17,7 +16,7 @@ defmodule SongyWeb.RoomChannelTest do
   end
 
   setup do
-    current_user = User.get_user("test-uuid")
+    current_user = User.get_user("test-user")
     owner = User.get_user("owner123")
 
     %{current_user: current_user, owner: owner}
@@ -44,10 +43,10 @@ defmodule SongyWeb.RoomChannelTest do
       {:ok, _reply, socket} = join_room_channel(current_user, game_id)
 
       presence_list = Presence.list(socket)
-      assert Map.has_key?(presence_list, current_user.uuid)
+      assert Map.has_key?(presence_list, current_user.id)
     end
 
-    test "returns state in join reply", %{current_user: current_user} do
+    test "returns the initial snapshot in join reply", %{current_user: current_user} do
       game_id = "game-123"
 
       game_state = %Game{
@@ -66,7 +65,7 @@ defmodule SongyWeb.RoomChannelTest do
       assert {:ok, %{game: ^game_state, permissions: _permissions}, _socket} =
                join_room_channel(current_user, game_id)
 
-      refute_push "state", _
+      refute_push "snapshot", _
     end
 
     test "handles missing game session gracefully", %{current_user: current_user} do
@@ -78,12 +77,12 @@ defmodule SongyWeb.RoomChannelTest do
 
       assert {:error, %{reason: "game_not_found"}} = join_room_channel(current_user, game_id)
 
-      refute_push "state", _
+      refute_push "snapshot", _
     end
   end
 
-  describe "state updates" do
-    test "push state when channel receives a state message", %{current_user: current_user} do
+  describe "snapshot updates" do
+    test "pushes a snapshot when the channel receives a state message", %{current_user: current_user} do
       game_id = "game-123"
 
       initial_game = %Game{
@@ -99,7 +98,7 @@ defmodule SongyWeb.RoomChannelTest do
         id: game_id,
         owner_id: "owner123",
         status: :in_progress,
-        queue: [current_user.uuid],
+        queue: [current_user.id],
         cursor: 0,
         turn: %Turn{phase: :waiting}
       }
@@ -111,16 +110,16 @@ defmodule SongyWeb.RoomChannelTest do
       assert {:ok, %{game: ^initial_game, permissions: _permissions}, socket} =
                join_room_channel(current_user, game_id)
 
-      refute_push "state", _
+      refute_push "snapshot", _
 
       send(socket.channel_pid, {:state, updated_game})
 
-      assert_push "state", %{game: ^updated_game, permissions: _permissions}
+      assert_push "snapshot", %{game: ^updated_game, permissions: _permissions}
     end
   end
 
   describe "challenging deadline" do
-    test "includes deadline_at_ms in state push", %{current_user: current_user} do
+    test "includes deadline_at_ms in snapshot push", %{current_user: current_user} do
       game_id = "game-123"
       deadline_at_ms = System.system_time(:millisecond) + 5_000
 
@@ -150,7 +149,7 @@ defmodule SongyWeb.RoomChannelTest do
 
       send(socket.channel_pid, {:state, challenging_game})
 
-      assert_push "state", %{game: %{turn: %{deadline_at_ms: ^deadline_at_ms}}, permissions: _permissions}
+      assert_push "snapshot", %{game: %{turn: %{deadline_at_ms: ^deadline_at_ms}}, permissions: _permissions}
     end
   end
 
@@ -215,7 +214,7 @@ defmodule SongyWeb.RoomChannelTest do
   describe "start_playback" do
     test "replies :ok when start_playback succeeds", %{current_user: current_user} do
       game_id = "game-123"
-      user_id = current_user.uuid
+      user_id = current_user.id
       new_state = %{player: %{is_playback: true}}
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
@@ -243,7 +242,7 @@ defmodule SongyWeb.RoomChannelTest do
 
     test "does not reply when start_playback fails", %{current_user: current_user} do
       game_id = "game-123"
-      user_id = current_user.uuid
+      user_id = current_user.id
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
         {:ok,
@@ -272,7 +271,7 @@ defmodule SongyWeb.RoomChannelTest do
   describe "pause_playback" do
     test "replies :ok when pause_playback succeeds", %{current_user: current_user} do
       game_id = "game-123"
-      user_id = current_user.uuid
+      user_id = current_user.id
       new_state = %{player: %{is_playback: false}}
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
@@ -300,7 +299,7 @@ defmodule SongyWeb.RoomChannelTest do
 
     test "does not reply when pause_playback fails", %{current_user: current_user} do
       game_id = "game-123"
-      user_id = current_user.uuid
+      user_id = current_user.id
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
         {:ok,
@@ -383,173 +382,12 @@ defmodule SongyWeb.RoomChannelTest do
     end
   end
 
-  describe "get_provider" do
-    test "returns token when provider found", %{current_user: current_user} do
-      game_id = "game-123"
-      user_id = current_user.uuid
-
-      Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok,
-         %Game{
-           id: game_id,
-           owner_id: "owner123",
-           status: :waiting,
-           queue: [],
-           cursor: 0,
-           turn: nil
-         }}
-      end)
-
-      Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn ^user_id ->
-        {:ok,
-         Session.normalize!(%Songy.Core.Provider.Spotify{
-           access_token: "test-token",
-           refresh_token: "test-refresh",
-           device_id: nil,
-           expires_at: DateTime.utc_now()
-         })}
-      end)
-
-      {:ok, _, socket} = join_room_channel(current_user, game_id)
-
-      ref = push(socket, "get_provider", %{})
-
-      assert_reply ref, :ok, %{token: "test-token"}
-    end
-
-    test "returns error when provider not found", %{current_user: current_user} do
-      game_id = "game-123"
-      user_id = current_user.uuid
-
-      Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok,
-         %Game{
-           id: game_id,
-           owner_id: "owner123",
-           status: :waiting,
-           queue: [],
-           cursor: 0,
-           turn: nil
-         }}
-      end)
-
-      Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn ^user_id ->
-        {:error, :provider_not_found}
-      end)
-
-      {:ok, _, socket} = join_room_channel(current_user, game_id)
-
-      ref = push(socket, "get_provider", %{})
-
-      assert_reply ref, :error, %{reason: "invalid_credentials"}
-    end
-
-    test "returns error when access token is nil", %{current_user: current_user} do
-      game_id = "game-123"
-      user_id = current_user.uuid
-
-      Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok,
-         %Game{
-           id: game_id,
-           owner_id: "owner123",
-           status: :waiting,
-           queue: [],
-           cursor: 0,
-           turn: nil
-         }}
-      end)
-
-      Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn ^user_id ->
-        {:ok,
-         Session.normalize!(%Songy.Core.Provider.Spotify{
-           access_token: nil,
-           refresh_token: "test-refresh",
-           device_id: nil,
-           expires_at: DateTime.utc_now()
-         })}
-      end)
-
-      {:ok, _, socket} = join_room_channel(current_user, game_id)
-
-      ref = push(socket, "get_provider", %{})
-
-      assert_reply ref, :error, %{reason: "invalid_credentials"}
-    end
-  end
-
-  describe "update_provider" do
-    test "updates provider when successful", %{current_user: current_user} do
-      game_id = "game-123"
-      user_id = current_user.uuid
-
-      Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok,
-         %Game{
-           id: game_id,
-           owner_id: "owner123",
-           status: :waiting,
-           queue: [],
-           cursor: 0,
-           turn: nil
-         }}
-      end)
-
-      Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn ^user_id ->
-        {:ok,
-         Session.normalize!(%Songy.Core.Provider.Spotify{
-           access_token: "old-token",
-           refresh_token: "old-refresh",
-           device_id: nil,
-           expires_at: DateTime.utc_now()
-         })}
-      end)
-
-      Repatch.patch(Songy.Providers, :update, [mode: :shared], fn ^user_id, _updated_provider ->
-        :ok
-      end)
-
-      {:ok, _, socket} = join_room_channel(current_user, game_id)
-
-      ref = push(socket, "update_provider", %{"access_token" => "new-token"})
-
-      assert_reply ref, :ok
-    end
-
-    test "returns error when provider not found", %{current_user: current_user} do
-      game_id = "game-123"
-      user_id = current_user.uuid
-
-      Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
-        {:ok,
-         %Game{
-           id: game_id,
-           owner_id: "owner123",
-           status: :waiting,
-           queue: [],
-           cursor: 0,
-           turn: nil
-         }}
-      end)
-
-      Repatch.patch(Songy.Providers, :lookup, [mode: :shared], fn ^user_id ->
-        {:error, :provider_not_found}
-      end)
-
-      {:ok, _, socket} = join_room_channel(current_user, game_id)
-
-      ref = push(socket, "update_provider", %{"access_token" => "new-token"})
-
-      assert_reply ref, :error, %{reason: "provider_not_found"}
-    end
-  end
-
   # === GAME ACTION EVENTS ===
 
   describe "make_assumption" do
     test "replies :ok when make_assumption succeeds", %{current_user: current_user} do
       game_id = "game-123"
-      user_id = current_user.uuid
+      user_id = current_user.id
       new_state = %{turn: %{assumptions: %{0 => user_id}}}
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
@@ -577,7 +415,7 @@ defmodule SongyWeb.RoomChannelTest do
 
     test "does not reply when make_assumption fails", %{current_user: current_user} do
       game_id = "game-123"
-      user_id = current_user.uuid
+      user_id = current_user.id
 
       Repatch.patch(GameSession, :get_state, [mode: :shared], fn ^game_id ->
         {:ok,

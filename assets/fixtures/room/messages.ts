@@ -13,49 +13,49 @@ const defaultUsers = [
 ];
 
 const defaultParticipants = Object.fromEntries(
-  defaultUsers.map((user) => [user.uuid, user]),
+  defaultUsers.map((user) => [user.id, user]),
 );
 
-const defaultQueue = defaultUsers.map((user) => user.uuid);
+const defaultQueue = defaultUsers.map((user) => user.id);
 
 const defaultQueueActivePlayerFirst = [
-  users.bob.uuid,
-  ...defaultQueue.filter((userId) => userId !== users.bob.uuid),
+  users.bob.id,
+  ...defaultQueue.filter((userId) => userId !== users.bob.id),
 ];
 
 const defaultScores = {
-  [users.alice.uuid]: 8,
-  [users.bob.uuid]: 10,
-  [users.carol.uuid]: 3,
-  [users.dan.uuid]: 9,
-  [users.erin.uuid]: 6,
-  [users.frank.uuid]: 5,
-  [users.gina.uuid]: 4,
+  [users.alice.id]: 8,
+  [users.bob.id]: 10,
+  [users.carol.id]: 3,
+  [users.dan.id]: 9,
+  [users.erin.id]: 6,
+  [users.frank.id]: 5,
+  [users.gina.id]: 4,
 };
 
 const defaultTimelines = {
-  [users.alice.uuid]: [tracks.timelineOne, tracks.timelineTwo],
-  [users.bob.uuid]: [tracks.timelineOne, tracks.timelineTwo],
-  [users.carol.uuid]: [],
-  [users.dan.uuid]: [tracks.timelineTwo],
-  [users.erin.uuid]: [tracks.timelineOne],
-  [users.frank.uuid]: [],
-  [users.gina.uuid]: [tracks.timelineTwo],
+  [users.alice.id]: [tracks.timelineOne, tracks.timelineTwo],
+  [users.bob.id]: [tracks.timelineOne, tracks.timelineTwo],
+  [users.carol.id]: [],
+  [users.dan.id]: [tracks.timelineTwo],
+  [users.erin.id]: [tracks.timelineOne],
+  [users.frank.id]: [],
+  [users.gina.id]: [tracks.timelineTwo],
 };
 
 const defaultResultsAssumptions = {
-  1: users.alice.uuid,
-  2: users.bob.uuid,
-  3: users.carol.uuid,
-  4: users.dan.uuid,
-  5: users.erin.uuid,
-  6: users.frank.uuid,
+  1: users.alice.id,
+  2: users.bob.id,
+  3: users.carol.id,
+  4: users.dan.id,
+  5: users.erin.id,
+  6: users.frank.id,
 };
 
 export const waitingSnapshot = {
   game: {
     id: "room-1",
-    owner_id: users.alice.uuid,
+    owner_id: users.alice.id,
     max_participants: 8,
     max_score: 10,
     status: "waiting",
@@ -98,11 +98,11 @@ export const waitingSingleParticipantSnapshot = {
   game: {
     ...waitingSnapshot.game,
     participants: {
-      [users.alice.uuid]: users.alice,
+      [users.alice.id]: users.alice,
     },
-    queue: [users.alice.uuid],
+    queue: [users.alice.id],
     scores: {
-      [users.alice.uuid]: 7,
+      [users.alice.id]: 7,
     },
   },
 };
@@ -121,7 +121,7 @@ export const waitingScoreThreeSnapshot = {
   game: {
     ...waitingSnapshot.game,
     scores: {
-      [users.alice.uuid]: 3,
+      [users.alice.id]: 3,
     },
   },
 };
@@ -131,7 +131,7 @@ export const waitingScoreMissingSnapshot = {
   game: {
     ...waitingSnapshot.game,
     scores: {
-      [users.bob.uuid]: 5,
+      [users.bob.id]: 5,
     },
   },
 };
@@ -234,7 +234,7 @@ export const resultsActivePlayerWinsSnapshot = {
     turn: {
       phase: "results",
       assumptions: defaultResultsAssumptions,
-      winner_id: users.alice.uuid,
+      winner_id: users.alice.id,
     },
   },
 };
@@ -262,7 +262,7 @@ export const finishedSnapshot = {
     turn: {
       phase: "results",
       assumptions: {},
-      winner_id: users.bob.uuid,
+      winner_id: users.bob.id,
       deadline_at_ms: null,
     },
   },
@@ -281,14 +281,14 @@ export const finishedMissingParticipantSnapshot = {
   game: {
     ...finishedSnapshot.game,
     participants: {
-      [users.alice.uuid]: users.alice,
-      [users.bob.uuid]: users.bob,
+      [users.alice.id]: users.alice,
+      [users.bob.id]: users.bob,
     },
-    queue: [users.alice.uuid, users.bob.uuid, users.carol.uuid],
+    queue: [users.alice.id, users.bob.id, users.carol.id],
     scores: {
-      [users.alice.uuid]: 7,
-      [users.bob.uuid]: 10,
-      [users.carol.uuid]: 3,
+      [users.alice.id]: 7,
+      [users.bob.id]: 10,
+      [users.carol.id]: 3,
     },
   },
 };
@@ -345,7 +345,7 @@ export const readyTimelineOwnAssumptionSnapshot = {
     turn: {
       phase: "ready",
       assumptions: {
-        1: users.alice.uuid,
+        1: users.alice.id,
       },
       winner_id: null,
     },
@@ -365,7 +365,7 @@ export const challengingTimelineOwnAssumptionSnapshot = {
     turn: {
       phase: "challenging",
       assumptions: {
-        1: users.alice.uuid,
+        1: users.alice.id,
       },
       winner_id: null,
     },
@@ -385,7 +385,7 @@ export const readyTimelineSlotZeroSnapshot = {
     turn: {
       phase: "ready",
       assumptions: {
-        0: users.alice.uuid,
+        0: users.alice.id,
       },
       winner_id: null,
     },
@@ -405,7 +405,7 @@ export const readyTimelineOtherAssumptionSnapshot = {
     turn: {
       phase: "ready",
       assumptions: {
-        0: users.bob.uuid,
+        0: users.bob.id,
       },
       winner_id: null,
     },
@@ -425,8 +425,8 @@ export const readyTimelineMixedSnapshot = {
     turn: {
       phase: "ready",
       assumptions: {
-        0: users.bob.uuid,
-        2: users.alice.uuid,
+        0: users.bob.id,
+        2: users.alice.id,
       },
       winner_id: null,
     },

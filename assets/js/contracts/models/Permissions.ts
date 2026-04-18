@@ -4,7 +4,7 @@
  */
 
 /**
- * Caller-specific permissions computed by `Songy.Authorization.permissions/2`
+ * Caller-specific permissions computed by the authorization layer
  */
 export interface Permissions {
   can_control_playback: boolean;

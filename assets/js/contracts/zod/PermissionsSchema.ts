@@ -16,6 +16,4 @@ export const permissionsSchema = z
     can_make_assumptions: z.boolean(),
   })
   .strict()
-  .describe(
-    "Caller-specific permissions computed by `Songy.Authorization.permissions/2`",
-  );
+  .describe("Caller-specific permissions computed by the authorization layer");

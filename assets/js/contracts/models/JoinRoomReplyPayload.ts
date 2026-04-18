@@ -6,9 +6,12 @@
 export type JoinRoomReplyPayload =
   | {
       status: "ok";
+      /**
+       * Authoritative room snapshot sent to the client
+       */
       response: {
         /**
-         * JSON-encoded `Songy.Core.Game` snapshot
+         * JSON-encoded game snapshot
          */
         game: {
           id: string;
@@ -21,10 +24,10 @@ export type JoinRoomReplyPayload =
            */
           participants: {
             /**
-             * JSON-encoded `Songy.Core.User`
+             * JSON-encoded user
              */
             [k: string]: {
-              uuid: string;
+              id: string;
               name: string;
               avatar_url: string;
             };
@@ -88,7 +91,7 @@ export type JoinRoomReplyPayload =
           } | null;
         };
         /**
-         * Caller-specific permissions computed by `Songy.Authorization.permissions/2`
+         * Caller-specific permissions computed by the authorization layer
          */
         permissions: {
           can_control_playback: boolean;

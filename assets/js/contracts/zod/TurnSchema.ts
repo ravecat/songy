@@ -21,4 +21,4 @@ export const turnSchema = z
       ),
   })
   .strict()
-  .describe("JSON-encoded `Songy.Core.Turn`");
+  .describe("JSON-encoded turn");

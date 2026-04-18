@@ -1,23 +1,18 @@
 asyncapi: 3.0.0
 info:
-  title: Songy Async API
+  title: Game Room Async API
   version: 1.1.0
   description: >
-    Real-time async API over Phoenix Channels for Songy game rooms.
+    Real-time async API for multiplayer game rooms.
 
-    All room interactions go through a single Phoenix Channel per game room
-    (`room:{room_id}`) over the authenticated user socket.
-
-    The specification models Phoenix protocol events (`phx_join`, `phx_reply`,
-    `phx_error`, `phx_close`) together with application events (`state` and
-    room actions such as `start_game` or `get_provider`).
+    This document defines the room-scoped messaging contract between clients and
+    the backend, including room actions, authoritative room snapshots, and
+    protocol replies.
   license:
     name: MIT
   tags:
     - name: room
       description: Multiplayer game room messaging
-    - name: phoenix
-      description: Phoenix Channel protocol semantics
 servers:
   production:
     host: "{domain}"
@@ -55,25 +50,26 @@ channels:
     address: "room:{room_id}"
     title: Game Room
     description: >
-      Phoenix Channel for a single Songy game room.
+      Phoenix Channel for a single game room.
 
       The channel is stateful: the server returns the initial room snapshot in
-      the join reply and pushes `state` after subsequent state transitions.
+      the join reply and pushes `snapshot` after subsequent state transitions.
       Challenging-phase timer data is embedded in `game.turn.deadline_at_ms`.
     parameters:
       room_id:
-        description: Human-readable room identifier, for example `happy-tiger-42`
+        description:
+          Human-readable room identifier, for example `happy-tiger-42`
     messages:
-      phxJoin:
-        $ref: "#/components/messages/phxJoin"
-      phxJoinReply:
-        $ref: "#/components/messages/phxJoinReply"
-      phxError:
-        $ref: "#/components/messages/phxError"
-      phxClose:
-        $ref: "#/components/messages/phxClose"
-      stateOut:
-        $ref: "#/components/messages/stateOut"
+      joinRoomRequest:
+        $ref: "#/components/messages/joinRoomRequest"
+      joinRoomReply:
+        $ref: "#/components/messages/joinRoomReply"
+      channelError:
+        $ref: "#/components/messages/channelError"
+      channelClosed:
+        $ref: "#/components/messages/channelClosed"
+      snapshot:
+        $ref: "#/components/messages/snapshot"
       startGame:
         $ref: "#/components/messages/startGame"
       startPlayback:
@@ -94,18 +90,6 @@ channels:
         $ref: "#/components/messages/makeAssumptionReplyOk"
       makeAssumptionReplyUnknownEvent:
         $ref: "#/components/messages/makeAssumptionReplyUnknownEvent"
-      getProvider:
-        $ref: "#/components/messages/getProvider"
-      getProviderReplyOk:
-        $ref: "#/components/messages/getProviderReplyOk"
-      getProviderReplyInvalidCredentials:
-        $ref: "#/components/messages/getProviderReplyInvalidCredentials"
-      updateProvider:
-        $ref: "#/components/messages/updateProvider"
-      updateProviderReplyOk:
-        $ref: "#/components/messages/updateProviderReplyOk"
-      updateProviderReplyProviderNotFound:
-        $ref: "#/components/messages/updateProviderReplyProviderNotFound"
       unknownEventReply:
         $ref: "#/components/messages/unknownEventReply"
     bindings:
@@ -123,12 +107,12 @@ operations:
       On success the server confirms the join with the initial room snapshot.
       On failure the join is rejected with `game_not_found`.
     messages:
-      - $ref: "#/channels/gameRoom/messages/phxJoin"
+      - $ref: "#/channels/gameRoom/messages/joinRoomRequest"
     reply:
       channel:
         $ref: "#/channels/gameRoom"
       messages:
-        - $ref: "#/channels/gameRoom/messages/phxJoinReply"
+        - $ref: "#/channels/gameRoom/messages/joinRoomReply"
   startGame:
     action: send
     channel:
@@ -137,7 +121,7 @@ operations:
     description: |
       Client sends `start_game` with an empty payload.
       The channel intentionally does not reply to this event.
-      Success is observed via a subsequent `state` push.
+      Success is observed via a subsequent `snapshot` push.
       Failures are logged server-side and also produce no reply.
     messages:
       - $ref: "#/channels/gameRoom/messages/startGame"
@@ -181,7 +165,7 @@ operations:
     description: |
       Client sends `advance_turn` to move the game forward.
       Success returns `phx_reply` with empty `response`.
-      The resulting game snapshot is delivered separately via `state`.
+      The resulting game snapshot is delivered separately via `snapshot`.
       Failures are logged server-side and produce no reply.
     messages:
       - $ref: "#/channels/gameRoom/messages/advanceTurn"
@@ -210,59 +194,20 @@ operations:
       messages:
         - $ref: "#/channels/gameRoom/messages/makeAssumptionReplyOk"
         - $ref: "#/channels/gameRoom/messages/makeAssumptionReplyUnknownEvent"
-  getProvider:
-    action: send
-    channel:
-      $ref: "#/channels/gameRoom"
-    summary: Fetch the caller's Spotify access token
-    description: |
-      Client sends `get_provider` with an empty payload.
-      The server always replies:
-      - `ok` with `{ token }` when a valid Spotify access token exists
-      - `error` with `invalid_credentials` otherwise
-    messages:
-      - $ref: "#/channels/gameRoom/messages/getProvider"
-    reply:
-      channel:
-        $ref: "#/channels/gameRoom"
-      messages:
-        - $ref: "#/channels/gameRoom/messages/getProviderReplyOk"
-        - $ref: "#/channels/gameRoom/messages/getProviderReplyInvalidCredentials"
-  updateProvider:
-    action: send
-    channel:
-      $ref: "#/channels/gameRoom"
-    summary: Patch the caller's Spotify provider state
-    description: |
-      Client sends `update_provider` with a partial provider patch.
-      The current frontend uses this primarily for `device_id`, but the channel
-      also accepts token-related fields.
-
-      The server replies:
-      - `ok` with empty `response` when the provider record exists
-      - `error` with `provider_not_found` when no provider record is available
-    messages:
-      - $ref: "#/channels/gameRoom/messages/updateProvider"
-    reply:
-      channel:
-        $ref: "#/channels/gameRoom"
-      messages:
-        - $ref: "#/channels/gameRoom/messages/updateProviderReplyOk"
-        - $ref: "#/channels/gameRoom/messages/updateProviderReplyProviderNotFound"
-  receiveState:
+  receiveSnapshot:
     action: receive
     channel:
       $ref: "#/channels/gameRoom"
-    summary: Receive the latest full room state
+    summary: Receive the latest room snapshot
     description: |
-      Server pushes `state`:
+      Server pushes `snapshot`:
       - immediately after a successful join
       - after any game transition or state change
 
       The payload includes the full `game` snapshot and the caller-specific
       permission flags.
     messages:
-      - $ref: "#/channels/gameRoom/messages/stateOut"
+      - $ref: "#/channels/gameRoom/messages/snapshot"
   receiveError:
     action: receive
     channel:
@@ -272,7 +217,7 @@ operations:
       Phoenix protocol-level error event emitted when the channel crashes
       or the transport fails.
     messages:
-      - $ref: "#/channels/gameRoom/messages/phxError"
+      - $ref: "#/channels/gameRoom/messages/channelError"
   receiveClose:
     action: receive
     channel:
@@ -281,7 +226,7 @@ operations:
     description: |
       Phoenix protocol-level close event emitted on channel shutdown or leave.
     messages:
-      - $ref: "#/channels/gameRoom/messages/phxClose"
+      - $ref: "#/channels/gameRoom/messages/channelClosed"
 components:
   serverVariables:
     domain:
@@ -290,113 +235,49 @@ components:
       default: "5000"
       description: Server port. Set via `PORT`
   messages:
-    phxJoin:
+    joinRoomRequest:
       name: phx_join
       title: Join Room
       summary: Join request for a room topic
+      tags:
+        - name: phoenix
       contentType: application/json
       payload:
         $ref: "#/components/schemas/joinPayload"
-      examples:
-        - name: join-empty
-          payload: {}
-    phxJoinReply:
+    joinRoomReply:
       name: phx_reply
       title: Join Reply
       summary: Join success or failure
+      tags:
+        - name: phoenix
       contentType: application/json
       payload:
         $ref: "#/components/schemas/joinReply"
-      examples:
-        - name: join-ok
-          payload:
-            status: ok
-            response:
-              game:
-                id: game-123
-                owner_id: owner123
-                max_participants: 8
-                max_score: 10
-                status: waiting
-                participants: {}
-                scores: {}
-                player:
-                  is_playback: false
-                timelines: {}
-                created_at: "2026-01-01T00:00:00Z"
-                queue: []
-                cursor: 0
-                track: null
-                turn: null
-              permissions:
-                can_control_playback: false
-                can_advance_turn: false
-                can_start_game: true
-                can_start_turn: false
-                can_restart_game: false
-                can_see_assumptions: false
-                can_make_assumptions: false
-        - name: join-error-game-not-found
-          payload:
-            status: error
-            response:
-              reason: game_not_found
-    phxError:
+    channelError:
       name: phx_error
       title: Channel Error
       summary: Phoenix channel error event
+      tags:
+        - name: phoenix
       contentType: application/json
       payload:
         $ref: "#/components/schemas/phxSystemPayload"
-      examples:
-        - name: error
-          payload:
-            reason: internal_error
-    phxClose:
+    channelClosed:
       name: phx_close
       title: Channel Closed
       summary: Phoenix channel close event
+      tags:
+        - name: phoenix
       contentType: application/json
       payload:
         $ref: "#/components/schemas/phxSystemPayload"
-      examples:
-        - name: close
-          payload:
-            reason: closed
-    stateOut:
-      name: state
-      title: State Push
-      summary: Full game state and caller permissions
+    snapshot:
+      name: snapshot
+      title: Snapshot Push
+      summary: Full room snapshot and caller permissions
       contentType: application/json
       payload:
-        $ref: "#/components/schemas/statePayload"
-      examples:
-        - name: waiting-room
-          payload:
-            game:
-              id: happy-tiger-42
-              owner_id: owner123
-              max_participants: 10
-              max_score: 10
-              status: waiting
-              participants: {}
-              scores: {}
-              player:
-                is_playback: false
-              timelines: {}
-              created_at: "2026-03-20T12:00:00Z"
-              queue: []
-              cursor: 0
-              track: null
-              turn: null
-            permissions:
-              can_control_playback: false
-              can_advance_turn: false
-              can_start_game: true
-              can_start_turn: false
-              can_restart_game: false
-              can_see_assumptions: false
-              can_make_assumptions: false
+        $ref: "#/components/schemas/snapshotPayload"
     startGame:
       name: start_game
       title: Start Game
@@ -404,9 +285,6 @@ components:
       contentType: application/json
       payload:
         $ref: "#/components/schemas/emptyPayload"
-      examples:
-        - name: start-game
-          payload: {}
     startPlayback:
       name: start_playback
       title: Start Playback
@@ -414,9 +292,6 @@ components:
       contentType: application/json
       payload:
         $ref: "#/components/schemas/emptyPayload"
-      examples:
-        - name: start-playback
-          payload: {}
     startPlaybackReplyOk:
       name: phx_reply
       title: Start Playback Reply
@@ -424,11 +299,6 @@ components:
       contentType: application/json
       payload:
         $ref: "#/components/schemas/emptyReply"
-      examples:
-        - name: ok
-          payload:
-            status: ok
-            response: {}
     pausePlayback:
       name: pause_playback
       title: Pause Playback
@@ -436,9 +306,6 @@ components:
       contentType: application/json
       payload:
         $ref: "#/components/schemas/emptyPayload"
-      examples:
-        - name: pause-playback
-          payload: {}
     pausePlaybackReplyOk:
       name: phx_reply
       title: Pause Playback Reply
@@ -446,11 +313,6 @@ components:
       contentType: application/json
       payload:
         $ref: "#/components/schemas/emptyReply"
-      examples:
-        - name: ok
-          payload:
-            status: ok
-            response: {}
     advanceTurn:
       name: advance_turn
       title: Advance Turn
@@ -458,9 +320,6 @@ components:
       contentType: application/json
       payload:
         $ref: "#/components/schemas/emptyPayload"
-      examples:
-        - name: advance-turn
-          payload: {}
     advanceTurnReplyOk:
       name: phx_reply
       title: Advance Turn Reply
@@ -468,11 +327,6 @@ components:
       contentType: application/json
       payload:
         $ref: "#/components/schemas/emptyReply"
-      examples:
-        - name: ok
-          payload:
-            status: ok
-            response: {}
     makeAssumption:
       name: make_assumption
       title: Make Assumption
@@ -480,10 +334,6 @@ components:
       contentType: application/json
       payload:
         $ref: "#/components/schemas/assumptionPayload"
-      examples:
-        - name: guess-position-zero
-          payload:
-            position: 0
     makeAssumptionReplyOk:
       name: phx_reply
       title: Make Assumption Reply
@@ -491,11 +341,6 @@ components:
       contentType: application/json
       payload:
         $ref: "#/components/schemas/emptyReply"
-      examples:
-        - name: ok
-          payload:
-            status: ok
-            response: {}
     makeAssumptionReplyUnknownEvent:
       name: phx_reply
       title: Make Assumption Unknown Event Reply
@@ -503,89 +348,6 @@ components:
       contentType: application/json
       payload:
         $ref: "#/components/schemas/unknownEventReply"
-      examples:
-        - name: missing-position
-          payload:
-            status: error
-            response:
-              reason: unknown_event
-              event: make_assumption
-    getProvider:
-      name: get_provider
-      title: Get Provider
-      summary: Request the caller's Spotify access token
-      contentType: application/json
-      payload:
-        $ref: "#/components/schemas/emptyPayload"
-      examples:
-        - name: get-provider
-          payload: {}
-    getProviderReplyOk:
-      name: phx_reply
-      title: Get Provider Reply
-      summary: Successful provider token reply
-      contentType: application/json
-      payload:
-        $ref: "#/components/schemas/providerTokenReply"
-      examples:
-        - name: token
-          payload:
-            status: ok
-            response:
-              token: spotify-access-token
-    getProviderReplyInvalidCredentials:
-      name: phx_reply
-      title: Get Provider Error Reply
-      summary: Invalid credentials provider reply
-      contentType: application/json
-      payload:
-        $ref: "#/components/schemas/invalidCredentialsReply"
-      examples:
-        - name: invalid-credentials
-          payload:
-            status: error
-            response:
-              reason: invalid_credentials
-    updateProvider:
-      name: update_provider
-      title: Update Provider
-      summary: Patch the caller's Spotify provider record
-      contentType: application/json
-      payload:
-        $ref: "#/components/schemas/updateProviderPayload"
-      examples:
-        - name: update-device
-          payload:
-            device_id: spotify-web-sdk-device
-        - name: update-token
-          payload:
-            access_token: refreshed-token
-            refresh_token: refreshed-refresh-token
-    updateProviderReplyOk:
-      name: phx_reply
-      title: Update Provider Reply
-      summary: Successful provider update reply
-      contentType: application/json
-      payload:
-        $ref: "#/components/schemas/emptyReply"
-      examples:
-        - name: ok
-          payload:
-            status: ok
-            response: {}
-    updateProviderReplyProviderNotFound:
-      name: phx_reply
-      title: Update Provider Error Reply
-      summary: Provider missing for the current user
-      contentType: application/json
-      payload:
-        $ref: "#/components/schemas/providerNotFoundReply"
-      examples:
-        - name: provider-not-found
-          payload:
-            status: error
-            response:
-              reason: provider_not_found
     unknownEventReply:
       name: phx_reply
       title: Unknown Event Reply
@@ -593,17 +355,11 @@ components:
       contentType: application/json
       payload:
         $ref: "#/components/schemas/unknownEventReply"
-      examples:
-        - name: unknown-event
-          payload:
-            status: error
-            response:
-              reason: unknown_event
-              event: unknown_event
   schemas:
     socketConnectQuery:
       type: object
-      description: Query parameters used by the Phoenix JS client during socket connect
+      description:
+        Query parameters used by the Phoenix JS client during socket connect
       properties:
         vsn:
           type: string
@@ -612,8 +368,8 @@ components:
         user_token:
           type: string
           description: >
-            `Phoenix.Token` signed on page render and verified by
-            `SongyWeb.UserSocket.connect/3` with `max_age: 86400`
+            Signed user token issued on page render and accepted during socket
+            authentication with a maximum age of 86400 seconds
       required:
         - vsn
         - user_token
@@ -632,7 +388,7 @@ components:
             status:
               const: ok
             response:
-              $ref: "#/components/schemas/statePayload"
+              $ref: "#/components/schemas/snapshotPayload"
           additionalProperties: false
         - type: object
           required:
@@ -647,15 +403,18 @@ components:
                 - reason
               properties:
                 reason:
-                  const: game_not_found
+                  type: string
+                  enum:
+                    - game_not_found
               additionalProperties: false
           additionalProperties: false
     phxSystemPayload:
       type: object
       description: Phoenix protocol payload for lifecycle events
       additionalProperties: true
-    statePayload:
+    snapshotPayload:
       type: object
+      description: Authoritative room snapshot sent to the client
       required:
         - game
         - permissions
@@ -667,7 +426,7 @@ components:
       additionalProperties: false
     game:
       type: object
-      description: JSON-encoded `Songy.Core.Game` snapshot
+      description: JSON-encoded game snapshot
       required:
         - id
         - owner_id
@@ -742,13 +501,13 @@ components:
       additionalProperties: false
     user:
       type: object
-      description: JSON-encoded `Songy.Core.User`
+      description: JSON-encoded user
       required:
-        - uuid
+        - id
         - name
         - avatar_url
       properties:
-        uuid:
+        id:
           type: string
           pattern: "^[0-9a-f]{32}$"
         name:
@@ -759,7 +518,7 @@ components:
       additionalProperties: false
     player:
       type: object
-      description: JSON-encoded `Songy.Core.Player`
+      description: JSON-encoded player
       required:
         - is_playback
       properties:
@@ -768,7 +527,7 @@ components:
       additionalProperties: false
     turn:
       type: object
-      description: JSON-encoded `Songy.Core.Turn`
+      description: JSON-encoded turn
       required:
         - phase
         - assumptions
@@ -785,8 +544,8 @@ components:
         assumptions:
           type: object
           description: >
-            Map keyed by JSON stringified zero-based positions.
-            Values are user ids.
+            Map keyed by JSON stringified zero-based positions. Values are user
+            ids.
           additionalProperties:
             type: string
         winner_id:
@@ -804,7 +563,7 @@ components:
       additionalProperties: false
     track:
       type: object
-      description: JSON-encoded `Songy.Core.Track`
+      description: JSON-encoded track
       required:
         - id
         - title
@@ -824,19 +583,22 @@ components:
         cover_url:
           oneOf:
             - type: string
+              format: uri
             - type: "null"
         meta:
           type: object
           properties:
             preview_url:
               type: string
+              format: uri
             uri:
               type: string
           additionalProperties: true
       additionalProperties: false
     permissions:
       type: object
-      description: Caller-specific permissions computed by `Songy.Authorization.permissions/2`
+      description:
+        Caller-specific permissions computed by the authorization layer
       required:
         - can_control_playback
         - can_advance_turn
@@ -873,21 +635,9 @@ components:
         position:
           type: integer
           minimum: 0
-          description: Zero-based insertion position in the active player's timeline
+          description:
+            Zero-based insertion position in the active player's timeline
       additionalProperties: false
-    updateProviderPayload:
-      type: object
-      description: >
-        Partial Spotify provider patch accepted by `update_provider`.
-        Unknown keys are ignored by the current provider struct update logic.
-      properties:
-        access_token:
-          type: string
-        refresh_token:
-          type: string
-        device_id:
-          type: string
-      additionalProperties: true
     emptyReply:
       type: object
       required:
@@ -899,57 +649,6 @@ components:
         response:
           type: object
           additionalProperties: true
-      additionalProperties: false
-    providerTokenReply:
-      type: object
-      required:
-        - status
-        - response
-      properties:
-        status:
-          const: ok
-        response:
-          type: object
-          required:
-            - token
-          properties:
-            token:
-              type: string
-          additionalProperties: false
-      additionalProperties: false
-    invalidCredentialsReply:
-      type: object
-      required:
-        - status
-        - response
-      properties:
-        status:
-          const: error
-        response:
-          type: object
-          required:
-            - reason
-          properties:
-            reason:
-              const: invalid_credentials
-          additionalProperties: false
-      additionalProperties: false
-    providerNotFoundReply:
-      type: object
-      required:
-        - status
-        - response
-      properties:
-        status:
-          const: error
-        response:
-          type: object
-          required:
-            - reason
-          properties:
-            reason:
-              const: provider_not_found
-          additionalProperties: false
       additionalProperties: false
     unknownEventReply:
       type: object
@@ -977,5 +676,5 @@ components:
       name: user_token
       in: query
       description: >
-        `Phoenix.Token` passed as the `user_token` query parameter during socket
-        connect. Verified in `SongyWeb.UserSocket.connect/3`.
+        Signed token passed as the `user_token` query parameter during socket
+        connect.

@@ -2,8 +2,6 @@ defmodule SongyWeb.RoomChannel do
   use SongyWeb, :channel
 
   alias Songy.Boundary.GameSession
-  alias Songy.Core.Provider.Spotify
-  alias Songy.Provider.Session
   alias SongyWeb.Presence
 
   require Logger
@@ -34,7 +32,7 @@ defmodule SongyWeb.RoomChannel do
   def handle_info({:state, game}, socket) do
     current_user_id = socket.assigns.current_user_id
     permissions = Songy.Authorization.permissions(game, current_user_id)
-    push(socket, "state", %{game: game, permissions: permissions})
+    push(socket, "snapshot", %{game: game, permissions: permissions})
 
     {:noreply, socket}
   end
@@ -86,44 +84,6 @@ defmodule SongyWeb.RoomChannel do
       {:error, reason} ->
         Logger.warning("Pause playback failed: #{inspect(reason)}")
         {:noreply, socket}
-    end
-  end
-
-  @impl true
-  def handle_in("get_provider", _payload, socket) do
-    user_id = socket.assigns.current_user_id
-
-    case Songy.Providers.lookup(user_id) do
-      {:ok, %Session{data: %Spotify{access_token: token}}} when not is_nil(token) ->
-        {:reply, {:ok, %{token: token}}, socket}
-
-      {:ok, _session} ->
-        {:reply, {:error, %{reason: "invalid_credentials"}}, socket}
-
-      {:error, _reason} ->
-        {:reply, {:error, %{reason: "invalid_credentials"}}, socket}
-    end
-  end
-
-  @impl true
-  def handle_in("update_provider", payload, socket) do
-    user_id = socket.assigns.current_user_id
-
-    case Songy.Providers.lookup(user_id) do
-      {:ok, %Session{data: %Spotify{} = current_data} = session} ->
-        attrs = for {key, val} <- payload, into: %{}, do: {String.to_atom(key), val}
-        updated_data = Songy.Core.Provider.Spotify.update(current_data, attrs)
-        :ok = Songy.Providers.update(user_id, Session.put_data(session, updated_data))
-        Logger.debug("Updated provider data for user #{user_id} with #{inspect(payload)}")
-        {:reply, :ok, socket}
-
-      {:ok, _session} ->
-        {:reply, {:error, %{reason: "provider_not_found"}}, socket}
-
-      {:error, _reason} ->
-        Logger.warning("Failed to update provider for user #{user_id}: user not found in ETS")
-
-        {:reply, {:error, %{reason: "provider_not_found"}}, socket}
     end
   end
 

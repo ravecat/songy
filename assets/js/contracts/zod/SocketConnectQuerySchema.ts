@@ -13,7 +13,7 @@ export const socketConnectQuerySchema = z
     user_token: z
       .string()
       .describe(
-        "`Phoenix.Token` signed on page render and verified by `SongyWeb.UserSocket.connect/3` with `max_age: 86400`\n",
+        "Signed user token issued on page render and accepted during socket authentication with a maximum age of 86400 seconds\n",
       ),
   })
   .strict()

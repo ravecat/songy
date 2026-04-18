@@ -1,6 +1,6 @@
 {
   "type": "object",
-  "description": "JSON-encoded `Songy.Core.Track`",
+  "description": "JSON-encoded track",
   "required": ["id", "title", "artist", "year", "cover_url", "meta"],
   "properties": {
     "id": {
@@ -18,7 +18,8 @@
     "cover_url": {
       "oneOf": [
         {
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         {
           "type": "null"
@@ -29,7 +30,8 @@
       "type": "object",
       "properties": {
         "preview_url": {
-          "type": "string"
+          "type": "string",
+          "format": "uri"
         },
         "uri": {
           "type": "string"

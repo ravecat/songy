@@ -197,7 +197,7 @@ participant.
 Two paths depending on active provider:
 
 - **Spotify**: server calls `PUT /v1/me/player/play` with device ID and track URI; client has Spotify Web Playback
-  SDK connected via token received from `get_provider`.
+  SDK connected using provider credentials established outside the room channel.
 - **iTunes / Apple Music**: server returns `preview_url` in track metadata; client plays via HTML5 `<audio>`.
 
 ## Domain model
@@ -328,8 +328,6 @@ Client to server:
 | `make_assumption` | `%{"position" => int}` | Place track on timeline                   |
 | `start_playback`  | `{}`                   | Start audio playback                      |
 | `pause_playback`  | `{}`                   | Pause audio playback                      |
-| `get_provider`    | `{}`                   | Returns `%{token: token}` for Spotify SDK |
-| `update_provider` | `%{...}`               | Update provider credentials               |
 | `get_current_user`| `{}`                   | Returns current User struct               |
 
 Server to client:
@@ -499,11 +497,6 @@ Role-based via `Songy.Policy` (Bodyguard):
 | `make_assumption`  | player (`:ready`), challenger (`:challenging`)  | in_progress         |
 | `control_playback` | player, owner, challenger (`:challenging` only) | in_progress         |
 | `see_assumptions`  | any                                             | `:results` phase    |
-
-#### Provider token boundaries
-
-Spotify tokens live in ETS only, never in cookies or client state. Client receives the access token solely via
-`get_provider` channel event for the Web Playback SDK. Invalid or expired provider falls back to iTunes.
 
 #### Threat model
 

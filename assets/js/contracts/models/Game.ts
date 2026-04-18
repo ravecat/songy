@@ -4,7 +4,7 @@
  */
 
 /**
- * JSON-encoded `Songy.Core.Game` snapshot
+ * JSON-encoded game snapshot
  */
 export interface Game {
   id: string;
@@ -17,10 +17,10 @@ export interface Game {
    */
   participants: {
     /**
-     * JSON-encoded `Songy.Core.User`
+     * JSON-encoded user
      */
     [k: string]: {
-      uuid: string;
+      id: string;
       name: string;
       avatar_url: string;
     };

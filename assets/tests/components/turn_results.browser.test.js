@@ -13,7 +13,7 @@ const resultsChallengers = resultsAssumptionIds
   .map((userId) => resultsActivePlayerWinsSnapshot.game.participants[userId])
   .filter(Boolean);
 const resultsNonChallengers = Object.values(resultsActivePlayerWinsSnapshot.game.participants).filter(
-  (user) => !resultsAssumptionIds.includes(user.uuid),
+  (user) => !resultsAssumptionIds.includes(user.id),
 );
 const resultsWinner =
   resultsActivePlayerWinsSnapshot.game.participants[

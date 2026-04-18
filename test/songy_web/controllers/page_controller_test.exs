@@ -16,7 +16,7 @@ defmodule SongyWeb.PageControllerTest do
       conn = get(conn, ~p"/")
 
       props = inertia_props(conn)
-      assert props.scope.user.uuid == conn.assigns.current_user.uuid
+      assert props.scope.user.id == conn.assigns.current_user.id
       assert props.scope.user.name == conn.assigns.current_user.name
     end
   end
@@ -27,12 +27,12 @@ defmodule SongyWeb.PageControllerTest do
       assert redirected_to(conn, 302) =~ ~r"^/[A-Za-z0-9_-]+$"
 
       location = redirected_to(conn, 302)
-      uuid = String.trim_leading(location, "/")
+      room_id = String.trim_leading(location, "/")
 
-      assert {:ok, pid} = GameSession.lookup_game_session(uuid)
+      assert {:ok, pid} = GameSession.lookup_game_session(room_id)
       assert Process.alive?(pid)
 
-      GameSession.end_game_session(uuid)
+      GameSession.end_game_session(room_id)
     end
   end
 
@@ -83,7 +83,7 @@ defmodule SongyWeb.PageControllerTest do
     test "passes provider assignment to inertia", %{conn: conn} do
       {:ok, game} = GameSession.create_game_session("owner123")
 
-      Repatch.patch(Songy.Providers, :lookup, fn _user_uuid ->
+      Repatch.patch(Songy.Providers, :lookup, fn _user_id ->
         {:ok, Session.normalize!(%Songy.Core.Provider.ITunes{})}
       end)
 
@@ -103,7 +103,7 @@ defmodule SongyWeb.PageControllerTest do
       conn = get(conn, ~p"/#{game.id}")
 
       props = inertia_props(conn)
-      assert props.scope.user.uuid == conn.assigns.current_user.uuid
+      assert props.scope.user.id == conn.assigns.current_user.id
       assert props.scope.user.name == conn.assigns.current_user.name
 
       GameSession.end_game_session(game.id)

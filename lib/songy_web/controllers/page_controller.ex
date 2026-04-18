@@ -5,7 +5,7 @@ defmodule SongyWeb.PageController do
   alias Songy.Music
 
   def home(conn, _params) do
-    user_id = conn.assigns.current_user.uuid
+    user_id = conn.assigns.current_user.id
 
     conn
     |> assign_prop(:tracks, inertia_defer(fn -> Music.fetch_cover_tracks(user_id) end))
@@ -13,7 +13,7 @@ defmodule SongyWeb.PageController do
   end
 
   def create(conn, _params) do
-    user_id = conn.assigns.current_user.uuid
+    user_id = conn.assigns.current_user.id
 
     case GameSession.create_game_session(user_id) do
       {:ok, game} ->
