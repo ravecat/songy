@@ -368,6 +368,9 @@ export const challengingTimelineOwnAssumptionSnapshot = {
         1: users.alice.id,
       },
       winner_id: null,
+      get deadline_at_ms() {
+        return Date.now() + 12_000;
+      },
     },
   },
 };
@@ -558,7 +561,11 @@ export const challengingTimerSnapshot = {
     ...readySnapshot.game,
     turn: {
       phase: "challenging",
-      deadline_at_ms: Date.parse("2026-01-01T00:00:12.000Z"),
+      assumptions: {},
+      winner_id: null,
+      get deadline_at_ms() {
+        return Date.now() + 12_000;
+      },
     },
   },
 };
