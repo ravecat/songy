@@ -32,11 +32,10 @@ describe("game provider", () => {
     });
 
     await expect
-      .element(screen.getByRole("list", { name: "Lobby players" }))
-      .toBeVisible();
-    await expect.element(screen.getByText(users.alice.name)).toBeVisible();
-    await expect
       .element(screen.getByRole("button", { name: "Copy share link" }))
+      .toBeVisible();
+    await expect
+      .element(screen.getByRole("status", { name: /players?\s+online/i }))
       .toBeVisible();
   });
 

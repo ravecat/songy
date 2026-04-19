@@ -1,18 +1,11 @@
 <script lang="ts">
   import { usePage } from "@inertiajs/svelte";
-  import { getGameContext } from "~/contexts/game";
-  import { Link, Copy, Check, Crown } from "lucide-svelte";
+  import { Link, Copy, Check } from "lucide-svelte";
   import Sleeve from "~components/sleeve.svelte";
   import type { Props } from "~pages/room.types";
 
   const page = usePage<Props>();
   let { qr = "" } = $derived($page.props);
-  const session = getGameContext();
-  const game = $derived($session.snapshot?.game ?? null);
-
-  const participants = $derived(game?.participants ?? {});
-  const queue = $derived(game?.queue ?? []);
-  const ownerId = $derived(game?.owner_id ?? "");
 
   let copied = $state(false);
 
@@ -24,34 +17,6 @@
 </script>
 
 <div class="lobby">
-  <div class="lobby__players" role="list" aria-label="Lobby players">
-    {#each queue as participantId, i (participantId)}
-      {@const participant = participants[participantId]}
-      {#if participant}
-        <div
-          class="lobby-player"
-          class:lobby-player_owner={participantId === ownerId}
-          style="--index: {i}"
-          role="listitem"
-        >
-          <div class="lobby-player__frame">
-            <img
-              src={participant.avatar_url}
-              alt={participant.name}
-              class="lobby-player__avatar"
-            />
-            {#if participantId === ownerId}
-              <div class="lobby-player__badge">
-                <Crown size={16} strokeWidth={2.5} />
-              </div>
-            {/if}
-          </div>
-          <span class="lobby-player__name">{participant.name}</span>
-        </div>
-      {/if}
-    {/each}
-  </div>
-
   <div class="lobby__record">
     <div class="lobby__sleeve-frame">
       <Sleeve />
@@ -94,82 +59,11 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    justify-self: stretch;
     gap: 1.5rem;
+    box-sizing: border-box;
+    width: 100%;
     padding: 1.5rem;
-    width: 100%;
-    height: 100%;
-  }
-
-  .lobby__players {
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    gap: var(--spacing-md);
-    flex-wrap: wrap;
-  }
-
-  .lobby-player {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    max-width: 5rem;
-    animation: avatar-pop 0.4s var(--ease-bounce) backwards;
-    animation-delay: calc(var(--index) * 0.08s);
-  }
-
-  .lobby-player__frame {
-    position: relative;
-    padding: var(--spacing-xs);
-    border: var(--border-thick) solid var(--color-white-emphasis);
-    border-radius: var(--radius-sm);
-    box-shadow: var(--shadow-base);
-  }
-
-  .lobby-player_owner .lobby-player__frame {
-    border-color: var(--color-gold);
-    box-shadow: var(--shadow-gold-glow), var(--shadow-base);
-  }
-
-  .lobby-player__avatar {
-    display: block;
-    width: 3.5rem;
-    height: 3.5rem;
-    border-radius: var(--radius-sm);
-    object-fit: cover;
-  }
-
-  .lobby-player__badge {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 1.25rem;
-    height: 1.25rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-sm);
-    background: var(--gradient-gold);
-    color: var(--color-white);
-  }
-
-  .lobby-player__name {
-    width: 100%;
-    margin-top: var(--spacing-sm);
-    font-size: var(--font-size-xs);
-    font-weight: var(--font-weight-medium);
-    color: var(--color-white-emphasis);
-    text-align: center;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  @keyframes avatar-pop {
-    from {
-      opacity: 0;
-      transform: scale(0.5);
-    }
+    min-height: 100%;
   }
 
   .lobby__record {
@@ -199,15 +93,6 @@
   }
 
   @media (max-width: 639px) {
-    .lobby-player__avatar {
-      width: 2.5rem;
-      height: 2.5rem;
-    }
-
-    .lobby__players {
-      gap: var(--spacing-sm);
-    }
-
     .lobby-share {
       inline-size: 17rem;
     }

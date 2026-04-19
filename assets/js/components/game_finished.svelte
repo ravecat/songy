@@ -44,91 +44,74 @@
 </script>
 
 <section class="game-finished" aria-label="Game finished">
-  <div class="game-finished__viewport">
-    <div class="game-finished__hero">
-      <span class="game-finished__eyebrow">Game over</span>
-      <h2 class="game-finished__title">{winner.name} wins</h2>
+  <div class="game-finished__hero">
+    <span class="game-finished__eyebrow">Game over</span>
+    <h2 class="game-finished__title">{winner.name} wins</h2>
 
-      <div class="game-finished__winner-badge">
-        {#if winner.avatarUrl}
-          <img
-            src={winner.avatarUrl}
-            alt={winner.name}
-            class="game-finished__winner-avatar"
-          />
-        {:else}
-          <div class="game-finished__winner-fallback" aria-hidden="true">
-            <Crown size={28} strokeWidth={2.25} />
-          </div>
-        {/if}
-      </div>
+    <div class="game-finished__winner-badge">
+      {#if winner.avatarUrl}
+        <img
+          src={winner.avatarUrl}
+          alt={winner.name}
+          class="game-finished__winner-avatar"
+        />
+      {:else}
+        <div class="game-finished__winner-fallback" aria-hidden="true">
+          <Crown size={28} strokeWidth={2.25} />
+        </div>
+      {/if}
     </div>
-
-    <ol class="game-finished__leaderboard" aria-label="Final leaderboard">
-      {#each leaderboard as entry, index (entry.userId)}
-        <li
-          class="game-finished__entry"
-          class:game-finished__entry--winner={index === 0}
-          aria-current={index === 0 ? "true" : undefined}
-        >
-          <div class="game-finished__entry-rank">
-            {#if index === 0}
-              <Crown size={16} strokeWidth={2.25} />
-            {:else}
-              <span>{index + 1}</span>
-            {/if}
-          </div>
-
-          <div class="game-finished__entry-user">
-            {#if entry.avatarUrl}
-              <img
-                src={entry.avatarUrl}
-                alt={entry.name}
-                class="game-finished__entry-avatar"
-              />
-            {:else}
-              <div
-                class="game-finished__entry-avatar-fallback"
-                aria-hidden="true"
-              >
-                {entry.name.slice(0, 1).toUpperCase()}
-              </div>
-            {/if}
-            <span class="game-finished__entry-name">{entry.name}</span>
-          </div>
-
-          <span class="game-finished__entry-score">{entry.score}</span>
-        </li>
-      {/each}
-    </ol>
   </div>
+
+  <ol class="game-finished__leaderboard" aria-label="Final leaderboard">
+    {#each leaderboard as entry, index (entry.userId)}
+      <li
+        class="game-finished__entry"
+        class:game-finished__entry--winner={index === 0}
+        aria-current={index === 0 ? "true" : undefined}
+      >
+        <div class="game-finished__entry-rank">
+          {#if index === 0}
+            <Crown size={16} strokeWidth={2.25} />
+          {:else}
+            <span>{index + 1}</span>
+          {/if}
+        </div>
+
+        <div class="game-finished__entry-user">
+          {#if entry.avatarUrl}
+            <img
+              src={entry.avatarUrl}
+              alt={entry.name}
+              class="game-finished__entry-avatar"
+            />
+          {:else}
+            <div
+              class="game-finished__entry-avatar-fallback"
+              aria-hidden="true"
+            >
+              {entry.name.slice(0, 1).toUpperCase()}
+            </div>
+          {/if}
+          <span class="game-finished__entry-name">{entry.name}</span>
+        </div>
+
+        <span class="game-finished__entry-score">{entry.score}</span>
+      </li>
+    {/each}
+  </ol>
 </section>
 
 <style>
   .game-finished {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  .game-finished__viewport {
     display: grid;
     align-content: start;
     justify-items: center;
     gap: clamp(0.875rem, 2.4vh, 1.5rem);
-    width: 100%;
-    height: 100%;
-    min-height: 0;
+    box-sizing: border-box;
     padding: clamp(0.75rem, 2.4vmin, 1.5rem);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: none;
-  }
-
-  .game-finished__viewport::-webkit-scrollbar {
-    display: none;
+    width: 100%;
+    min-height: 100%;
   }
 
   .game-finished__hero {

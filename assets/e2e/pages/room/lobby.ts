@@ -4,7 +4,7 @@ export class RoomLobby {
   readonly shareButton: Locator;
   readonly startGameButton: Locator;
   readonly forwardButton: Locator;
-  readonly players: Locator;
+  readonly participantAvatars: Locator;
   readonly participantsOnlineStatus: Locator;
 
   constructor(readonly page: Page) {
@@ -13,12 +13,10 @@ export class RoomLobby {
     });
     this.startGameButton = page.getByRole("button", { name: "Start game" });
     this.forwardButton = page.getByRole("button", { name: "Forward" });
-    this.players = page
-      .getByRole("list", { name: "Lobby players" })
-      .getByRole("listitem");
     this.participantsOnlineStatus = page.getByRole("status", {
       name: /\d+ players? online/i,
     });
+    this.participantAvatars = this.participantsOnlineStatus.locator("img");
   }
 
   async startGame(): Promise<void> {

@@ -376,7 +376,6 @@ body,
   font-family: inherit;
 }
 
-/* Gradient background visible during page transitions */
-html {
+#app {
   background-image: var(--landing-gradient);
 }

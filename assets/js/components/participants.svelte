@@ -1,53 +1,61 @@
 <script lang="ts">
+  import type { Game } from "~contracts";
   import { getGameContext } from "~/contexts/game";
-  import { Users } from "lucide-svelte";
+
+  type Participant = Game["participants"][string];
 
   const session = getGameContext();
   const game = $derived($session.snapshot?.game ?? null);
+  const participants = $derived(game?.participants ?? {});
+  const queue = $derived(game?.queue ?? []);
+  const participantList = $derived(Object.values(participants));
 
-  const playerCount = $derived(
-    game?.participants ? Object.keys(game.participants).length : 0,
+  const visibleParticipants = $derived(
+    queue
+      .map((participantId) => participants[participantId])
+      .filter((participant): participant is Participant => Boolean(participant))
+      .slice(0, 3),
   );
+
+  const playerCount = $derived(participantList.length);
 </script>
 
 <div
-  class="participants-indicator"
+  class="participants-indicator flex items-center justify-end text-white"
   role="status"
   aria-live="polite"
   aria-atomic="true"
   aria-label={`${playerCount} player${playerCount !== 1 ? "s" : ""} online`}
 >
-  <Users size={20} strokeWidth={2.5} aria-hidden="true" />
-  <span class="participants-indicator__value" aria-hidden="true">
-    {playerCount}
-  </span>
+  <div class="flex -space-x-2 rtl:space-x-reverse">
+    {#each visibleParticipants as participant (participant.id)}
+      <div class="avatar">
+        <div
+          class="ring-primary ring-offset-base-100 w-6 rounded-full ring-2 ring-offset-1 sm:w-7"
+        >
+          <img src={participant.avatar_url} alt="" />
+        </div>
+      </div>
+    {/each}
+
+    <div class="avatar avatar-placeholder">
+      <div
+        class="[background-image:var(--room-gradient)] ring-primary ring-offset-base-100 w-6 rounded-full text-white ring-2 ring-offset-1 sm:w-7"
+      >
+        <span
+          aria-hidden="true"
+          class="text-[0.625rem] font-semibold leading-none sm:text-[0.75rem]"
+        >
+          {playerCount}
+        </span>
+      </div>
+    </div>
+  </div>
 </div>
 
 <style>
   .participants-indicator {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    width: 3rem;
-    height: 3rem;
-    padding: 0.4rem;
-    box-sizing: border-box;
-    background: transparent;
-    border-radius: var(--radius-md);
-    color: white;
-    padding: 0;
-  }
-
-  .participants-indicator :global(svg) {
-    flex-shrink: 0;
-    display: block;
-  }
-
-  .participants-indicator__value {
-    font-size: 1rem;
-    font-weight: var(--font-weight-semibold);
-    line-height: 1;
-    min-width: 1.25rem;
+    min-width: 0;
+    max-width: 100%;
   }
 </style>

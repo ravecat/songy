@@ -16,7 +16,7 @@ describe("Score", () => {
     });
 
     await expect
-      .element(screen.getByRole("button", { name: "Your score: 3" }))
+      .element(screen.getByRole("img", { name: "Your score: 3" }))
       .toBeVisible();
   });
 
@@ -32,7 +32,7 @@ describe("Score", () => {
     });
 
     await expect
-      .element(screen.getByRole("button", { name: "Your score: 0" }))
+      .element(screen.getByRole("img", { name: "Your score: 0" }))
       .toBeVisible();
   });
 
@@ -48,7 +48,7 @@ describe("Score", () => {
     });
 
     await expect
-      .element(screen.getByRole("button", { name: "Your score: 0" }))
+      .element(screen.getByRole("img", { name: "Your score: 0" }))
       .toBeVisible();
   });
 });

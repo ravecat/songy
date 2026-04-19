@@ -29,6 +29,8 @@
     justify-content: center;
     align-items: center;
     text-align: center;
+    width: 100%;
+    min-height: 100%;
   }
 
   .turn-waiting__title {

@@ -1,7 +1,6 @@
 <script lang="ts">
   import { getGameContext } from "~/contexts/game";
   import { currentUser } from "~/stores/scope";
-  import { Star } from "lucide-svelte";
 
   const session = getGameContext();
   const game = $derived($session.snapshot?.game ?? null);
@@ -12,52 +11,33 @@
   });
 </script>
 
-<button class="score-button" type="button" aria-label={`Your score: ${score}`}>
-  <Star size={20} strokeWidth={2.5} />
-  <span class="score-button__value">{score}</span>
-</button>
+<div class="score-coin" role="img" aria-label={`Your score: ${score}`}>{score}</div>
 
 <style>
-  .score-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    width: 3rem;
-    height: 3rem;
-    padding: 0.4rem;
+  .score-coin {
+    display: grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
     box-sizing: border-box;
-    color: white;
-    background: transparent;
-    border: none;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    padding: 0;
-    transition: background-color 0.15s ease-out;
-  }
-
-  .score-button :global(svg) {
-    flex-shrink: 0;
-    display: block;
-  }
-
-  .score-button:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-
-  .score-button:active {
-    background-color: rgba(255, 255, 255, 0.2);
-  }
-
-  .score-button:focus-visible {
-    outline: var(--border-thick) solid rgba(255, 255, 255, 0.35);
-    outline-offset: var(--spacing-xs);
-  }
-
-  .score-button__value {
-    font-size: 1rem;
-    font-weight: var(--font-weight-semibold);
+    border-radius: 9999px;
+    background: var(--gradient-gold);
+    box-shadow:
+      0 0 0 1px var(--color-base-100),
+      0 0 0 3px var(--color-primary);
+    color: var(--spotify-black);
+    font-size: 0.625rem;
+    font-weight: 700;
     line-height: 1;
-    min-width: 1.25rem;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+  }
+
+  @media (width >= 640px) {
+    .score-coin {
+      width: 1.75rem;
+      height: 1.75rem;
+      font-size: 0.75rem;
+    }
   }
 </style>

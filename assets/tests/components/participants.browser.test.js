@@ -52,6 +52,10 @@ describe("Participants component", () => {
     await expect
       .element(screen.getByRole("status", { name: "1 player online" }))
       .toBeVisible();
+
+    const status = screen.getByRole("status", { name: "1 player online" });
+
+    expect(status.element().querySelectorAll("img")).toHaveLength(1);
   });
 
   test("handles undefined participants gracefully", async () => {
@@ -70,7 +74,7 @@ describe("Participants component", () => {
       .toBeVisible();
   });
 
-  test("renders Users icon", async () => {
+  test("renders up to three participant avatars from the queue", async () => {
     const screen = render(Room, {
       props: {
         roomId: "room-player-lobby",
@@ -81,9 +85,20 @@ describe("Participants component", () => {
       },
     });
 
-    await expect
-      .element(screen.getByRole("status", { name: `${playerCount} players online` }))
-      .toBeVisible();
-    expect(document.body.querySelector("svg.lucide-users")).not.toBeNull();
+    const status = screen.getByRole("status", {
+      name: `${playerCount} players online`,
+    });
+
+    await expect.element(status).toBeVisible();
+
+    const avatars = Array.from(status.element().querySelectorAll("img"));
+
+    expect(avatars).toHaveLength(3);
+    expect(avatars.map((avatar) => avatar.getAttribute("src"))).toEqual([
+      users.alice.avatar_url,
+      users.bob.avatar_url,
+      users.carol.avatar_url,
+    ]);
+    expect(status.element().textContent).toContain(String(playerCount));
   });
 });

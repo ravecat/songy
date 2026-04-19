@@ -58,4 +58,6 @@
   });
 </script>
 
-<InertiaApp {...inertiaProps} />
+<div id="app">
+  <InertiaApp {...inertiaProps} />
+</div>

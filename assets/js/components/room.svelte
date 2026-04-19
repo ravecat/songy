@@ -23,7 +23,9 @@
           <Participants />
         </div>
       </div>
-      <Game />
+      <div class="room__body">
+        <Game />
+      </div>
       <Player />
     </main>
   {/if}
@@ -45,16 +47,33 @@
     grid-template-rows: auto minmax(0, 1fr) auto;
   }
 
+  .room__body {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+  }
+
+  .room__body::-webkit-scrollbar {
+    display: none;
+  }
+
   .room__header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
     gap: 1rem;
     padding: 1rem;
   }
 
   .room__header-actions {
     display: flex;
-    gap: 1rem;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    gap: 0.75rem;
     margin-left: auto;
+    min-width: 0;
   }
 </style>

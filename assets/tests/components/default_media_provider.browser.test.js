@@ -40,7 +40,7 @@ describe("DefaultMediaProvider component", () => {
     });
 
     await expect
-      .element(screen.getByRole("list", { name: "Lobby players" }))
+      .element(screen.getByRole("button", { name: "Copy share link" }))
       .toBeVisible();
 
     expect(getAudio()).not.toBeNull();
@@ -58,7 +58,7 @@ describe("DefaultMediaProvider component", () => {
     });
 
     await expect
-      .element(screen.getByRole("list", { name: "Lobby players" }))
+      .element(screen.getByRole("button", { name: "Copy share link" }))
       .toBeVisible();
 
     expect(getAudio()).toHaveAttribute(
@@ -79,7 +79,7 @@ describe("DefaultMediaProvider component", () => {
     });
 
     await expect
-      .element(screen.getByRole("list", { name: "Lobby players" }))
+      .element(screen.getByRole("button", { name: "Copy share link" }))
       .toBeVisible();
 
     await vi.waitFor(() => {
@@ -121,7 +121,7 @@ describe("DefaultMediaProvider component", () => {
     });
 
     await expect
-      .element(screen.getByRole("list", { name: "Lobby players" }))
+      .element(screen.getByRole("button", { name: "Copy share link" }))
       .toBeVisible();
 
     expect(getAudio()).toHaveAttribute("preload", "auto");
@@ -139,7 +139,7 @@ describe("DefaultMediaProvider component", () => {
     });
 
     await expect
-      .element(screen.getByRole("list", { name: "Lobby players" }))
+      .element(screen.getByRole("button", { name: "Copy share link" }))
       .toBeVisible();
 
     expect(getAudio()).toHaveStyle("display: none;");
@@ -157,7 +157,7 @@ describe("DefaultMediaProvider component", () => {
     });
 
     await expect
-      .element(screen.getByRole("list", { name: "Lobby players" }))
+      .element(screen.getByRole("button", { name: "Copy share link" }))
       .toBeVisible();
 
     expect(getAudio()).not.toBeNull();
@@ -224,7 +224,7 @@ describe("DefaultMediaProvider component", () => {
     });
 
     await expect
-      .element(screen.getByRole("list", { name: "Lobby players" }))
+      .element(screen.getByRole("button", { name: "Copy share link" }))
       .toBeVisible();
 
     expect(getAudio()).not.toBeNull();
@@ -242,7 +242,7 @@ describe("DefaultMediaProvider component", () => {
     });
 
     await expect
-      .element(screen.getByRole("list", { name: "Lobby players" }))
+      .element(screen.getByRole("button", { name: "Copy share link" }))
       .toBeVisible();
 
     expect(getAudio()).not.toBeNull();

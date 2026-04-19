@@ -132,7 +132,7 @@ describe("Game", () => {
         .element(screen.getByRole("list", { name: "Result challengers" }))
         .not.toBeInTheDocument();
       await expect
-        .element(screen.getByRole("list", { name: "Lobby players" }))
+        .element(screen.getByRole("button", { name: "Copy share link" }))
         .not.toBeInTheDocument();
     },
   );

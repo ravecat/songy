@@ -251,8 +251,7 @@
     align-items: center;
     justify-content: center;
     width: 100%;
-    flex: 1;
-    min-height: 0;
+    min-height: 100%;
     overflow: hidden;
   }
 

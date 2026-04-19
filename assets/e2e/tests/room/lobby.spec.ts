@@ -21,8 +21,8 @@ test.describe("room lobby", () => {
     ownerLobbyPage,
     playerLobbyPage,
   }) => {
-    await expect(ownerLobbyPage.lobby.players).toHaveCount(2);
-    await expect(playerLobbyPage.lobby.players).toHaveCount(2);
+    await expect(ownerLobbyPage.lobby.participantAvatars).toHaveCount(2);
+    await expect(playerLobbyPage.lobby.participantAvatars).toHaveCount(2);
 
     await expect(
       ownerLobbyPage.lobby.participantsOnlineStatus,

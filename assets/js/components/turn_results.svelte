@@ -51,9 +51,10 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    box-sizing: border-box;
     padding: var(--spacing-md);
     width: 100%;
-    height: 100%;
+    min-height: 100%;
   }
 
   .results__container {

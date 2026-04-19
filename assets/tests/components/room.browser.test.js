@@ -44,7 +44,6 @@ describe("Room", () => {
         .element(screen.getByRole("button", { name: "Forward" }))
         .not.toBeInTheDocument();
       await expect.element(screen.getByTestId("room-qr")).toBeVisible();
-      expect(document.body.querySelectorAll(".lobby-player")).toHaveLength(playerCount);
     });
 
     test("renders player lobby state from the room page", async () => {
@@ -73,12 +72,11 @@ describe("Room", () => {
       await expect
         .element(screen.getByRole("button", { name: "Start game" }))
         .not.toBeInTheDocument();
-      expect(document.body.querySelectorAll(".lobby-player")).toHaveLength(playerCount);
     });
   });
 
   describe("lobby", () => {
-    test("renders lobby structure with players list and share button", async () => {
+    test("renders lobby structure without central player list", async () => {
       const screen = render(Room, {
         props: {
           roomId: "room-player-lobby",
@@ -89,36 +87,18 @@ describe("Room", () => {
         },
       });
 
-      await expect
-        .element(screen.getByRole("list", { name: "Lobby players" }))
-        .toBeVisible();
       await expect
         .element(screen.getByRole("button", { name: "Copy share link" }))
         .toBeVisible();
-      expect(document.body.querySelectorAll(".lobby-player")).toHaveLength(playerCount);
+      await expect
+        .element(screen.getByRole("status", { name: `${playerCount} players online` }))
+        .toBeVisible();
+      await expect
+        .element(screen.getByRole("list", { name: "Lobby players" }))
+        .not.toBeInTheDocument();
     });
 
-    test("displays all participants with avatars and names", async () => {
-      const screen = render(Room, {
-        props: {
-          roomId: "room-player-lobby",
-          scope: {
-            user: users.alice,
-            provider: null,
-          },
-        },
-      });
-
-      for (const user of Object.values(users)) {
-        await expect.element(screen.getByAltText(user.name)).toHaveAttribute(
-          "src",
-          user.avatar_url,
-        );
-        await expect.element(screen.getByText(user.name)).toBeVisible();
-      }
-    });
-
-    test("shows crown badge for room owner", async () => {
+    test("does not render participant names in the central lobby zone", async () => {
       const screen = render(Room, {
         props: {
           roomId: "room-player-lobby",
@@ -131,15 +111,8 @@ describe("Room", () => {
 
       await expect
         .element(screen.getByRole("list", { name: "Lobby players" }))
-        .toBeVisible();
-
-      const players = Array.from(document.body.querySelectorAll(".lobby-player"));
-      const ownerPlayer = players.find((player) =>
-        player.textContent?.includes(users.alice.name)
-      );
-
-      expect(ownerPlayer).toBeDefined();
-      expect(ownerPlayer?.querySelector(".lobby-player__badge")).not.toBeNull();
+        .not.toBeInTheDocument();
+      expect(document.body.querySelectorAll(".lobby-player")).toHaveLength(0);
     });
 
     test("renders share button with the current room URL", async () => {
@@ -223,7 +196,9 @@ describe("Room", () => {
         },
       });
 
-      expect(screen.getByRole("list", { name: "Lobby players" })).toBeDefined();
+      await expect
+        .element(screen.getByRole("list", { name: "Lobby players" }))
+        .not.toBeInTheDocument();
       expect(document.body.querySelectorAll(".lobby-player")).toHaveLength(0);
     });
   });
