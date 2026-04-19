@@ -28,6 +28,9 @@ const preview = {
   parameters: {
     layout: "fullscreen",
   },
+  initialGlobals: {
+    viewport: { value: "mobile1", isRotated: false },
+  },
   loaders: [mswLoader],
   decorators: [withInertiaPage],
 } satisfies Preview;
