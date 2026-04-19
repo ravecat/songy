@@ -5,10 +5,17 @@
   import Player from "~components/player.svelte";
   import Participants from "~components/participants.svelte";
   import Score from "~components/score.svelte";
-  import Timer from "~components/timer.svelte";
+  import { currentUser } from "~/stores/scope";
 
   const session = getGameContext();
   const game = $derived($session.snapshot?.game ?? null);
+  const currentParticipant = $derived.by(() => {
+    if (!$currentUser) {
+      return null;
+    }
+
+    return game?.participants?.[$currentUser.id] ?? $currentUser;
+  });
 </script>
 
 <div class="room">
@@ -17,7 +24,23 @@
   {:else}
     <main class="room__content">
       <div class="room__header">
-        <Timer />
+        <div class="room__header-leading">
+          {#if currentParticipant}
+            <div class="room__player">
+              <div class="room__player-avatar avatar">
+                <div
+                  class="ring-primary ring-offset-base-100 w-6 rounded-full ring-2 ring-offset-1 sm:w-7"
+                >
+                  <img
+                    src={currentParticipant.avatar_url}
+                    alt={currentParticipant.name}
+                  />
+                </div>
+              </div>
+              <span class="room__player-name">{currentParticipant.name}</span>
+            </div>
+          {/if}
+        </div>
         <div class="room__header-actions">
           <Score />
           <Participants />
@@ -60,20 +83,49 @@
 
   .room__header {
     display: flex;
-    align-items: flex-start;
-    flex-wrap: wrap;
+    align-items: center;
     gap: 1rem;
     padding: 1rem;
+    min-width: 0;
+  }
+
+  .room__header-leading {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .room__player {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .room__player-avatar {
+    flex: 0 0 auto;
+  }
+
+  .room__player-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-white);
+    font-size: 0.9375rem;
+    font-weight: var(--font-weight-semibold);
   }
 
   .room__header-actions {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    flex: 1 1 auto;
-    flex-wrap: wrap;
+    flex: 0 0 auto;
     gap: 0.75rem;
-    margin-left: auto;
     min-width: 0;
+    margin-left: auto;
   }
 </style>

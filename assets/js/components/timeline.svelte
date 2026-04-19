@@ -79,6 +79,7 @@
   Storage format: [%{position: integer, user_id: string}, ...]
 -->
 <script lang="ts">
+  import Timer from "~components/timer.svelte";
   import TrackCard from "~components/track_card.svelte";
   import { getGameContext } from "~/contexts/game";
   import { currentUser } from "~/stores/scope";
@@ -184,6 +185,9 @@
 </script>
 
 <div class="timeline__wrapper">
+  <div class="timeline__timer">
+    <Timer />
+  </div>
   <div
     class="timeline__scroll"
     bind:this={timeline}
@@ -250,15 +254,24 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: clamp(0.75rem, 2.5vh, 1.25rem);
     width: 100%;
     min-height: 100%;
     overflow: hidden;
   }
 
+  .timeline__timer {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    padding-inline: var(--spacing-base);
+    pointer-events: none;
+  }
+
   .timeline__scroll {
     display: flex;
     width: 100%;
-    padding-block: 1.5rem;
+    padding-block: 1rem 1.5rem;
     overflow-x: auto;
     overflow-y: clip;
     scroll-snap-type: x mandatory;

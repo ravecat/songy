@@ -72,6 +72,11 @@ describe("Room", () => {
       await expect
         .element(screen.getByRole("button", { name: "Start game" }))
         .not.toBeInTheDocument();
+      await expect.element(screen.getByText(users.bob.name)).toBeVisible();
+      await expect.element(screen.getByAltText(users.bob.name)).toHaveAttribute(
+        "src",
+        users.bob.avatar_url,
+      );
     });
   });
 
@@ -129,6 +134,25 @@ describe("Room", () => {
       await expect
         .element(screen.getByText(window.location.href))
         .toBeVisible();
+    });
+
+    test("truncates the current player name in the header when space is tight", async () => {
+      const screen = render(Room, {
+        props: {
+          roomId: "room-player-lobby",
+          scope: {
+            user: users.bob,
+            provider: null,
+          },
+        },
+      });
+
+      const playerName = screen.getByText(users.bob.name);
+
+      await expect.element(playerName).toBeVisible();
+      expect(getComputedStyle(playerName.element()).textOverflow).toBe("ellipsis");
+      expect(getComputedStyle(playerName.element()).whiteSpace).toBe("nowrap");
+      expect(getComputedStyle(playerName.element()).overflow).toBe("hidden");
     });
 
     test("renders QR svg when page props provide it", async () => {
