@@ -34,7 +34,7 @@
       <div class="sleeve__artist">{track.artist}</div>
       <div class="sleeve__title">{track.title}</div>
     </div>
-    <div class="sleeve__year">{track.year ?? ""}</div>
+    <div class="sleeve__year">{track.year}</div>
   {/if}
 </div>
 
@@ -66,9 +66,13 @@
 
   .sleeve__info {
     align-self: start;
-    justify-self: start;
-    padding: 1rem;
-    max-width: 130px;
+    justify-self: stretch;
+    display: grid;
+    gap: 0.25rem;
+    min-width: 0;
+    padding: 1rem 1rem 0;
+    max-block-size: calc(100% - 4.5rem);
+    overflow: hidden;
   }
 
   .sleeve__year {
@@ -85,18 +89,33 @@
   }
 
   .sleeve__artist {
+    max-inline-size: 100%;
+    display: -webkit-box;
     font-size: 1rem;
     font-weight: var(--font-weight-semibold);
     color: rgba(255, 255, 255, 0.9);
     line-height: 1.2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    text-wrap: pretty;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
   }
 
   .sleeve__title {
+    max-inline-size: 100%;
+    display: -webkit-box;
     font-size: 0.875rem;
     font-style: italic;
     color: rgba(255, 255, 255, 0.6);
-    margin-top: 0.25rem;
     line-height: 1.3;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    text-wrap: pretty;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
   }
 
   .sleeve__pattern {
