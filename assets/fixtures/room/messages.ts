@@ -1,6 +1,20 @@
+import {
+  snapshotPayloadSchema,
+  turnSchema,
+  type Permissions,
+} from "~contracts";
+import { zocker } from "zocker";
+
 import { tracks } from "../tracks";
 import { users } from "../users";
-import { basePermissions } from "../permissions";
+
+const gameShape = snapshotPayloadSchema.shape.game.shape;
+const permissionsShape = snapshotPayloadSchema.shape.permissions;
+const turnShape = snapshotPayloadSchema.shape.game.shape.turn.options[0].shape;
+
+// Stable absolute deadline keeps timer fixtures deterministic with fake timers.
+const challengeDeadlineAtMs = Date.parse("2026-01-01T00:00:12.000Z");
+const defaultCreatedAt = "2026-03-23T12:00:00.000Z";
 
 const defaultUsers = [
   users.alice,
@@ -52,402 +66,114 @@ const defaultResultsAssumptions = {
   6: users.frank.id,
 };
 
-export const waitingSnapshot = {
-  game: {
-    id: "room-1",
-    owner_id: users.alice.id,
-    max_participants: 8,
-    max_score: 10,
-    status: "waiting",
-    participants: defaultParticipants,
-    scores: defaultScores,
-    player: {
-      is_playback: false,
-    },
-    timelines: defaultTimelines,
-    created_at: "2026-03-23T12:00:00.000Z",
-    queue: defaultQueue,
-    cursor: 0,
-    track: null,
-    turn: null,
-  },
-  permissions: basePermissions,
-  timer: null,
-} satisfies Record<string, unknown>;
+const defaultPermissions = {
+  can_control_playback: false,
+  can_advance_turn: false,
+  can_start_game: false,
+  can_start_turn: false,
+  can_restart_game: false,
+  can_see_assumptions: false,
+  can_make_assumptions: false,
+} satisfies Permissions;
 
-export const waitingOwnerCanStartGameSnapshot = {
-  ...waitingSnapshot,
-  permissions: {
-    ...waitingSnapshot.permissions,
-    can_start_game: true,
-  },
-};
+const waitingTurn = zocker(turnSchema)
+  .setSeed(2)
+  .supply(turnShape.phase, "waiting")
+  .supply(turnShape.assumptions, {})
+  .supply(turnShape.winner_id, null)
+  .supply(turnShape.deadline_at_ms, null)
+  .generate();
 
-export const waitingEmptySnapshot = {
-  ...waitingSnapshot,
-  game: {
-    ...waitingSnapshot.game,
-    participants: {},
-    queue: [],
-    scores: {},
-  },
-};
+const readyTurn = zocker(turnSchema)
+  .setSeed(2)
+  .supply(turnShape.phase, "ready")
+  .supply(turnShape.assumptions, {})
+  .supply(turnShape.winner_id, null)
+  .supply(turnShape.deadline_at_ms, null)
+  .generate();
 
-export const waitingSingleParticipantSnapshot = {
-  ...waitingSnapshot,
-  game: {
-    ...waitingSnapshot.game,
-    participants: {
-      [users.alice.id]: users.alice,
-    },
-    queue: [users.alice.id],
-    scores: {
-      [users.alice.id]: 7,
-    },
-  },
-};
+const readyTurnOwnAssumption = zocker(turnSchema)
+  .setSeed(2)
+  .supply(turnShape.phase, "ready")
+  .supply(turnShape.assumptions, {
+    1: users.alice.id,
+  })
+  .supply(turnShape.winner_id, null)
+  .supply(turnShape.deadline_at_ms, null)
+  .generate();
 
-export const waitingParticipantsUndefinedSnapshot = {
-  ...waitingSnapshot,
-  game: {
-    ...waitingSnapshot.game,
-    participants: undefined,
-    queue: [],
-  },
-};
+const readyTurnSlotZero = zocker(turnSchema)
+  .setSeed(2)
+  .supply(turnShape.phase, "ready")
+  .supply(turnShape.assumptions, {
+    0: users.alice.id,
+  })
+  .supply(turnShape.winner_id, null)
+  .supply(turnShape.deadline_at_ms, null)
+  .generate();
 
-export const waitingScoreThreeSnapshot = {
-  ...waitingSnapshot,
-  game: {
-    ...waitingSnapshot.game,
-    scores: {
-      [users.alice.id]: 3,
-    },
-  },
-};
+const readyTurnOtherAssumption = zocker(turnSchema)
+  .setSeed(2)
+  .supply(turnShape.phase, "ready")
+  .supply(turnShape.assumptions, {
+    0: users.bob.id,
+  })
+  .supply(turnShape.winner_id, null)
+  .supply(turnShape.deadline_at_ms, null)
+  .generate();
 
-export const waitingScoreMissingSnapshot = {
-  ...waitingSnapshot,
-  game: {
-    ...waitingSnapshot.game,
-    scores: {
-      [users.bob.id]: 5,
-    },
-  },
-};
+const readyTurnMixedAssumptions = zocker(turnSchema)
+  .setSeed(2)
+  .supply(turnShape.phase, "ready")
+  .supply(turnShape.assumptions, {
+    0: users.bob.id,
+    2: users.alice.id,
+  })
+  .supply(turnShape.winner_id, null)
+  .supply(turnShape.deadline_at_ms, null)
+  .generate();
 
-export const waitingScoresUndefinedSnapshot = {
-  ...waitingSnapshot,
-  game: {
-    ...waitingSnapshot.game,
-    scores: undefined,
-  },
-};
+const challengingTurn = zocker(turnSchema)
+  .setSeed(2)
+  .supply(turnShape.phase, "challenging")
+  .supply(turnShape.assumptions, {})
+  .supply(turnShape.winner_id, null)
+  .supply(turnShape.deadline_at_ms, challengeDeadlineAtMs)
+  .generate();
 
-export const readySnapshot = {
-  ...waitingSnapshot,
-  game: {
-    ...waitingSnapshot.game,
-    status: "in_progress",
-    turn: {
-      phase: "ready",
-      assumptions: {},
-      winner_id: null,
-    },
-  },
-};
+const challengingTurnOwnAssumption = zocker(turnSchema)
+  .setSeed(2)
+  .supply(turnShape.phase, "challenging")
+  .supply(turnShape.assumptions, {
+    1: users.alice.id,
+  })
+  .supply(turnShape.winner_id, null)
+  .supply(turnShape.deadline_at_ms, challengeDeadlineAtMs)
+  .generate();
 
-export const waitingTurnActiveSnapshot = {
-  ...waitingSnapshot,
-  permissions: {
-    ...waitingSnapshot.permissions,
-    can_start_turn: true,
-  },
-  game: {
-    ...waitingSnapshot.game,
-    status: "in_progress",
-    queue: defaultQueue,
-    cursor: 0,
-    turn: {
-      phase: "waiting",
-      assumptions: {},
-      winner_id: null,
-    },
-  },
-};
+const resultsTurnWin = zocker(turnSchema)
+  .setSeed(2)
+  .supply(turnShape.phase, "results")
+  .supply(turnShape.assumptions, defaultResultsAssumptions)
+  .supply(turnShape.winner_id, users.alice.id)
+  .supply(turnShape.deadline_at_ms, null)
+  .generate();
 
-export const waitingTurnPassiveSnapshot = {
-  ...waitingSnapshot,
-  game: {
-    ...waitingSnapshot.game,
-    status: "in_progress",
-    queue: defaultQueue,
-    cursor: 0,
-    turn: {
-      phase: "waiting",
-      assumptions: {},
-      winner_id: null,
-    },
-  },
-};
+const resultsTurnNoWinner = zocker(turnSchema)
+  .setSeed(2)
+  .supply(turnShape.phase, "results")
+  .supply(turnShape.assumptions, defaultResultsAssumptions)
+  .supply(turnShape.winner_id, null)
+  .supply(turnShape.deadline_at_ms, null)
+  .generate();
 
-export const waitingTurnActivePlayerSnapshot = {
-  ...waitingSnapshot,
-  permissions: {
-    ...waitingSnapshot.permissions,
-    can_start_turn: true,
-  },
-  game: {
-    ...waitingSnapshot.game,
-    status: "in_progress",
-    queue: defaultQueue,
-    cursor: 1,
-    turn: {
-      phase: "waiting",
-      assumptions: {},
-      winner_id: null,
-    },
-  },
-};
-
-export const waitingTurnPassivePlayerSnapshot = {
-  ...waitingSnapshot,
-  game: {
-    ...waitingSnapshot.game,
-    status: "in_progress",
-    queue: defaultQueue,
-    cursor: 1,
-    turn: {
-      phase: "waiting",
-      assumptions: {},
-      winner_id: null,
-    },
-  },
-};
-
-export const resultsActivePlayerWinsSnapshot = {
-  ...waitingSnapshot,
-  game: {
-    ...waitingSnapshot.game,
-    status: "in_progress",
-    track: tracks.result,
-    turn: {
-      phase: "results",
-      assumptions: defaultResultsAssumptions,
-      winner_id: users.alice.id,
-    },
-  },
-};
-
-export const resultsNoWinnerSnapshot = {
-  ...waitingSnapshot,
-  game: {
-    ...waitingSnapshot.game,
-    status: "in_progress",
-    track: tracks.result,
-    turn: {
-      phase: "results",
-      assumptions: defaultResultsAssumptions,
-      winner_id: null,
-    },
-  },
-};
-
-export const finishedSnapshot = {
-  ...waitingSnapshot,
-  game: {
-    ...waitingSnapshot.game,
-    status: "finished",
-    scores: defaultScores,
-    turn: {
-      phase: "results",
-      assumptions: {},
-      winner_id: users.bob.id,
-      deadline_at_ms: null,
-    },
-  },
-};
-
-export const finishedCanRestartSnapshot = {
-  ...finishedSnapshot,
-  permissions: {
-    ...waitingSnapshot.permissions,
-    can_restart_game: true,
-  },
-};
-
-export const finishedMissingParticipantSnapshot = {
-  ...finishedSnapshot,
-  game: {
-    ...finishedSnapshot.game,
-    participants: {
-      [users.alice.id]: users.alice,
-      [users.bob.id]: users.bob,
-    },
-    queue: [users.alice.id, users.bob.id, users.carol.id],
-    scores: {
-      [users.alice.id]: 7,
-      [users.bob.id]: 10,
-      [users.carol.id]: 3,
-    },
-  },
-};
-
-export const readyPlaybackControlsSnapshot = {
-  ...readySnapshot,
-  permissions: {
-    ...waitingSnapshot.permissions,
-    can_control_playback: true,
-  },
-  game: {
-    ...readySnapshot.game,
-    player: {
-      ...waitingSnapshot.game.player,
-      is_playback: false,
-    },
-  },
-};
-
-export const readyPlaybackPlayingSnapshot = {
-  ...readySnapshot,
-  permissions: {
-    ...waitingSnapshot.permissions,
-    can_control_playback: true,
-  },
-  game: {
-    ...readySnapshot.game,
-    player: {
-      ...waitingSnapshot.game.player,
-      is_playback: true,
-    },
-  },
-};
-
-export const readyPlaybackControlsActivePlayerSnapshot = {
-  ...readyPlaybackControlsSnapshot,
-  game: {
-    ...readyPlaybackControlsSnapshot.game,
-    queue: defaultQueue,
-    cursor: 1,
-  },
-};
-
-export const readyTimelineOwnAssumptionSnapshot = {
-  ...readySnapshot,
-  permissions: {
-    ...waitingSnapshot.permissions,
-    can_make_assumptions: true,
-  },
-  game: {
-    ...readySnapshot.game,
-    queue: defaultQueue,
-    cursor: 0,
-    turn: {
-      phase: "ready",
-      assumptions: {
-        1: users.alice.id,
-      },
-      winner_id: null,
-    },
-  },
-};
-
-export const challengingTimelineOwnAssumptionSnapshot = {
-  ...readySnapshot,
-  permissions: {
-    ...waitingSnapshot.permissions,
-    can_make_assumptions: true,
-  },
-  game: {
-    ...readySnapshot.game,
-    queue: defaultQueueActivePlayerFirst,
-    cursor: 0,
-    turn: {
-      phase: "challenging",
-      assumptions: {
-        1: users.alice.id,
-      },
-      winner_id: null,
-      get deadline_at_ms() {
-        return Date.now() + 12_000;
-      },
-    },
-  },
-};
-
-export const readyTimelineSlotZeroSnapshot = {
-  ...readySnapshot,
-  permissions: {
-    ...waitingSnapshot.permissions,
-    can_make_assumptions: true,
-  },
-  game: {
-    ...readySnapshot.game,
-    queue: defaultQueue,
-    cursor: 0,
-    turn: {
-      phase: "ready",
-      assumptions: {
-        0: users.alice.id,
-      },
-      winner_id: null,
-    },
-  },
-};
-
-export const readyTimelineOtherAssumptionSnapshot = {
-  ...readySnapshot,
-  permissions: {
-    ...waitingSnapshot.permissions,
-    can_make_assumptions: true,
-  },
-  game: {
-    ...readySnapshot.game,
-    queue: defaultQueue,
-    cursor: 0,
-    turn: {
-      phase: "ready",
-      assumptions: {
-        0: users.bob.id,
-      },
-      winner_id: null,
-    },
-  },
-};
-
-export const readyTimelineMixedSnapshot = {
-  ...readySnapshot,
-  permissions: {
-    ...waitingSnapshot.permissions,
-    can_make_assumptions: true,
-  },
-  game: {
-    ...readySnapshot.game,
-    queue: defaultQueue,
-    cursor: 0,
-    turn: {
-      phase: "ready",
-      assumptions: {
-        0: users.bob.id,
-        2: users.alice.id,
-      },
-      winner_id: null,
-    },
-  },
-};
-
-export const readyTimelinePermissionsUndefinedSnapshot = {
-  ...readySnapshot,
-  permissions: undefined,
-};
-
-export const readyTimelineNoTrackSnapshot = {
-  ...readySnapshot,
-  permissions: {
-    ...waitingSnapshot.permissions,
-    can_make_assumptions: true,
-  },
-};
+const finishedTurn = zocker(turnSchema)
+  .setSeed(2)
+  .supply(turnShape.phase, "results")
+  .supply(turnShape.assumptions, {})
+  .supply(turnShape.winner_id, users.bob.id)
+  .supply(turnShape.deadline_at_ms, null)
+  .generate();
 
 const playbackTrack = {
   ...tracks.current,
@@ -457,149 +183,283 @@ const playbackTrack = {
   },
 };
 
-export const mediaSnapshot = {
-  ...waitingSnapshot,
-  permissions: {
-    ...waitingSnapshot.permissions,
+const waitingSnapshotZock = zocker(snapshotPayloadSchema)
+  .setSeed(1)
+  .supply(gameShape.id, "room-1")
+  .supply(gameShape.owner_id, users.alice.id)
+  .supply(gameShape.max_participants, 8)
+  .supply(gameShape.max_score, 10)
+  .supply(gameShape.status, "waiting")
+  .supply(gameShape.participants, defaultParticipants)
+  .supply(gameShape.scores, defaultScores)
+  .supply(gameShape.player, { is_playback: false })
+  .supply(gameShape.timelines, defaultTimelines)
+  .supply(gameShape.created_at, defaultCreatedAt)
+  .supply(gameShape.queue, defaultQueue)
+  .supply(gameShape.cursor, 0)
+  .supply(gameShape.track, null)
+  .supply(gameShape.turn, null)
+  .supply(permissionsShape, defaultPermissions);
+
+const inProgressSnapshotZock = waitingSnapshotZock.supply(
+  gameShape.status,
+  "in_progress",
+);
+
+const waitingTurnSnapshotZock = inProgressSnapshotZock.supply(
+  gameShape.turn,
+  waitingTurn,
+);
+
+const readySnapshotZock = inProgressSnapshotZock.supply(
+  gameShape.turn,
+  readyTurn,
+);
+
+const mediaSnapshotZock = waitingSnapshotZock
+  .supply(gameShape.track, playbackTrack)
+  .supply(permissionsShape, {
+    ...defaultPermissions,
     can_control_playback: true,
-  },
-  game: {
-    ...waitingSnapshot.game,
-    track: {
-      ...playbackTrack,
-      meta: {
-        ...playbackTrack.meta,
-      },
-    },
-    player: {
-      ...waitingSnapshot.game.player,
-      is_playback: false,
-    },
-  },
-};
+  });
 
-export const mediaPlayingSnapshot = {
-  ...waitingSnapshot,
-  permissions: {
-    ...waitingSnapshot.permissions,
+const challengingSnapshotZock = inProgressSnapshotZock.supply(
+  gameShape.turn,
+  challengingTurn,
+);
+
+const resultsSnapshotZock = inProgressSnapshotZock.supply(
+  gameShape.track,
+  tracks.result,
+);
+
+const finishedSnapshotZock = waitingSnapshotZock
+  .supply(gameShape.status, "finished")
+  .supply(gameShape.track, tracks.result)
+  .supply(gameShape.turn, finishedTurn);
+
+export const waitingSnapshot = waitingSnapshotZock.generate();
+
+export const waitingOwnerCanStartGameSnapshot = waitingSnapshotZock
+  .supply(permissionsShape, {
+    ...defaultPermissions,
+    can_start_game: true,
+  })
+  .generate();
+
+export const waitingEmptySnapshot = waitingSnapshotZock
+  .supply(gameShape.participants, {})
+  .supply(gameShape.scores, {})
+  .supply(gameShape.queue, [])
+  .generate();
+
+export const waitingSingleParticipantSnapshot = waitingSnapshotZock
+  .supply(gameShape.participants, {
+    [users.alice.id]: users.alice,
+  })
+  .supply(gameShape.scores, {
+    [users.alice.id]: 7,
+  })
+  .supply(gameShape.queue, [users.alice.id])
+  .generate();
+
+export const waitingParticipantsUndefinedSnapshot = waitingSnapshotZock
+  .supply(gameShape.participants, undefined as never)
+  .supply(gameShape.queue, [])
+  .generate();
+
+export const waitingScoreThreeSnapshot = waitingSnapshotZock
+  .supply(gameShape.scores, {
+    [users.alice.id]: 3,
+  })
+  .generate();
+
+export const waitingScoreMissingSnapshot = waitingSnapshotZock
+  .supply(gameShape.scores, {
+    [users.bob.id]: 5,
+  })
+  .generate();
+
+export const waitingScoresUndefinedSnapshot = waitingSnapshotZock
+  .supply(gameShape.scores, undefined as never)
+  .generate();
+
+export const waitingTurnPassiveSnapshot = waitingTurnSnapshotZock.generate();
+
+export const waitingTurnActiveSnapshot = waitingTurnSnapshotZock
+  .supply(permissionsShape, {
+    ...defaultPermissions,
+    can_start_turn: true,
+  })
+  .generate();
+
+export const waitingTurnActivePlayerSnapshot = waitingTurnSnapshotZock
+  .supply(gameShape.cursor, 1)
+  .supply(permissionsShape, {
+    ...defaultPermissions,
+    can_start_turn: true,
+  })
+  .generate();
+
+export const waitingTurnPassivePlayerSnapshot = waitingTurnSnapshotZock
+  .supply(gameShape.cursor, 1)
+  .generate();
+
+export const readySnapshot = readySnapshotZock.generate();
+
+export const readyPlaybackControlsSnapshot = readySnapshotZock
+  .supply(permissionsShape, {
+    ...defaultPermissions,
     can_control_playback: true,
-  },
-  game: {
-    ...waitingSnapshot.game,
-    track: {
-      ...playbackTrack,
-      meta: {
-        ...playbackTrack.meta,
-      },
-    },
-    player: {
-      ...waitingSnapshot.game.player,
-      is_playback: true,
-    },
-  },
-};
+  })
+  .generate();
 
-export const mediaNoPreviewSnapshot = {
-  ...waitingSnapshot,
-  permissions: {
-    ...waitingSnapshot.permissions,
+export const readyPlaybackPlayingSnapshot = readySnapshotZock
+  .supply(gameShape.player, { is_playback: true })
+  .supply(permissionsShape, {
+    ...defaultPermissions,
     can_control_playback: true,
-  },
-  game: {
-    ...waitingSnapshot.game,
-    track: {
-      ...playbackTrack,
-      meta: {},
-    },
-    player: {
-      ...waitingSnapshot.game.player,
-      is_playback: false,
-    },
-  },
-};
+  })
+  .generate();
 
-export const mediaNoPlayerSnapshot = {
-  ...waitingSnapshot,
-  permissions: {
-    ...waitingSnapshot.permissions,
+export const readyPlaybackControlsActivePlayerSnapshot = readySnapshotZock
+  .supply(gameShape.cursor, 1)
+  .supply(permissionsShape, {
+    ...defaultPermissions,
     can_control_playback: true,
-  },
-  game: {
-    ...waitingSnapshot.game,
-    track: {
-      ...playbackTrack,
-      meta: {
-        ...playbackTrack.meta,
-      },
-    },
-    player: undefined,
-  },
-};
+  })
+  .generate();
 
-export const mediaNoMetaSnapshot = {
-  ...waitingSnapshot,
-  permissions: {
-    ...waitingSnapshot.permissions,
-    can_control_playback: true,
-  },
-  game: {
-    ...waitingSnapshot.game,
-    track: {
-      ...playbackTrack,
-      meta: undefined,
-    },
-    player: {
-      ...waitingSnapshot.game.player,
-      is_playback: false,
-    },
-  },
-};
+export const readyTimelineNoTrackSnapshot = readySnapshotZock
+  .supply(permissionsShape, {
+    ...defaultPermissions,
+    can_make_assumptions: true,
+  })
+  .generate();
 
-export const challengingTimerSnapshot = {
-  ...readySnapshot,
-  game: {
-    ...readySnapshot.game,
-    turn: {
-      phase: "challenging",
-      assumptions: {},
-      winner_id: null,
-      get deadline_at_ms() {
-        return Date.now() + 12_000;
-      },
-    },
-  },
-};
+export const readyTimelineOwnAssumptionSnapshot = readySnapshotZock
+  .supply(gameShape.turn, readyTurnOwnAssumption)
+  .supply(permissionsShape, {
+    ...defaultPermissions,
+    can_make_assumptions: true,
+  })
+  .generate();
 
-export const challengingActivePlayerSnapshot = {
-  ...challengingTimerSnapshot,
-  game: {
-    ...challengingTimerSnapshot.game,
-    queue: defaultQueue,
-    cursor: 1,
-  },
-};
+export const readyTimelineSlotZeroSnapshot = readySnapshotZock
+  .supply(gameShape.turn, readyTurnSlotZero)
+  .supply(permissionsShape, {
+    ...defaultPermissions,
+    can_make_assumptions: true,
+  })
+  .generate();
 
-export const challengingPlaybackControlsActivePlayerSnapshot = {
-  ...challengingActivePlayerSnapshot,
-  permissions: {
-    ...waitingSnapshot.permissions,
-    can_control_playback: true,
-  },
-};
+export const readyTimelineOtherAssumptionSnapshot = readySnapshotZock
+  .supply(gameShape.turn, readyTurnOtherAssumption)
+  .supply(permissionsShape, {
+    ...defaultPermissions,
+    can_make_assumptions: true,
+  })
+  .generate();
 
-export const resultsControlsActivePlayerSnapshot = {
-  ...resultsActivePlayerWinsSnapshot,
-  permissions: {
-    ...waitingSnapshot.permissions,
-    can_control_playback: true,
+export const readyTimelineMixedSnapshot = readySnapshotZock
+  .supply(gameShape.turn, readyTurnMixedAssumptions)
+  .supply(permissionsShape, {
+    ...defaultPermissions,
+    can_make_assumptions: true,
+  })
+  .generate();
+
+export const readyTimelinePermissionsUndefinedSnapshot = readySnapshotZock
+  .supply(permissionsShape, undefined as never)
+  .generate();
+
+export const mediaSnapshot = mediaSnapshotZock.generate();
+
+export const mediaPlayingSnapshot = mediaSnapshotZock
+  .supply(gameShape.player, { is_playback: true })
+  .generate();
+
+export const mediaNoPreviewSnapshot = mediaSnapshotZock
+  .supply(gameShape.track, {
+    ...playbackTrack,
+    meta: {},
+  })
+  .generate();
+
+export const mediaNoPlayerSnapshot = mediaSnapshotZock
+  .supply(gameShape.player, undefined as never)
+  .generate();
+
+export const mediaNoMetaSnapshot = mediaSnapshotZock
+  .supply(gameShape.track, {
+    ...playbackTrack,
+    meta: undefined,
+  } as never)
+  .generate();
+
+export const challengingTimerSnapshot = challengingSnapshotZock.generate();
+
+export const challengingTimelineOwnAssumptionSnapshot = challengingSnapshotZock
+  .supply(gameShape.queue, defaultQueueActivePlayerFirst)
+  .supply(gameShape.turn, challengingTurnOwnAssumption)
+  .supply(permissionsShape, {
+    ...defaultPermissions,
+    can_make_assumptions: true,
+  })
+  .generate();
+
+export const challengingActivePlayerSnapshot = challengingSnapshotZock
+  .supply(gameShape.cursor, 1)
+  .generate();
+
+export const challengingPlaybackControlsActivePlayerSnapshot =
+  challengingSnapshotZock
+    .supply(gameShape.cursor, 1)
+    .supply(permissionsShape, {
+      ...defaultPermissions,
+      can_control_playback: true,
+    })
+    .generate();
+
+export const resultsActivePlayerWinsSnapshot = resultsSnapshotZock
+  .supply(gameShape.turn, resultsTurnWin)
+  .generate();
+
+export const resultsNoWinnerSnapshot = resultsSnapshotZock
+  .supply(gameShape.turn, resultsTurnNoWinner)
+  .generate();
+
+export const resultsControlsActivePlayerSnapshot = resultsSnapshotZock
+  .supply(gameShape.cursor, 1)
+  .supply(gameShape.turn, resultsTurnWin)
+  .supply(permissionsShape, {
+    ...defaultPermissions,
     can_advance_turn: true,
-  },
-  game: {
-    ...resultsActivePlayerWinsSnapshot.game,
-    queue: defaultQueue,
-    cursor: 1,
-  },
-};
+    can_control_playback: true,
+  })
+  .generate();
+
+export const finishedSnapshot = finishedSnapshotZock.generate();
+
+export const finishedCanRestartSnapshot = finishedSnapshotZock
+  .supply(permissionsShape, {
+    ...defaultPermissions,
+    can_restart_game: true,
+  })
+  .generate();
+
+export const finishedMissingParticipantSnapshot = finishedSnapshotZock
+  .supply(gameShape.participants, {
+    [users.alice.id]: users.alice,
+    [users.bob.id]: users.bob,
+  })
+  .supply(gameShape.scores, {
+    [users.alice.id]: 7,
+    [users.bob.id]: 10,
+    [users.carol.id]: 3,
+  })
+  .supply(gameShape.queue, [users.alice.id, users.bob.id, users.carol.id])
+  .generate();
 
 export const invalidTurnPhaseSnapshots = [
   undefined,
@@ -610,14 +470,11 @@ export const invalidTurnPhaseSnapshots = [
   123,
   {},
   [],
-].map((phase) => ({
-  ...readySnapshot,
-  game: {
-    ...readySnapshot.game,
-    turn: {
+].map((phase) =>
+  readySnapshotZock
+    .supply(gameShape.turn, {
+      ...readyTurn,
       phase,
-      assumptions: {},
-      winner_id: null,
-    },
-  },
-}));
+    } as never)
+    .generate(),
+);

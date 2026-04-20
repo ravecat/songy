@@ -15,8 +15,10 @@ describe("Turn waiting view", () => {
       },
     });
 
+    const waitingRegion = screen.getByRole("region", { name: "Turn waiting" });
+
     await expect.element(screen.getByText("It's your turn")).toBeVisible();
-    await expect.element(screen.getByAltText(users.alice.name)).toHaveAttribute(
+    await expect.element(waitingRegion.getByAltText(users.alice.name)).toHaveAttribute(
       "src",
       users.alice.avatar_url,
     );
@@ -33,8 +35,10 @@ describe("Turn waiting view", () => {
       },
     });
 
+    const waitingRegion = screen.getByRole("region", { name: "Turn waiting" });
+
     await expect.element(screen.getByText(`${users.alice.name} turn`)).toBeVisible();
-    await expect.element(screen.getByAltText(users.alice.name)).toHaveAttribute(
+    await expect.element(waitingRegion.getByAltText(users.alice.name)).toHaveAttribute(
       "src",
       users.alice.avatar_url,
     );
@@ -51,8 +55,10 @@ describe("Turn waiting view", () => {
       },
     });
 
+    const waitingRegion = screen.getByRole("region", { name: "Turn waiting" });
+
     await expect.element(screen.getByText("It's your turn")).toBeVisible();
-    await expect.element(screen.getByAltText(users.bob.name)).toHaveAttribute(
+    await expect.element(waitingRegion.getByAltText(users.bob.name)).toHaveAttribute(
       "src",
       users.bob.avatar_url,
     );
@@ -69,8 +75,10 @@ describe("Turn waiting view", () => {
       },
     });
 
+    const waitingRegion = screen.getByRole("region", { name: "Turn waiting" });
+
     await expect.element(screen.getByText(`${users.bob.name} turn`)).toBeVisible();
-    await expect.element(screen.getByAltText(users.bob.name)).toHaveAttribute(
+    await expect.element(waitingRegion.getByAltText(users.bob.name)).toHaveAttribute(
       "src",
       users.bob.avatar_url,
     );
@@ -87,9 +95,11 @@ describe("Turn waiting view", () => {
       },
     });
 
+    const waitingRegion = screen.getByRole("region", { name: "Turn waiting" });
+
     await expect.element(screen.getByText(`${users.bob.name} turn`)).toBeVisible();
     await expect.element(screen.getByText("It's your turn")).not.toBeInTheDocument();
-    await expect.element(screen.getByAltText(users.bob.name)).toHaveAttribute(
+    await expect.element(waitingRegion.getByAltText(users.bob.name)).toHaveAttribute(
       "src",
       users.bob.avatar_url,
     );

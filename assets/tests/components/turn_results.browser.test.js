@@ -54,15 +54,17 @@ describe("TurnResults", () => {
       },
     });
 
+    const challengersList = screen.getByRole("list", { name: "Result challengers" });
+
     for (const user of resultsChallengers) {
-      await expect.element(screen.getByAltText(user.name)).toHaveAttribute(
+      await expect.element(challengersList.getByAltText(user.name)).toHaveAttribute(
         "src",
         user.avatar_url,
       );
     }
 
     for (const user of resultsNonChallengers) {
-      await expect.element(screen.getByAltText(user.name)).not.toBeInTheDocument();
+      await expect.element(challengersList.getByAltText(user.name)).not.toBeInTheDocument();
     }
   });
 
@@ -77,8 +79,10 @@ describe("TurnResults", () => {
       },
     });
 
+    const challengersList = screen.getByRole("list", { name: "Result challengers" });
+
     for (const user of resultsChallengers) {
-      await expect.element(screen.getByText(user.name)).toBeVisible();
+      await expect.element(challengersList.getByText(user.name)).toBeVisible();
     }
   });
 
