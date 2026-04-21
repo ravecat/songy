@@ -122,6 +122,8 @@ defmodule Songy.Boundary.ProviderPlaybackTest do
 
   describe "Apple Music provider implementation" do
     setup do
+      Application.put_env(:songy, :apple, access_token: "test_developer_token")
+
       provider = Session.normalize!(%Songy.Core.Provider.Apple{})
 
       track = %Track{
@@ -143,7 +145,7 @@ defmodule Songy.Boundary.ProviderPlaybackTest do
       assert {:ok, :playback_paused} = Provider.pause_playback(provider)
     end
 
-    test "search_random_track/1 delegates to Apple.search_random_track/0", %{provider: provider} do
+    test "search_random_track/1 returns converted Apple track", %{provider: provider} do
       apple_track = %Songy.Core.Track.Apple{
         id: "1440783454",
         type: "songs",
@@ -164,8 +166,25 @@ defmodule Songy.Boundary.ProviderPlaybackTest do
         meta: %{}
       }
 
-      Repatch.patch(Boundary.Provider.Apple, :search_random_track, fn ->
-        {:ok, apple_track}
+      Repatch.patch(Req, :get, fn _url, _opts ->
+        {:ok,
+         %{
+           status: 200,
+           body: %{
+             "results" => %{
+               "songs" => %{
+                 "data" => [
+                   %{
+                     "id" => apple_track.id,
+                     "type" => apple_track.type,
+                     "href" => apple_track.href,
+                     "attributes" => apple_track.attributes
+                   }
+                 ]
+               }
+             }
+           }
+         }}
       end)
 
       Repatch.patch(Songy.Core.Trackable, :to_track, fn _apple_track ->
@@ -173,17 +192,17 @@ defmodule Songy.Boundary.ProviderPlaybackTest do
       end)
 
       assert {:ok, ^expected_track} = Provider.search_random_track(provider)
-      assert Repatch.called?(Boundary.Provider.Apple, :search_random_track, 0)
+      assert Repatch.called?(Req, :get, 2)
       assert Repatch.called?(Songy.Core.Trackable, :to_track, 1)
     end
 
-    test "search_random_track/1 handles errors from Apple.search_random_track/0", %{provider: provider} do
-      Repatch.patch(Boundary.Provider.Apple, :search_random_track, fn ->
-        {:error, :no_tracks_found}
+    test "search_random_track/1 handles errors from Apple search", %{provider: provider} do
+      Repatch.patch(Req, :get, fn _url, _opts ->
+        {:ok, %{status: 200, body: %{"results" => %{}}}}
       end)
 
       assert {:error, :no_tracks_found} = Provider.search_random_track(provider)
-      assert Repatch.called?(Boundary.Provider.Apple, :search_random_track, 0)
+      assert Repatch.called?(Req, :get, 2)
       refute Repatch.called?(Songy.Core.Trackable, :to_track, 1)
     end
   end

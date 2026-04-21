@@ -8,7 +8,7 @@ defmodule SongyWeb.PageController do
     user_id = conn.assigns.current_user.id
 
     conn
-    |> assign_prop(:tracks, inertia_defer(fn -> Music.fetch_cover_tracks(user_id) end))
+    |> assign_prop(:tracks, inertia_defer(fn -> Music.search_cover_tracks(user_id) end))
     |> render_inertia("home")
   end
 

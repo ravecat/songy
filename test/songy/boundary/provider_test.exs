@@ -23,6 +23,10 @@ defmodule Songy.Boundary.ProviderTest do
     test "ensure/1 returns error for atom provider" do
       assert {:error, :not_supported} = Provider.ensure(:invalid_provider)
     end
+
+    test "search_cover_tracks/1 returns error for unsupported provider types" do
+      assert {:error, :not_supported} = Provider.search_cover_tracks(nil)
+    end
   end
 
   describe "provider facade / spotify" do
@@ -89,6 +93,23 @@ defmodule Songy.Boundary.ProviderTest do
       assert result.access_token == original_provider.data.access_token
       assert result.refresh_token == original_provider.data.refresh_token
       assert result.device_id == original_provider.data.device_id
+    end
+
+    test "search_cover_tracks/1 delegates to Spotify boundary" do
+      spotify_provider =
+        Session.normalize!(%Spotify{
+          access_token: "token",
+          refresh_token: "refresh_token",
+          expires_at: DateTime.utc_now()
+        })
+
+      expected_tracks = [%Songy.Core.Track{id: "track"}]
+
+      Repatch.patch(Songy.Boundary.Provider.Spotify, :search_cover_tracks, fn _provider ->
+        {:ok, expected_tracks}
+      end)
+
+      assert {:ok, ^expected_tracks} = Provider.search_cover_tracks(spotify_provider)
     end
   end
 end

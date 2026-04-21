@@ -287,4 +287,40 @@ defmodule Songy.Boundary.Provider.ITunesTest do
       assert track.artworkUrl100 == "https://example.com/artwork.jpg"
     end
   end
+
+  describe "search_cover_tracks/1" do
+    test "uses provider-defined iTunes search params and returns tracks" do
+      Repatch.patch(Req, :get, fn _url, opts ->
+        params = Keyword.get(opts, :params)
+        assert Keyword.get(params, :entity) == "song"
+        assert Keyword.get(params, :media) == "music"
+        assert Keyword.get(params, :limit) == 50
+        assert is_binary(Keyword.get(params, :term))
+        assert String.ends_with?(Keyword.get(params, :term), "*")
+
+        {:ok,
+         %{
+           status: 200,
+           body: %{
+             "resultCount" => 1,
+             "results" => [
+               %{
+                 "trackId" => 123,
+                 "trackName" => "Test Song",
+                 "artistName" => "Test Artist",
+                 "collectionName" => "Test Album",
+                 "releaseDate" => "2020-01-01T00:00:00Z",
+                 "previewUrl" => "https://audio-ssl.itunes.apple.com/preview.m4a",
+                 "artworkUrl100" => "https://is1-ssl.mzstatic.com/image/thumb/Music/100x100bb.jpg",
+                 "kind" => "song"
+               }
+             ]
+           }
+         }}
+      end)
+
+      assert {:ok, [%Songy.Core.Track{title: "Test Song", artist: "Test Artist", year: 2020}]} =
+               ITunes.search_cover_tracks(%Songy.Core.Provider.ITunes{})
+    end
+  end
 end

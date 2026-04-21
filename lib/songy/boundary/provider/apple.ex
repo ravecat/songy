@@ -17,6 +17,9 @@ defmodule Songy.Boundary.Provider.Apple do
   @storefront "us"
   @types "songs"
   @limit 25
+  @random_track_attempts 5
+  @cover_request_count 3
+  @cover_offset_pages 12
 
   @impl true
   def ensure(_provider), do: {:ok, :apple, Provider.Apple.new()}
@@ -32,25 +35,42 @@ defmodule Songy.Boundary.Provider.Apple do
   end
 
   @impl true
-  def search_random_track(_provider) do
-    case search_random_track() do
-      {:ok, track} ->
-        {:ok, Trackable.to_track(track)}
-
-      {:error, reason} ->
-        {:error, reason}
+  def search_random_track(%Provider.Apple{}) do
+    with {:ok, track} <- find_random_track(@random_track_attempts) do
+      {:ok, Trackable.to_track(track)}
     end
   end
 
   @impl true
-  def search(token, params) when is_binary(token) do
-    search_catalog(token, params)
+  def search_cover_tracks(%Provider.Apple{}) do
+    offsets =
+      0..(@cover_offset_pages - 1)
+      |> Enum.shuffle()
+      |> Enum.take(@cover_request_count)
+      |> Enum.map(&(&1 * @limit))
+
+    params_batch =
+      Enum.map(offsets, fn offset ->
+        [
+          storefront: @storefront,
+          types: @types,
+          term: random_query(),
+          limit: @limit,
+          offset: offset
+        ]
+      end)
+
+    params_batch
+    |> Task.async_stream(&search_catalog/1,
+      ordered: false,
+      max_concurrency: @cover_request_count
+    )
+    |> collect_cover_tracks()
   end
 
   @impl true
   def search(%Provider.Apple{}, params) do
-    with {:ok, token} <- access_token(),
-         {:ok, %{"songs" => %{"data" => data}}} <- search_catalog(token, params) do
+    with {:ok, %{"songs" => %{"data" => data}}} <- search_catalog(params) do
       tracks = Enum.map(data, &(Track.Apple.to_struct(&1) |> Trackable.to_track()))
       {:ok, tracks}
     else
@@ -59,68 +79,30 @@ defmodule Songy.Boundary.Provider.Apple do
     end
   end
 
-  @doc """
-  Returns Developer Token from application config.
-
-  Token is valid for up to 6 months and manually updated via environment variable.
-  Configured via APPLE_MUSIC_ACCESS_TOKEN in runtime.exs.
-
-  ## Returns
-
-    * `{:ok, token}` - Valid non-empty token
-    * `{:error, :invalid_credentials}` - Token is missing, nil, or empty string
-
-  """
-  @spec access_token() :: {:ok, String.t()} | {:error, :invalid_credentials}
-  def access_token do
-    with {:ok, config} <- Application.fetch_env(:songy, :apple),
-         token when is_binary(token) and token != "" <- config[:access_token] do
-      {:ok, token}
-    else
-      _ -> {:error, :invalid_credentials}
-    end
+  @spec access_token() :: String.t()
+  defp access_token do
+    Application.fetch_env!(:songy, :apple)
+    |> Keyword.fetch!(:access_token)
   end
 
-  @doc """
-  Performs a general search on Apple Music catalog.
+  @spec search_catalog(keyword()) :: {:ok, map()} | {:error, :search_failed}
+  defp search_catalog(params) do
+    token = access_token()
 
-  This function searches for tracks, albums, artists, playlists, and other content types
-  supported by the Apple Music API.
-
-  ## Parameters
-
-    * `token` - Apple Music Developer Token (required)
-    * `params` - Search parameters as keyword list:
-      * `:term` - Search query string (required)
-      * `:types` - Type of content to search ("songs", "albums", "artists", "playlists")
-      * `:limit` - Number of results to return (1-25, default: 5)
-      * `:offset` - The index of the first result to return (default: 0)
-      * `:storefront` - ISO 3166-1 alpha-2 country code (default: "us")
-
-  ## Returns
-
-    * `{:ok, result}` - Search results as returned by Apple Music API
-    * `{:error, :search_failed}` - Apple Music API error
-
-  ## Examples
-
-      # Search for tracks
-      search_catalog("developer_token_jwt", term: "bohemian rhapsody", types: "songs", limit: 10)
-
-      # Search for albums in specific storefront
-      search_catalog("developer_token_jwt", term: "abbey road", types: "albums", storefront: "gb")
-
-  """
-  @spec search_catalog(String.t(), keyword()) :: {:ok, map()} | {:error, :search_failed}
-  def search_catalog(token, params \\ []) when is_binary(token) do
-    result = make_search_request(token, params)
-    Logger.debug("Apple Music API request result: #{inspect(result)}")
-
-    case result do
-      {:ok, %{status: 200, body: %{"results" => results}}} ->
-        Logger.info("Apple Music API search successful: #{length(results)} results")
-        {:ok, results}
-
+    with {storefront, search_params} = Keyword.pop(params, :storefront, @storefront),
+         result <-
+           Req.get("#{base_url()}/catalog/#{storefront}/search",
+             headers: [
+               {"Authorization", "Bearer #{token}"},
+               {"Content-Type", "application/json"}
+             ],
+             params: search_params
+           ),
+         {:ok, %{status: 200, body: %{"results" => results}}} <- result do
+      Logger.info("Apple Music API request storefront=#{storefront} params=#{inspect(search_params)} successful: #{search_result_count(results)} results")
+      Logger.info("Apple Music API request result: #{inspect(result)}")
+      {:ok, results}
+    else
       {:ok, %{status: status, body: body}} ->
         Logger.warning("Apple Music API error #{status}: #{inspect(body)}")
         {:error, :search_failed}
@@ -134,75 +116,115 @@ defmodule Songy.Boundary.Provider.Apple do
   @doc """
   Searches for a random track in Apple Music catalog.
 
-  ## Parameters
-
-    * `token` - Apple Music Developer Token (required)
-
   ## Returns
 
     * `{:ok, track}` - Apple Music Track.Apple struct
     * `{:error, :search_failed}` - Apple Music API error (propagated from `search/2`)
-    * `{:error, :no_tracks_found}` - No tracks found for the random query or unexpected response shape
+    * `{:error, :no_tracks_found}` - No tracks found after several random search attempts
 
   ## Examples
 
-      Songy.Boundary.Provider.Apple.search_random_track("developer_token_jwt")
+      Songy.Boundary.Provider.Apple.search_random_track()
       # => {:ok, %Track.Apple{id: "1613600188", attributes: %{"name" => "Entropy", ...}}}
 
   """
   @spec search_random_track() ::
-          {:ok, Track.Apple.t()} | {:error, :invalid_credentials | :search_failed | :no_tracks_found}
+          {:ok, Track.Apple.t()} | {:error, :search_failed | :no_tracks_found}
   def search_random_track do
+    find_random_track(@random_track_attempts)
+  end
+
+  defp random_track_search_params do
+    [
+      storefront: @storefront,
+      types: @types,
+      term: random_query(),
+      limit: @limit
+    ]
+  end
+
+  defp random_query do
+    "#{<<random_letter()>>} #{random_year()}"
+  end
+
+  defp random_letter, do: ?a + rem(:binary.decode_unsigned(:crypto.strong_rand_bytes(1)), 26)
+
+  defp random_year do
+    first = 1900
+    last = Date.utc_today().year
+    first + rem(:binary.decode_unsigned(:crypto.strong_rand_bytes(2)), last - first + 1)
+  end
+
+  defp find_random_track(0) do
+    Logger.warning("No Apple Music tracks found after #{@random_track_attempts} attempts")
+    {:error, :no_tracks_found}
+  end
+
+  defp find_random_track(attempts_left) do
     params = random_track_search_params()
 
-    with {:ok, token} <- access_token(),
-         {:ok, %{"songs" => %{"data" => [_ | _] = data}}} <- search_catalog(token, params) do
-      track =
-        data
-        |> Enum.at(rem(:binary.decode_unsigned(:crypto.strong_rand_bytes(1)), length(data)))
-        |> Track.Apple.to_struct()
+    case search_catalog(params) do
+      {:ok, %{"songs" => %{"data" => [_ | _] = data}}} ->
+        track =
+          data
+          |> Enum.at(rem(:binary.decode_unsigned(:crypto.strong_rand_bytes(1)), length(data)))
+          |> Track.Apple.to_struct()
 
-      Logger.info("Successfully found random track #{inspect(track)} with params: #{inspect(params)}")
+        Logger.info("Successfully found random track #{inspect(track)} with params: #{inspect(params)}")
 
-      {:ok, track}
-    else
+        {:ok, track}
+
       {:ok, %{"songs" => %{"data" => []}}} ->
-        Logger.warning("No tracks found for params: #{inspect(random_track_search_params())}")
-        {:error, :no_tracks_found}
+        Logger.warning("No Apple Music songs found for params: #{inspect(params)}")
+        find_random_track(attempts_left - 1)
 
-      {:ok, _other} ->
-        Logger.warning("Unexpected response structure for random track search")
-        {:error, :no_tracks_found}
+      {:ok, %{}} ->
+        Logger.warning("No Apple Music songs found for params: #{inspect(params)}")
+        find_random_track(attempts_left - 1)
+
+      {:ok, _results} ->
+        Logger.warning("Unexpected Apple Music search payload for params: #{inspect(params)}")
+        find_random_track(attempts_left - 1)
 
       {:error, reason} ->
         {:error, reason}
     end
   end
 
-  defp make_search_request(token, params) do
-    {storefront, search_params} = Keyword.pop(params, :storefront, @storefront)
+  defp collect_cover_tracks(task_results) do
+    tracks =
+      Enum.reduce(task_results, [], fn
+        {:ok, {:ok, %{"songs" => %{"data" => data}}}}, acc ->
+          acc ++ Enum.map(data, &(Track.Apple.to_struct(&1) |> Trackable.to_track()))
 
-    Req.get("#{base_url()}/catalog/#{storefront}/search",
-      headers: [
-        {"Authorization", "Bearer #{token}"},
-        {"Content-Type", "application/json"}
-      ],
-      params: search_params
-    )
+        {:ok, {:ok, _}}, acc ->
+          acc
+
+        {:ok, {:error, reason}}, acc ->
+          Logger.warning("Apple Music cover search failed: #{inspect(reason)}")
+          acc
+
+        {:exit, reason}, acc ->
+          Logger.warning("Apple Music cover search task exited: #{inspect(reason)}")
+          acc
+      end)
+
+    unique_tracks =
+      tracks
+      |> Enum.filter(&is_binary(&1.cover_url))
+      |> Enum.uniq_by(& &1.cover_url)
+
+    {:ok, unique_tracks}
   end
 
-  defp random_track_search_params do
-    [
-      types: @types,
-      term: random_query(),
-      offset: random_offset(),
-      limit: @limit
-    ]
+  defp search_result_count(results) when is_map(results) do
+    Enum.reduce(results, 0, fn
+      {_type, %{"data" => data}}, acc when is_list(data) -> acc + length(data)
+      {_type, _group}, acc -> acc
+    end)
   end
 
-  defp random_query, do: <<?a + rem(:binary.decode_unsigned(:crypto.strong_rand_bytes(1)), 26)>> <> "*"
-
-  defp random_offset, do: rem(:binary.decode_unsigned(:crypto.strong_rand_bytes(2)), 1000)
+  defp search_result_count(_results), do: 0
 
   defp base_url do
     Application.fetch_env!(:songy, :providers)

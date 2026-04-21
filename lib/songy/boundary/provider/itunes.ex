@@ -52,6 +52,11 @@ defmodule Songy.Boundary.Provider.ITunes do
   end
 
   @impl true
+  def search_cover_tracks(%Provider.ITunes{} = provider) do
+    search(provider, cover_track_search_params())
+  end
+
+  @impl true
   def search(_provider, params) do
     case search(params) do
       {:ok, results} ->
@@ -185,6 +190,17 @@ defmodule Songy.Boundary.Provider.ITunes do
   defp decode_body(body), do: {:error, {:unexpected_body, body}}
 
   defp random_track_search_params do
+    [
+      term: random_term(),
+      media: @media,
+      entity: @entity,
+      limit: @limit,
+      attribute: random_attribute(),
+      country: random_country()
+    ]
+  end
+
+  defp cover_track_search_params do
     [
       term: random_term(),
       media: @media,

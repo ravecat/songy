@@ -18,6 +18,8 @@ defmodule Songy.Boundary.Provider.Spotify do
 
   require Logger
 
+  @cover_tracks_limit 50
+
   @impl true
   def ensure(%Provider.Spotify{access_token: access_token, refresh_token: refresh_token} = provider) do
     with true <- Provider.Spotify.refresh?(provider),
@@ -80,6 +82,11 @@ defmodule Songy.Boundary.Provider.Spotify do
         Logger.warning("Spotify API failed to pause playback: #{inspect(reason)}")
         {:error, :playback_pause_failed}
     end
+  end
+
+  @impl true
+  def search_cover_tracks(%Provider.Spotify{} = provider) do
+    search(provider, build_cover_track_search_params())
   end
 
   @impl true
@@ -176,6 +183,18 @@ defmodule Songy.Boundary.Provider.Spotify do
       q: query,
       type: "track",
       limit: 2,
+      offset: offset
+    ]
+  end
+
+  defp build_cover_track_search_params do
+    query = generate_random_track_query()
+    offset = generate_random_offset()
+
+    [
+      q: query,
+      type: "track",
+      limit: @cover_tracks_limit,
       offset: offset
     ]
   end

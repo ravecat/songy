@@ -4,14 +4,13 @@ defmodule Songy.Music do
   """
 
   alias Songy.Boundary.Provider
+  alias Songy.Core.Track
   alias Songy.Providers
 
-  @spec fetch_cover_tracks(String.t(), pos_integer()) :: list(map())
-  def fetch_cover_tracks(user_id, limit \\ 50) do
-    term = <<Enum.random(?a..?z)>>
-
+  @spec search_cover_tracks(String.t()) :: [Track.t()]
+  def search_cover_tracks(user_id) do
     with {:ok, session} <- Providers.ensure(user_id),
-         {:ok, tracks} <- Provider.search(session, term: term, limit: limit, entity: "song") do
+         {:ok, tracks} <- Provider.search_cover_tracks(session) do
       tracks
     else
       _ -> []

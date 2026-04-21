@@ -3,6 +3,7 @@ defmodule Songy.Boundary.Provider.AppleTest do
 
   alias Songy.Boundary.Provider.Apple
 
+  @random_track_attempts 5
   @valid_token "test_developer_token"
 
   setup do
@@ -11,14 +12,22 @@ defmodule Songy.Boundary.Provider.AppleTest do
   end
 
   describe "search/2" do
-    test "returns results when search is successful" do
+    test "returns tracks when search is successful" do
       expected_response = %{
         status: 200,
         body: %{
           "results" => %{
             "songs" => %{
               "data" => [
-                %{"id" => "123", "attributes" => %{"name" => "Test Song"}}
+                %{
+                  "id" => "123",
+                  "type" => "songs",
+                  "attributes" => %{
+                    "name" => "Test Song",
+                    "artistName" => "Test Artist",
+                    "releaseDate" => "2020-01-01"
+                  }
+                }
               ]
             }
           }
@@ -27,8 +36,8 @@ defmodule Songy.Boundary.Provider.AppleTest do
 
       Repatch.patch(Req, :get, fn _url, _opts -> {:ok, expected_response} end)
 
-      assert {:ok, results} = Apple.search(@valid_token, term: "test")
-      assert Map.has_key?(results, "songs")
+      assert {:ok, [%Songy.Core.Track{title: "Test Song", artist: "Test Artist", year: 2020}]} =
+               Apple.search(%Songy.Core.Provider.Apple{}, term: "test")
     end
 
     test "returns error when API request fails" do
@@ -36,7 +45,15 @@ defmodule Songy.Boundary.Provider.AppleTest do
         {:error, %RuntimeError{message: "Network error"}}
       end)
 
-      assert {:error, :search_failed} = Apple.search(@valid_token, term: "test")
+      assert {:error, :search_failed} = Apple.search(%Songy.Core.Provider.Apple{}, term: "test")
+    end
+
+    test "returns empty tracks when Apple Music returns no result groups" do
+      Repatch.patch(Req, :get, fn _url, _opts ->
+        {:ok, %{status: 200, body: %{"results" => %{}}}}
+      end)
+
+      assert {:ok, []} = Apple.search(%Songy.Core.Provider.Apple{}, term: "test")
     end
 
     test "does not include storefront in query params when not specified" do
@@ -46,7 +63,7 @@ defmodule Songy.Boundary.Provider.AppleTest do
         {:ok, %{status: 200, body: %{"results" => %{}}}}
       end)
 
-      Apple.search(@valid_token, term: "test")
+      Apple.search(%Songy.Core.Provider.Apple{}, term: "test")
     end
 
     test "removes custom storefront from query params before request" do
@@ -56,19 +73,20 @@ defmodule Songy.Boundary.Provider.AppleTest do
         {:ok, %{status: 200, body: %{"results" => %{}}}}
       end)
 
-      Apple.search(@valid_token, term: "test", storefront: "gb")
+      Apple.search(%Songy.Core.Provider.Apple{}, term: "test", storefront: "gb")
     end
 
-    test "passes query params directly to Req" do
+    test "passes query params directly to Req without normalization" do
       Repatch.patch(Req, :get, fn _url, opts ->
         params = Keyword.get(opts, :params)
         assert Keyword.get(params, :term) == "beatles"
-        assert Keyword.get(params, :types) == "albums"
-        assert Keyword.get(params, :limit) == 10
+        assert Keyword.get(params, :entity) == "song"
+        assert Keyword.get(params, :limit) == 50
+        refute Keyword.has_key?(params, :types)
         {:ok, %{status: 200, body: %{"results" => %{}}}}
       end)
 
-      Apple.search(@valid_token, term: "beatles", types: "albums", limit: 10)
+      Apple.search(%Songy.Core.Provider.Apple{}, term: "beatles", entity: "song", limit: 50)
     end
 
     test "handles API error responses" do
@@ -76,7 +94,7 @@ defmodule Songy.Boundary.Provider.AppleTest do
         {:ok, %{status: 401, body: %{"errors" => [%{"status" => "401"}]}}}
       end)
 
-      assert {:error, :search_failed} = Apple.search(@valid_token, term: "test")
+      assert {:error, :search_failed} = Apple.search(%Songy.Core.Provider.Apple{}, term: "test")
     end
 
     test "includes Authorization header with Bearer token" do
@@ -87,7 +105,7 @@ defmodule Songy.Boundary.Provider.AppleTest do
         {:ok, %{status: 200, body: %{"results" => %{}}}}
       end)
 
-      Apple.search(@valid_token, term: "test")
+      Apple.search(%Songy.Core.Provider.Apple{}, term: "test")
     end
 
     test "includes Content-Type header" do
@@ -97,9 +115,20 @@ defmodule Songy.Boundary.Provider.AppleTest do
         {:ok, %{status: 200, body: %{"results" => %{}}}}
       end)
 
-      Apple.search(@valid_token, term: "test")
+      Apple.search(%Songy.Core.Provider.Apple{}, term: "test")
     end
   end
+
+  describe "search/2 with missing config" do
+    test "raises when Apple config is missing" do
+      Application.delete_env(:songy, :apple)
+
+      assert_raise ArgumentError, fn ->
+        Apple.search(%Songy.Core.Provider.Apple{}, term: "test")
+      end
+    end
+  end
+
   describe "ensure/1" do
     test "returns Apple provider without requiring configured credentials" do
       Application.delete_env(:songy, :apple)
@@ -108,6 +137,112 @@ defmodule Songy.Boundary.Provider.AppleTest do
     end
   end
 
+  describe "search_cover_tracks/1" do
+    test "runs three parallel cover searches, uses bounded offsets, and dedupes by cover_url" do
+      {:ok, calls} = Agent.start_link(fn -> {0, []} end)
+
+      shared_artwork = %{"url" => "https://example.test/shared/{w}x{h}bb.jpg"}
+      unique_artwork = %{"url" => "https://example.test/unique/{w}x{h}bb.jpg"}
+
+      Repatch.patch(Req, :get, [mode: :shared], fn url, opts ->
+        call_index =
+          Agent.get_and_update(calls, fn {index, recorded} ->
+            params = Keyword.fetch!(opts, :params)
+            next = index + 1
+            {next, {next, [params | recorded]}}
+          end)
+
+        assert url =~ ~r"/catalog/us/search$"
+
+        body =
+          case call_index do
+            1 ->
+              songs_response([
+                song_payload("1", "Shared A", "Artist A", "2020-01-01", shared_artwork)
+              ])
+
+            2 ->
+              songs_response([
+                song_payload("2", "Shared B", "Artist B", "2021-01-01", shared_artwork)
+              ])
+
+            _ ->
+              songs_response([
+                song_payload("3", "Unique", "Artist C", "2022-01-01", unique_artwork)
+              ])
+          end
+
+        {:ok, %{status: 200, body: body}}
+      end)
+
+      assert {:ok, tracks} = Apple.search_cover_tracks(%Songy.Core.Provider.Apple{})
+      assert length(tracks) == 2
+
+      recorded =
+        Agent.get(calls, fn {_count, recorded} ->
+          Enum.reverse(recorded)
+        end)
+
+      assert length(recorded) == 3
+      assert Enum.all?(recorded, &(Keyword.fetch!(&1, :types) == "songs"))
+      assert Enum.all?(recorded, &(Keyword.fetch!(&1, :limit) == 25))
+      assert Enum.all?(recorded, &(Keyword.fetch!(&1, :term) =~ ~r/^[a-z] \d{4}$/))
+      assert Enum.all?(recorded, &(rem(Keyword.fetch!(&1, :offset), 25) == 0))
+      assert recorded |> Enum.map(&Keyword.fetch!(&1, :offset)) |> Enum.uniq() |> length() == 3
+    end
+
+    test "returns partial unique cover results when one parallel request fails" do
+      {:ok, calls} = Agent.start_link(fn -> 0 end)
+
+      Repatch.patch(Req, :get, [mode: :shared], fn _url, _opts ->
+        call_index =
+          Agent.get_and_update(calls, fn count ->
+            next = count + 1
+            {next, next}
+          end)
+
+        case call_index do
+          1 ->
+            {:error, %RuntimeError{message: "Network error"}}
+
+          2 ->
+            {:ok,
+             %{
+               status: 200,
+               body:
+                 songs_response([
+                   song_payload("2", "A", "B", "2020-01-01", %{
+                     "url" => "https://example.test/a/{w}x{h}bb.jpg"
+                   })
+                 ])
+             }}
+
+          _ ->
+            {:ok,
+             %{
+               status: 200,
+               body:
+                 songs_response([
+                   song_payload("3", "C", "D", "2020-01-01", %{
+                     "url" => "https://example.test/c/{w}x{h}bb.jpg"
+                   })
+                 ])
+             }}
+        end
+      end)
+
+      assert {:ok, tracks} = Apple.search_cover_tracks(%Songy.Core.Provider.Apple{})
+      assert length(tracks) == 2
+    end
+
+    test "returns an empty list when all parallel requests fail" do
+      Repatch.patch(Req, :get, [mode: :shared], fn _url, _opts ->
+        {:error, %RuntimeError{message: "Network error"}}
+      end)
+
+      assert {:ok, []} = Apple.search_cover_tracks(%Songy.Core.Provider.Apple{})
+    end
+  end
 
   describe "search_random_track/0" do
     test "returns random track when search is successful" do
@@ -135,21 +270,16 @@ defmodule Songy.Boundary.Provider.AppleTest do
       assert is_map(track.attributes)
     end
 
-    test "returns error when no tracks found" do
-      expected_response = %{
-        status: 200,
-        body: %{
-          "results" => %{
-            "songs" => %{
-              "data" => []
-            }
-          }
-        }
-      }
+    test "retries when Apple Music returns no result groups" do
+      Process.put(:apple_req_calls, 0)
 
-      Repatch.patch(Req, :get, fn _url, _opts -> {:ok, expected_response} end)
+      Repatch.patch(Req, :get, fn _url, _opts ->
+        Process.put(:apple_req_calls, Process.get(:apple_req_calls, 0) + 1)
+        {:ok, %{status: 200, body: %{"results" => %{}}}}
+      end)
 
       assert {:error, :no_tracks_found} = Apple.search_random_track()
+      assert Process.get(:apple_req_calls) == @random_track_attempts
     end
 
     test "returns error when response has unexpected structure" do
@@ -169,6 +299,42 @@ defmodule Songy.Boundary.Provider.AppleTest do
       assert {:error, :no_tracks_found} = Apple.search_random_track()
     end
 
+    test "retries empty search results until tracks are found" do
+      tracks = [
+        %{"id" => "123", "attributes" => %{"name" => "Track 1"}},
+        %{"id" => "456", "attributes" => %{"name" => "Track 2"}}
+      ]
+
+      Process.put(:apple_req_calls, 0)
+
+      Repatch.patch(Req, :get, fn _url, _opts ->
+        calls = Process.get(:apple_req_calls, 0) + 1
+        Process.put(:apple_req_calls, calls)
+
+        case calls do
+          1 ->
+            {:ok, %{status: 200, body: %{"results" => %{}}}}
+
+          _ ->
+            {:ok,
+             %{
+               status: 200,
+               body: %{
+                 "results" => %{
+                   "songs" => %{
+                     "data" => tracks
+                   }
+                 }
+               }
+             }}
+        end
+      end)
+
+      assert {:ok, %Songy.Core.Track.Apple{id: id}} = Apple.search_random_track()
+      assert id in ["123", "456"]
+      assert Process.get(:apple_req_calls) == 2
+    end
+
     test "returns error when API request fails" do
       Repatch.patch(Req, :get, fn _url, _opts ->
         {:error, %RuntimeError{message: "Network error"}}
@@ -178,14 +344,15 @@ defmodule Songy.Boundary.Provider.AppleTest do
     end
 
     test "uses correct search parameters" do
-      Repatch.patch(Req, :get, fn _url, opts ->
+      Repatch.patch(Req, :get, fn url, opts ->
         params = Keyword.get(opts, :params)
 
+        assert url =~ ~r"/catalog/us/search$"
         assert Keyword.get(params, :types) == "songs"
         assert Keyword.get(params, :limit) == 25
         assert is_binary(Keyword.get(params, :term))
-        assert Keyword.get(params, :term) =~ ~r/^[a-z]\*$/
-        assert is_integer(Keyword.get(params, :offset))
+        assert Keyword.get(params, :term) =~ ~r/^[a-z] \d{4}$/
+        refute Keyword.has_key?(params, :offset)
 
         {:ok,
          %{
@@ -237,23 +404,30 @@ defmodule Songy.Boundary.Provider.AppleTest do
     end
   end
 
-  describe "search_random_track/0 with invalid credentials" do
-    test "returns invalid_credentials when token is empty" do
-      Application.put_env(:songy, :apple, access_token: "")
-
-      assert {:error, :invalid_credentials} = Apple.search_random_track()
-    end
-
-    test "returns invalid_credentials when token is nil" do
-      Application.put_env(:songy, :apple, access_token: nil)
-
-      assert {:error, :invalid_credentials} = Apple.search_random_track()
-    end
-
-    test "returns invalid_credentials when config is missing" do
+  describe "search_random_track/0 with missing config" do
+    test "raises when Apple config is missing" do
       Application.delete_env(:songy, :apple)
 
-      assert {:error, :invalid_credentials} = Apple.search_random_track()
+      assert_raise ArgumentError, fn ->
+        Apple.search_random_track()
+      end
     end
+  end
+
+  defp songs_response(data) do
+    %{"results" => %{"songs" => %{"data" => data}}}
+  end
+
+  defp song_payload(id, name, artist, release_date, artwork) do
+    %{
+      "id" => id,
+      "type" => "songs",
+      "attributes" => %{
+        "name" => name,
+        "artistName" => artist,
+        "releaseDate" => release_date,
+        "artwork" => artwork
+      }
+    }
   end
 end

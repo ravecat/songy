@@ -9,12 +9,11 @@ defmodule Songy.Boundary.Provider do
   alias Songy.Core.Track
   alias Songy.Provider.Session
 
-  @type id :: atom()
-
-  @callback ensure(struct()) :: {:ok, id(), struct()} | {:error, atom()}
+  @callback ensure(struct()) :: {:ok, atom(), struct()} | {:error, atom()}
   @callback start_playback(struct(), Track.t()) :: {:ok, :playback_started} | {:error, atom()}
   @callback pause_playback(struct()) :: {:ok, :playback_paused} | {:error, atom()}
   @callback search_random_track(struct()) :: {:ok, Track.t()} | {:error, atom()}
+  @callback search_cover_tracks(struct()) :: {:ok, [Track.t()]} | {:error, atom()}
   @callback search(struct(), keyword()) :: {:ok, [Track.t()]} | {:error, atom()}
 
   @doc false
@@ -54,6 +53,13 @@ defmodule Songy.Boundary.Provider do
   end
 
   def search_random_track(_), do: {:error, :not_supported}
+
+  @spec search_cover_tracks(Session.t()) :: {:ok, [Track.t()]} | {:error, atom()}
+  def search_cover_tracks(%Session{adapter: adapter, data: data}) when is_atom(adapter) do
+    adapter.search_cover_tracks(data)
+  end
+
+  def search_cover_tracks(_), do: {:error, :not_supported}
 
   @spec search(Session.t(), keyword()) :: {:ok, [Track.t()]} | {:error, atom()}
   def search(%Session{adapter: adapter, data: data}, params) when is_atom(adapter) do

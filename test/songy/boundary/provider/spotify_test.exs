@@ -238,6 +238,30 @@ defmodule Songy.Boundary.Provider.SpotifyTest do
     end
   end
 
+  describe "search_cover_tracks/1" do
+    test "uses provider-defined Spotify search params and converts result" do
+      provider = %Provider.Spotify{access_token: "valid_token"}
+      expected_track = %Track{id: "test"}
+
+      Repatch.patch(Search, :query, fn _credentials, params ->
+        assert params[:q] =~ ~r/^[a-zA-Z] year:\d{4}-\d{4}$/
+        assert params[:type] == "track"
+        assert params[:limit] == 50
+        assert is_integer(params[:offset])
+        assert params[:offset] >= 0
+        assert params[:offset] <= 999
+
+        {:ok, %{items: [%{id: "test"}]}}
+      end)
+
+      Repatch.patch(Songy.Core.Trackable, :to_track, fn %{id: "test"} ->
+        expected_track
+      end)
+
+      assert {:ok, [^expected_track]} = BoundarySpotify.search_cover_tracks(provider)
+    end
+  end
+
   describe "ensure/1" do
     test "refreshes token when access_token expired" do
       fixed_time = ~U[2025-07-15 12:00:00Z]
