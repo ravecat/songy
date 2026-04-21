@@ -138,7 +138,7 @@ defmodule Songy.Boundary.Provider.AppleTest do
   end
 
   describe "search_cover_tracks/1" do
-    test "runs three parallel cover searches, uses bounded offsets, and dedupes by cover_url" do
+    test "runs three parallel cover searches, uses year-weighted offsets, and dedupes by cover_url" do
       {:ok, calls} = Agent.start_link(fn -> {0, []} end)
 
       shared_artwork = %{"url" => "https://example.test/shared/{w}x{h}bb.jpg"}
@@ -188,7 +188,13 @@ defmodule Songy.Boundary.Provider.AppleTest do
       assert Enum.all?(recorded, &(Keyword.fetch!(&1, :limit) == 25))
       assert Enum.all?(recorded, &(Keyword.fetch!(&1, :term) =~ ~r/^[a-z] \d{4}$/))
       assert Enum.all?(recorded, &(rem(Keyword.fetch!(&1, :offset), 25) == 0))
-      assert recorded |> Enum.map(&Keyword.fetch!(&1, :offset)) |> Enum.uniq() |> length() == 3
+
+      Enum.each(recorded, fn params ->
+        year = params |> Keyword.fetch!(:term) |> String.split(" ") |> List.last() |> String.to_integer()
+        page = params |> Keyword.fetch!(:offset) |> div(25)
+
+        assert page in expected_cover_pages_for_year(year)
+      end)
     end
 
     test "returns partial unique cover results when one parallel request fails" do
@@ -343,16 +349,19 @@ defmodule Songy.Boundary.Provider.AppleTest do
       assert {:error, :search_failed} = Apple.search_random_track()
     end
 
-    test "uses correct search parameters" do
+    test "uses weighted random search parameters" do
       Repatch.patch(Req, :get, fn url, opts ->
         params = Keyword.get(opts, :params)
+        year = params |> Keyword.fetch!(:term) |> String.split(" ") |> List.last() |> String.to_integer()
+        page = params |> Keyword.fetch!(:offset) |> div(25)
 
         assert url =~ ~r"/catalog/us/search$"
         assert Keyword.get(params, :types) == "songs"
         assert Keyword.get(params, :limit) == 25
         assert is_binary(Keyword.get(params, :term))
         assert Keyword.get(params, :term) =~ ~r/^[a-z] \d{4}$/
-        refute Keyword.has_key?(params, :offset)
+        assert rem(Keyword.fetch!(params, :offset), 25) == 0
+        assert page in expected_cover_pages_for_year(year)
 
         {:ok,
          %{
@@ -411,6 +420,15 @@ defmodule Songy.Boundary.Provider.AppleTest do
       assert_raise ArgumentError, fn ->
         Apple.search_random_track()
       end
+    end
+  end
+
+  defp expected_cover_pages_for_year(year) do
+    cond do
+      year < 1950 -> [0, 1]
+      year < 1980 -> [0, 1, 2, 3]
+      year < 2000 -> [0, 1, 2, 3, 4, 5, 6]
+      true -> Enum.to_list(0..11)
     end
   end
 

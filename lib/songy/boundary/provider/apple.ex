@@ -19,7 +19,6 @@ defmodule Songy.Boundary.Provider.Apple do
   @limit 25
   @random_track_attempts 5
   @cover_request_count 3
-  @cover_offset_pages 12
 
   @impl true
   def ensure(_provider), do: {:ok, :apple, Provider.Apple.new()}
@@ -43,21 +42,9 @@ defmodule Songy.Boundary.Provider.Apple do
 
   @impl true
   def search_cover_tracks(%Provider.Apple{}) do
-    offsets =
-      0..(@cover_offset_pages - 1)
-      |> Enum.shuffle()
-      |> Enum.take(@cover_request_count)
-      |> Enum.map(&(&1 * @limit))
-
     params_batch =
-      Enum.map(offsets, fn offset ->
-        [
-          storefront: @storefront,
-          types: @types,
-          term: random_query(),
-          limit: @limit,
-          offset: offset
-        ]
+      Enum.map(1..@cover_request_count, fn _ ->
+        build_random_search_params()
       end)
 
     params_batch
@@ -99,7 +86,10 @@ defmodule Songy.Boundary.Provider.Apple do
              params: search_params
            ),
          {:ok, %{status: 200, body: %{"results" => results}}} <- result do
-      Logger.info("Apple Music API request storefront=#{storefront} params=#{inspect(search_params)} successful: #{search_result_count(results)} results")
+      Logger.info(
+        "Apple Music API request storefront=#{storefront} params=#{inspect(search_params)} successful: #{search_result_count(results)} results"
+      )
+
       Logger.info("Apple Music API request result: #{inspect(result)}")
       {:ok, results}
     else
@@ -134,17 +124,21 @@ defmodule Songy.Boundary.Provider.Apple do
     find_random_track(@random_track_attempts)
   end
 
-  defp random_track_search_params do
-    [
-      storefront: @storefront,
-      types: @types,
-      term: random_query(),
-      limit: @limit
-    ]
-  end
+  defp build_random_search_params(overrides \\ []) do
+    year = random_year()
+    letter = random_letter()
+    offset = weighted_cover_offset(year)
 
-  defp random_query do
-    "#{<<random_letter()>>} #{random_year()}"
+    Keyword.merge(
+      [
+        storefront: @storefront,
+        types: @types,
+        term: "#{<<letter>>} #{year}",
+        limit: @limit,
+        offset: offset
+      ],
+      overrides
+    )
   end
 
   defp random_letter, do: ?a + rem(:binary.decode_unsigned(:crypto.strong_rand_bytes(1)), 26)
@@ -155,13 +149,29 @@ defmodule Songy.Boundary.Provider.Apple do
     first + rem(:binary.decode_unsigned(:crypto.strong_rand_bytes(2)), last - first + 1)
   end
 
+  defp weighted_cover_offset(year) do
+    pages = cover_offset_pages_for_year(year)
+    page = Enum.at(pages, rem(:binary.decode_unsigned(:crypto.strong_rand_bytes(1)), length(pages)))
+
+    page * @limit
+  end
+
+  defp cover_offset_pages_for_year(year) do
+    cond do
+      year < 1950 -> [0, 0, 0, 1]
+      year < 1980 -> [0, 0, 1, 1, 2, 2, 3]
+      year < 2000 -> [0, 1, 1, 2, 2, 3, 4, 5, 6]
+      true -> Enum.to_list(0..11)
+    end
+  end
+
   defp find_random_track(0) do
     Logger.warning("No Apple Music tracks found after #{@random_track_attempts} attempts")
     {:error, :no_tracks_found}
   end
 
   defp find_random_track(attempts_left) do
-    params = random_track_search_params()
+    params = build_random_search_params()
 
     case search_catalog(params) do
       {:ok, %{"songs" => %{"data" => [_ | _] = data}}} ->
