@@ -2,9 +2,10 @@ defmodule Songy.Providers do
   @moduledoc """
   Provider data storage with ETS.
 
-  Stores provider sessions in memory with automatic token refresh.
-  User-centric storage structure: user_id -> provider_session.
-  Each user can have only one active provider at a time.
+  Stores user-scoped provider sessions in memory with automatic token refresh.
+
+  Stateless default providers such as Apple Music and iTunes are resolved from
+  application config and are not treated as persisted user sessions.
   """
 
   use GenServer
@@ -58,7 +59,8 @@ defmodule Songy.Providers do
 
   @doc """
   Ensures provider is ready for the user.
-  Returns {:ok, session} from ETS (validated and refreshed) or creates the default provider.
+  Returns a validated persisted provider session or falls back to the current
+  default provider from application config.
   """
   @spec ensure(String.t()) :: {:ok, Session.t()} | {:error, atom()}
   def ensure(user_id) do
@@ -82,33 +84,30 @@ defmodule Songy.Providers do
     end
   end
 
-  defp insert_default_provider(user_id) do
+  defp insert_default_provider(_user_id) do
     module =
       Application.fetch_env!(:songy, :providers)
       |> Keyword.fetch!(:default)
 
     session = Session.normalize!(module.new())
-    insert(user_id, session)
 
     case Songy.Boundary.Provider.ensure(session) do
-      {:ok, ensured_session} ->
-        update(user_id, ensured_session)
-        {:ok, ensured_session}
-
+      {:ok, ensured_session} -> {:ok, ensured_session}
       {:error, reason} ->
         {:error, reason}
     end
   end
 
   @doc """
-  Looks up the provider session for user. Pure ETS read without validation.
+  Looks up persisted user-scoped provider data from ETS.
   """
   @spec lookup(String.t()) :: {:ok, Session.t()} | {:error, :not_found}
   def lookup(user_id) when is_binary(user_id) do
     case :ets.lookup(__MODULE__, user_id) do
       [{^user_id, data}] ->
         case Session.normalize(data) do
-          {:ok, session} -> {:ok, session}
+          {:ok, %Session{id: :spotify} = session} -> {:ok, session}
+          {:ok, _session} -> {:error, :not_found}
           {:error, :not_supported} -> {:error, :not_found}
         end
 

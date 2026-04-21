@@ -48,7 +48,7 @@ config :songy,
   game_session_termination_timeout: :timer.minutes(3),
   challenging_phase_timeout: :timer.seconds(8),
   providers: [
-    default: Songy.Core.Provider.ITunes,
+    default: Songy.Core.Provider.Apple,
     apple: [
       url: "https://api.music.apple.com/v1"
     ],

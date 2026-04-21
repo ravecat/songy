@@ -161,11 +161,11 @@ defmodule SongyWeb.AuthTest do
   end
 
   describe "fetch_current_provider/2" do
-    test "assigns default provider when ensure creates default", %{conn: conn} do
+    test "assigns Apple as the default provider when ensure creates default", %{conn: conn} do
       user = User.new()
 
       Repatch.patch(Songy.Providers, :ensure, fn _user_id ->
-        {:ok, Session.normalize!(%Songy.Core.Provider.ITunes{})}
+        {:ok, Session.normalize!(%Songy.Core.Provider.Apple{})}
       end)
 
       conn =
@@ -173,7 +173,7 @@ defmodule SongyWeb.AuthTest do
         |> assign(:current_user, user)
         |> Auth.fetch_current_provider([])
 
-      assert conn.assigns.provider == :itunes
+      assert conn.assigns.provider == :apple
     end
 
     test "assigns :spotify when user has Spotify provider", %{conn: conn} do

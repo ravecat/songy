@@ -1,6 +1,7 @@
 defmodule Songy.ProvidersTest do
   use ExUnit.Case, async: false
 
+  alias Songy.Core.Provider.Apple
   alias Songy.Core.Provider.Spotify
   alias Songy.Provider.Session
   alias Songy.Providers
@@ -276,11 +277,20 @@ defmodule Songy.ProvidersTest do
       assert result.access_token == "valid_token"
     end
 
-    test "creates default provider when user has no provider" do
+    test "resolves Apple Music from config when user has no persisted provider" do
       user_id = "new_user"
 
-      assert {:ok, %Session{id: :itunes, data: %Songy.Core.Provider.ITunes{}}} = Providers.ensure(user_id)
-      assert {:ok, %Session{id: :itunes, data: %Songy.Core.Provider.ITunes{}}} = Providers.lookup(user_id)
+      assert {:ok, %Session{id: :apple, data: %Apple{}}} = Providers.ensure(user_id)
+      assert {:error, :not_found} = Providers.lookup(user_id)
+    end
+
+    test "ignores a persisted iTunes fallback session and resolves Apple Music from config" do
+      user_id = "user_with_stale_itunes_fallback"
+
+      assert :ok = Providers.insert(user_id, %Songy.Core.Provider.ITunes{})
+
+      assert {:ok, %Session{id: :apple, data: %Apple{}}} = Providers.ensure(user_id)
+      assert {:error, :not_found} = Providers.lookup(user_id)
     end
 
     test "updates ETS when token has expired" do
@@ -317,7 +327,7 @@ defmodule Songy.ProvidersTest do
       assert stored_session.data.access_token == "refreshed_token"
     end
 
-    test "falls back to default provider when credentials are invalid" do
+    test "falls back to Apple Music from config when credentials are invalid" do
       user_id = "user_with_invalid_refresh"
 
       invalid_data = %Spotify{
@@ -331,8 +341,8 @@ defmodule Songy.ProvidersTest do
         {:error, :invalid_credentials}
       end)
 
-      assert {:ok, %Session{id: :itunes, data: %Songy.Core.Provider.ITunes{}}} = Providers.ensure(user_id)
-      assert {:ok, %Session{id: :itunes, data: %Songy.Core.Provider.ITunes{}}} = Providers.lookup(user_id)
+      assert {:ok, %Session{id: :apple, data: %Apple{}}} = Providers.ensure(user_id)
+      assert {:error, :not_found} = Providers.lookup(user_id)
     end
 
     test "returns error for transient failures without removing provider" do

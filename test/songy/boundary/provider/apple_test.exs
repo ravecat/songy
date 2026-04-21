@@ -100,6 +100,14 @@ defmodule Songy.Boundary.Provider.AppleTest do
       Apple.search(@valid_token, term: "test")
     end
   end
+  describe "ensure/1" do
+    test "returns Apple provider without requiring configured credentials" do
+      Application.delete_env(:songy, :apple)
+
+      assert {:ok, :apple, %Songy.Core.Provider.Apple{}} = Apple.ensure(%Songy.Core.Provider.Apple{})
+    end
+  end
+
 
   describe "search_random_track/0" do
     test "returns random track when search is successful" do

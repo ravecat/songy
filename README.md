@@ -80,9 +80,7 @@ Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 
 ## Music Providers
 
-By default, the app uses **iTunes** (no configuration needed) - its rate limits are sufficient for development.
-
-For production or enhanced features, configure one of these providers:
+Provider selection is defined in the application config.
 
 ### Spotify
 

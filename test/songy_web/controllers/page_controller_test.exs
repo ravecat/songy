@@ -80,11 +80,11 @@ defmodule SongyWeb.PageControllerTest do
                Phoenix.Flash.get(conn.assigns.flash, :error)
     end
 
-    test "passes provider assignment to inertia", %{conn: conn} do
+    test "passes Apple provider assignment to inertia when it is active", %{conn: conn} do
       {:ok, game} = GameSession.create_game_session("owner123")
 
       Repatch.patch(Songy.Providers, :lookup, fn _user_id ->
-        {:ok, Session.normalize!(%Songy.Core.Provider.ITunes{})}
+        {:ok, Session.normalize!(%Songy.Core.Provider.Apple{})}
       end)
 
       conn = get(conn, ~p"/#{game.id}")
@@ -92,7 +92,7 @@ defmodule SongyWeb.PageControllerTest do
 
       props = inertia_props(conn)
       assert props.roomId == game.id
-      assert props.scope.provider == :itunes
+      assert props.scope.provider == :apple
 
       GameSession.end_game_session(game.id)
     end

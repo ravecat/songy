@@ -19,15 +19,7 @@ defmodule Songy.Boundary.Provider.Apple do
   @limit 25
 
   @impl true
-  def ensure(_provider) do
-    case access_token() do
-      {:ok, _token} ->
-        {:ok, :apple, Provider.Apple.new()}
-
-      {:error, :invalid_credentials} ->
-        {:error, :invalid_credentials}
-    end
-  end
+  def ensure(_provider), do: {:ok, :apple, Provider.Apple.new()}
 
   @impl true
   def start_playback(_provider, _track) do
