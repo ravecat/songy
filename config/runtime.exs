@@ -45,7 +45,14 @@ config :spotify_ex,
   ],
   callback_url: env!("SPOTIFY_CALLBACK_URL", :string?, "http://127.0.0.1:4000/auth/spotify/callback")
 
-config :songy, :apple, access_token: env!("APPLE_MUSIC_ACCESS_TOKEN", :string?, "")
+apple_music_access_token =
+  if config_env() == :prod do
+    env!("APPLE_MUSIC_ACCESS_TOKEN", :string!)
+  else
+    env!("APPLE_MUSIC_ACCESS_TOKEN", :string?, "")
+  end
+
+config :songy, :apple, access_token: apple_music_access_token
 
 if config_env() == :prod do
   # Database connection disabled - uncomment if needed
