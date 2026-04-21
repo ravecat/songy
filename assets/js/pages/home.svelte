@@ -6,6 +6,27 @@
   import { inertia, Deferred } from "@inertiajs/svelte";
 
   let { tracks } = $props();
+
+  const coverGridSize = 45;
+
+  let displayTracks = $derived.by(() => {
+    const foundTracks = Array.isArray(tracks) ? tracks.slice(0, coverGridSize) : [];
+    const placeholders = Array.from(
+      { length: coverGridSize - foundTracks.length },
+      () => null,
+    );
+
+    return shuffle([...foundTracks, ...placeholders]);
+  });
+
+  function shuffle(items) {
+    for (let index = items.length - 1; index > 0; index -= 1) {
+      const randomIndex = Math.floor(Math.random() * (index + 1));
+      [items[index], items[randomIndex]] = [items[randomIndex], items[index]];
+    }
+
+    return items;
+  }
 </script>
 
 <h1 class="sr-only">Songy - Music Game</h1>
@@ -15,19 +36,26 @@
     <Deferred data="tracks">
       {#snippet fallback()}
         <div class="cover-grid">
-          {#each Array(50) as _}
+          {#each Array(coverGridSize) as _}
             <div class="cover-grid__item cover-grid__item_placeholder"></div>
           {/each}
         </div>
       {/snippet}
       <div class="cover-grid">
-        {#each tracks as track, i (track.id)}
-          <img
-            src={track.cover_url}
-            alt="{track.artist} - {track.title}"
-            class="cover-grid__item"
-            style="--i: {i}"
-          />
+        {#each displayTracks as track, i (track?.id ?? `placeholder:${i}`)}
+          {#if track}
+            <img
+              src={track.cover_url}
+              alt="{track.artist} - {track.title}"
+              class="cover-grid__item"
+              style="--i: {i}"
+            />
+          {:else}
+            <div
+              class="cover-grid__item cover-grid__item_placeholder"
+              style="--i: {i}"
+            ></div>
+          {/if}
         {/each}
       </div>
     </Deferred>
