@@ -17,6 +17,7 @@ defmodule Songy.Boundary.Provider.Apple do
   @storefront "us"
   @types "songs"
   @limit 25
+  @excluded_random_track_genres ["Classical", "Christian", "Children's Music"]
   @random_track_attempts 5
   @cover_request_count 3
   @cover_track_count 45
@@ -167,14 +168,29 @@ defmodule Songy.Boundary.Provider.Apple do
 
     case search_catalog(params) do
       {:ok, %{"songs" => %{"data" => [_ | _] = data}}} ->
-        track =
-          data
-          |> Enum.at(rem(:binary.decode_unsigned(:crypto.strong_rand_bytes(1)), length(data)))
-          |> Track.Apple.to_struct()
+        filtered_data =
+          Enum.reject(data, fn
+            %{"attributes" => %{"genreNames" => genre_names}} when is_list(genre_names) ->
+              Enum.any?(genre_names, &(&1 in @excluded_random_track_genres))
 
-        Logger.info("Successfully found random track #{inspect(track)} with params: #{inspect(params)}")
+            _track ->
+              false
+          end)
 
-        {:ok, track}
+        case filtered_data do
+          [] ->
+            Logger.warning("No Apple Music songs remained after genre filtering for params: #{inspect(params)}")
+            find_random_track(attempts_left - 1)
+
+          filtered_data ->
+            track =
+              filtered_data
+              |> Enum.at(rem(:binary.decode_unsigned(:crypto.strong_rand_bytes(1)), length(filtered_data)))
+              |> Track.Apple.to_struct()
+
+            Logger.info("Successfully found random track #{inspect(track)} with params: #{inspect(params)}")
+            {:ok, track}
+        end
 
       {:ok, %{"songs" => %{"data" => []}}} ->
         Logger.warning("No Apple Music songs found for params: #{inspect(params)}")

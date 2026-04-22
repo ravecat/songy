@@ -314,6 +314,57 @@ defmodule Songy.Boundary.Provider.AppleTest do
       assert Process.get(:apple_req_calls) == 2
     end
 
+    test "excludes tracks from configured genres before random selection" do
+      tracks = [
+        %{
+          "id" => "123",
+          "attributes" => %{"name" => "Classical Track", "genreNames" => ["Classical", "Music"]}
+        },
+        %{
+          "id" => "456",
+          "attributes" => %{"name" => "Allowed Track", "genreNames" => ["Alternative", "Music"]}
+        }
+      ]
+
+      Repatch.patch(Req, :get, fn _url, _opts ->
+        {:ok, %{status: 200, body: songs_response(tracks)}}
+      end)
+
+      assert {:ok, %Songy.Core.Track.Apple{id: "456", attributes: %{"name" => "Allowed Track"}}} =
+               Apple.search_random_track()
+    end
+
+    test "retries when all returned tracks are excluded by genre" do
+      Process.put(:apple_req_calls, 0)
+
+      excluded_tracks = [
+        %{
+          "id" => "123",
+          "attributes" => %{"name" => "Classical Track", "genreNames" => ["Classical", "Music"]}
+        }
+      ]
+
+      allowed_tracks = [
+        %{
+          "id" => "456",
+          "attributes" => %{"name" => "Allowed Track", "genreNames" => ["Alternative", "Music"]}
+        }
+      ]
+
+      Repatch.patch(Req, :get, fn _url, _opts ->
+        calls = Process.get(:apple_req_calls, 0) + 1
+        Process.put(:apple_req_calls, calls)
+
+        case calls do
+          1 -> {:ok, %{status: 200, body: songs_response(excluded_tracks)}}
+          _ -> {:ok, %{status: 200, body: songs_response(allowed_tracks)}}
+        end
+      end)
+
+      assert {:ok, %Songy.Core.Track.Apple{id: "456"}} = Apple.search_random_track()
+      assert Process.get(:apple_req_calls) == 2
+    end
+
     test "returns error when API request fails" do
       Repatch.patch(Req, :get, fn _url, _opts ->
         {:error, %RuntimeError{message: "Network error"}}
