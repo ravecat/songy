@@ -19,6 +19,8 @@ defmodule Songy.Boundary.Provider.Apple do
   @limit 25
   @random_track_attempts 5
   @cover_request_count 3
+  @cover_track_count 45
+  @cover_search_attempts 5
 
   @impl true
   def ensure(_provider), do: {:ok, :apple, Provider.Apple.new()}
@@ -42,17 +44,7 @@ defmodule Songy.Boundary.Provider.Apple do
 
   @impl true
   def search_cover_tracks(%Provider.Apple{}) do
-    params_batch =
-      Enum.map(1..@cover_request_count, fn _ ->
-        build_random_search_params()
-      end)
-
-    params_batch
-    |> Task.async_stream(&search_catalog/1,
-      ordered: false,
-      max_concurrency: @cover_request_count
-    )
-    |> collect_cover_tracks()
+    collect_cover_tracks([], @cover_search_attempts)
   end
 
   @impl true
@@ -201,30 +193,60 @@ defmodule Songy.Boundary.Provider.Apple do
     end
   end
 
-  defp collect_cover_tracks(task_results) do
-    tracks =
-      Enum.reduce(task_results, [], fn
-        {:ok, {:ok, %{"songs" => %{"data" => data}}}}, acc ->
-          acc ++ Enum.map(data, &(Track.Apple.to_struct(&1) |> Trackable.to_track()))
+  # We repeat cover searches to improve UX by collecting enough unique artwork for the landing grid.
+  # If API rate limits become a concern, prefer stopping retries over aggressively pursuing the target.
+  defp collect_cover_tracks(unique_tracks, attempts_left) do
+    case length(unique_tracks) >= @cover_track_count or attempts_left == 0 do
+      true ->
+        cover_tracks = Enum.take(unique_tracks, @cover_track_count)
 
-        {:ok, {:ok, _}}, acc ->
-          acc
+        if length(cover_tracks) < @cover_track_count do
+          Logger.warning(
+            "Apple Music cover search collected #{length(cover_tracks)}/#{@cover_track_count} unique cover tracks"
+          )
+        end
 
-        {:ok, {:error, reason}}, acc ->
-          Logger.warning("Apple Music cover search failed: #{inspect(reason)}")
-          acc
+        {:ok, cover_tracks}
 
-        {:exit, reason}, acc ->
-          Logger.warning("Apple Music cover search task exited: #{inspect(reason)}")
-          acc
-      end)
+      false ->
+        params_batch =
+          Enum.map(1..@cover_request_count, fn _ ->
+            build_random_search_params()
+          end)
 
-    unique_tracks =
-      tracks
-      |> Enum.filter(&is_binary(&1.cover_url))
-      |> Enum.uniq_by(& &1.cover_url)
+        round_tracks =
+          params_batch
+          |> Task.async_stream(&search_catalog/1,
+            ordered: false,
+            max_concurrency: @cover_request_count
+          )
+          |> extract_cover_tracks()
 
-    {:ok, unique_tracks}
+        unique_tracks =
+          (unique_tracks ++ round_tracks)
+          |> Enum.filter(&is_binary(&1.cover_url))
+          |> Enum.uniq_by(& &1.cover_url)
+
+        collect_cover_tracks(unique_tracks, attempts_left - 1)
+    end
+  end
+
+  defp extract_cover_tracks(tracks) do
+    Enum.reduce(tracks, [], fn
+      {:ok, {:ok, %{"songs" => %{"data" => data}}}}, acc ->
+        acc ++ Enum.map(data, &(Track.Apple.to_struct(&1) |> Trackable.to_track()))
+
+      {:ok, {:ok, _}}, acc ->
+        acc
+
+      {:ok, {:error, reason}}, acc ->
+        Logger.warning("Apple Music cover search failed: #{inspect(reason)}")
+        acc
+
+      {:exit, reason}, acc ->
+        Logger.warning("Apple Music cover search task exited: #{inspect(reason)}")
+        acc
+    end)
   end
 
   defp search_result_count(results) when is_map(results) do

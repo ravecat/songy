@@ -4,6 +4,8 @@ defmodule Songy.Boundary.Provider.AppleTest do
   alias Songy.Boundary.Provider.Apple
 
   @random_track_attempts 5
+  @cover_request_count 3
+  @cover_track_count 45
   @valid_token "test_developer_token"
 
   setup do
@@ -138,11 +140,8 @@ defmodule Songy.Boundary.Provider.AppleTest do
   end
 
   describe "search_cover_tracks/1" do
-    test "runs three parallel cover searches, uses year-weighted offsets, and dedupes by cover_url" do
+    test "collects 45 unique cover tracks and stops once the target is reached" do
       {:ok, calls} = Agent.start_link(fn -> {0, []} end)
-
-      shared_artwork = %{"url" => "https://example.test/shared/{w}x{h}bb.jpg"}
-      unique_artwork = %{"url" => "https://example.test/unique/{w}x{h}bb.jpg"}
 
       Repatch.patch(Req, :get, [mode: :shared], fn url, opts ->
         call_index =
@@ -156,34 +155,24 @@ defmodule Songy.Boundary.Provider.AppleTest do
 
         body =
           case call_index do
-            1 ->
-              songs_response([
-                song_payload("1", "Shared A", "Artist A", "2020-01-01", shared_artwork)
-              ])
-
-            2 ->
-              songs_response([
-                song_payload("2", "Shared B", "Artist B", "2021-01-01", shared_artwork)
-              ])
-
-            _ ->
-              songs_response([
-                song_payload("3", "Unique", "Artist C", "2022-01-01", unique_artwork)
-              ])
+            1 -> songs_response(song_payloads(1..25))
+            2 -> songs_response(song_payloads(1..25))
+            _ -> songs_response(song_payloads(26..50))
           end
 
         {:ok, %{status: 200, body: body}}
       end)
 
       assert {:ok, tracks} = Apple.search_cover_tracks(%Songy.Core.Provider.Apple{})
-      assert length(tracks) == 2
+      assert length(tracks) == @cover_track_count
+      assert length(Enum.uniq_by(tracks, & &1.cover_url)) == @cover_track_count
 
       recorded =
         Agent.get(calls, fn {_count, recorded} ->
           Enum.reverse(recorded)
         end)
 
-      assert length(recorded) == 3
+      assert length(recorded) == @cover_request_count
       assert Enum.all?(recorded, &(Keyword.fetch!(&1, :types) == "songs"))
       assert Enum.all?(recorded, &(Keyword.fetch!(&1, :limit) == 25))
       assert Enum.all?(recorded, &(Keyword.fetch!(&1, :term) =~ ~r/^[a-z] \d{4}$/))
@@ -197,7 +186,7 @@ defmodule Songy.Boundary.Provider.AppleTest do
       end)
     end
 
-    test "returns partial unique cover results when one parallel request fails" do
+    test "returns partial unique cover results when unique target is not reached" do
       {:ok, calls} = Agent.start_link(fn -> 0 end)
 
       Repatch.patch(Req, :get, [mode: :shared], fn _url, _opts ->
@@ -211,34 +200,18 @@ defmodule Songy.Boundary.Provider.AppleTest do
           1 ->
             {:error, %RuntimeError{message: "Network error"}}
 
-          2 ->
-            {:ok,
-             %{
-               status: 200,
-               body:
-                 songs_response([
-                   song_payload("2", "A", "B", "2020-01-01", %{
-                     "url" => "https://example.test/a/{w}x{h}bb.jpg"
-                   })
-                 ])
-             }}
-
           _ ->
             {:ok,
              %{
                status: 200,
-               body:
-                 songs_response([
-                   song_payload("3", "C", "D", "2020-01-01", %{
-                     "url" => "https://example.test/c/{w}x{h}bb.jpg"
-                   })
-                 ])
+               body: songs_response(song_payloads(1..25))
              }}
         end
       end)
 
       assert {:ok, tracks} = Apple.search_cover_tracks(%Songy.Core.Provider.Apple{})
-      assert length(tracks) == 2
+      assert length(tracks) == 25
+      assert length(Enum.uniq_by(tracks, & &1.cover_url)) == 25
     end
 
     test "returns an empty list when all parallel requests fail" do
@@ -434,6 +407,18 @@ defmodule Songy.Boundary.Provider.AppleTest do
 
   defp songs_response(data) do
     %{"results" => %{"songs" => %{"data" => data}}}
+  end
+
+  defp song_payloads(ids) do
+    Enum.map(ids, fn id ->
+      song_payload(
+        "#{id}",
+        "Track #{id}",
+        "Artist #{id}",
+        "2020-01-01",
+        %{"url" => "https://example.test/#{id}/{w}x{h}bb.jpg"}
+      )
+    end)
   end
 
   defp song_payload(id, name, artist, release_date, artwork) do

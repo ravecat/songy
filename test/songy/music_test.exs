@@ -8,7 +8,24 @@ defmodule Songy.MusicTest do
 
   describe "search_cover_tracks/1" do
     test "delegates to provider cover-track strategy" do
-      expected_tracks = [%Track{id: "track", title: "Song", artist: "Artist", year: 2024, meta: %{}}]
+      expected_tracks = [
+        %Track{
+          id: "track-1",
+          title: "Song 1",
+          artist: "Artist 1",
+          year: 2024,
+          cover_url: "https://example.test/1.jpg",
+          meta: %{}
+        },
+        %Track{
+          id: "track-2",
+          title: "Song 2",
+          artist: "Artist 2",
+          year: 2024,
+          cover_url: "https://example.test/2.jpg",
+          meta: %{}
+        }
+      ]
 
       Repatch.patch(Songy.Providers, :ensure, fn _user_id ->
         {:ok, Session.normalize!(%Apple{})}
