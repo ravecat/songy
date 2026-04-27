@@ -106,7 +106,7 @@ type Session<TSpec extends SessionSpec> =
 export function createSession<TSpec extends SessionSpec>(
   config: SessionConfig<TSpec>,
 ): Session<TSpec> {
-  const channel = socket.channel(config.topic, {}) as Channel;
+  let channel: Channel | null = null;
 
   const initialState: SessionState<SnapshotOf<TSpec>> = {
     snapshot: config.snapshot ?? null,
@@ -117,6 +117,7 @@ export function createSession<TSpec extends SessionSpec>(
   const { subscribe } = readable<SessionState<SnapshotOf<TSpec>>>(
     initialState,
     (_set, update) => {
+      channel = socket.channel(config.topic, {}) as Channel;
       const cleanups: Array<() => void> = [];
 
       const errorRef = channel.onError((reason) => {
@@ -143,7 +144,7 @@ export function createSession<TSpec extends SessionSpec>(
       });
 
       cleanups.push(() => {
-        channel.off(CHANNEL_ERROR_EVENT, errorRef);
+        channel?.off(CHANNEL_ERROR_EVENT, errorRef);
       });
 
       const closeRef = channel.onClose(() => {
@@ -169,7 +170,7 @@ export function createSession<TSpec extends SessionSpec>(
       });
 
       cleanups.push(() => {
-        channel.off(CHANNEL_CLOSE_EVENT, closeRef);
+        channel?.off(CHANNEL_CLOSE_EVENT, closeRef);
       });
 
       for (const [event, reducer] of Object.entries(config.events ?? {})) {
@@ -185,7 +186,7 @@ export function createSession<TSpec extends SessionSpec>(
         });
 
         cleanups.push(() => {
-          channel.off(event, ref);
+          channel?.off(event, ref);
         });
       }
 
@@ -228,13 +229,19 @@ export function createSession<TSpec extends SessionSpec>(
           cleanup();
         }
 
-        channel.leave();
+        channel?.leave();
+        channel = null;
       };
     },
   );
 
-  const push: Channel["push"] = (event, payload, timeout) =>
-    channel.push(event, payload, timeout);
+  const push: Channel["push"] = (event, payload, timeout) => {
+    if (!channel) {
+      throw new Error(`Cannot push "${event}" before joining "${config.topic}"`);
+    }
+
+    return channel.push(event, payload, timeout);
+  };
   const sessionCore: SessionCore<TSpec> = {
     subscribe,
     push,
