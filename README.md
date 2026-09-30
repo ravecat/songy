@@ -106,6 +106,11 @@ APPLE_MUSIC_ACCESS_TOKEN=your_access_token
 
 [docs/README.md](docs/README.md)
 
+## OpenSpec
+
+Run `openspec init --tools codex` after cloning to install the Codex skills locally. Start a change with
+`$openspec-propose`.
+
 ## Licensing
 
 This project is dual-licensed:
