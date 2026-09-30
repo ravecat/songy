@@ -35,3 +35,9 @@
 ## Supporting technical references
 
 All technical references (security, deployment, data flows) are consolidated in [Design Doc](design-doc.md).
+
+## Gameplay rule alignment
+
+- [Hitster Original Rules Reference](hitster-original-reference.md) - publisher source, rule decisions and Songy differences
+- [Gameplay Commit Map](gameplay-commit-map.md) - retrospective delivery evidence and full feature-commit index
+- [OpenSpec Rule-Alignment Change](../openspec/changes/align-gameplay-with-hitster-original/proposal.md) - proposed behavior, design and implementation tasks

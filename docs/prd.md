@@ -11,6 +11,10 @@
 - Design doc: [design-doc.md](design-doc.md)
 - ADR links: [adr/README.md](adr/README.md)
 
+This PRD describes the existing timed Songy game, including point-scoring assumptions. The proposed Hitster Original
+rule alignment is tracked in [OpenSpec](../openspec/changes/align-gameplay-with-hitster-original/proposal.md); its rules
+supersede conflicting gameplay requirements here only after that change is implemented and synchronized.
+
 ## Problem recap
 
 Songy targets groups of friends who want fast, music-driven social play but avoid existing options due to setup friction
