@@ -98,7 +98,7 @@ just assets test --coverage
 just assets test --ui --watch
 just assets test:unit
 just assets test:browser
-just assets test:storybook
+just assets test:visual
 just assets check --watch
 just assets typecheck
 just assets e2e --reporter=list
@@ -112,6 +112,31 @@ and tests, Markdown formatting, Svelte/TypeScript checks, frontend tests, and pr
 flake provides Chromium matching the pinned Playwright dependency. For a production release, run `just assets deploy`
 followed by `MIX_ENV=prod just mix phx.digest`; Docker does both before building the release. The Docker builder retains
 d20's release image with Elixir 1.19.5 and OTP 28.3.3 and installs Bun 1.3.13 separately.
+
+## Storybook tests
+
+Write component interactions and user-visible assertions in Storybook `play` functions. `just assets test` runs the unit
+tests and Storybook tests through Vitest and the Chromium supplied by the flake. Storybook tests load the same
+decorators, themes, fixtures, and request mocks as the interactive catalog; they do not need a running Phoenix server.
+The old standalone component tests remain available through `just assets test:browser` while their behavior is moved
+into stories.
+
+```bash
+nix develop
+just assets test:visual
+just assets vitest run --project 'visual-*-mobile'
+just assets test:visual --update
+just storybook
+```
+
+Visual tests run light and dark themes at desktop (`1280x720`), tablet (`1024x640`), and mobile (`320x900`) sizes.
+Screenshots are captured after `play`, with pinned fonts and Chromium. References live under
+`assets/__screenshots__/<story-path>/<theme>/<viewport>/chromium/`; actual images, diffs, and traces are ignored under
+`assets/.vitest/`. Review an intentional `--update` in Git, then run a normal comparison. The Storybook workflow runs
+the same flake checks on pushes to `master` and pull requests, comparing references without updating them and uploading
+failure evidence. Generate and compare references in the Linux flake environment.
+
+See [story conventions](assets/stories/README.md) for fixture, interaction, and screenshot guidelines.
 
 ## Music Providers
 

@@ -1,0 +1,50 @@
+diff --git a/dist/index.js b/dist/index.js
+index 7dc3ff14a551314a30e0222a0f5d160bfc1150ac..71b391f347ef7509db628459afb3fbb05d7b737d 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -2175,23 +2175,6 @@ function takeDecodedScreenshot({ codec, context, element, name, screenshotOption
+ 		element
+ 	}).then(({ buffer }) => codec.decode(buffer, {}));
+ }
+-/**
+-* Creates a promise that resolves to `null` after the specified timeout.
+-* If the timeout is `0`, the promise resolves immediately.
+-*
+-* @param timeout - The delay in milliseconds before the promise resolves
+-* @returns `Promise` that resolves to `null` after the timeout
+-*/
+-function asyncTimeout(timeout) {
+-	return new Promise((resolve) => {
+-		if (timeout === 0) {
+-			resolve(null);
+-		} else {
+-			setTimeout(() => resolve(null), timeout);
+-		}
+-	});
+-}
+-
+ /**
+ * Browser command that compares a screenshot against a stored reference.
+ *
+@@ -2416,8 +2399,19 @@ function buildOutput(outcome, timeout) {
+ async function waitForStableScreenshot(options, timeout) {
+ 	const abortController = new AbortController();
+ 	const stableScreenshot = getStableScreenshot(options, abortController.signal);
+-	const result = await (timeout === 0 ? stableScreenshot : Promise.race([stableScreenshot, asyncTimeout(timeout).finally(() => abortController.abort())]));
+-	return result;
++	if (timeout === 0) return stableScreenshot;
++	let timer;
++	try {
++		return await Promise.race([stableScreenshot, new Promise((resolve) => {
++			timer = setTimeout(() => {
++				abortController.abort();
++				resolve(null);
++			}, timeout);
++		})]);
++	} finally {
++		clearTimeout(timer);
++		abortController.abort();
++	}
+ }
+ /**
+ * Takes screenshots repeatedly until the page reaches a visually stable state.

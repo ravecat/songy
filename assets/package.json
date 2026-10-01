@@ -9,15 +9,15 @@
     "build": "vite build",
     "deploy": "bun run build && bun run storybook:build",
     "codegen": "asyncapi-codegen",
-    "test": "vitest run --project unit --project browser --passWithNoTests --reporter=verbose",
+    "test": "vitest run --project unit --project 'visual-*' --reporter=verbose",
     "test:unit": "vitest run --project unit --reporter=verbose",
     "test:browser": "vitest run --project browser --passWithNoTests --reporter=verbose",
-    "test:storybook": "vitest run --project storybook --reporter=verbose",
+    "test:visual": "vitest run --project 'visual-*' --reporter=verbose",
     "check": "svelte-check",
     "typecheck": "tsc --noEmit",
     "e2e": "playwright test",
-    "storybook": "storybook dev --no-open --port 6006 --exact-port",
-    "storybook:build": "storybook build -o ../priv/static/storybook"
+    "storybook": "storybook dev --no-open --port 6006 --exact-port --disable-telemetry",
+    "storybook:build": "storybook build -o ../priv/static/storybook --disable-telemetry"
   },
   "dependencies": {
     "@inertiajs/core": "2.3.21",
@@ -38,9 +38,12 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@fontsource-variable/dm-sans": "5.3.0",
     "@playwright/test": "1.59.1",
     "@rvct/asyncapi": "1.0.0-beta.3",
+    "@storybook/addon-a11y": "10.3.5",
     "@storybook/addon-svelte-csf": "^5.0.12",
+    "@storybook/addon-themes": "10.3.5",
     "@storybook/addon-vitest": "^10.3.1",
     "@storybook/svelte-vite": "^10.3.1",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
@@ -72,5 +75,8 @@
     "workerDirectory": [
       "public"
     ]
+  },
+  "patchedDependencies": {
+    "@vitest/browser@4.1.4": "patches/@vitest%2Fbrowser@4.1.4.patch"
   }
 }

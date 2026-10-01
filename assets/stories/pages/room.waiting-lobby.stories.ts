@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/svelte-vite";
+import { expect, userEvent } from "storybook/test";
 import { users } from "~fixtures/users";
 import qr from "~fixtures/qr.svg?raw";
 
@@ -43,5 +44,24 @@ export const Player: Story = {
       user: users.bob,
       provider: null,
     },
+  },
+};
+
+export const StartGame: Story = {
+  args: {
+    roomId: "room-start-game",
+    qr,
+    scope: {
+      user: users.alice,
+      provider: null,
+    },
+  },
+  play: async ({ canvas }) => {
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Start game" }),
+    );
+    await expect(
+      await canvas.findByRole("button", { name: "Ready" }),
+    ).toBeVisible();
   },
 };

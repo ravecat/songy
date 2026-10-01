@@ -11,11 +11,29 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         beam = pkgs.beam.packages.erlang_28;
+        fontsConf = pkgs.writeText "playwright-fonts.conf" ''
+          <?xml version="1.0"?>
+          <!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
+          <fontconfig>
+            <dir>${pkgs.noto-fonts}/share/fonts/noto</dir>
+            <dir>${pkgs.liberation_ttf}/share/fonts/truetype</dir>
+            <alias binding="strong"><family>sans</family><prefer><family>Noto Sans</family></prefer></alias>
+            <alias binding="strong"><family>system</family><prefer><family>Noto Sans</family></prefer></alias>
+            <alias binding="strong"><family>serif</family><prefer><family>Noto Serif</family></prefer></alias>
+            <alias binding="strong"><family>monospace</family><prefer><family>Noto Sans Mono</family></prefer></alias>
+            <alias binding="strong"><family>Arial</family><prefer><family>Liberation Sans</family></prefer></alias>
+            <alias binding="strong"><family>Times New Roman</family><prefer><family>Liberation Serif</family></prefer></alias>
+            <cachedir prefix="xdg">fontconfig</cachedir>
+          </fontconfig>
+        '';
+        playwright = (pkgs.callPackage "${nixpkgs}/pkgs/development/web/playwright/driver.nix" {
+          makeFontsConf = _: fontsConf;
+        }).playwright-core;
         browsers =
           assert pkgs.lib.assertMsg
-            (pkgs.playwright-driver.version == (builtins.fromJSON (builtins.readFile ./assets/package.json)).devDependencies."@playwright/test")
+            (playwright.version == (builtins.fromJSON (builtins.readFile ./assets/package.json)).devDependencies."@playwright/test")
             "The Nix browser package must match the Playwright version in assets/package.json.";
-          pkgs.playwright-driver.selectBrowsers {
+          playwright.selectBrowsers {
             withFirefox = false;
             withWebkit = false;
             withFfmpeg = false;
@@ -23,6 +41,7 @@
       in {
         devShells.default = pkgs.mkShell {
           PLAYWRIGHT_BROWSERS_PATH = "${browsers}";
+          FONTCONFIG_FILE = "${fontsConf}";
           packages = [
             beam.erlang
             beam.elixir_1_20

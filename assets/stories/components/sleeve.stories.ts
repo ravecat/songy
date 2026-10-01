@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/svelte-vite";
+import { expect } from "storybook/test";
 import Sleeve from "~components/sleeve.svelte";
 
 const meta = {
@@ -19,11 +20,23 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("Midnight City")).toBeVisible();
+    await expect(canvas.getByText("M83")).toBeVisible();
+    await expect(canvas.getByText("2011")).toBeVisible();
+  },
+};
 
 export const EmptyState: Story = {
   args: {
     track: null,
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.queryByText("Midnight City")).not.toBeInTheDocument();
+    await expect(canvas.queryByText("M83")).not.toBeInTheDocument();
+    await expect(canvas.queryByText("2011")).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("img")).not.toBeInTheDocument();
   },
 };
 
