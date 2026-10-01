@@ -1,7 +1,7 @@
 # Timeline Turns
 
 Current Songy behavior at `72f5395`. The current point-scoring challenge differs from Hitster Original.
-[The rules reference](../../../docs/hitster-original-reference.md) records the publisher source.
+[The rules reference](../gameplay-audit/references/hitster-original-reference.md) records the publisher source.
 
 ## Purpose
 

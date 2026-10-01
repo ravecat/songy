@@ -15,7 +15,7 @@ before changing the state machine or accepting results as rule-correct.
 - Guarantee playable track selection, safe reveal timing, provider failure handling and per-viewer snapshot visibility.
 - Record round outcomes and gameplay events so result validation and playtests can audit each transition.
 - Preserve the implemented Songy loop as a documented baseline, with relevant historical commit references in
-  [the commit map](../../../docs/gameplay-commit-map.md).
+  [the commit map](../../specs/gameplay-audit/references/gameplay-commit-map.md).
 
 This proposal assumes Hitster Original as the target rule set. Teams, Pro, Expert and Cooperative modes remain separate
 follow-up scopes. Product decisions still needed are listed in the design and tasks; they must be resolved before
@@ -41,5 +41,5 @@ implementation of the affected behavior.
   channel handlers.
 - Contracts and UI: `priv/specs/asyncapi.yaml`, generated client schemas, game/room components and session stores.
 - Provider adapters, playback UI and configuration; targeted core, FSM, channel, browser and multi-client tests.
-- Rule source: [publisher instructions](https://hitstergame.com/en-nl/pages/how-to-play-original); local
-  [reference and differences](../../../docs/hitster-original-reference.md).
+- Rule source: [publisher instructions](https://hitstergame.com/en-us/pages/how-to-play-original); local
+  [reference and differences](../../specs/gameplay-audit/references/hitster-original-reference.md).

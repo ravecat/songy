@@ -8,11 +8,11 @@
 - Status: solution-review
 - Date: 2026-02-16
 - Product brief: [product-brief.md](product-brief.md)
-- Design doc: [design-doc.md](design-doc.md)
-- ADR links: [adr/README.md](adr/README.md)
+- Design doc: [design-doc.md](../architecture/design.md)
+- ADR links: [adr/README.md](../architecture/decisions/README.md)
 
 This PRD describes the existing timed Songy game, including point-scoring assumptions. The proposed Hitster Original
-rule alignment is tracked in [OpenSpec](../openspec/changes/align-gameplay-with-hitster-original/proposal.md); its rules
+rule alignment is tracked in [OpenSpec](../../changes/align-gameplay-with-hitster-original/proposal.md); its rules
 supersede conflicting gameplay requirements here only after that change is implemented and synchronized.
 
 ## Problem recap

@@ -8,9 +8,9 @@
 - Status: implemented
 - Depth: standard
 - Related docs:
-  - Product brief: [product-brief.md](product-brief.md)
-  - PRD: [prd.md](prd.md)
-  - ADR links: [adr/README.md](adr/README.md)
+  - Product brief: [product-brief.md](../product-context/product-brief.md)
+  - PRD: [prd.md](../product-context/prd.md)
+  - ADR links: [adr/README.md](decisions/README.md)
 
 ## Summary
 
@@ -24,7 +24,7 @@ validation of gameplay loop and low setup friction over long-term persistence fe
   and replayable gameplay.
 - Goals and non-goals: validate real-time engagement for MVP. Accounts, history, and matchmaking are explicitly out of
   scope.
-- Key requirements driving this design: FR-1..FR-18 and NFR-1..NFR-8 from [PRD](prd.md).
+- Key requirements driving this design: FR-1..FR-18 and NFR-1..NFR-8 from [PRD](../product-context/prd.md).
 - System context: one deployable web application integrating with external music providers.
 
 ## Architecture overview
@@ -466,11 +466,11 @@ Cookie-based sessions (`_songy_key`): Same-Site Lax, HttpOnly, Secure (productio
 
 #### Authentication
 
-- **Ephemeral identity** ([ADR-006](adr/006-ephemeral-identities.md)): first visit generates UUID + random name +
+- **Ephemeral identity** ([ADR-006](decisions/006-ephemeral-identities.md)): first visit generates UUID + random name +
   avatar, stored in cookie, no persistence.
 - **WebSocket token**: server signs `user.uuid` via `Phoenix.Token`, client sends on socket connect, server verifies
   in `UserSocket.connect/3`.
-- **Spotify OAuth**: server exchanges code for tokens, stores in ETS ([ADR-007](adr/007-token-storage-ets.md)),
+- **Spotify OAuth**: server exchanges code for tokens, stores in ETS ([ADR-007](decisions/007-token-storage-ets.md)),
   auto-refreshes when within 3600s of expiry. Scopes: `user-read-playback-state`, `user-modify-playback-state`,
   `streaming`, `user-read-email`, `user-read-private`.
 - **Apple Music**: `APPLE_MUSIC_ACCESS_TOKEN` env var, no user-level OAuth.
@@ -533,7 +533,7 @@ Operational notes:
 - ETS provider cache is reconstructed on application start; affected users fall back to iTunes.
 - No persistent state to back up or migrate.
 
-Scaling strategy: single BEAM node, vertical scaling before horizontal ([ADR-008](adr/008-scaling-single-node-sticky-sessions.md)).
+Scaling strategy: single BEAM node, vertical scaling before horizontal ([ADR-008](decisions/008-scaling-single-node-sticky-sessions.md)).
 
 ### Other concerns
 
@@ -564,10 +564,10 @@ Scaling strategy: single BEAM node, vertical scaling before horizontal ([ADR-008
 
 | Decision                                     | Rationale                                                  | ADR link                                                  |
 | -------------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------- |
-| Use Elixir/Phoenix runtime                   | Fits concurrent stateful room model with process isolation | [ADR-001](adr/001-elixir-phoenix-runtime.md)              |
-| Model room lifecycle with `:gen_statem`      | Deterministic phase transitions and timer orchestration    | [ADR-002](adr/002-in-memory-state-genstatem.md)           |
-| Use Phoenix Channels for room sync           | Native real-time transport with presence support           | [ADR-003](adr/003-phoenix-channels-realtime.md)           |
-| Keep provider abstraction and fallback chain | Decouple gameplay from single provider risk                | [ADR-004](adr/004-provider-abstraction.md)                |
-| Keep identities ephemeral in MVP             | Reduce onboarding friction and implementation scope        | [ADR-006](adr/006-ephemeral-identities.md)                |
-| Store provider tokens in ETS                 | Keep tokens server-side with low-latency access            | [ADR-007](adr/007-token-storage-ets.md)                   |
-| Start with single-node scaling strategy      | Matches MVP traffic assumptions and delivery speed         | [ADR-008](adr/008-scaling-single-node-sticky-sessions.md) |
+| Use Elixir/Phoenix runtime                   | Fits concurrent stateful room model with process isolation | [ADR-001](decisions/001-elixir-phoenix-runtime.md)              |
+| Model room lifecycle with `:gen_statem`      | Deterministic phase transitions and timer orchestration    | [ADR-002](decisions/002-in-memory-state-genstatem.md)           |
+| Use Phoenix Channels for room sync           | Native real-time transport with presence support           | [ADR-003](decisions/003-phoenix-channels-realtime.md)           |
+| Keep provider abstraction and fallback chain | Decouple gameplay from single provider risk                | [ADR-004](decisions/004-provider-abstraction.md)                |
+| Keep identities ephemeral in MVP             | Reduce onboarding friction and implementation scope        | [ADR-006](decisions/006-ephemeral-identities.md)                |
+| Store provider tokens in ETS                 | Keep tokens server-side with low-latency access            | [ADR-007](decisions/007-token-storage-ets.md)                   |
+| Start with single-node scaling strategy      | Matches MVP traffic assumptions and delivery speed         | [ADR-008](decisions/008-scaling-single-node-sticky-sessions.md) |

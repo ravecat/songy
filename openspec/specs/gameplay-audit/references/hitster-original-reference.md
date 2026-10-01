@@ -2,16 +2,20 @@
 
 ## Purpose and source
 
-Use the publisher's [Hitster Original rules](https://hitstergame.com/en-nl/pages/how-to-play-original) as the source for
-future gameplay design and result-validation tests. The publisher's
-[product page](https://jumboplay.com/en-gb/products/hitster-uk-edition-1110100132) links to those rules. Reviewed on
-2026-09-30. Recheck the live rules before implementing a rule change because the publisher may revise them.
+Use the publisher's [Hitster Original rules](https://hitstergame.com/en-us/pages/how-to-play-original) as the source for
+future gameplay design and result-validation tests. The
+[local PDF snapshot](../../../../assets/public/assets/rules/hitster-original-rules.pdf) contains the complete Original
+rules, advanced modes and FAQ from that page. The publisher's
+[product page](https://jumboplay.com/en-gb/products/hitster-uk-edition-1110100132) links to the live rules.
 
-The current official instructions are a web page. The publisher-hosted
-[2021 Print-and-Play PDF](https://nordics.hitstergame.com/wp-content/uploads/2021/06/HITSTER-Print-and-Play.pdf) is a
-deck of printable cards that points to separate instructions; it is not the rules for the current Original edition. Do
-not use it as a result-validation fixture. No current Original-rule PDF was found on the publisher's linked download
-pages, so there is no suitable PDF to add to public assets.
+The PDF was generated from the publisher's HTML with Chromium on 2026-10-03. It preserves the instructions, links and
+instructional diagrams, expands both FAQ answers and uses print formatting. Site navigation, the site footer and
+decorative images are omitted. This is a locally generated HTML-to-PDF snapshot, not a publisher-authored PDF.
+
+- Source HTML SHA-256: `fa4728508f3dff3843d8ef3e296cb4ce848c5942016c12094845a852b72ed3cf`
+- PDF SHA-256: `1b1b4332b76750cd7ecfba65bd7163c9382b82eb68e1c47994387fd2e25bdbab`
+
+Recheck the live rules before implementing a rule change because the publisher may revise them.
 
 ## Rule decisions to encode
 
@@ -33,7 +37,7 @@ rights decision before claiming exact HITSTER compatibility.
 
 ## Existing Songy differences
 
-The current [PRD](prd.md) specifies a timed challenge phase, parallel assumptions and a point for one correct
-participant. The implemented state machine follows that model. Hitster Original instead resolves ownership of one card
-after the active placement and any token-backed challenges. Current Songy scores and timelines must therefore be treated
-as existing behavior, not as evidence of Original-rule compliance.
+The current [PRD](../../product-context/prd.md) specifies a timed challenge phase, parallel assumptions and a point for
+one correct participant. The implemented state machine follows that model. Hitster Original instead resolves ownership
+of one card after the active placement and any token-backed challenges. Current Songy scores and timelines must
+therefore be treated as existing behavior, not as evidence of Original-rule compliance.

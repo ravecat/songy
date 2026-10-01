@@ -104,7 +104,7 @@ APPLE_MUSIC_ACCESS_TOKEN=your_access_token
 
 ## Documentation
 
-[docs/README.md](docs/README.md)
+[OpenSpec specifications](openspec/specs/README.md)
 
 ## OpenSpec
 

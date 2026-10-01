@@ -10,11 +10,11 @@
 - Related docs:
   - [Product Brief](product-brief.md)
   - [PRD](prd.md)
-  - [Design Doc](design-doc.md)
-  - [ADR Index](adr/README.md)
+  - [Design Doc](../architecture/design.md)
+  - [ADR Index](../architecture/decisions/README.md)
 
 This is the historical Songy MVP delivery plan. The remaining Hitster Original rule work and its verification gates are
-tracked in [OpenSpec](../openspec/changes/align-gameplay-with-hitster-original/tasks.md).
+tracked in [OpenSpec](../../changes/align-gameplay-with-hitster-original/tasks.md).
 
 ## Goal and release definition of done
 

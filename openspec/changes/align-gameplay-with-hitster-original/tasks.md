@@ -3,8 +3,9 @@
 - [ ] 1.1 Confirm Original mode as the target and decide whether the existing timed Songy contest remains a separate
       mode; update the PRD, proposal and acceptance matrix together.
 - [ ] 1.2 Resolve seed-card and token-purchased-card counting, reveal timing, active-player disconnect and
-      challenge-order policies against the [publisher rules](../../../docs/hitster-original-reference.md); record each
-      decision and a test case in the specs.
+      challenge-order policies against the
+      [publisher rules](../../specs/gameplay-audit/references/hitster-original-reference.md); record each decision and a
+      test case in the specs.
 - [ ] 1.3 Define canonical release-year and title/artist answer policies, including remasters, aliases and unavailable
       metadata; add positive and negative fixtures.
 - [ ] 1.4 Confirm rights and naming for independent digital playback before a public release; keep the publisher source

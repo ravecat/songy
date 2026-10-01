@@ -1,8 +1,8 @@
 # Room Lifecycle
 
 Current Songy behavior at `72f5395`. This is a retrospective baseline, not a claim of Hitster Original compliance.
-Historical commits identify the main delivery points; [the commit map](../../../docs/gameplay-commit-map.md) records the
-wider sequence.
+Historical commits identify the main delivery points;
+[the commit map](../gameplay-audit/references/gameplay-commit-map.md) records the wider sequence.
 
 ## Purpose
 

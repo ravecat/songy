@@ -17,9 +17,9 @@ materially changed behavior. Infrastructure-only and test-only commits are not t
 | Contracts and validation scaffolding              | `154d264`, `32ccd07`, `b786333`, `8f92e55`, `e0c313a`, `3defb8c`, `d6d6724`                                                                              | AsyncAPI, E2E, browser and Storybook coverage exist. Rule-derived golden cases and race/failure tests remain.                                |
 | Replay entry                                      | `58eecfc`                                                                                                                                                | The replay button creates a fresh empty room, so a same-participant rematch is still open.                                                   |
 
-See the current [room](../openspec/specs/room-lifecycle/spec.md), [turn](../openspec/specs/timeline-turns/spec.md) and
-[provider](../openspec/specs/music-providers/spec.md) specifications, then the
-[rule-alignment tasks](../openspec/changes/align-gameplay-with-hitster-original/tasks.md). No Git commits were amended
+See the current [room](../../room-lifecycle/spec.md), [turn](../../timeline-turns/spec.md) and
+[provider](../../music-providers/spec.md) specifications, then the
+[rule-alignment tasks](../../../changes/align-gameplay-with-hitster-original/tasks.md). No Git commits were amended
 or reordered.
 
 ## Full feature-commit index

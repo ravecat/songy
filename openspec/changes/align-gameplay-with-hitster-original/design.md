@@ -2,9 +2,9 @@
 
 The in-memory `Songy.Boundary.Game` GenStateMachine serializes room mutations. Today it resolves a timed contest by
 selecting one valid assumption, incrementing a point score and appending the track to that participant's timeline. The
-current [PRD](../../../docs/prd.md) describes this Songy-specific behavior; it is not the
-[publisher's Original rules](../../../docs/hitster-original-reference.md). The default provider is Apple Music, and
-rooms disappear with their process. No persistent game-state migration is required.
+current [PRD](../../specs/product-context/prd.md) describes this Songy-specific behavior; it is not the
+[publisher's Original rules](../../specs/gameplay-audit/references/hitster-original-reference.md). The default provider
+is Apple Music, and rooms disappear with their process. No persistent game-state migration is required.
 
 ## Goals / Non-Goals
 
