@@ -11,7 +11,7 @@
 #   - https://pkgs.org/ - resource for finding needed packages
 #   - Ex: docker.io/hexpm/elixir:1.19.5-erlang-28.3.3-debian-bookworm-20260223-slim
 #
-# NOTE: Keep in sync with flake.nix devShell versions
+# Release builder matches d20; the Nix development shell uses Elixir 1.20.
 ARG ELIXIR_VERSION=1.19.5
 ARG OTP_VERSION=28.3.3
 ARG DEBIAN_VERSION=bookworm-20260223-slim
@@ -19,7 +19,11 @@ ARG DEBIAN_VERSION=bookworm-20260223-slim
 ARG BUILDER_IMAGE="docker.io/hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
 ARG RUNNER_IMAGE="docker.io/debian:${DEBIAN_VERSION}"
 
+FROM oven/bun:1.3.13 AS bun
+
 FROM ${BUILDER_IMAGE} AS builder
+
+COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 
 # install build dependencies
 RUN apt-get update \
@@ -55,10 +59,10 @@ COPY lib lib
 RUN mix compile
 
 # Prepare assets
-RUN mix assets.setup
+RUN bun run --cwd assets setup --frozen-lockfile
 
 # Build static assets
-RUN mix assets.deploy
+RUN bun run --cwd assets deploy && mix phx.digest
 
 # Changes to config/runtime.exs don't require recompiling the code
 COPY config/runtime.exs config/

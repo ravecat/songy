@@ -4,25 +4,20 @@
     "../deps/*"
   ],
   "scripts": {
+    "setup": "bun install",
+    "dev": "vite dev",
+    "build": "vite build",
+    "deploy": "bun run build && bun run storybook:build",
     "codegen": "asyncapi-codegen",
     "test": "vitest run --project unit --project browser --passWithNoTests --reporter=verbose",
-    "test:watch": "vitest --project unit --project browser --passWithNoTests --watch",
-    "test:ui": "vitest --project unit --project browser --passWithNoTests --ui",
     "test:unit": "vitest run --project unit --reporter=verbose",
     "test:browser": "vitest run --project browser --passWithNoTests --reporter=verbose",
-    "test:coverage": "vitest run --project unit --project browser --passWithNoTests --coverage",
-    "check": "svelte-check",
-    "check:watch": "svelte-check --watch",
-    "typecheck": "tsc --noEmit",
-    "e2e:install": "playwright install",
-    "e2e:run": "playwright test",
-    "e2e:fast": "playwright test --reporter=list",
-    "e2e:ui": "playwright test --ui",
-    "e2e:watch": "playwright test --ui",
-    "storybook": "storybook dev --no-open --port 6006 --exact-port",
-    "storybook:build": "storybook build -o ../priv/static/storybook",
     "test:storybook": "vitest run --project storybook --reporter=verbose",
-    "test:storybook:watch": "vitest --project storybook"
+    "check": "svelte-check",
+    "typecheck": "tsc --noEmit",
+    "e2e": "playwright test",
+    "storybook": "storybook dev --no-open --port 6006 --exact-port",
+    "storybook:build": "storybook build -o ../priv/static/storybook"
   },
   "dependencies": {
     "@inertiajs/core": "2.3.21",
@@ -43,7 +38,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.0",
+    "@playwright/test": "1.59.1",
     "@rvct/asyncapi": "1.0.0-beta.3",
     "@storybook/addon-svelte-csf": "^5.0.12",
     "@storybook/addon-vitest": "^10.3.1",

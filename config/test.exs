@@ -21,7 +21,19 @@ config :songy, SongyWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: port],
   secret_key_base: "Puh1NLtCsE4ZyuOAo+juoEz4Hjh/8LI5nUOGBIhzx00Ewl661pI30SCVZ3oVfBNg",
   server: false,
-  watchers: [vite: {Bun, :install_and_run, [:vite, ~w(dev --port #{static_server_port})]}],
+  watchers: [
+    vite:
+      {System, :cmd,
+       [
+         "bun",
+         ~w(run dev --port #{static_server_port}),
+         [
+           cd: Path.expand("../assets", __DIR__),
+           into: IO.stream(:stdio, :line),
+           stderr_to_stdout: true
+         ]
+       ]}
+  ],
   static_url: [host: "localhost", port: static_server_port]
 
 # In test we don't send emails

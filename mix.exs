@@ -17,14 +17,7 @@ defmodule Songy.MixProject do
   def cli do
     [
       preferred_envs: [
-        storybook: :dev,
-        "storybook.build": :dev,
-        "test.watch": :test,
-        "test.e2e": :e2e,
-        "test.e2e.fast": :e2e,
-        "test.e2e.setup": :e2e,
-        "test.e2e.ui": :e2e,
-        "test.e2e.watch": :e2e
+        "test.watch": :test
       ]
     ]
   end
@@ -74,7 +67,6 @@ defmodule Songy.MixProject do
       {:jason, "~> 1.4"},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
-      {:bun, "~> 1.5", runtime: Mix.env() == :dev},
       {:typed_struct, "~> 0.3.0"},
       {:nimble_options, "~> 1.1"},
       {:gen_state_machine, "~> 3.0"},
@@ -90,46 +82,10 @@ defmodule Songy.MixProject do
     ]
   end
 
-  # Aliases are shortcuts or tasks specific to the current project.
-  # For example, to install project dependencies and perform other setup tasks, run:
-  #
-  #     $ mix setup
-  #
-  # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      setup: ["deps.get", "assets.setup", "assets.build"],
-      serve: ["setup", "phx.server"],
-      "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
-      "ecto.reset": ["ecto.drop", "ecto.setup"],
-      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
-      "test.only": ["test --only only"],
-      "test.watch": ["test.watch"],
-      "test.assets": ["bun assets run test"],
-      "test.assets.watch": ["bun assets run test:watch"],
-      "test.assets.ui": ["bun assets run test:ui"],
-      "test.assets.coverage": ["bun assets run test:coverage"],
-      "test.assets.typecheck": ["bun assets run typecheck"],
-      "test.e2e": ["bun assets run e2e:run"],
-      "test.e2e.fast": ["bun assets run e2e:fast"],
-      "test.e2e.setup": ["bun assets run e2e:install"],
-      "test.e2e.ui": ["bun assets run e2e:ui"],
-      "test.e2e.watch": ["bun e2e.watch"],
-      storybook: ["bun storybook"],
-      codegen: ["bun assets run codegen"],
-      "assets.setup": ["bun.install --if-missing", "bun assets install"],
-      "assets.build": ["bun vite build"],
-      "assets.deploy": [
-        "bun vite build",
-        "bun assets run storybook:build",
-        "phx.digest"
-      ],
-      deploy: [
-        "deps.get --only prod",
-        "compile",
-        "assets.setup",
-        "assets.deploy"
-      ]
+      serve: ["phx.server"],
+      "test.only": ["test --only only"]
     ]
   end
 end

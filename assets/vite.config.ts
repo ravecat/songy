@@ -67,6 +67,13 @@ export default {
     emptyOutDir: true,
   },
   plugins: [
+    {
+      name: "phoenix-watcher",
+      configureServer() {
+        // Let Vite detect stdin closing when the Phoenix watcher stops.
+        if (!process.env.VITEST) process.stdin.resume();
+      },
+    },
     esToolkit(),
     tailwindcss(),
     svelte({

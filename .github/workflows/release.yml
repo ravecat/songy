@@ -6,10 +6,32 @@ on:
       - master
     tags:
       - "*.*.*"
+  pull_request:
+
+permissions:
+  contents: read
 
 jobs:
+  specifications:
+    name: Validate OpenSpec
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: nix develop --command bash --noprofile --norc -eo pipefail {0}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v17
+
+      - name: Validate specifications and changes
+        run: openspec validate --all --strict --no-interactive
+
   docker:
     name: Build and push to GHCR
+    needs: specifications
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     env:
       REGISTRY: ghcr.io

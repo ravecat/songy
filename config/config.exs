@@ -7,40 +7,6 @@
 # General application configuration
 import Config
 
-config :bun,
-  version: "1.3.8",
-  assets: [args: [], cd: Path.expand("../assets", __DIR__)],
-  storybook: [
-    args: ~w(x storybook dev --no-open --port 6006 --exact-port),
-    cd: Path.expand("../assets", __DIR__)
-  ],
-  vite: [args: ~w(x vite), cd: Path.expand("../assets", __DIR__)],
-  "e2e.watch": [
-    args: [
-      "x",
-      "nodemon",
-      "--watch",
-      "../lib",
-      "--watch",
-      "e2e",
-      "--watch",
-      "js",
-      "--ext",
-      "ex,exs,heex,ts,js,svelte",
-      "--ignore",
-      "**/node_modules/**",
-      "--ignore",
-      "**/.git/**",
-      "--delay",
-      "50ms",
-      "--signal",
-      "SIGINT",
-      "--exec",
-      "playwright test --reporter=list"
-    ],
-    cd: Path.expand("../assets", __DIR__)
-  ]
-
 config :songy,
   # Ecto disabled for this project - using in-memory state management
   ecto_repos: [],

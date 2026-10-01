@@ -45,13 +45,16 @@ Property-based testing via `stream_data` for domain invariants.
 
 ## Test Commands
 
-| Command                          | Scope                     |
-| -------------------------------- | ------------------------- |
-| `mix test`                       | All Elixir tests          |
-| `mix test.only`                  | Tests tagged `@tag :only` |
-| `cd assets && npm run test:run`  | Vitest (frontend)         |
-| `cd assets && npm run typecheck` | Svelte + TypeScript check |
-| `cd assets && npm run e2e:run`   | Playwright E2E            |
+| Command                      | Scope                     |
+| ---------------------------- | ------------------------- |
+| `just mix test`              | All Elixir tests          |
+| `just mix test.only`         | Tests tagged `@tag :only` |
+| `just assets test`           | Vitest (frontend)         |
+| `just assets check`          | Svelte check              |
+| `just assets typecheck`      | TypeScript check          |
+| `just assets e2e`            | Playwright E2E            |
+| `just assets test --watch`   | Watch frontend tests      |
+| `just assets test:storybook` | Storybook component tests |
 
 ## Code References
 

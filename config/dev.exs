@@ -40,7 +40,17 @@ config :songy, SongyWeb.Endpoint,
   debug_errors: true,
   secret_key_base: "D4ZJEvFP19Dn0Mpzog0xd6QL5qu8RJUNfWmGRXf7447sfWh67sHftKl8uUSLtGFw",
   watchers: [
-    vite: {Bun, :install_and_run, [:vite, ~w(dev)]}
+    vite:
+      {System, :cmd,
+       [
+         "bun",
+         ~w(run dev),
+         [
+           cd: Path.expand("../assets", __DIR__),
+           into: IO.stream(:stdio, :line),
+           stderr_to_stdout: true
+         ]
+       ]}
   ],
   static_url: [host: lan_ip, port: String.to_integer(System.get_env("VITE_PORT") || "5173")]
 
