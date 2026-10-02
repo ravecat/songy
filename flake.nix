@@ -15,14 +15,7 @@
           <?xml version="1.0"?>
           <!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
           <fontconfig>
-            <dir>${pkgs.noto-fonts}/share/fonts/noto</dir>
-            <dir>${pkgs.liberation_ttf}/share/fonts/truetype</dir>
-            <alias binding="strong"><family>sans</family><prefer><family>Noto Sans</family></prefer></alias>
-            <alias binding="strong"><family>system</family><prefer><family>Noto Sans</family></prefer></alias>
-            <alias binding="strong"><family>serif</family><prefer><family>Noto Serif</family></prefer></alias>
-            <alias binding="strong"><family>monospace</family><prefer><family>Noto Sans Mono</family></prefer></alias>
-            <alias binding="strong"><family>Arial</family><prefer><family>Liberation Sans</family></prefer></alias>
-            <alias binding="strong"><family>Times New Roman</family><prefer><family>Liberation Serif</family></prefer></alias>
+            <dir>${pkgs.dejavu_fonts}/share/fonts/truetype</dir>
             <cachedir prefix="xdg">fontconfig</cachedir>
           </fontconfig>
         '';

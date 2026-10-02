@@ -7,6 +7,13 @@ import { defineConfig, mergeConfig } from "vitest/config";
 import viteConfig from "./vite.config";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
+const contextOptions = {
+  viewport: { width: 1280, height: 900 },
+  screen: { width: 1280, height: 900 },
+  deviceScaleFactor: 1,
+  locale: "en-US",
+  timezoneId: "UTC",
+};
 
 export default mergeConfig(
   viteConfig,
@@ -18,6 +25,10 @@ export default mergeConfig(
     test: {
       globals: true,
       exclude: ["node_modules", "dist"],
+      attachmentsDir: path.join(".vitest", "attachments"),
+      outputFile: {
+        html: path.join(dirname, ".vitest/report/index.html"),
+      },
       coverage: {
         provider: "v8",
         reporter: ["text", "json", "html", "clover", "lcov"],
@@ -26,13 +37,7 @@ export default mergeConfig(
       browser: {
         api: { strictPort: false },
         provider: playwright({
-          contextOptions: {
-            viewport: { width: 1280, height: 900 },
-            screen: { width: 1280, height: 900 },
-            deviceScaleFactor: 1,
-            locale: "en-US",
-            timezoneId: "UTC",
-          },
+          contextOptions,
         }),
       },
       projects: [
@@ -75,14 +80,19 @@ export default mergeConfig(
           ],
           test: {
             name: "visual",
-            fileParallelism: true,
-            maxWorkers: 2,
+            fileParallelism: false,
             sequence: { groupOrder: 1 },
             setupFiles: [path.join(dirname, ".storybook/vitest.setup.ts")],
             browser: {
               enabled: true,
               headless: true,
               screenshotFailures: true,
+              provider: playwright({
+                contextOptions: {
+                  ...contextOptions,
+                  reducedMotion: "reduce",
+                },
+              }),
               instances: (["light", "dark"] as const).flatMap((theme) =>
                 (["desktop", "tablet", "mobile"] as const).map((viewport) => ({
                   browser: "chromium",
@@ -92,28 +102,28 @@ export default mergeConfig(
                     theme,
                     viewport,
                   ),
-                  attachmentsDir: path.join(
-                    ".vitest/attachments",
-                    theme,
-                    viewport,
-                  ),
                   provide: {
                     visualGlobals: { theme, viewport: { value: viewport } },
                   },
                 })),
               ),
               trace: {
+                // Shared instances cannot finalize concurrent trace chunks; use one instance for diagnostics.
                 mode: "off",
                 tracesDir: path.join(dirname, ".vitest/traces"),
               },
               expect: {
                 toMatchScreenshot: {
+                  comparatorOptions: {
+                    allowedMismatchedPixels: 30,
+                  },
                   resolveDiffPath: ({
                     arg,
                     attachmentsDir,
                     browserName,
                     ext,
                     root: projectRoot,
+                    screenshotDirectory,
                     testFileDirectory,
                     testFileName,
                   }) => {
@@ -122,6 +132,8 @@ export default mergeConfig(
                       attachmentsDir,
                       testFileDirectory,
                       testFileName,
+                      path.basename(path.dirname(screenshotDirectory)),
+                      path.basename(screenshotDirectory),
                       browserName,
                       `${arg}${ext}`,
                     );

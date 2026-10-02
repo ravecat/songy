@@ -26,15 +26,17 @@ jobs:
           just assets typecheck
           just assets check
       - name: Test stories and unit logic
-        run: just assets test
+        id: vitest-tests
+        run: just assets test --reporter=html
       - name: Build Storybook
         run: just assets storybook:build
       - name: Upload visual failure evidence
-        if: failure()
+        if: failure() && steps.vitest-tests.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
           name: storybook-failure-evidence
           path: |
+            assets/.vitest/report/
             assets/.vitest/attachments/
             assets/.vitest/screenshots/
             assets/.vitest/traces/

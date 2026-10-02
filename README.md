@@ -124,17 +124,40 @@ into stories.
 ```bash
 nix develop
 just assets test:visual
+just assets test:visual --reporter=html
 just assets vitest run --project 'visual-*-mobile'
 just assets test:visual --update
 just storybook
 ```
 
-Visual tests run light and dark themes at desktop (`1280x720`), tablet (`1024x640`), and mobile (`320x900`) sizes.
-Screenshots are captured after `play`, with pinned fonts and Chromium. References live under
-`assets/__screenshots__/<story-path>/<theme>/<viewport>/chromium/`; actual images, diffs, and traces are ignored under
-`assets/.vitest/`. Review an intentional `--update` in Git, then run a normal comparison. The Storybook workflow runs
-the same flake checks on pushes to `master` and pull requests, comparing references without updating them and uploading
-failure evidence. Generate and compare references in the Linux flake environment.
+The screenshot setup follows Next Station Paris. One visual project runs every discovered story in light and dark
+themes. The viewports are desktop (`1280x720`), tablet (`1024x640`), and mobile (`320x900`). Story files run
+sequentially. The test browser requests reduced motion. Interactive Storybook keeps normal motion settings.
+
+Screenshots are captured after `play`, font loading, and image decoding, with pinned Chromium and DejaVu fallback fonts.
+Storybook bundles DM Sans separately. Comparisons allow up to 30 mismatched pixels, matching Paris. References live
+under `assets/__screenshots__/<story-path>/<theme>/<viewport>/chromium/`; actual images, diffs, and traces are ignored
+under `assets/.vitest/`. Review an intentional `--update` in Git, then run a normal comparison. The Storybook workflow
+runs the same flake checks on pushes to `master` and pull requests, comparing references without updating them and
+uploading failure evidence. Generate and compare references in the Linux flake environment.
+
+Pass `--reporter=html` to write `assets/.vitest/report/index.html`. The report includes screenshot attachments and
+comparison controls. Serve the report over HTTP:
+
+```bash
+just assets vite preview --outDir .vitest/report --port 4173
+```
+
+Open the URL printed by Vite. CI includes the HTML report with visual failure evidence.
+
+Use one browser instance for trace diagnostics:
+
+```bash
+just assets vitest run --project visual-light-mobile --browser.trace on
+```
+
+Traces are written under `assets/.vitest/traces/`. Routine runs disable tracing because shared instances cannot finalize
+concurrent trace chunks.
 
 See [story conventions](assets/stories/README.md) for fixture, interaction, and screenshot guidelines.
 

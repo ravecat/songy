@@ -40,7 +40,10 @@ Property-based testing via `stream_data` for domain invariants.
 - (+) FSM transitions tested via boundary tests - catches illegal state changes
 - (+) Frontend tests via Vitest - fast feedback on component behavior
 - (+) Storybook and automated tests share scenarios, decorators, themes, and deterministic connected-dependency mocks
-- (-) Visual references require review in the pinned Linux Chromium and font environment
+- (+) Screenshot execution follows Next Station Paris with sequential story files, reduced motion, and HTML failure
+  reports
+- (-) Screenshot comparisons allow up to 30 mismatched pixels; smaller differences can pass
+- (-) Visual references require review in the pinned Linux Chromium and DejaVu fallback font environment
 - (+) E2E validates full stack but runs separately from dev loop
 - (-) No database to mock/sandbox (no Ecto sandbox) - simplifies setup but limits persistence testing
 - (-) Channel tests require simulating full socket lifecycle
