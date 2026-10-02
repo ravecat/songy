@@ -58,5 +58,7 @@ check:
     prettier --check "**/*.md"
     just assets check
     just assets typecheck
-    just assets test
-    just assets deploy
+    just assets test --reporter=html
+    MIX_ENV=prod mix compile
+    MIX_ENV=prod just assets deploy
+    MIX_ENV=prod mix phx.digest

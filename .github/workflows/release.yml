@@ -8,13 +8,19 @@ on:
       - "*.*.*"
   pull_request:
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 jobs:
-  specifications:
-    name: Validate OpenSpec
+  checks:
+    name: Check and build application
     runs-on: ubuntu-24.04
+    env:
+      CI: "true"
     defaults:
       run:
         shell: nix develop --command bash --noprofile --norc -eo pipefail {0}
@@ -25,12 +31,26 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v17
 
-      - name: Validate specifications and changes
-        run: openspec validate --all --strict --no-interactive
+      - name: Install dependencies
+        run: just setup
+
+      - name: Check repository
+        id: repository-checks
+        run: just check
+
+      - name: Upload visual failure evidence
+        if: failure() && steps.repository-checks.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-failure-evidence
+          path: assets/.vitest/attachments/**/*.png
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7
 
   docker:
     name: Build and push to GHCR
-    needs: specifications
+    needs: checks
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     env:
@@ -57,7 +77,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ github.event.repository.name }}
+          images: ${{ env.REGISTRY }}/${{ github.repository }}
           tags: |
             type=ref,event=branch
             type=ref,event=tag

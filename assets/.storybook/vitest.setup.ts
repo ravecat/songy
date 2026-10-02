@@ -32,11 +32,6 @@ beforeEach(async () => {
   });
 });
 
-afterEach(async ({ task }) => {
-  if (task.result?.state === "fail") return;
-
-  await Promise.all(Array.from(document.fonts, (font) => font.load()));
-  await document.fonts.ready;
-  await Promise.all(Array.from(document.images, (image) => image.decode()));
+afterEach(async () => {
   await expect(document.documentElement).toMatchScreenshot({ timeout: 15_000 });
 });

@@ -36,6 +36,7 @@ export default mergeConfig(
       },
       browser: {
         api: { strictPort: false },
+        trace: "off",
         provider: playwright({
           contextOptions,
         }),
@@ -59,7 +60,15 @@ export default mergeConfig(
             browser: {
               enabled: true,
               headless: true,
-              instances: [{ browser: "chromium" }],
+              instances: [
+                {
+                  browser: "chromium",
+                  screenshotDirectory: path.join(
+                    dirname,
+                    ".vitest/attachments/failures/browser/chromium",
+                  ),
+                },
+              ],
             },
           },
         },
@@ -86,7 +95,9 @@ export default mergeConfig(
           ],
           test: {
             name: "visual",
-            fileParallelism: false,
+            fileParallelism: true,
+            maxWorkers: 2,
+            maxConcurrency: 1,
             sequence: { groupOrder: 1 },
             setupFiles: [path.join(dirname, ".storybook/vitest.setup.ts")],
             browser: {
@@ -104,7 +115,8 @@ export default mergeConfig(
                   browser: "chromium",
                   name: `visual-${theme}-${viewport}`,
                   screenshotDirectory: path.join(
-                    ".vitest/screenshots",
+                    dirname,
+                    ".vitest/attachments/failures",
                     theme,
                     viewport,
                   ),
@@ -113,15 +125,16 @@ export default mergeConfig(
                   },
                 })),
               ),
-              trace: {
-                // Shared instances cannot finalize concurrent trace chunks; use one instance for diagnostics.
-                mode: "off",
-                tracesDir: path.join(dirname, ".vitest/traces"),
-              },
               expect: {
                 toMatchScreenshot: {
+                  // Remove the marquee compositor layer before rasterizing text.
+                  screenshotOptions: {
+                    style:
+                      ".track-card__marquee-track { animation: none !important; will-change: auto !important; }",
+                  },
+                  comparatorName: "pixelmatch",
                   comparatorOptions: {
-                    allowedMismatchedPixels: 30,
+                    allowedMismatchedPixelRatio: 0.001,
                   },
                   resolveDiffPath: ({
                     arg,

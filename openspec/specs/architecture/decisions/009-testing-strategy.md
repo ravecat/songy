@@ -40,10 +40,20 @@ Property-based testing via `stream_data` for domain invariants.
 - (+) FSM transitions tested via boundary tests - catches illegal state changes
 - (+) Frontend tests via Vitest - fast feedback on component behavior
 - (+) Storybook and automated tests share scenarios, decorators, themes, and deterministic connected-dependency mocks
-- (+) Screenshot execution follows Next Station Paris with sequential story files, reduced motion, and HTML failure
-  reports
-- (-) Screenshot comparisons allow up to 30 mismatched pixels; smaller differences can pass
-- (-) Visual references require review in the pinned Linux Chromium and DejaVu fallback font environment
+- (+) Screenshot execution follows d20 with two workers, parallel story files, sequential tests and hooks, reduced
+  motion, and local HTML reports
+- (-) Native pixelmatch comparisons allow a mismatched-pixel ratio of 0.001 (0.1%) without an absolute pixel cap
+- (-) Visual references require review with pinned Linux Chromium, nixpkgs DM Sans 1.002, and Source Code Pro
+- (-) The local DM Sans version differs from the current Google Fonts version used in production and interactive
+  Storybook
+- (+) Interactive Storybook shares production Google Fonts links; visual tests use local flake fonts without CDN access
+- (+) Visual setup only resets the pointer before each story and compares the complete document after play with a
+  15-second timeout; Playwright supplies font readiness without manual font loading or image decoding
+- (+) Native screenshot styling freezes marquee text during capture to keep font rendering stable
+- (+) Vitest and Playwright tracing are disabled. CI retains only PNG reference, actual, diff, and failed-test
+  attachments from `assets/.vitest/attachments/` for seven days after the repository check fails
+- (+) Automatic failure screenshots use separate theme and viewport directories; committed reference paths remain
+  unchanged. CI excludes trace archives, caches, HTML bundles, and bulk reference uploads
 - (+) E2E validates full stack but runs separately from dev loop
 - (-) No database to mock/sandbox (no Ecto sandbox) - simplifies setup but limits persistence testing
 - (-) Channel tests require simulating full socket lifecycle

@@ -19,8 +19,8 @@ materially changed behavior. Infrastructure-only and test-only commits are not t
 
 See the current [room](../../room-lifecycle/spec.md), [turn](../../timeline-turns/spec.md) and
 [provider](../../music-providers/spec.md) specifications, then the
-[rule-alignment tasks](../../../changes/align-gameplay-with-hitster-original/tasks.md). No Git commits were amended
-or reordered.
+[rule-alignment tasks](../../../changes/align-gameplay-with-hitster-original/tasks.md). No Git commits were amended or
+reordered.
 
 ## Full feature-commit index
 

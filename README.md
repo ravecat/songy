@@ -108,10 +108,11 @@ just assets build
 ```
 
 `just format` formats Elixir and Markdown. `just check` validates OpenSpec, then runs backend formatting, compilation
-and tests, Markdown formatting, Svelte/TypeScript checks, frontend tests, and production frontend/Storybook builds. The
-flake provides Chromium matching the pinned Playwright dependency. For a production release, run `just assets deploy`
-followed by `MIX_ENV=prod just mix phx.digest`; Docker does both before building the release. The Docker builder retains
-d20's release image with Elixir 1.19.5 and OTP 28.3.3 and installs Bun 1.3.13 separately.
+and tests, Markdown formatting, Svelte/TypeScript checks, frontend tests with an HTML report, production compilation,
+frontend/Storybook builds, and static asset digests. The flake provides Chromium matching the pinned Playwright
+dependency. For a production release, run `MIX_ENV=prod mix compile`, `MIX_ENV=prod just assets deploy`, then
+`MIX_ENV=prod mix phx.digest`; Docker runs these steps before building the release. The Docker builder retains d20's
+release image with Elixir 1.19.5 and OTP 28.3.3 and installs Bun 1.3.13 separately.
 
 ## Storybook tests
 
@@ -130,16 +131,25 @@ just assets test:visual --update
 just storybook
 ```
 
-The screenshot setup follows Next Station Paris. One visual project runs every discovered story in light and dark
-themes. The viewports are desktop (`1280x720`), tablet (`1024x640`), and mobile (`320x900`). Story files run
-sequentially. The test browser requests reduced motion. Interactive Storybook keeps normal motion settings.
+The screenshot setup follows d20. One visual project runs every discovered story in light and dark themes. The viewports
+are desktop (`1280x720`), tablet (`1024x640`), and mobile (`320x900`). Each theme/viewport instance reuses its Chromium
+browser across parallel story files, with two workers and sequential tests and hooks. The test browser requests reduced
+motion. Interactive Storybook keeps normal motion settings. Native screenshot styling freezes marquee text during
+capture to keep font rendering stable.
 
-Screenshots are captured after `play`, font loading, and image decoding, with pinned Chromium and DejaVu fallback fonts.
-Storybook bundles DM Sans separately. Comparisons allow up to 30 mismatched pixels, matching Paris. References live
-under `assets/__screenshots__/<story-path>/<theme>/<viewport>/chromium/`; actual images, diffs, and traces are ignored
-under `assets/.vitest/`. Review an intentional `--update` in Git, then run a normal comparison. The Storybook workflow
-runs the same flake checks on pushes to `master` and pull requests, comparing references without updating them and
-uploading failure evidence. Generate and compare references in the Linux flake environment.
+Screenshots are captured after `play` with a 15-second native assertion timeout. Setup only resets the pointer and
+compares the document; Playwright supplies font readiness without manual loading or image decoding. The environment uses
+pinned Chromium and nixpkgs fonts: DM Sans 1.002 (named DeepMind Sans internally) and Source Code Pro for monospace and
+fallback text. Fontconfig maps DM Sans to the local package. Interactive Storybook loads the current DM Sans through the
+same Google Fonts request as production. Visual tests omit these links and use the local fonts from the flake without
+CDN access. Native pixelmatch permits a mismatched-pixel ratio of 0.001 (0.1%) without an absolute allowance. References
+live under `assets/__screenshots__/<story-path>/<theme>/<viewport>/chromium/`. Failure evidence is ignored under
+`assets/.vitest/attachments/`; automatic captures use separate theme and viewport directories. Review an intentional
+`--update` in Git, then run a normal comparison. The release workflow runs `just setup` and `just check` in the same
+flake on pull requests and release pushes. It compares references without updating them and uploads only available PNG
+reference, actual, diff, and failed-test attachments for seven days after its repository check fails. Trace archives,
+caches, HTML bundles, and the full baseline catalog are excluded. Docker publication requires all checks and builds to
+pass. Generate and compare references in the Linux flake environment.
 
 Pass `--reporter=html` to write `assets/.vitest/report/index.html`. The report includes screenshot attachments and
 comparison controls. Serve the report over HTTP:
@@ -148,16 +158,8 @@ comparison controls. Serve the report over HTTP:
 just assets vite preview --outDir .vitest/report --port 4173
 ```
 
-Open the URL printed by Vite. CI includes the HTML report with visual failure evidence.
-
-Use one browser instance for trace diagnostics:
-
-```bash
-just assets vitest run --project visual-light-mobile --browser.trace on
-```
-
-Traces are written under `assets/.vitest/traces/`. Routine runs disable tracing because shared instances cannot finalize
-concurrent trace chunks.
+Open the URL printed by Vite. HTML reports remain a local inspection option. Vitest and Playwright E2E tracing are
+disabled; E2E captures screenshots only on failure. The release gate runs Vitest, while E2E remains a separate command.
 
 See [story conventions](assets/stories/README.md) for fixture, interaction, and screenshot guidelines.
 
@@ -193,8 +195,8 @@ APPLE_MUSIC_ACCESS_TOKEN=your_access_token
 
 OpenSpec is supplied by the pinned flake and is available through `nix develop` and direnv. Run
 `openspec validate --all --strict --no-interactive` to validate all specifications and active changes. The release
-workflow runs this command in the flake on pull requests and release pushes. Docker publication requires this validation
-to pass.
+workflow includes this validation in `just check` on pull requests and release pushes. Docker publication requires the
+complete check to pass.
 
 Run `openspec init --tools codex` after cloning to install the Codex skills locally. Start a change with
 `$openspec-propose`.

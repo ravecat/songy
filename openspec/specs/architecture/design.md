@@ -73,8 +73,8 @@ C4Context
 
 ### Container diagram
 
-Runtime deployables only. In-process modules (`:gen_statem`, ETS cache, policy layer) are implementation components
-of `Application Server`, not separate containers.
+Runtime deployables only. In-process modules (`:gen_statem`, ETS cache, policy layer) are implementation components of
+`Application Server`, not separate containers.
 
 ```mermaid
 C4Container
@@ -144,7 +144,8 @@ C4Dynamic
 
 ### Provider OAuth
 
-Spotify OAuth authentication lifecycle. Token storage and fallback behavior are described in [failure contracts](#failure-contracts).
+Spotify OAuth authentication lifecycle. Token storage and fallback behavior are described in
+[failure contracts](#failure-contracts).
 
 ```mermaid
 C4Dynamic
@@ -196,8 +197,8 @@ participant.
 
 Two paths depending on active provider:
 
-- **Spotify**: server calls `PUT /v1/me/player/play` with device ID and track URI; client has Spotify Web Playback
-  SDK connected using provider credentials established outside the room channel.
+- **Spotify**: server calls `PUT /v1/me/player/play` with device ID and track URI; client has Spotify Web Playback SDK
+  connected using provider credentials established outside the room channel.
 - **iTunes / Apple Music**: server returns `preview_url` in track metadata; client plays via HTML5 `<audio>`.
 
 ## Domain model
@@ -307,28 +308,28 @@ erDiagram
 
 #### HTTP endpoints
 
-| Method   | Path                       | Purpose                          | Status   |
-| -------- | -------------------------- | -------------------------------- | -------- |
-| `GET`    | `/`                        | Landing page                     | verified |
-| `GET`    | `/create`                  | Create game form                 | verified |
-| `POST`   | `/create`                  | Create game session, redirect    | verified |
-| `GET`    | `/:room_id`                | Join existing game room          | verified |
-| `GET`    | `/auth/spotify/`           | Redirect to Spotify OAuth        | verified |
-| `GET`    | `/auth/spotify/callback`   | OAuth code exchange              | verified |
-| `DELETE` | `/auth/spotify/disconnect` | Remove Spotify provider          | verified |
+| Method   | Path                       | Purpose                       | Status   |
+| -------- | -------------------------- | ----------------------------- | -------- |
+| `GET`    | `/`                        | Landing page                  | verified |
+| `GET`    | `/create`                  | Create game form              | verified |
+| `POST`   | `/create`                  | Create game session, redirect | verified |
+| `GET`    | `/:room_id`                | Join existing game room       | verified |
+| `GET`    | `/auth/spotify/`           | Redirect to Spotify OAuth     | verified |
+| `GET`    | `/auth/spotify/callback`   | OAuth code exchange           | verified |
+| `DELETE` | `/auth/spotify/disconnect` | Remove Spotify provider       | verified |
 
 #### WebSocket channel (`room:{game_id}`)
 
 Client to server:
 
-| Event             | Payload                | Description                               |
-| ----------------- | ---------------------- | ----------------------------------------- |
-| `start_game`      | `{}`                   | Owner starts the game                     |
-| `advance_turn`    | `{}`                   | Advance to next phase or turn             |
-| `make_assumption` | `%{"position" => int}` | Place track on timeline                   |
-| `start_playback`  | `{}`                   | Start audio playback                      |
-| `pause_playback`  | `{}`                   | Pause audio playback                      |
-| `get_current_user`| `{}`                   | Returns current User struct               |
+| Event              | Payload                | Description                   |
+| ------------------ | ---------------------- | ----------------------------- |
+| `start_game`       | `{}`                   | Owner starts the game         |
+| `advance_turn`     | `{}`                   | Advance to next phase or turn |
+| `make_assumption`  | `%{"position" => int}` | Place track on timeline       |
+| `start_playback`   | `{}`                   | Start audio playback          |
+| `pause_playback`   | `{}`                   | Pause audio playback          |
+| `get_current_user` | `{}`                   | Returns current User struct   |
 
 Server to client:
 
@@ -468,8 +469,8 @@ Cookie-based sessions (`_songy_key`): Same-Site Lax, HttpOnly, Secure (productio
 
 - **Ephemeral identity** ([ADR-006](decisions/006-ephemeral-identities.md)): first visit generates UUID + random name +
   avatar, stored in cookie, no persistence.
-- **WebSocket token**: server signs `user.uuid` via `Phoenix.Token`, client sends on socket connect, server verifies
-  in `UserSocket.connect/3`.
+- **WebSocket token**: server signs `user.uuid` via `Phoenix.Token`, client sends on socket connect, server verifies in
+  `UserSocket.connect/3`.
 - **Spotify OAuth**: server exchanges code for tokens, stores in ETS ([ADR-007](decisions/007-token-storage-ets.md)),
   auto-refreshes when within 3600s of expiry. Scopes: `user-read-playback-state`, `user-modify-playback-state`,
   `streaming`, `user-read-email`, `user-read-private`.
@@ -533,7 +534,8 @@ Operational notes:
 - ETS provider cache is reconstructed on application start; affected users fall back to iTunes.
 - No persistent state to back up or migrate.
 
-Scaling strategy: single BEAM node, vertical scaling before horizontal ([ADR-008](decisions/008-scaling-single-node-sticky-sessions.md)).
+Scaling strategy: single BEAM node, vertical scaling before horizontal
+([ADR-008](decisions/008-scaling-single-node-sticky-sessions.md)).
 
 ### Other concerns
 
@@ -562,8 +564,8 @@ Scaling strategy: single BEAM node, vertical scaling before horizontal ([ADR-008
 
 ## Decision log and ADRs
 
-| Decision                                     | Rationale                                                  | ADR link                                                  |
-| -------------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------- |
+| Decision                                     | Rationale                                                  | ADR link                                                        |
+| -------------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------- |
 | Use Elixir/Phoenix runtime                   | Fits concurrent stateful room model with process isolation | [ADR-001](decisions/001-elixir-phoenix-runtime.md)              |
 | Model room lifecycle with `:gen_statem`      | Deterministic phase transitions and timer orchestration    | [ADR-002](decisions/002-in-memory-state-genstatem.md)           |
 | Use Phoenix Channels for room sync           | Native real-time transport with presence support           | [ADR-003](decisions/003-phoenix-channels-realtime.md)           |

@@ -15,7 +15,12 @@
           <?xml version="1.0"?>
           <!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
           <fontconfig>
-            <dir>${pkgs.dejavu_fonts}/share/fonts/truetype</dir>
+            <dir>${pkgs.dm-sans}/share/fonts/truetype</dir>
+            <dir>${pkgs.source-code-pro}/share/fonts/opentype</dir>
+            <alias>
+              <family>DM Sans</family>
+              <prefer><family>DeepMind Sans</family></prefer>
+            </alias>
             <cachedir prefix="xdg">fontconfig</cachedir>
           </fontconfig>
         '';
@@ -45,8 +50,6 @@
             pkgs.nodejs_24
             pkgs.openspec
             pkgs.watchexec
-            pkgs.gnumake
-            pkgs.stdenv.cc
             pkgs.prettier
           ];
 

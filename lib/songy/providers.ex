@@ -92,7 +92,9 @@ defmodule Songy.Providers do
     session = Session.normalize!(module.new())
 
     case Songy.Boundary.Provider.ensure(session) do
-      {:ok, ensured_session} -> {:ok, ensured_session}
+      {:ok, ensured_session} ->
+        {:ok, ensured_session}
+
       {:error, reason} ->
         {:error, reason}
     end
@@ -111,7 +113,8 @@ defmodule Songy.Providers do
           {:error, :not_supported} -> {:error, :not_found}
         end
 
-      [] -> {:error, :not_found}
+      [] ->
+        {:error, :not_found}
     end
   end
 
