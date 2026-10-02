@@ -52,7 +52,7 @@ cd songy/
 direnv allow
 # Environment automatically activated
 just setup
-just serve
+just up
 ```
 
 If you need Storybook, run it in a separate terminal:
@@ -68,7 +68,7 @@ cd songy/
 nix develop
 direnv allow
 just setup
-just serve
+just up
 ```
 
 If you need Storybook, run it in a separate terminal:
@@ -84,7 +84,7 @@ Node.js 24, Just, OpenSpec, watchexec, native compilation tools, and Prettier. `
 application; copy `envs/.env.example` for local configuration. Songy keeps its state in memory and does not need
 PostgreSQL.
 
-`just setup` installs Hex, Rebar, Mix dependencies, and frontend dependencies using the Bun lockfile. `just serve` also
+`just setup` installs Hex, Rebar, Mix dependencies, and frontend dependencies using the Bun lockfile. `just up` also
 runs setup and builds assets, then starts IEx/Phoenix and restarts it when environment files, configuration, or Mix
 manifests change. Phoenix starts Vite with the Bun from the Nix shell. Storybook runs separately on port 6006.
 

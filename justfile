@@ -21,7 +21,7 @@ setup:
 [arg("erl", long="erl")]
 [arg("sname", long="sname")]
 [no-exit-message]
-serve sname="songy" erl="-proto_dist inet6_tcp":
+up sname="songy" erl="-proto_dist inet6_tcp":
     just setup
     just assets build
     exec watchexec \
