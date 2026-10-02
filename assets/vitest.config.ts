@@ -65,7 +65,13 @@ export default mergeConfig(
         },
         {
           extends: true,
-          optimizeDeps: { exclude: ["@storybook/svelte"] },
+          optimizeDeps: {
+            include: [
+              "@storybook/addon-themes/preview",
+              "@storybook/svelte-vite",
+            ],
+            exclude: ["@storybook/svelte"],
+          },
           plugins: [
             storybookTest({
               configDir: path.join(dirname, ".storybook"),
