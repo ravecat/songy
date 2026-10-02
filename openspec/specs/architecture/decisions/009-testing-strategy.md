@@ -43,10 +43,11 @@ Property-based testing via `stream_data` for domain invariants.
 - (+) Screenshot execution follows d20 with two workers, parallel story files, sequential tests and hooks, reduced
   motion, and local HTML reports
 - (-) Native pixelmatch comparisons allow a mismatched-pixel ratio of 0.001 (0.1%) without an absolute pixel cap
-- (-) Visual references require review with pinned Linux Chromium, nixpkgs DM Sans 1.002, and Source Code Pro
+- (-) Visual references require review with pinned Linux Chromium and nixpkgs DM Sans 1.002
 - (-) The local DM Sans version differs from the current Google Fonts version used in production and interactive
   Storybook
 - (+) Interactive Storybook shares production Google Fonts links; visual tests use local flake fonts without CDN access
+- (+) Both application root layouts load DM Sans with weights 400, 600, and 700; components inherit the same font
 - (+) Visual setup only resets the pointer before each story and compares the complete document after play with a
   15-second timeout; Playwright supplies font readiness without manual font loading or image decoding
 - (+) Native screenshot styling freezes marquee text during capture to keep font rendering stable

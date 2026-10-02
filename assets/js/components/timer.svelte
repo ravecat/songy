@@ -148,7 +148,7 @@
     position: absolute;
     color: var(--color-white);
     font-size: clamp(1rem, 1.15vw, 1.25rem);
-    font-weight: var(--font-weight-extrabold);
+    font-weight: var(--font-weight-bold);
     line-height: 1;
     letter-spacing: -0.04em;
     font-variant-numeric: tabular-nums;

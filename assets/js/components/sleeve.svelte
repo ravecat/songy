@@ -80,7 +80,7 @@
     justify-self: start;
     padding: 1rem;
     font-size: 2rem;
-    font-weight: var(--font-weight-extrabold);
+    font-weight: var(--font-weight-bold);
     background: linear-gradient(135deg, #facc15, #f97316);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;

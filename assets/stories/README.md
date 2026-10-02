@@ -13,9 +13,9 @@
 - Each tested story runs at desktop (`1280x720`), tablet (`1024x640`), and mobile (`320x900`) in both themes. The
   screenshot follows rendering and `play` assertions.
 - The screenshot setup follows d20: each theme/viewport instance reuses Chromium across parallel story files with two
-  workers and sequential tests and hooks. Use reduced motion, pinned Chromium, local DM Sans 1.002, and Source Code Pro
-  for fallback text. Fontconfig maps DM Sans to its packaged DeepMind Sans name. Native pixelmatch permits a
-  mismatched-pixel ratio of 0.001 (0.1%) with no absolute cap.
+  workers and sequential tests and hooks. Use reduced motion, pinned Chromium, and local DM Sans 1.002. Fontconfig maps
+  DM Sans to its packaged DeepMind Sans name. Components inherit the application font and use weights 400, 600, and 700.
+  Native pixelmatch permits a mismatched-pixel ratio of 0.001 (0.1%) with no absolute cap.
 - Native screenshot styling freezes marquee text during capture. Interactive Storybook keeps normal animations.
 - References belong under `assets/__screenshots__/<story-path>/<theme>/<viewport>/chromium/`. Generate intentional
   changes with `just assets test:visual --update`, inspect the images and Git diff, then run a normal comparison. CI

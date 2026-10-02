@@ -150,7 +150,6 @@
   .lobby-share__url {
     flex: 1 1 auto;
     min-width: 0;
-    font-family: monospace;
     font-size: 0.875rem;
     opacity: var(--opacity-emphasis);
     max-width: 100%;

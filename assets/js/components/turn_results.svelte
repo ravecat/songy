@@ -144,7 +144,7 @@
     width: 100%;
     margin-top: var(--spacing-sm);
     font-size: var(--font-size-xs);
-    font-weight: var(--font-weight-medium);
+    font-weight: var(--font-weight-normal);
     color: rgba(255, 255, 255, var(--opacity-emphasis));
     text-align: center;
     overflow: hidden;

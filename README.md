@@ -139,11 +139,12 @@ capture to keep font rendering stable.
 
 Screenshots are captured after `play` with a 15-second native assertion timeout. Setup only resets the pointer and
 compares the document; Playwright supplies font readiness without manual loading or image decoding. The environment uses
-pinned Chromium and nixpkgs fonts: DM Sans 1.002 (named DeepMind Sans internally) and Source Code Pro for monospace and
-fallback text. Fontconfig maps DM Sans to the local package. Interactive Storybook loads the current DM Sans through the
-same Google Fonts request as production. Visual tests omit these links and use the local fonts from the flake without
-CDN access. Native pixelmatch permits a mismatched-pixel ratio of 0.001 (0.1%) without an absolute allowance. References
-live under `assets/__screenshots__/<story-path>/<theme>/<viewport>/chromium/`. Failure evidence is ignored under
+pinned Chromium and nixpkgs DM Sans 1.002 (named DeepMind Sans internally). Fontconfig maps DM Sans to the local
+package. Both application root layouts and interactive Storybook load the current DM Sans through Google Fonts with
+weights 400, 600, and 700. Components inherit the application font, and their styles use only these three weights.
+Visual tests omit these links and use the local fonts from the flake without CDN access. Native pixelmatch permits a
+mismatched-pixel ratio of 0.001 (0.1%) without an absolute allowance. References live under
+`assets/__screenshots__/<story-path>/<theme>/<viewport>/chromium/`. Failure evidence is ignored under
 `assets/.vitest/attachments/`; automatic captures use separate theme and viewport directories. Review an intentional
 `--update` in Git, then run a normal comparison. The release workflow runs `just setup` and `just check` in the same
 flake on pull requests and release pushes. It compares references without updating them and uploads only available PNG

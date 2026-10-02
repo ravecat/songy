@@ -16,7 +16,6 @@
           <!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
           <fontconfig>
             <dir>${pkgs.dm-sans}/share/fonts/truetype</dir>
-            <dir>${pkgs.source-code-pro}/share/fonts/opentype</dir>
             <alias>
               <family>DM Sans</family>
               <prefer><family>DeepMind Sans</family></prefer>
